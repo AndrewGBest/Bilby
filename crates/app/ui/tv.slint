@@ -62,6 +62,13 @@ export component TvShell inherits Rectangle {
 
     init => { scope.focus(); }
 
+    // Rows come and go (search results, the library row). Keep the focus on something
+    // that exists instead of pointing past the end.
+    changed rows => {
+        root.cur-row = max(0, min(root.cur-row, rows.length - 1));
+        root.cur-col = max(0, min(root.cur-col, rows[root.cur-row].apps.length - 1));
+    }
+
     scope := FocusScope {
         // While the search box has focus, steal the keys that should leave it.
         capture-key-pressed(event) => {

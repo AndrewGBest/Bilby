@@ -17,7 +17,7 @@ device.
 | ![Desktop](docs/screenshots/desktop-discover.png) | ![Mobile](docs/screenshots/mobile-details.png) | ![TV](docs/screenshots/tv-home.png) |
 
 More in [`docs/screenshots/`](docs/screenshots): [app page](docs/screenshots/desktop-details.png),
-[update](docs/screenshots/desktop-update.png), [library](docs/screenshots/desktop-library.png),
+[update](docs/screenshots/desktop-update.png), [older versions](docs/screenshots/desktop-versions.png), [library](docs/screenshots/desktop-library.png),
 [settings](docs/screenshots/desktop-settings.png), [light theme](docs/screenshots/desktop-light.png),
 [first run](docs/screenshots/desktop-welcome.png), [AUR results on Arch](docs/screenshots/desktop-search-arch.png),
 [Windows on Arm](docs/screenshots/desktop-windows-arm.png), [TV app page](docs/screenshots/tv-details.png).
@@ -38,7 +38,7 @@ Screenshots show the built-in demo catalog; the apps in it are fictional.
   device; initials on a colour until it arrives, or if there is none.
 - **Three interfaces** in one app: desktop (mouse and full keyboard use), mobile (touch),
   TV (remote only). Light and dark themes.
-- **Works badly-connected**: Discover and suggestions need no network; failed lookups
+- **Copes with a bad connection**: Discover and suggestions need no network; failed lookups
   say what went wrong and can be retried; cached answers are used when GitHub's
   allowance runs out.
 - **Honest about limits**: shows GitHub's remaining request allowance, takes an optional
@@ -51,8 +51,8 @@ A working vertical slice. It has only ever been looked at on Linux.
 
 | | State |
 |---|---|
-| Engine, sources, library, updates, install planning | Implemented; 146 automated tests in total |
-| Desktop, mobile and TV interfaces | Implemented; 41 tests drive the real window headlessly, 6 more run the real binary under a virtual display |
+| Engine, sources, library, updates, install planning | Implemented; 147 automated tests in total |
+| Desktop, mobile and TV interfaces | Implemented; 42 tests drive the real window headlessly, 6 more run the real binary under a virtual display |
 | Linux | Builds, runs, all tests pass |
 | Windows, macOS | Builds and the test suite passes on GitHub's Windows and macOS runners. Those tests use a headless backend: **nobody has seen the window on either system**, and installer hand-off there is untried |
 | Android (phone, tablet, TV) | Core type-checks; entry point written; **no APK packaging**, and handing APKs to the system installer is not implemented (the UI says so) |

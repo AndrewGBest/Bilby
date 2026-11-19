@@ -343,7 +343,7 @@ been run on a television.
 
 ## 8. Testing
 
-146 tests, none needing the internet. **[verified]**: all pass on Linux here. CI runs
+147 tests, none needing the internet. **[verified]**: all pass on Linux here. CI runs
 the suite on Linux, Windows and macOS on every push. It passed on all three for the
 version-picker commit (run 13). The run after that failed on Windows only, because a
 test clicked a button that was below the window there; the test helper was fixed. Check
@@ -355,7 +355,7 @@ the Actions tab for the state of the latest commit rather than trusting this par
 | `core/tests/corpus.rs` | 4 | 169 real-world-style names; cross-OS/CPU safety property; 20,000 generated names |
 | `core/tests/http_sources.rs` | 16 | the real HTTP client and both sources against a local server: headers, token scoping, rate limits, allowance, progress, cancel, cache, documented JSON shapes, garbage responses |
 | `cli/tests/cli.rs` | 8 | the `ustore` binary end to end, including install, library, updates and `doctor` |
-| `app/tests/ui.rs` | 34 | the real window on Slint's headless backend: clicks by accessible label, key presses, all three interfaces |
+| `app/tests/ui.rs` | 35 | the real window on Slint's headless backend: clicks by accessible label, key presses, all three interfaces |
 | `app/tests/offline.rs` | 5 | the same window with a transport that goes offline or rate limited on demand, then recovers |
 | `app/tests/pictures.rs` | 1 | app pictures: fetched, decoded, shown, cached on disk, harmless when missing |
 | `app/tests/binary.rs` | 6 | the real application (threads, event loop, software renderer) under `xvfb-run`, Linux only |

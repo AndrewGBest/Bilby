@@ -879,6 +879,25 @@ fn tv_is_driven_entirely_by_the_remote() {
 }
 
 #[test]
+fn tv_focus_survives_rows_changing_under_it() {
+    let s = start("android-tv", Shell::Tv);
+    // Move to the last row and its last tile, then make the grid shorter by searching
+    // for something with a single result row in front.
+    for _ in 0..6 {
+        s.press(Key::DownArrow);
+    }
+    for _ in 0..6 {
+        s.press(Key::RightArrow);
+    }
+    s.app.search(&s.ui, "play");
+    // Whatever is focused now must be a real app: OK opens it.
+    s.press(Key::Return);
+    assert!(s.store().get_details_open());
+    assert!(s.store().get_app().id.starts_with("github:"), "focus landed on {:?}", s.store().get_app().id);
+    assert!(s.store().get_details_error().is_empty());
+}
+
+#[test]
 fn tv_puts_the_library_first() {
     let seed = r#"{"library":[{"id":"github:marquee-tv/marquee","name":"Marquee","version":"v20.0"}]}"#;
     let s = start_with("android-tv", Shell::Tv, Some(seed));
