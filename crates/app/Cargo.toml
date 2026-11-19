@@ -15,11 +15,14 @@ path = "src/main.rs"
 
 [dependencies]
 ustore-core = { path = "../core" }
-slint = { version = "1.19", default-features = false, features = ["std", "compat-1-2", "backend-winit", "renderer-software", "renderer-femtovg", "image-default-formats"] }
+slint = { version = "1.19", default-features = false, features = ["std", "compat-1-2", "backend-winit", "renderer-software", "renderer-femtovg"] }
 png = "0.17"
+# App pictures are PNGs or JPEGs. Slint's own "image-default-formats" would pull in every
+# format the image crate knows (AVIF, EXR, WebP, ...); two decoders are enough.
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
-slint = { version = "1.19", default-features = false, features = ["std", "compat-1-2", "backend-android-activity-06", "image-default-formats"] }
+slint = { version = "1.19", default-features = false, features = ["std", "compat-1-2", "backend-android-activity-06"] }
 
 [dev-dependencies]
 i-slint-backend-testing = "=1.19.0"

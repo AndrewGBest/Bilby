@@ -316,6 +316,18 @@ thread_local! {
     static PICTURES: RefCell<HashMap<String, slint::Image>> = RefCell::new(HashMap::new());
 }
 
+/// Decode a cached PNG or JPEG into something Slint can draw. Implausible sizes are
+/// refused: an avatar is small, and a huge image would only cost memory.
+fn decode_picture(path: &std::path::Path) -> Option<slint::Image> {
+    let decoded = image::open(path).ok()?.into_rgba8();
+    let (width, height) = decoded.dimensions();
+    if width == 0 || height == 0 || width > 1024 || height > 1024 {
+        return None;
+    }
+    let buffer = slint::SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(decoded.as_raw(), width, height);
+    Some(slint::Image::from_rgba8(buffer))
+}
+
 fn picture_for(id: &str) -> slint::Image {
     AppId::parse(id)
         .and_then(|id| ustore_core::icons::icon_key(&id))
@@ -459,7 +471,7 @@ impl App {
                 PICTURES.with(|pictures| {
                     for (key, path) in found {
                         // A file that will not decode is simply not shown.
-                        if let Ok(image) = slint::Image::load_from_path(&path) {
+                        if let Some(image) = decode_picture(&path) {
                             pictures.borrow_mut().insert(key, image);
                         }
                     }
