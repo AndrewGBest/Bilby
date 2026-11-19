@@ -793,6 +793,7 @@ impl App {
             AppCard {
                 id: id.into(),
                 name: name.into(),
+                source: AppId::parse(id).map(|parsed| parsed.source.label()).unwrap_or_default().into(),
                 initials: initials(name).into(),
                 tint: tint_for(id),
                 icon: picture_for(id),

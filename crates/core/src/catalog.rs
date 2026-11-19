@@ -210,8 +210,16 @@ impl Catalog {
 
     pub fn details(&self, id: &AppId) -> Result<AppDetails> {
         let source = self.source(id.source)?;
-        let mut summary = source.summary(&id.key)?;
-        let releases = source.releases(&id.key)?;
+        // "Not found" in a person's terms, not as the URL that was asked for.
+        let named = |e: Error| match e {
+            Error::NotFound(_) => {
+                let what = if id.source == SourceKind::Aur { "package" } else { "project" };
+                Error::NotFound(format!("{} has no {what} called “{}”.", id.source.label(), id.key))
+            }
+            other => other,
+        };
+        let mut summary = source.summary(&id.key).map_err(named)?;
+        let releases = source.releases(&id.key).map_err(named)?;
         let (release, unavailable_reason) = self.pick_release(&releases);
         if let Some(r) = &release {
             summary.version = Some(r.version.clone());
@@ -370,6 +378,14 @@ mod tests {
         let d = demo("linux-x64-debian").details(&id("github:winspect/winspect")).unwrap();
         assert!(d.unavailable_reason.unwrap().contains("Linux"));
         assert!(d.release.unwrap().options.is_empty());
+    }
+
+    #[test]
+    fn a_missing_project_is_named_not_shown_as_a_url() {
+        let error = demo("linux-x64-debian").details(&id("github:nobody/nothing")).unwrap_err();
+        assert_eq!(error.to_string(), "GitHub has no project called “nobody/nothing”.");
+        let error = demo("linux-x64-arch").details(&id("aur:no-such-package")).unwrap_err();
+        assert_eq!(error.to_string(), "AUR has no package called “no-such-package”.");
     }
 
     #[test]

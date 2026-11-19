@@ -38,7 +38,10 @@ impl Aur {
         }
         let url = format!("{}/info?arg[]={}", self.rpc, url_encode(name));
         let resp: RpcResponse = serde_json::from_str(&self.http.get(&url)?)?;
-        resp.into_results()?.into_iter().next().ok_or_else(|| Error::NotFound(format!("AUR package {name}")))
+        resp.into_results()?
+            .into_iter()
+            .next()
+            .ok_or_else(|| Error::NotFound(format!("The AUR has no package called “{name}”.")))
     }
 }
 

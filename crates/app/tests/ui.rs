@@ -387,7 +387,8 @@ fn failed_lookups_can_be_retried() {
     let s = start("linux-x64-debian", Shell::Desktop);
     s.app.open(&s.ui, "github:nobody/nothing");
     assert!(s.store().get_details_open());
-    assert!(!s.store().get_details_error().is_empty());
+    assert_eq!(s.store().get_details_error(), "GitHub has no project called “nobody/nothing”.");
+    assert_eq!(s.store().get_app().source, "GitHub", "the page still says where it looked");
     assert!(s.has("Try again"));
     s.click("Try again");
     assert!(!s.store().get_details_error().is_empty(), "still failing, still explained");

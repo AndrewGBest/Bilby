@@ -680,7 +680,7 @@ export component DetailsBody inherits Rectangle {
                     HorizontalLayout {
                         spacing: 6px;
                         alignment: start;
-                        Chip { text: Store.app.source; }
+                        if Store.app.source != "" : Chip { text: Store.app.source; }
                         if Store.app.version != "" : Chip { text: Store.app.version; }
                         if Store.app.popularity != "" : Chip { text: Store.app.popularity; }
                         if Store.license != "" && !compact : Chip { text: Store.license; }

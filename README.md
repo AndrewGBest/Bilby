@@ -52,7 +52,7 @@ A working vertical slice. It has only ever been looked at on Linux.
 
 | | State |
 |---|---|
-| Engine, sources, library, updates, install planning | Implemented; 152 automated tests in total |
+| Engine, sources, library, updates, install planning | Implemented; 153 automated tests in total |
 | Desktop, mobile and TV interfaces | Implemented; 45 tests drive the real window headlessly, 7 more run the real binary under a virtual display |
 | Linux | Builds (debug and release), runs, all tests pass |
 | Windows, macOS | Builds and the test suite passes on GitHub's Windows and macOS runners. Those tests use a headless backend: **nobody has seen the window on either system**, and installer hand-off there is untried |

@@ -138,7 +138,7 @@ impl NetHttp {
                     };
                     Err(Error::RateLimited { source: "GitHub", hint: hint.to_string() })
                 } else if code == 404 {
-                    Err(Error::NotFound(url.to_string()))
+                    Err(Error::NotFound(format!("Nothing was found at {url}")))
                 } else {
                     Err(Error::Status { code, url: url.to_string() })
                 }

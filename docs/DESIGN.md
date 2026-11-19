@@ -350,7 +350,7 @@ been run on a television.
 
 ## 8. Testing
 
-152 tests, none needing the internet. **[verified]**: all pass on Linux here. CI runs
+153 tests, none needing the internet. **[verified]**: all pass on Linux here. CI runs
 the suite on Linux, Windows and macOS on every push. It passed on all three for the
 version-picker commit (run 13). The run after that failed on Windows only, because a
 test clicked a button that was below the window there; the test helper was fixed. Check
@@ -358,7 +358,7 @@ the Actions tab for the state of the latest commit rather than trusting this par
 
 | Suite | Count | What it exercises |
 |---|---|---|
-| `ustore-core` unit tests | 66 | detection, classification, compatibility, versions, state file, install plans and execution, index, suggestions, icons, catalog |
+| `ustore-core` unit tests | 67 | detection, classification, compatibility, versions, state file, install plans and execution, index, suggestions, icons, catalog |
 | `core/tests/corpus.rs` | 4 | 169 real-world-style names; cross-OS/CPU safety property; 20,000 generated names |
 | `core/tests/http_sources.rs` | 16 | the real HTTP client and both sources against a local server: headers, token scoping, rate limits, allowance, progress, cancel, cache, documented JSON shapes, garbage responses |
 | `cli/tests/cli.rs` | 8 | the `ustore` binary end to end, including install, library, updates and `doctor` |
