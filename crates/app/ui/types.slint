@@ -107,6 +107,9 @@ export global Store {
     in property <[HiddenRow]> hidden;
     // Version in the library, "" when not installed.
     in property <string> installed-version;
+    // Releases that have a file for this machine, newest first, and the one shown.
+    in property <[string]> versions;
+    in property <int> selected-version;
 
     // --- install ----------------------------------------------------------------
     // 0 idle, 1 working, 2 done, 3 failed
@@ -140,6 +143,7 @@ export global Store {
     callback open(string);
     callback close-details();
     callback retry-details();
+    callback select-version(int);
     callback install(int);
     callback cancel-install();
     callback check-updates();

@@ -738,6 +738,21 @@ export component DetailsBody inherits Rectangle {
                 }
             }
 
+            if Store.versions.length > 1 : HorizontalLayout {
+                spacing: 8px;
+                alignment: start;
+                VerticalLayout {
+                    alignment: center;
+                    Text { text: "Version"; color: Theme.text-dim; font-size: 12px; font-weight: 700; }
+                }
+                for version[i] in Store.versions : ChoiceChip {
+                    text: version;
+                    selected: i == Store.selected-version;
+                    accessible-label: "Version " + version;
+                    clicked => { Store.select-version(i); }
+                }
+            }
+
             if Store.options.length > 0 : VerticalLayout {
                 spacing: 10px;
                 Text {

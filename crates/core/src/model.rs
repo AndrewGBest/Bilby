@@ -178,6 +178,9 @@ pub struct AppDetails {
     pub release: Option<ResolvedRelease>,
     /// Why `release` is `None`, in words.
     pub unavailable_reason: Option<String>,
+    /// Every recent release that has something for this machine, newest first, so an
+    /// older version can be chosen. Includes `release`.
+    pub versions: Vec<ResolvedRelease>,
 }
 
 pub fn human_size(bytes: u64) -> String {

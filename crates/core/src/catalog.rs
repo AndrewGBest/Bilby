@@ -211,12 +211,15 @@ impl Catalog {
     pub fn details(&self, id: &AppId) -> Result<AppDetails> {
         let source = self.source(id.source)?;
         let mut summary = source.summary(&id.key)?;
-        let (release, unavailable_reason) = self.pick_release(&source.releases(&id.key)?);
+        let releases = source.releases(&id.key)?;
+        let (release, unavailable_reason) = self.pick_release(&releases);
         if let Some(r) = &release {
             summary.version = Some(r.version.clone());
             summary.install_label = r.options.first().map(|o| o.label());
         }
-        Ok(AppDetails { summary, release, unavailable_reason })
+        let versions: Vec<ResolvedRelease> =
+            releases.iter().map(|r| self.resolve_release(r)).filter(|r| !r.options.is_empty()).collect();
+        Ok(AppDetails { summary, release, unavailable_reason, versions })
     }
 
     /// Is there a newer release than `installed_version` with a file for this machine?
@@ -359,6 +362,18 @@ mod tests {
         let d = demo("linux-x64-debian").details(&id("github:winspect/winspect")).unwrap();
         assert!(d.unavailable_reason.unwrap().contains("Linux"));
         assert!(d.release.unwrap().options.is_empty());
+    }
+
+    #[test]
+    fn older_versions_with_a_build_are_listed() {
+        let versions = |preset: &str| -> Vec<String> {
+            let d = demo(preset).details(&id("github:kestrel-sh/kestrel")).unwrap();
+            d.versions.into_iter().map(|r| r.version).collect()
+        };
+        assert_eq!(versions("linux-x64-debian"), ["v1.21.0", "v1.20.0"]);
+        // The newest release has nothing for macOS, so it is not offered there at all.
+        assert_eq!(versions("macos-arm64"), ["v1.20.0"]);
+        assert!(demo("linux-x64-debian").details(&id("github:winspect/winspect")).unwrap().versions.is_empty());
     }
 
     #[test]

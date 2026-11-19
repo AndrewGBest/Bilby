@@ -333,6 +333,45 @@ fn the_app_page_warns_about_what_matters() {
 }
 
 #[test]
+fn an_older_version_can_be_chosen_and_installed() {
+    let s = start("linux-x64-debian", Shell::Desktop);
+    s.app.open(&s.ui, "github:kestrel-sh/kestrel");
+    let versions: Vec<String> = s.store().get_versions().iter().map(|v| v.to_string()).collect();
+    assert_eq!(versions, ["v1.21.0", "v1.20.0"]);
+    assert_eq!(s.store().get_selected_version(), 0);
+    assert_eq!(s.store().get_app().version, "v1.21.0");
+    assert_eq!(s.store().get_options().row_count(), 2);
+
+    s.click("Version v1.20.0");
+    assert_eq!(s.store().get_selected_version(), 1);
+    assert_eq!(s.store().get_app().version, "v1.20.0");
+    assert_eq!(s.store().get_options().row_count(), 1, "the older release had one Linux x86_64 file");
+    assert_eq!(s.store().get_release_date(), "2026-09-14");
+    assert!(s.store().get_warning().contains("older version"), "{}", s.store().get_warning());
+
+    s.app.install(&s.ui, 0);
+    assert_eq!(s.store().get_install_state(), 2);
+    assert_eq!(s.saved().library[0].version, "v1.20.0");
+    assert_eq!(s.store().get_installed_version(), "v1.20.0");
+    // The library knows a newer one exists, without another request.
+    assert_eq!(s.store().get_updates_count(), 1);
+    assert_eq!(s.store().get_library().row_data(0).unwrap().status_text, "Update available: v1.21.0");
+
+    // Back to the newest: the warning goes away.
+    s.click("Version v1.21.0");
+    assert_eq!(s.store().get_warning(), "");
+    assert_eq!(s.store().get_options().row_count(), 2);
+
+    // An app with a single usable release shows no picker.
+    s.app.open(&s.ui, "github:tidewave/tidewave");
+    assert_eq!(s.store().get_versions().row_count(), 1);
+    assert!(!s.has("Version v3.4.0"));
+    // Out-of-range selections are ignored.
+    s.store().invoke_select_version(7);
+    assert_eq!(s.store().get_selected_version(), 0);
+}
+
+#[test]
 fn failed_lookups_can_be_retried() {
     let s = start("linux-x64-debian", Shell::Desktop);
     s.app.open(&s.ui, "github:nobody/nothing");

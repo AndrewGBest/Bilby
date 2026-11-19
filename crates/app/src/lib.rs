@@ -314,6 +314,19 @@ fn make_catalog(platform: &Platform, demo: bool, settings: &Settings, dirs: &Dir
 struct Current {
     id: String,
     details: Option<AppDetails>,
+    /// Index into `details.versions` of the release on screen; `None` when the app has
+    /// nothing for this machine and only the explanation is shown.
+    selected: Option<usize>,
+}
+
+impl Current {
+    fn release(&self) -> Option<&ustore_core::model::ResolvedRelease> {
+        let details = self.details.as_ref()?;
+        match self.selected {
+            Some(index) => details.versions.get(index),
+            None => details.release.as_ref(),
+        }
+    }
 }
 
 pub struct App {
@@ -670,7 +683,9 @@ impl App {
         store.set_installed_version(
             self.state.lock().unwrap().installed(id).map(|a| a.version.clone()).unwrap_or_default().into(),
         );
-        *self.current.lock().unwrap() = Current { id: id.to_string(), details: None };
+        store.set_versions(ModelRc::default());
+        store.set_selected_version(0);
+        *self.current.lock().unwrap() = Current { id: id.to_string(), details: None, selected: None };
         let mut card = known.unwrap_or_else(|| {
             let name = id.rsplit(['/', ':']).next().unwrap_or(id);
             AppCard {
@@ -722,10 +737,36 @@ impl App {
         store.set_license(details.summary.license.clone().unwrap_or_default().into());
         store.set_homepage(details.summary.homepage.as_str().into());
         store.set_unavailable(details.unavailable_reason.clone().unwrap_or_default().into());
-        let (options, hidden, notes, date) = match &details.release {
+        store.set_versions(ModelRc::new(VecModel::from(
+            details.versions.iter().map(|r| SharedString::from(&r.version)).collect::<Vec<_>>(),
+        )));
+        // Start on the release the catalog picked (the newest stable one that fits).
+        let picked = details.release.as_ref().map(|r| r.version.clone());
+        let selected = details.versions.iter().position(|r| Some(&r.version) == picked.as_ref());
+        {
+            let mut current = self.current.lock().unwrap();
+            current.details = Some(details);
+            current.selected = selected;
+        }
+        self.show_release(ui);
+    }
+
+    /// Fill the page from the release that is currently selected.
+    fn show_release(&self, ui: &AppWindow) {
+        let store = ui.global::<Store>();
+        let current = self.current.lock().unwrap();
+        let Some(details) = current.details.as_ref() else { return };
+        let release = current.release();
+        let (options, hidden, notes, date) = match release {
             Some(r) => (r.options.clone(), r.hidden.clone(), plain_notes(&r.notes), r.published.clone()),
             None => (vec![], vec![], String::new(), String::new()),
         };
+        store.set_selected_version(current.selected.unwrap_or(0) as i32);
+        let mut card = store.get_app();
+        card.version = release.map(|r| r.version.as_str()).unwrap_or_default().into();
+        card.badge = options.first().map(|o| o.label()).unwrap_or_default().into();
+        store.set_app(card);
+        store.set_install_state(0);
         store.set_options(ModelRc::new(VecModel::from(options.iter().map(option_row).collect::<Vec<_>>())));
         store.set_hidden(ModelRc::new(VecModel::from(
             hidden
@@ -737,16 +778,32 @@ impl App {
         // Things worth knowing before installing, most important first.
         let age = age_label(&date, now_unix());
         let mut warnings: Vec<String> = details.summary.warning.clone().into_iter().collect();
-        if details.release.as_ref().is_some_and(|r| r.prerelease && !r.options.is_empty()) {
+        let newest = details.versions.first().map(|r| r.version.as_str());
+        let is_newest = release.map(|r| r.version.as_str()) == newest;
+        if let (false, Some(newest)) = (is_newest, newest) {
+            warnings.push(format!("This is an older version. The newest for this device is {newest}."));
+        }
+        if release.is_some_and(|r| r.prerelease && !r.options.is_empty()) {
             warnings.push("This is a pre-release. It may be unfinished or unstable.".to_string());
         }
-        if let Some(years) = age.strip_suffix(" years ago").and_then(|n| n.parse::<u32>().ok()) {
+        if let (true, Some(years)) = (is_newest, age.strip_suffix(" years ago").and_then(|n| n.parse::<u32>().ok())) {
             warnings.push(format!("The latest release is {years} years old. The project may no longer be maintained."));
         }
         store.set_warning(warnings.join("\n").into());
         store.set_release_age(age.into());
         store.set_release_date(date.into());
-        self.current.lock().unwrap().details = Some(details);
+    }
+
+    pub fn select_version(&self, ui: &AppWindow, index: i32) {
+        {
+            let mut current = self.current.lock().unwrap();
+            let count = current.details.as_ref().map(|d| d.versions.len()).unwrap_or(0);
+            if index < 0 || index as usize >= count || ui.global::<Store>().get_install_state() == 1 {
+                return;
+            }
+            current.selected = Some(index as usize);
+        }
+        self.show_release(ui);
     }
 
     pub fn close_details(&self, ui: &AppWindow) {
@@ -762,14 +819,12 @@ impl App {
         if store.get_install_state() == 1 {
             return;
         }
-        let (details, option) = {
+        let (details, option, version) = {
             let current = self.current.lock().unwrap();
             let Some(details) = current.details.clone() else { return };
-            let Some(option) = details.release.as_ref().and_then(|r| r.options.get(index.max(0) as usize)).cloned()
-            else {
-                return;
-            };
-            (details, option)
+            let Some(release) = current.release() else { return };
+            let Some(option) = release.options.get(index.max(0) as usize).cloned() else { return };
+            (details, option, release.version.clone())
         };
         store.set_install_index(index);
         store.set_install_state(1);
@@ -827,7 +882,6 @@ impl App {
                         if option.plan.action == Action::ShowCommand {
                             return;
                         }
-                        let version = details.release.as_ref().map(|r| r.version.clone()).unwrap_or_default();
                         let name = store.get_app().name.to_string();
                         let mut entry = InstalledApp::new(
                             &details.summary,
@@ -841,7 +895,15 @@ impl App {
                         entry.store_managed = outcome.store_managed;
                         let id = entry.id.clone();
                         app.update_state(ui, |state| state.record_install(entry));
-                        app.updates.lock().unwrap().insert(id, UpdateStatus::UpToDate);
+                        // Installing an older version on purpose leaves an update pending.
+                        let newest = details.versions.first().map(|r| r.version.clone()).unwrap_or_default();
+                        let status = if ustore_core::version::is_newer(&newest, &version) {
+                            let label = details.versions[0].options.first().map(|o| o.label()).unwrap_or_default();
+                            UpdateStatus::Available { version: newest, label }
+                        } else {
+                            UpdateStatus::UpToDate
+                        };
+                        app.updates.lock().unwrap().insert(id, status);
                         store.set_installed_version(version.into());
                         app.refresh(ui);
                         app.toast(ui, &format!("{name} is in your library"), false);
@@ -1033,6 +1095,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
             app.open(ui, &id);
         }
     });
+    on!(on_select_version, |app, ui, index| { app.select_version(ui, index) });
     on!(on_install, |app, ui, index| { app.install(ui, index) });
     on!(on_cancel_install, |app, ui| {
         let _ = ui;
