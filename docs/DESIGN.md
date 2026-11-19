@@ -19,6 +19,37 @@ Releases first) and through community repositories (the AUR first), with one rul
 One codebase, in Rust, with three interfaces: desktop (pointer and keyboard), mobile
 (touch) and TV (remote / D-pad).
 
+### Entirely client-side
+
+There is no untitledstore server, account, telemetry or hosted catalog, and the design
+must not grow one. The app talks only to the sources themselves (`api.github.com`,
+`github.com` downloads, `aur.archlinux.org`), and everything it remembers lives in one
+file on the device (`state.json`: settings, library, recent searches). Consequences that
+shape the rest of this document:
+
+- The Discover catalog is compiled into the binary and updates with the app.
+- GitHub's per-device request allowance is the scarce resource, so the app caches,
+  bounds how much each search checks, and shows the remaining allowance in Settings.
+- Update checks, library and preferences are local; nothing syncs between devices.
+- **[verified]** by test: the GitHub token is sent to the API host and to no other
+  (`the_token_goes_to_the_api_and_nowhere_else`), and the state file is private to the
+  user (mode 600 on Unix).
+
+### What was borrowed from existing stores
+
+| Idea | Seen in | Here |
+|---|---|---|
+| Library with update checks against the source | Obtainium, F-Droid | Library page, badge, start-up check |
+| Paste a repository link to add an app | Obtainium | Search field accepts links and `owner/repo` |
+| One prominent install button, details below | Flathub, GNOME Software, Play Store | Best option first, the rest listed under it |
+| Say what a package can and cannot be trusted for | F-Droid's anti-features | First-run notice, checksum line, AUR warning |
+| Show the steps before doing them | Linux package managers | "What will happen?" on each option |
+| Focus-driven rows with a hero area | Android TV launcher, Steam Big Picture | TV interface |
+| Spotlight and category chips | Most stores | Discover page |
+
+These are **[assumption]**: attributions from the author's familiarity with those apps,
+not from a review of their current versions.
+
 ### Prior art, and whether this approach is the right one
 
 Two existing projects already cover much of this idea, and are worth trying before
@@ -61,20 +92,23 @@ other stores do least thoroughly, and it has no UI dependencies.
 │     ├── asset      file name ──► format, OS, CPU, libc, TV                   │
 │     ├── compat     (asset, platform) ──► Native / Compatible / Incompatible  │
 │     ├── install    (asset, platform) ──► plan; execute plan                  │
-│     └── platform   Platform::detect() / Platform::preset(name)               │
+│     ├── platform   Platform::detect() / Platform::preset(name)               │
+│     ├── state      settings, library, recent searches (one local JSON file)  │
+│     └── version    is this release newer than the installed one?             │
 │  http      trait Http ── NetHttp (rustls), CachedHttp, DemoHttp              │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
 Rules that keep it honest:
 
-- **The UI holds no logic.** The three interfaces render one `Store` global and call four
-  callbacks (`search`, `open`, `close-details`, `install`). Anything a UI shows, the CLI
-  can print.
+- **The UI holds no logic.** The three interfaces render one `Store` global and call its
+  callbacks (`search`, `open`, `install`, `check-updates`, ...). Anything a UI shows, the
+  CLI can print.
+- **One controller, two execution modes.** `App::job` runs catalog work on a worker
+  thread in the app and inline under test, so the UI tests exercise the real handlers.
 - **`Platform` is a value, not ambient state.** Every decision takes a `&Platform`, so
   "what would an Android TV be offered?" is a function call (`--as android-tv`), and the
-  whole engine is testable on one machine. **[verified]** 13 presets, all exercised in
-  tests.
+  whole engine is testable on one machine. **[verified]** 13 presets, all exercised in tests.
 - **The network is behind one trait.** `DemoHttp` serves a fictional catalog in the real
   GitHub and AUR JSON shapes, so demo mode runs the production parsing and filtering
   code.
@@ -103,7 +137,8 @@ Decision order, each step able to reject with a reason shown to the user:
    Dropped silently.
 2. **Operating system**: from the format (`.apk`, `.msi`, `.dmg`, `.deb`...) or name
    tokens. Unknown OS is rejected rather than guessed.
-3. **Form factor**: an Android TV build is hidden on phones.
+3. **Form factor**: an Android TV build is hidden on phones. Debug-signed APKs are kept
+   (some projects publish nothing else) but ranked below release builds.
 4. **Package format**: `.deb` needs dpkg, `.rpm` needs rpm, pacman packages and the AUR
    need Arch, AppImage needs glibc.
 5. **libc**: a glibc build is rejected on musl; a musl build is fine anywhere.
@@ -122,11 +157,21 @@ the whole catalog path, from API-shaped JSON to install option, on 7 of them
 
 Known limits of name-based detection: it is a heuristic. An APK's real ABIs and whether
 it declares a TV launcher are inside the file, not its name; reading the APK manifest
-after download would be exact. The classifier's vocabulary comes from common naming
-conventions (Rust target triples, Go/GoReleaser, Electron, Android ABI names)
-**[assumption]**: it was tested on names written for the tests, not on a crawl of real
-releases. Running it over a few thousand real releases and reviewing the misses is the
-single most valuable next step.
+after download would be exact.
+
+The classifier is checked against a corpus of 169 file names in the styles of Rust
+target triples, GoReleaser, Electron and Tauri bundlers, Android ABI splits and distro
+packages (`crates/core/tests/corpus.rs`). Writing it found 14 misclassifications, since
+fixed, including `arm-64` being read as 32-bit Arm. The corpus was written from memory
+of those conventions **[assumption]**, not fetched from live releases, so it is a
+regression suite, not proof about any project's current files. Known misses it records:
+archives that name no system (`obsidian-1.6.7.tar.gz`, `MoonlightPortable-x64.zip`) are
+hidden rather than guessed. Running the classifier over a crawl of real releases and
+reviewing the misses remains the most valuable next step.
+
+A property test over every corpus name, every preset and 20,000 generated names checks
+that nothing is ever offered for another operating system or CPU, and that every hidden
+file has a reason. **[verified]**
 
 ## 5. Sources
 
@@ -136,7 +181,10 @@ Forgejo, F-Droid, Flathub or winget means one new file.
 ### GitHub
 
 REST endpoints: `/search/repositories`, `/repos/{owner}/{repo}`,
-`/repos/{owner}/{repo}/releases`. Not yet run against the live API (see README).
+`/repos/{owner}/{repo}/releases`. Not yet run against the live API. The client is tested
+over real HTTP against a local server answering in the documented shapes
+(`crates/core/tests/http_sources.rs`); the fixtures were written from the API
+documentation **[assumption]**, not captured from GitHub.
 
 **Rate limits shape the whole design.** An unauthenticated client gets 60 requests per
 hour per IP address, and search has a separate, stricter limit. Conditional requests
@@ -147,15 +195,19 @@ hour per IP address, and search has a separate, stricter limit. Conditional requ
 "Only show what works here" needs each candidate's release assets, which is one request
 per repository. Consequences:
 
-- **Discover costs zero requests.** It is driven by a curated index (below).
+- **Discover costs zero requests.** It is driven by the bundled index (below).
+- **The allowance is visible.** GitHub reports what is left with every response; Settings
+  shows it ("42 of 60 GitHub requests left; refills in 23 minutes"), and a rate-limit
+  error says how to raise the limit. **[verified]** by test.
 - **Search checks a bounded number of hits** (8 without a token, 20 with), in parallel,
   and reports how many matched but had nothing for this device.
 - **Responses are cached on disk** for 30 minutes, and a stale copy is served when
   offline or rate limited. **[verified]** by test.
-- **A personal token** lifts the limit to 5,000 per hour **[sourced]** (same page). Today
-  it is read from `GITHUB_TOKEN`; a sign-in flow (OAuth device flow suits TVs, which have
-  no keyboard) belongs on the roadmap. The token is only ever attached to
-  `api.github.com` requests. **[verified]** by reading `http.rs`; not covered by a test.
+- **A personal token** lifts the limit to 5,000 per hour **[sourced]** (same page). It can
+  be pasted into Settings (stored in the local state file) or given as `GITHUB_TOKEN`.
+  The OAuth device flow would suit TVs, which have no keyboard, but needs a registered
+  OAuth app; not done. The token is only ever attached to API-host requests.
+  **[verified]** by test.
 - Next step: with a token, one GraphQL query can fetch the releases of many repositories
   at once. **[assumption]**, not implemented.
 
@@ -183,10 +235,15 @@ that check is left to `makepkg`.
 
 `crates/core/data/index.json` lists featured apps with the platforms they ship for and,
 optionally, the file names of their latest release. With file names, Discover is
-filtered by the same engine as installs, offline. The bundled index was written by hand
+filtered by the same engine as installs, offline, and can say what would be installed
+("Debian package · x86_64") before any request. The bundled index was written by hand
 from memory **[assumption]**: its platform lists are unverified and it has no file
-names. The intended design is a scheduled CI job that regenerates it from the APIs (with
-a token) and publishes it as a static file, so clients need no API quota to browse.
+names.
+
+In keeping with the client-side rule, the index ships inside the binary. A build-time
+script that regenerates it from the APIs (and records file names) is the intended way to
+keep it fresh; a hosted, separately updated catalog is deliberately not part of the
+design.
 
 ## 6. Installing (`install.rs`)
 
@@ -204,8 +261,27 @@ it. The store never runs anything as root itself.
 | APK | download, verify, then Android's `PackageInstaller` via JNI | download and verify work; **the hand-off is not implemented**, the UI says so |
 | ipa | download, hand to a sideloading app | not implemented beyond download |
 
-Not designed yet: tracking what is installed, updates, uninstall, desktop menu entries
-for AppImages, unpacking archives onto `PATH`.
+Downloads can be cancelled; a cancelled or failed download leaves no file behind.
+**[verified]** by test, over real HTTP.
+
+### Library and updates
+
+Every install except an AUR build is recorded in the library with its version and what
+was installed. "Check for updates" (also run quietly at start-up) asks each source for
+the newest release that has a file for this machine and compares versions
+(`version.rs`: numeric components, pre-releases sort below their release, never offers a
+downgrade). One request per app, cached for 30 minutes. **[verified]** by tests at the
+core, CLI and UI level.
+
+What the library is not: the store does not ask the system what is installed. It knows
+what it installed. A package handed to the system installer is recorded even if the user
+cancels that installer, and removing an app from the library only deletes the file for
+AppImages the store placed itself; for everything else it says to use the system's
+software manager. Reading the system's package database, and Android's package list,
+would close that gap.
+
+Not designed yet: desktop menu entries for AppImages, unpacking archives onto `PATH`,
+installing an older version on request.
 
 ## 7. The three interfaces
 
@@ -215,15 +291,28 @@ phone, a split-screen tablet and a narrow desktop window all get the mobile layo
 **[verified]**: see `docs/screenshots/`, produced by the real binary under a headless
 X server with scripted key presses and clicks (`--screenshot`, `--script`).
 
-- **Desktop**: sidebar, always-visible search, card grid that reflows with the window,
-  details with every compatible file and a "show the N files that won't work" disclosure.
-- **Mobile**: one column, bottom navigation, full-screen details. Respects safe-area
-  insets (status bar, gesture bar), which Slint exposes on the window **[verified]** in
-  Slint's element definitions; **not run on a phone**.
+- **Desktop**: sidebar (Discover, Search, Library, Settings), always-visible search, a
+  spotlight and category chips, a card grid that reflows with the window, details with
+  every compatible file and a "show the N files that won't work" disclosure. Fully usable
+  from the keyboard: Ctrl+K or `/` to search, Escape or Alt+Left to go back, Tab through
+  every control with a visible focus ring, Enter or Space to activate. Browse pages keep
+  their scroll position while an app page is open.
+- **Mobile**: one column, four-tab bottom navigation, full-screen details. Android's Back
+  button leaves the app page. Respects safe-area insets (status bar, gesture bar), which
+  Slint exposes on the window **[verified]** in Slint's element definitions; **not run
+  on a phone**.
 - **TV**: no pointer. Exactly one focused element, drawn with a thick white outline; rows
   scroll to keep it in view; a hero area describes the focused app in large type; every
-  size is a fraction of the screen height so 1080p and 4K look the same. Up from the top
-  row focuses search; OK opens; Back returns.
+  size is a fraction of the screen height so 1080p and 4K look the same. The library is
+  the first row, with updates marked. Up from the top row focuses search; OK opens,
+  installs, cancels a download or retries a failed lookup; Back returns. There is no
+  Settings page on TV yet (a token cannot sensibly be typed with a remote).
+
+Shared by all three: light and dark themes (following the system by default; the TV
+interface is always dark), a first-run notice that says what the store is and that
+nothing is reviewed, toasts for feedback, empty and error states with a way forward, and
+accessible roles, labels and default actions on every control, which is also how the
+tests find and operate them.
 
 Slint's Android backend maps D-pad up/down/left/right to arrow keys, D-pad centre to
 Return, and Back to a Back key **[verified]** by reading
@@ -231,7 +320,28 @@ Return, and Back to a Back key **[verified]** by reading
 handles exactly those keys, so the same code serves a remote and a keyboard. It has not
 been run on a television.
 
-## 8. Platform support
+## 8. Testing
+
+111 tests, none needing the internet or a display. **[verified]**: all pass on Linux.
+
+| Suite | Count | What it exercises |
+|---|---|---|
+| `ustore-core` unit tests | 57 | detection, classification, compatibility, versions, state file, install plans and execution, index, catalog |
+| `tests/corpus.rs` | 4 | 169 real-world-style names; cross-OS/CPU safety property; 20,000 generated names |
+| `tests/http_sources.rs` | 15 | the real HTTP client and both sources against a local server: headers, token scoping, rate limits, allowance, progress, cancel, cache, documented JSON shapes, garbage responses |
+| `ustore` CLI tests | 7 | the binary end to end, including install, library and updates |
+| `untitledstore` UI tests | 24 | the real window on Slint's headless backend: clicks by accessible label, key presses, all three interfaces |
+| app unit tests | 4 | option parsing and formatting |
+
+The UI tests found real bugs while being written: Escape did nothing until a control had
+been focused, Android's Back was not handled on mobile, focus was lost when an app page
+opened from the keyboard, and the spotlight banner only reacted on its button.
+
+Gaps: no test talks to the live services; nothing runs on Windows, macOS, Android or
+iOS yet (a CI workflow that would is in `.github/workflows/ci.yml`, itself untested);
+there are no visual regression tests, only the screenshots in `docs/screenshots/`.
+
+## 9. Platform support
 
 | Platform | Where it stands | What is missing |
 |---|---|---|
@@ -268,7 +378,7 @@ A cheaper way to serve iPhone owners is the desktop app offering "send to my pho
 
 tvOS is not addressed; whether Slint runs there was not checked.
 
-## 9. UI toolkit
+## 10. UI toolkit
 
 Chosen: **Slint 1.19**.
 
@@ -294,7 +404,7 @@ for the store would mean either the royalty-free terms (and settling the TV ques
 with Slint) or a different toolkit; `crates/core` has no Slint dependency and could be
 licensed separately.
 
-## 10. Safety
+## 11. Safety
 
 - Files are verified against the publisher's SHA-256 when GitHub provides one, before
   they are opened. This proves the download matches the release, not that the release is
@@ -307,13 +417,15 @@ licensed separately.
   names are validated before being placed in a URL **[verified]** by test.
 - No elevation: privileged installs go through the system's own installer.
 
-## 11. Next steps, in order of value
+## 12. Next steps, in order of value
 
 1. Run against the live GitHub and AUR APIs and fix whatever the real responses break.
 2. Run the classifier over a large sample of real release file names; fix the misses.
-3. Windows and macOS builds in CI.
+3. Windows and macOS builds in CI (the workflow exists; it has never run).
 4. Android: NDK build, APK, `PackageInstaller` hand-off; then Android TV launcher entry.
-5. Generated index published as a static file.
-6. Installed-app tracking and updates.
-7. GitHub sign-in (device flow), light theme, app icons and screenshots from repositories.
+5. Regenerate the bundled index at build time, with file names.
+6. Ask the system what is installed (dpkg/rpm/pacman databases, Android's package list)
+   instead of relying on the store's own record.
+7. App icons and screenshots from repositories; Markdown release notes.
 8. More sources: Codeberg / Forgejo, GitLab, F-Droid, Flathub.
+9. Translations; a Settings page for TV.

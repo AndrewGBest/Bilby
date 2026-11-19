@@ -8,25 +8,50 @@ on Fedora, the pacman package on Arch, the arm64 installer on a Windows-on-Arm l
 the right-ABI APK on a phone, the TV build on a TV. Everything else is hidden, and the
 store will tell you why if you ask.
 
+It is entirely client-side: no account, no server of ours, no telemetry. The app talks
+to GitHub and the AUR directly and keeps your library and settings in one file on your
+device.
+
 | Desktop | Mobile | TV |
 |---|---|---|
-| ![Desktop](docs/screenshots/desktop-details.png) | ![Mobile](docs/screenshots/mobile-details.png) | ![TV](docs/screenshots/tv-home.png) |
+| ![Desktop](docs/screenshots/desktop-discover.png) | ![Mobile](docs/screenshots/mobile-details.png) | ![TV](docs/screenshots/tv-home.png) |
 
-(Screenshots show the built-in demo catalog; the apps in it are fictional.)
+More in [`docs/screenshots/`](docs/screenshots): [app page](docs/screenshots/desktop-details.png),
+[update](docs/screenshots/desktop-update.png), [library](docs/screenshots/desktop-library.png),
+[settings](docs/screenshots/desktop-settings.png), [light theme](docs/screenshots/desktop-light.png),
+[first run](docs/screenshots/desktop-welcome.png), [AUR results on Arch](docs/screenshots/desktop-search-arch.png),
+[Windows on Arm](docs/screenshots/desktop-windows-arm.png), [TV app page](docs/screenshots/tv-details.png).
+Screenshots show the built-in demo catalog; the apps in it are fictional.
+
+## What it does
+
+- **Filters by device**: OS, CPU (including what can be emulated), Linux package format,
+  libc, and phone vs TV. Hidden files are listed with the reason on request.
+- **Discover, search, or paste a link**: a GitHub URL or `owner/repo` in the search box
+  opens that project directly.
+- **Installs**: downloads, verifies the SHA-256 GitHub publishes, then places AppImages
+  itself or hands packages to the system installer. Shows the steps first; downloads can
+  be cancelled. AUR packages get the exact command to run, not a silent build.
+- **Library and updates**: remembers what you installed and checks the sources for
+  newer releases that fit your device.
+- **Three interfaces** in one app: desktop (mouse and full keyboard use), mobile (touch),
+  TV (remote only). Light and dark themes.
+- **Honest about limits**: shows GitHub's remaining request allowance, takes an optional
+  token to raise it, and says plainly that nothing in the catalog is reviewed.
 
 ## Status
 
-Early, but real: this is a working vertical slice, not a mock-up.
+A working vertical slice, tested on Linux only.
 
 | | State |
 |---|---|
-| Compatibility engine, GitHub + AUR sources, install planning | Implemented, 43 unit tests |
-| Desktop, mobile and TV interfaces | Implemented in one Slint app, exercised headlessly on Linux |
+| Engine, sources, library, updates, install planning | Implemented; 111 automated tests |
+| Desktop, mobile and TV interfaces | Implemented; 24 of those tests drive the real window headlessly |
 | Linux | Builds and runs |
-| Windows, macOS | Core type-checks for these targets; the app has **not** been built or run there yet |
-| Android (phone, tablet, TV) | Core type-checks; entry point written; **no APK packaging yet**, and handing APKs to the system installer is not implemented |
-| iOS | Detection and `.ipa` handling exist in the core; see the caveats in [docs/DESIGN.md](docs/DESIGN.md#ios) |
-| Live GitHub / AUR requests | Written against the documented APIs, but **not yet run against the real services** (the environment this was built in blocks them) |
+| Windows, macOS | Core type-checks for these targets; the app has **not** been built or run there |
+| Android (phone, tablet, TV) | Core type-checks; entry point written; **no APK packaging**, and handing APKs to the system installer is not implemented (the UI says so) |
+| iOS | Can only ever be a catalog: see [the design notes](docs/DESIGN.md#ios) |
+| Live GitHub / AUR requests | Tested over real HTTP against a local server speaking the documented API shapes; **never run against the real services** (blocked where this was built) |
 
 ## Try it
 
@@ -43,32 +68,54 @@ cargo run -p untitledstore -- --demo --as android-arm64 --ui mobile --size 412x8
 cargo run -p ustore-cli -- device
 cargo run -p ustore-cli -- --demo --as linux-x64-arch search lumen
 cargo run -p ustore-cli -- --demo --as macos-arm64 show github:kestrel-sh/kestrel
+cargo run -p ustore-cli -- --demo install github:tidewave/tidewave
+cargo run -p ustore-cli -- --demo updates
 cargo run -p ustore-cli -- classify ripgrep-14.1.0-x86_64-unknown-linux-musl.tar.gz
 
-# Against the real GitHub and AUR (drop --demo). A token raises GitHub's limit
-# from 60 to 5,000 requests per hour.
-GITHUB_TOKEN=... cargo run -p ustore-cli -- search ripgrep
+# Against the real GitHub and AUR: drop --demo.
+cargo run -p ustore-cli -- search ripgrep
 ```
 
-Narrow the desktop window below 700 px and it becomes the mobile interface. TV mode is
-driven with the arrow keys, Enter and Escape, which is what a remote's D-pad, OK and
-Back buttons send.
+Keyboard on desktop: `Ctrl+K` or `/` search, `Esc` or `Alt+Left` back, `Tab` and
+`Enter` for everything else. Narrow the window below 700 px and it becomes the mobile
+interface. TV mode uses the arrow keys, Enter and Escape, which is what a remote's
+D-pad, OK and Back buttons send.
 
-Linux build requirements: a C toolchain, `fontconfig`, and at runtime `libxkbcommon`
+Linux build requirements: a C toolchain and `fontconfig`; at runtime `libxkbcommon`
 (plus `libxkbcommon-x11` on X11).
+
+## Tests
+
+```sh
+cargo test --workspace
+```
+
+No internet or display needed. The network tests start their own server on localhost;
+the UI tests use Slint's headless backend. See [Testing](docs/DESIGN.md#8-testing).
 
 ## Layout
 
 ```
 crates/core   ustore-core    platform detection, asset classification, compatibility,
-                             sources (GitHub, AUR), curated index, install planning
+                             sources (GitHub, AUR), index, install, library state
 crates/cli    ustore         command-line front end
 crates/app    untitledstore  Slint app: ui/desktop.slint, ui/mobile.slint, ui/tv.slint
 docs/DESIGN.md               the design, its trade-offs, and what is still open
 ```
 
+## Where things are stored
+
+| | Linux | Windows | macOS |
+|---|---|---|---|
+| Settings and library | `~/.config/untitledstore/state.json` | `%APPDATA%\untitledstore` | `~/Library/Application Support/untitledstore` |
+| Downloads | `~/Downloads/untitledstore` | same | same |
+| AppImages | `~/Applications` | | |
+| Cache | `~/.cache/untitledstore` | `%LOCALAPPDATA%\untitledstore` | `~/Library/Caches/untitledstore` |
+
+Only the Linux column has been exercised.
+
 ## License
 
 `GPL-3.0-only` is declared in `Cargo.toml` as a starting point because the UI toolkit,
 Slint, is available under GPLv3 (among other options). See
-[the licensing note](docs/DESIGN.md#ui-toolkit) before changing it.
+[the licensing note](docs/DESIGN.md#10-ui-toolkit) before changing it.

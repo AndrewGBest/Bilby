@@ -116,8 +116,15 @@ impl AssetInfo {
             label.push_str(" · ");
             label.push_str(&arch);
         }
+        // Two builds of the same archive differ only in this; say which is which.
+        if self.libc == Some(Libc::Musl) {
+            label.push_str(" · musl");
+        }
         if self.tv {
             label.push_str(" · TV");
+        }
+        if self.debug {
+            label.push_str(" · debug");
         }
         label
     }
