@@ -429,7 +429,14 @@ export component OptionCard inherits Rectangle {
                 HorizontalLayout {
                     spacing: 8px;
                     alignment: start;
-                    Text { text: option.label; color: Theme.text; font-size: 15px; font-weight: 600; vertical-alignment: center; }
+                    Text {
+                        text: option.label;
+                        color: Theme.text;
+                        font-size: 15px;
+                        font-weight: 600;
+                        vertical-alignment: center;
+                        overflow: elide;
+                    }
                     if recommended && !compact : Chip { text: "Best for this device"; tone: Theme.accent; }
                     if !option.native && !compact : Chip { text: "Compatible"; tone: Theme.warn; }
                 }
@@ -463,17 +470,24 @@ export component OptionCard inherits Rectangle {
         }
         if option.note != "" : Text { text: option.note; color: Theme.warn; font-size: 12px; wrap: word-wrap; }
         if option.command != "" : CommandBox { command: option.command; }
-        HorizontalLayout {
-            spacing: 14px;
+        if option.verified : HorizontalLayout {
+            spacing: 5px;
             alignment: start;
-            if option.verified : HorizontalLayout {
-                spacing: 5px;
-                VerticalLayout {
-                    alignment: center;
-                    Image { source: @image-url("icons/shield.svg"); colorize: Theme.ok; width: 13px; height: 13px; }
-                }
-                Text { text: "Checksum is checked after download"; color: Theme.ok; font-size: 11px; font-weight: 600; vertical-alignment: center; }
+            VerticalLayout {
+                alignment: center;
+                Image { source: @image-url("icons/shield.svg"); colorize: Theme.ok; width: 13px; height: 13px; }
             }
+            Text {
+                text: "Checksum is checked after download";
+                color: Theme.ok;
+                font-size: 11px;
+                font-weight: 600;
+                vertical-alignment: center;
+                overflow: elide;
+            }
+        }
+        HorizontalLayout {
+            alignment: start;
             Rectangle {
                 height: 18px;
                 width: steps-label.preferred-width;
@@ -867,10 +881,17 @@ export component LibraryBody inherits Rectangle {
                         color: Theme.text;
                         font-size: compact ? 16px : 20px;
                         font-weight: 700;
+                        overflow: elide;
                     }
-                    if Store.last-checked != "" : Text { text: "Last checked " + Store.last-checked; color: Theme.text-dim; font-size: 12px; }
+                    if Store.last-checked != "" : Text {
+                        text: "Last checked " + Store.last-checked;
+                        color: Theme.text-dim;
+                        font-size: 12px;
+                        overflow: elide;
+                    }
                 }
-                VerticalLayout {
+                // On a phone the button gets its own row below.
+                if !compact : VerticalLayout {
                     alignment: center;
                     Button {
                         text: "Check for updates";
@@ -879,6 +900,12 @@ export component LibraryBody inherits Rectangle {
                         clicked => { Store.check-updates(); }
                     }
                 }
+            }
+            if compact : Button {
+                text: "Check for updates";
+                primary: false;
+                enabled: !Store.checking-updates;
+                clicked => { Store.check-updates(); }
             }
             if Store.checking-updates : Busy { }
             for item in Store.library : LibraryItem { entry: item; compact: root.compact; }

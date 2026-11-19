@@ -34,7 +34,9 @@ impl fmt::Display for Error {
         match self {
             Error::Network(m) => write!(f, "{m}"),
             Error::Status { code, url } => write!(f, "HTTP {code} from {url}"),
-            Error::RateLimited { source, hint } => write!(f, "{source} rate limit reached. {hint}"),
+            Error::RateLimited { source, hint } => {
+                write!(f, "{source}'s request limit for this device is used up for now. {hint}")
+            }
             Error::NotFound(what) => write!(f, "not found: {what}"),
             Error::Parse(m) => write!(f, "unexpected response: {m}"),
             Error::Io(e) => write!(f, "I/O error: {e}"),

@@ -421,7 +421,10 @@ fn a_rate_limited_search_is_reported_not_swallowed() {
     let outcome = catalog.search("anything");
     assert!(outcome.apps.is_empty());
     assert_eq!(outcome.errors.len(), 1);
-    assert!(outcome.errors[0].contains("rate limit"), "{}", outcome.errors[0]);
+    assert_eq!(
+        outcome.errors[0],
+        "GitHub's request limit for this device is used up for now. Add a GitHub token in settings to raise the limit, or try again later."
+    );
 }
 
 // ---- AUR --------------------------------------------------------------------------

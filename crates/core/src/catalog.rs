@@ -35,6 +35,15 @@ pub struct Catalog {
     pub include_prereleases: bool,
 }
 
+/// One line for the search page: which source failed and why, without stuttering
+/// ("GitHub: GitHub's request limit ...").
+fn describe_source_error(source: SourceKind, error: &Error) -> String {
+    match error {
+        Error::RateLimited { .. } => error.to_string(),
+        other => format!("{} search failed: {other}", source.label()),
+    }
+}
+
 /// Result of checking one library entry for a newer release.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UpdateStatus {
@@ -260,7 +269,7 @@ impl Catalog {
             let hits = match source.search(query, self.check_limit) {
                 Ok(hits) => hits,
                 Err(e) => {
-                    outcome.errors.push(format!("{}: {e}", source.kind().label()));
+                    outcome.errors.push(describe_source_error(source.kind(), &e));
                     continue;
                 }
             };
@@ -285,7 +294,7 @@ impl Catalog {
                 }
             }
             if let Some(e) = first_error {
-                outcome.errors.push(format!("{}: {e}", source.kind().label()));
+                outcome.errors.push(describe_source_error(source.kind(), &e));
             }
             per_source.push(kept);
         }

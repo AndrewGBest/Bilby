@@ -5,7 +5,7 @@
 //! elements found by their accessible label, or sending key presses. Catalog work runs
 //! inline (`Options::inline`), so every assertion sees the finished result.
 
-use i_slint_backend_testing::ElementHandle;
+use i_slint_backend_testing::{ElementHandle, ElementRoot};
 use slint::platform::{Key, PointerEventButton, WindowEvent};
 use slint::{ComponentHandle, Model, SharedString};
 use std::path::PathBuf;
@@ -606,6 +606,45 @@ fn mobile_has_bottom_navigation_and_back() {
     assert_eq!(s.store().get_page(), 3);
     s.click("Discover");
     assert_eq!(s.store().get_page(), 0);
+}
+
+/// Every control on screen ends inside the window: nothing is pushed off the right edge.
+fn assert_fits(s: &Session, what: &str) {
+    let width = s.ui.window().size().to_logical(s.ui.window().scale_factor()).width;
+    let root = s.ui.root_element();
+    for role in [slint::private_unstable_api::re_exports::AccessibleRole::Button] {
+        for element in root.query_descendants().match_accessible_role(role).find_all() {
+            let right = element.absolute_position().x + element.size().width;
+            let label = element.accessible_label().unwrap_or_default();
+            assert!(right <= width + 0.5, "{what}: \"{label}\" ends at {right}, the window is {width} wide");
+        }
+    }
+}
+
+#[test]
+fn everything_fits_on_the_narrowest_phone() {
+    let seed = r#"{"settings":{"welcomed":true},"recent_searches":["editor","backup"],"library":[
+        {"id":"github:tidewave/tidewave","name":"Tidewave","version":"v3.3.0","label":"APK · arm64","installed_at":1794000000},
+        {"id":"github:relay-app/relay","name":"Relay","version":"v1.16.0","label":"APK · arm64","installed_at":1790000000}]}"#;
+    let s = start_with("android-arm64", Shell::Mobile, Some(seed));
+    s.ui.window().set_size(slint::LogicalSize::new(320.0, 640.0));
+    s.app.check_updates(&s.ui, true);
+    assert_fits(&s, "discover");
+    for (page, name) in [(1, "search"), (2, "library"), (3, "settings")] {
+        s.store().set_page(page);
+        assert_fits(&s, name);
+    }
+    s.app.search(&s.ui, "play");
+    assert_fits(&s, "search results");
+    s.app.open(&s.ui, "github:tidewave/tidewave");
+    assert_fits(&s, "app page");
+    s.app.open(&s.ui, "github:nobody/nothing");
+    assert_fits(&s, "app page with an error");
+
+    // And the first-run welcome.
+    let fresh = start_with("android-arm64", Shell::Mobile, None);
+    fresh.ui.window().set_size(slint::LogicalSize::new(320.0, 640.0));
+    assert_fits(&fresh, "welcome");
 }
 
 #[test]
