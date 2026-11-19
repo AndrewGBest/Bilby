@@ -724,7 +724,13 @@ mod tests {
         let Backend::Pacman { local_dir, .. } = &repos.backend else { unreachable!() };
         // Names with dashes, and an epoch in the version.
         std::fs::create_dir_all(local_dir.join("xdg-desktop-portal-gtk-1.15.0-2")).unwrap();
-        std::fs::create_dir_all(local_dir.join("something-else-1:2.0-1")).unwrap();
+        // An epoch puts a colon in the directory name, which Windows cannot create
+        // (and where pacman does not exist anyway).
+        #[cfg(not(windows))]
+        {
+            std::fs::create_dir_all(local_dir.join("something-else-1:2.0-1")).unwrap();
+            assert_eq!(repos.backend.installed().get("something-else").map(String::as_str), Some("1:2.0-1"));
+        }
         std::fs::write(local_dir.join("ALPM_DB_VERSION"), "9").unwrap();
         assert_eq!(repos.summary("xdg-desktop-portal-gtk").unwrap().installed_version.as_deref(), Some("1.15.0-2"));
         assert_eq!(repos.summary("ripgrep").unwrap().installed_version, None);
