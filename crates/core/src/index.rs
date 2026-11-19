@@ -60,20 +60,10 @@ impl Index {
 
     fn listed_on(entry: &IndexEntry, p: &Platform) -> bool {
         if !entry.files.is_empty() {
-            return entry
-                .files
-                .iter()
-                .filter_map(|f| classify(f))
-                .any(|info| evaluate(&info, p).usable());
+            return entry.files.iter().filter_map(|f| classify(f)).any(|info| evaluate(&info, p).usable());
         }
-        let is_arch = p
-            .linux
-            .as_ref()
-            .is_some_and(|l| l.family == LinuxFamily::Arch);
-        entry
-            .os
-            .iter()
-            .any(|os| os == p.os.key() || (os == "arch" && is_arch))
+        let is_arch = p.linux.as_ref().is_some_and(|l| l.family == LinuxFamily::Arch);
+        entry.os.iter().any(|os| os == p.os.key() || (os == "arch" && is_arch))
     }
 
     /// What would be installed here, when the entry's file list allows saying so offline.
@@ -92,14 +82,10 @@ impl Index {
     /// On a TV, apps made for TVs get their own row at the top.
     pub fn sections(&self, p: &Platform) -> Vec<Section> {
         let mut sections: Vec<Section> = Vec::new();
-        let mut push =
-            |title: &str, app: AppSummary| match sections.iter_mut().find(|s| s.title == title) {
-                Some(s) => s.apps.push(app),
-                None => sections.push(Section {
-                    title: title.to_string(),
-                    apps: vec![app],
-                }),
-            };
+        let mut push = |title: &str, app: AppSummary| match sections.iter_mut().find(|s| s.title == title) {
+            Some(s) => s.apps.push(app),
+            None => sections.push(Section { title: title.to_string(), apps: vec![app] }),
+        };
         let visible: Vec<(&IndexEntry, AppSummary)> = self
             .apps
             .iter()
@@ -174,29 +160,11 @@ mod tests {
                 .map(|s| (s.title, s.apps.into_iter().map(|a| a.name).collect()))
                 .collect()
         };
-        assert_eq!(
-            names("windows-x64"),
-            vec![(
-                "Tools".to_string(),
-                vec!["Win".to_string(), "Both".to_string()]
-            )]
-        );
-        assert_eq!(
-            names("linux-x64-debian"),
-            vec![("Tools".to_string(), vec!["Both".to_string()])]
-        );
-        assert_eq!(
-            names("linux-x64-arch"),
-            vec![(
-                "Tools".to_string(),
-                vec!["Both".to_string(), "thing".to_string()]
-            )]
-        );
+        assert_eq!(names("windows-x64"), vec![("Tools".to_string(), vec!["Win".to_string(), "Both".to_string()])]);
+        assert_eq!(names("linux-x64-debian"), vec![("Tools".to_string(), vec!["Both".to_string()])]);
+        assert_eq!(names("linux-x64-arch"), vec![("Tools".to_string(), vec!["Both".to_string(), "thing".to_string()])]);
         assert!(names("macos-arm64").is_empty());
         let tv = names("android-tv");
-        assert_eq!(
-            tv[0],
-            ("Made for TV".to_string(), vec!["Droid".to_string()])
-        );
+        assert_eq!(tv[0], ("Made for TV".to_string(), vec!["Droid".to_string()]));
     }
 }

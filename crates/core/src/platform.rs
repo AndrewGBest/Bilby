@@ -231,78 +231,35 @@ impl Platform {
                 aur_helper: (family == LinuxFamily::Arch).then(|| "paru".to_string()),
             })
         };
-        let p =
-            |os, arch, also_runs: &[Arch], linux: Option<LinuxInfo>, ff, os_name: &str| Platform {
-                os,
-                arch,
-                also_runs: also_runs.to_vec(),
-                os_name: linux
-                    .as_ref()
-                    .map(|l| l.distro.clone())
-                    .unwrap_or_else(|| os_name.to_string()),
-                linux,
-                form_factor: ff,
-            };
+        let p = |os, arch, also_runs: &[Arch], linux: Option<LinuxInfo>, ff, os_name: &str| Platform {
+            os,
+            arch,
+            also_runs: also_runs.to_vec(),
+            os_name: linux.as_ref().map(|l| l.distro.clone()).unwrap_or_else(|| os_name.to_string()),
+            linux,
+            form_factor: ff,
+        };
         use Arch::*;
         use FormFactor::*;
         Some(match name {
             "windows-x64" => p(Os::Windows, X86_64, &[X86], None, Desktop, "Windows 11"),
-            "windows-arm64" => p(
-                Os::Windows,
-                Aarch64,
-                &[X86_64, X86],
-                None,
-                Desktop,
-                "Windows 11 on Arm",
-            ),
-            "linux-x64-debian" => p(
-                Os::Linux,
-                X86_64,
-                &[],
-                linux("Ubuntu 24.04", LinuxFamily::Debian, Libc::Gnu),
-                Desktop,
-                "",
-            ),
-            "linux-x64-fedora" => p(
-                Os::Linux,
-                X86_64,
-                &[],
-                linux("Fedora Linux 42", LinuxFamily::Fedora, Libc::Gnu),
-                Desktop,
-                "",
-            ),
-            "linux-x64-arch" => p(
-                Os::Linux,
-                X86_64,
-                &[],
-                linux("Arch Linux", LinuxFamily::Arch, Libc::Gnu),
-                Desktop,
-                "",
-            ),
-            "linux-x64-alpine" => p(
-                Os::Linux,
-                X86_64,
-                &[],
-                linux("Alpine Linux", LinuxFamily::Alpine, Libc::Musl),
-                Desktop,
-                "",
-            ),
-            "linux-arm64-debian" => p(
-                Os::Linux,
-                Aarch64,
-                &[],
-                linux("Debian 13", LinuxFamily::Debian, Libc::Gnu),
-                Desktop,
-                "",
-            ),
-            "macos-arm64" => p(
-                Os::MacOs,
-                Aarch64,
-                &[X86_64],
-                None,
-                Desktop,
-                "macOS (Apple silicon)",
-            ),
+            "windows-arm64" => p(Os::Windows, Aarch64, &[X86_64, X86], None, Desktop, "Windows 11 on Arm"),
+            "linux-x64-debian" => {
+                p(Os::Linux, X86_64, &[], linux("Ubuntu 24.04", LinuxFamily::Debian, Libc::Gnu), Desktop, "")
+            }
+            "linux-x64-fedora" => {
+                p(Os::Linux, X86_64, &[], linux("Fedora Linux 42", LinuxFamily::Fedora, Libc::Gnu), Desktop, "")
+            }
+            "linux-x64-arch" => {
+                p(Os::Linux, X86_64, &[], linux("Arch Linux", LinuxFamily::Arch, Libc::Gnu), Desktop, "")
+            }
+            "linux-x64-alpine" => {
+                p(Os::Linux, X86_64, &[], linux("Alpine Linux", LinuxFamily::Alpine, Libc::Musl), Desktop, "")
+            }
+            "linux-arm64-debian" => {
+                p(Os::Linux, Aarch64, &[], linux("Debian 13", LinuxFamily::Debian, Libc::Gnu), Desktop, "")
+            }
+            "macos-arm64" => p(Os::MacOs, Aarch64, &[X86_64], None, Desktop, "macOS (Apple silicon)"),
             "macos-x64" => p(Os::MacOs, X86_64, &[], None, Desktop, "macOS (Intel)"),
             "android-arm64" => p(Os::Android, Aarch64, &[Arm32], None, Mobile, "Android"),
             "android-arm32" => p(Os::Android, Arm32, &[], None, Mobile, "Android"),
@@ -330,19 +287,10 @@ impl Platform {
         let also_runs = detect_also_runs(os, arch);
         let os_name = match (&linux, os) {
             (Some(l), _) => l.distro.clone(),
-            (None, Os::Android) if detect_form_factor(os) == FormFactor::Tv => {
-                "Android TV".to_string()
-            }
+            (None, Os::Android) if detect_form_factor(os) == FormFactor::Tv => "Android TV".to_string(),
             (None, _) => os.label().to_string(),
         };
-        Platform {
-            os,
-            arch,
-            also_runs,
-            linux,
-            form_factor: detect_form_factor(os),
-            os_name,
-        }
+        Platform { os, arch, also_runs, linux, form_factor: detect_form_factor(os), os_name }
     }
 }
 
@@ -367,9 +315,8 @@ fn detect_arch(os: Os) -> Arch {
             // PROCESSOR_ARCHITEW6432 is set for a 32-bit process on 64-bit Windows.
             // (An x64 process emulated on Arm sees AMD64 in both; the precise answer
             // needs IsWow64Process2, see docs/DESIGN.md.)
-            let native = std::env::var("PROCESSOR_ARCHITEW6432")
-                .or_else(|_| std::env::var("PROCESSOR_ARCHITECTURE"))
-                .ok();
+            let native =
+                std::env::var("PROCESSOR_ARCHITEW6432").or_else(|_| std::env::var("PROCESSOR_ARCHITECTURE")).ok();
             native.as_deref().and_then(arch_from_name).unwrap_or(built)
         }
         Os::Android => android::abis().first().copied().unwrap_or(built),
@@ -407,9 +354,7 @@ fn detect_form_factor(os: Os) -> FormFactor {
         Os::Ios => FormFactor::Mobile,
         _ => {
             // Steam Deck / HTPC sessions running gamescope are couch setups.
-            let desktop = std::env::var("XDG_CURRENT_DESKTOP")
-                .unwrap_or_default()
-                .to_lowercase();
+            let desktop = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default().to_lowercase();
             if desktop.contains("gamescope") {
                 FormFactor::Tv
             } else {
@@ -436,9 +381,7 @@ pub fn parse_os_release(text: &str) -> (String, LinuxFamily) {
             _ => {}
         }
     }
-    let ids: Vec<&str> = std::iter::once(id.as_str())
-        .chain(like.split_whitespace())
-        .collect();
+    let ids: Vec<&str> = std::iter::once(id.as_str()).chain(like.split_whitespace()).collect();
     let has = |names: &[&str]| ids.iter().any(|i| names.contains(i));
     let family = if has(&["arch", "archlinux"]) {
         LinuxFamily::Arch
@@ -454,11 +397,7 @@ pub fn parse_os_release(text: &str) -> (String, LinuxFamily) {
         LinuxFamily::Other
     };
     if pretty.is_empty() {
-        pretty = if id.is_empty() {
-            "Linux".to_string()
-        } else {
-            id
-        };
+        pretty = if id.is_empty() { "Linux".to_string() } else { id };
     }
     (pretty, family)
 }
@@ -476,23 +415,12 @@ fn detect_linux() -> LinuxInfo {
     let (distro, family) = parse_os_release(&text);
     // A musl system has musl's loader and no glibc one.
     let has_musl_loader = std::fs::read_dir("/lib")
-        .map(|d| {
-            d.flatten()
-                .any(|e| e.file_name().to_string_lossy().starts_with("ld-musl-"))
-        })
+        .map(|d| d.flatten().any(|e| e.file_name().to_string_lossy().starts_with("ld-musl-")))
         .unwrap_or(false);
-    let has_glibc_loader = [
-        "/lib64/ld-linux-x86-64.so.2",
-        "/lib/ld-linux-aarch64.so.1",
-        "/lib/ld-linux-armhf.so.3",
-    ]
-    .iter()
-    .any(|p| Path::new(p).exists());
-    let libc = if has_musl_loader && !has_glibc_loader {
-        Libc::Musl
-    } else {
-        Libc::Gnu
-    };
+    let has_glibc_loader = ["/lib64/ld-linux-x86-64.so.2", "/lib/ld-linux-aarch64.so.1", "/lib/ld-linux-armhf.so.3"]
+        .iter()
+        .any(|p| Path::new(p).exists());
+    let libc = if has_musl_loader && !has_glibc_loader { Libc::Musl } else { Libc::Gnu };
     let pacman = on_path("pacman");
     LinuxInfo {
         distro,
@@ -503,10 +431,7 @@ fn detect_linux() -> LinuxInfo {
         pacman,
         flatpak: on_path("flatpak"),
         snap: on_path("snap"),
-        aur_helper: ["paru", "yay", "pikaur", "aura"]
-            .iter()
-            .find(|h| on_path(h))
-            .map(|h| h.to_string()),
+        aur_helper: ["paru", "yay", "pikaur", "aura"].iter().find(|h| on_path(h)).map(|h| h.to_string()),
     }
 }
 
@@ -523,9 +448,7 @@ mod android {
         if len <= 0 {
             return None;
         }
-        CStr::from_bytes_until_nul(&buf)
-            .ok()
-            .map(|s| s.to_string_lossy().into_owned())
+        CStr::from_bytes_until_nul(&buf).ok().map(|s| s.to_string_lossy().into_owned())
     }
 
     #[cfg(not(target_os = "android"))]
@@ -549,27 +472,14 @@ mod tests {
 
     #[test]
     fn os_release_families() {
-        let (name, fam) = parse_os_release(
-            "NAME=\"Ubuntu\"\nID=ubuntu\nID_LIKE=debian\nPRETTY_NAME=\"Ubuntu 24.04.1 LTS\"\n",
-        );
+        let (name, fam) =
+            parse_os_release("NAME=\"Ubuntu\"\nID=ubuntu\nID_LIKE=debian\nPRETTY_NAME=\"Ubuntu 24.04.1 LTS\"\n");
         assert_eq!(name, "Ubuntu 24.04.1 LTS");
         assert_eq!(fam, LinuxFamily::Debian);
-        assert_eq!(
-            parse_os_release("ID=endeavouros\nID_LIKE=arch\n").1,
-            LinuxFamily::Arch
-        );
-        assert_eq!(
-            parse_os_release("ID=manjaro\nID_LIKE=arch\n").1,
-            LinuxFamily::Arch
-        );
-        assert_eq!(
-            parse_os_release("ID=\"opensuse-tumbleweed\"\nID_LIKE=\"opensuse suse\"\n").1,
-            LinuxFamily::Suse
-        );
-        assert_eq!(
-            parse_os_release("ID=rocky\nID_LIKE=\"rhel centos fedora\"\n").1,
-            LinuxFamily::Fedora
-        );
+        assert_eq!(parse_os_release("ID=endeavouros\nID_LIKE=arch\n").1, LinuxFamily::Arch);
+        assert_eq!(parse_os_release("ID=manjaro\nID_LIKE=arch\n").1, LinuxFamily::Arch);
+        assert_eq!(parse_os_release("ID=\"opensuse-tumbleweed\"\nID_LIKE=\"opensuse suse\"\n").1, LinuxFamily::Suse);
+        assert_eq!(parse_os_release("ID=rocky\nID_LIKE=\"rhel centos fedora\"\n").1, LinuxFamily::Fedora);
         assert_eq!(parse_os_release("ID=alpine\n").1, LinuxFamily::Alpine);
         assert_eq!(parse_os_release("ID=nixos\n").1, LinuxFamily::Other);
     }

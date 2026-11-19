@@ -268,10 +268,7 @@ fn detect_format(lower: &str) -> Option<Format> {
         (".zst", Format::Archive),
         (".bz2", Format::Archive),
     ];
-    BY_EXT
-        .iter()
-        .find(|(ext, _)| lower.ends_with(ext))
-        .map(|(_, f)| *f)
+    BY_EXT.iter().find(|(ext, _)| lower.ends_with(ext)).map(|(_, f)| *f)
 }
 
 fn any(norm: &str, needles: &[&str]) -> bool {
@@ -304,17 +301,7 @@ fn detect_os(norm: &str) -> TargetOs {
     ) {
         return TargetOs::Known(Os::Windows);
     }
-    if any(
-        norm,
-        &[
-            "_macos",
-            "_darwin",
-            "_osx",
-            "_mac_",
-            "_apple_",
-            "_macintosh_",
-        ],
-    ) {
+    if any(norm, &["_macos", "_darwin", "_osx", "_mac_", "_apple_", "_macintosh_"]) {
         return TargetOs::Known(Os::MacOs);
     }
     for (needle, name) in [
@@ -376,18 +363,7 @@ fn detect_arch(norm: &str) -> TargetArch {
     ) {
         return One(Arch::X86_64);
     }
-    if any(
-        norm,
-        &[
-            "_aarch64_",
-            "_arm64_",
-            "_armv8_",
-            "_armv8a_",
-            "_arm64ec_",
-            "_winarm64_",
-            "_aarch64v8a_",
-        ],
-    ) {
+    if any(norm, &["_aarch64_", "_arm64_", "_armv8_", "_armv8a_", "_arm64ec_", "_winarm64_", "_aarch64v8a_"]) {
         return One(Arch::Aarch64);
     }
     if any(norm, &["_universal_", "_universal2_", "_fat_"]) {
@@ -415,18 +391,7 @@ fn detect_arch(norm: &str) -> TargetArch {
     }
     if any(
         norm,
-        &[
-            "_i386_",
-            "_i486_",
-            "_i586_",
-            "_i686_",
-            "_x86_",
-            "_ia32_",
-            "_win32_",
-            "_32bit_",
-            "_32_bit_",
-            "_linux32_",
-        ],
+        &["_i386_", "_i486_", "_i586_", "_i686_", "_x86_", "_ia32_", "_win32_", "_32bit_", "_32_bit_", "_linux32_"],
     ) {
         return One(Arch::X86);
     }
@@ -477,9 +442,7 @@ pub fn classify(name: &str) -> Option<AssetInfo> {
     let named_os = detect_os(&norm);
     let os = match (format.implied_os(), named_os) {
         // `.apk` is also Alpine's package extension; trust an explicit Linux in the name.
-        (Some(Os::Android), TargetOs::Known(Os::Linux)) if !norm.contains("_android") => {
-            return None
-        }
+        (Some(Os::Android), TargetOs::Known(Os::Linux)) if !norm.contains("_android") => return None,
         (Some(os), _) => TargetOs::Known(os),
         (None, named) => named,
     };
@@ -490,33 +453,13 @@ pub fn classify(name: &str) -> Option<AssetInfo> {
     }
 
     let libc = match os {
-        TargetOs::Known(Os::Linux) if any(&norm, &["_musl_", "_musleabihf_", "_static_"]) => {
-            Some(Libc::Musl)
-        }
-        TargetOs::Known(Os::Linux) if any(&norm, &["_gnu_", "_glibc", "_gnueabihf_"]) => {
-            Some(Libc::Gnu)
-        }
+        TargetOs::Known(Os::Linux) if any(&norm, &["_musl_", "_musleabihf_", "_static_"]) => Some(Libc::Musl),
+        TargetOs::Known(Os::Linux) if any(&norm, &["_gnu_", "_glibc", "_gnueabihf_"]) => Some(Libc::Gnu),
         _ => None,
     };
-    let tv = any(
-        &norm,
-        &[
-            "_tv_",
-            "_androidtv_",
-            "_leanback_",
-            "_firetv_",
-            "_atv_",
-            "_googletv_",
-        ],
-    );
+    let tv = any(&norm, &["_tv_", "_androidtv_", "_leanback_", "_firetv_", "_atv_", "_googletv_"]);
 
-    Some(AssetInfo {
-        format,
-        os,
-        arch: detect_arch(&norm),
-        libc,
-        tv,
-    })
+    Some(AssetInfo { format, os, arch: detect_arch(&norm), libc, tv })
 }
 
 #[cfg(test)]
@@ -541,38 +484,14 @@ mod tests {
         assert_eq!(a.arch, TargetArch::One(Arch::X86_64));
         assert_eq!(a.libc, Some(Libc::Musl));
 
-        assert_eq!(
-            os("bat-v0.24.0-aarch64-apple-darwin.tar.gz"),
-            TargetOs::Known(Os::MacOs)
-        );
-        assert_eq!(
-            arch("bat-v0.24.0-aarch64-apple-darwin.tar.gz"),
-            TargetArch::One(Arch::Aarch64)
-        );
-        assert_eq!(
-            os("fd-v10.1.0-x86_64-pc-windows-gnu.zip"),
-            TargetOs::Known(Os::Windows)
-        );
-        assert_eq!(
-            os("fd-v10.1.0-i686-pc-windows-msvc.zip"),
-            TargetOs::Known(Os::Windows)
-        );
-        assert_eq!(
-            arch("fd-v10.1.0-i686-pc-windows-msvc.zip"),
-            TargetArch::One(Arch::X86)
-        );
-        assert_eq!(
-            arch("fd-v10.1.0-arm-unknown-linux-gnueabihf.tar.gz"),
-            TargetArch::One(Arch::Arm32)
-        );
-        assert_eq!(
-            os("tool-x86_64-linux-android.tar.gz"),
-            TargetOs::Known(Os::Android)
-        );
-        assert_eq!(
-            os("tool-x86_64-unknown-freebsd.tar.gz"),
-            TargetOs::Foreign("FreeBSD")
-        );
+        assert_eq!(os("bat-v0.24.0-aarch64-apple-darwin.tar.gz"), TargetOs::Known(Os::MacOs));
+        assert_eq!(arch("bat-v0.24.0-aarch64-apple-darwin.tar.gz"), TargetArch::One(Arch::Aarch64));
+        assert_eq!(os("fd-v10.1.0-x86_64-pc-windows-gnu.zip"), TargetOs::Known(Os::Windows));
+        assert_eq!(os("fd-v10.1.0-i686-pc-windows-msvc.zip"), TargetOs::Known(Os::Windows));
+        assert_eq!(arch("fd-v10.1.0-i686-pc-windows-msvc.zip"), TargetArch::One(Arch::X86));
+        assert_eq!(arch("fd-v10.1.0-arm-unknown-linux-gnueabihf.tar.gz"), TargetArch::One(Arch::Arm32));
+        assert_eq!(os("tool-x86_64-linux-android.tar.gz"), TargetOs::Known(Os::Android));
+        assert_eq!(os("tool-x86_64-unknown-freebsd.tar.gz"), TargetOs::Foreign("FreeBSD"));
     }
 
     #[test]
@@ -583,26 +502,11 @@ mod tests {
 
     #[test]
     fn go_style_names() {
-        assert_eq!(
-            os("lazygit_0.44.1_Linux_x86_64.tar.gz"),
-            TargetOs::Known(Os::Linux)
-        );
-        assert_eq!(
-            arch("lazygit_0.44.1_Linux_arm64.tar.gz"),
-            TargetArch::One(Arch::Aarch64)
-        );
-        assert_eq!(
-            arch("lazygit_0.44.1_Windows_32-bit.zip"),
-            TargetArch::One(Arch::X86)
-        );
-        assert_eq!(
-            arch("tool_1.0_linux_armv6.tar.gz"),
-            TargetArch::One(Arch::Arm32)
-        );
-        assert_eq!(
-            arch("tool_1.0_linux_ppc64le.tar.gz"),
-            TargetArch::Foreign("ppc64le")
-        );
+        assert_eq!(os("lazygit_0.44.1_Linux_x86_64.tar.gz"), TargetOs::Known(Os::Linux));
+        assert_eq!(arch("lazygit_0.44.1_Linux_arm64.tar.gz"), TargetArch::One(Arch::Aarch64));
+        assert_eq!(arch("lazygit_0.44.1_Windows_32-bit.zip"), TargetArch::One(Arch::X86));
+        assert_eq!(arch("tool_1.0_linux_armv6.tar.gz"), TargetArch::One(Arch::Arm32));
+        assert_eq!(arch("tool_1.0_linux_ppc64le.tar.gz"), TargetArch::Foreign("ppc64le"));
     }
 
     #[test]
@@ -610,14 +514,8 @@ mod tests {
         let a = c("app-arm64-v8a-release.apk");
         assert_eq!(a.os, TargetOs::Known(Os::Android));
         assert_eq!(a.arch, TargetArch::One(Arch::Aarch64));
-        assert_eq!(
-            arch("app-armeabi-v7a-release.apk"),
-            TargetArch::One(Arch::Arm32)
-        );
-        assert_eq!(
-            arch("app-x86_64-release.apk"),
-            TargetArch::One(Arch::X86_64)
-        );
+        assert_eq!(arch("app-armeabi-v7a-release.apk"), TargetArch::One(Arch::Arm32));
+        assert_eq!(arch("app-x86_64-release.apk"), TargetArch::One(Arch::X86_64));
         assert_eq!(arch("app-x86-release.apk"), TargetArch::One(Arch::X86));
         assert_eq!(arch("app-universal-release.apk"), TargetArch::Universal);
         assert_eq!(arch("NewApp_v1.2.apk"), TargetArch::Unknown);
@@ -638,23 +536,14 @@ mod tests {
         assert_eq!(arch("code_1.90.0_amd64.deb"), TargetArch::One(Arch::X86_64));
         assert_eq!(arch("fonts_1.0_all.deb"), TargetArch::Any);
         assert_eq!(arch("tool-1.0-1.noarch.rpm"), TargetArch::Any);
-        assert_eq!(
-            arch("tool-1.0-1.aarch64.rpm"),
-            TargetArch::One(Arch::Aarch64)
-        );
+        assert_eq!(arch("tool-1.0-1.aarch64.rpm"), TargetArch::One(Arch::Aarch64));
         assert_eq!(c("Thing-1.0-x86_64.AppImage").format, Format::AppImage);
         assert_eq!(os("Thing-1.0-x86_64.AppImage"), TargetOs::Known(Os::Linux));
-        assert_eq!(
-            c("thing-1.0-1-x86_64.pkg.tar.zst").format,
-            Format::PacmanPkg
-        );
+        assert_eq!(c("thing-1.0-1-x86_64.pkg.tar.zst").format, Format::PacmanPkg);
         assert_eq!(c("Thing-1.0-universal.dmg").arch, TargetArch::Universal);
         assert_eq!(c("Thing-1.0.pkg").format, Format::MacPkg);
         assert_eq!(c("Thing-Setup-1.0.exe").os, TargetOs::Known(Os::Windows));
-        assert_eq!(
-            c("Thing-1.0-arm64.msi").arch,
-            TargetArch::One(Arch::Aarch64)
-        );
+        assert_eq!(c("Thing-1.0-arm64.msi").arch, TargetArch::One(Arch::Aarch64));
         assert_eq!(c("Thing.msixbundle").format, Format::Msix);
         assert_eq!(c("Thing-1.0.ipa").os, TargetOs::Known(Os::Ios));
     }
@@ -663,10 +552,7 @@ mod tests {
     fn electron_names() {
         // "win32" here names the OS; the explicit x64 wins for the architecture.
         assert_eq!(arch("app-win32-x64-1.0.zip"), TargetArch::One(Arch::X86_64));
-        assert_eq!(
-            arch("app-win32-arm64-1.0.zip"),
-            TargetArch::One(Arch::Aarch64)
-        );
+        assert_eq!(arch("app-win32-arm64-1.0.zip"), TargetArch::One(Arch::Aarch64));
         assert_eq!(arch("app-darwin-universal-1.0.zip"), TargetArch::Universal);
     }
 

@@ -27,12 +27,12 @@ impl Aur {
     }
 
     fn info(&self, name: &str) -> Result<Package> {
+        if !crate::model::valid_key(SourceKind::Aur, name) {
+            return Err(Error::NotFound(format!("\"{name}\" is not an AUR package name")));
+        }
         let url = format!("{RPC}/info?arg[]={}", url_encode(name));
         let resp: RpcResponse = serde_json::from_str(&self.http.get(&url)?)?;
-        resp.into_results()?
-            .into_iter()
-            .next()
-            .ok_or_else(|| Error::NotFound(format!("AUR package {name}")))
+        resp.into_results()?.into_iter().next().ok_or_else(|| Error::NotFound(format!("AUR package {name}")))
     }
 }
 
@@ -48,10 +48,7 @@ struct RpcResponse {
 impl RpcResponse {
     fn into_results(self) -> Result<Vec<Package>> {
         if self.kind == "error" {
-            return Err(Error::Parse(
-                self.error
-                    .unwrap_or_else(|| "AUR returned an error".to_string()),
-            ));
+            return Err(Error::Parse(self.error.unwrap_or_else(|| "AUR returned an error".to_string())));
         }
         Ok(self.results)
     }
@@ -83,10 +80,7 @@ impl Package {
         AppSummary {
             id: AppId::new(SourceKind::Aur, self.name.clone()),
             name: self.name.clone(),
-            author: self
-                .maintainer
-                .clone()
-                .unwrap_or_else(|| "orphaned".to_string()),
+            author: self.maintainer.clone().unwrap_or_else(|| "orphaned".to_string()),
             summary: self.description.clone().unwrap_or_default(),
             popularity: Some(self.num_votes),
             homepage: format!("https://aur.archlinux.org/packages/{}", self.name),
@@ -94,9 +88,7 @@ impl Package {
             category: None,
             version: Some(self.version.clone()),
             install_label: None,
-            warning: self
-                .out_of_date
-                .map(|_| "Flagged out of date on the AUR".to_string()),
+            warning: self.out_of_date.map(|_| "Flagged out of date on the AUR".to_string()),
         }
     }
 }
@@ -124,11 +116,7 @@ impl Source for Aur {
     }
 
     fn available_on(&self, platform: &Platform) -> bool {
-        platform.os == Os::Linux
-            && platform
-                .linux
-                .as_ref()
-                .is_some_and(|l| l.family == LinuxFamily::Arch)
+        platform.os == Os::Linux && platform.linux.as_ref().is_some_and(|l| l.family == LinuxFamily::Arch)
     }
 
     fn search(&self, query: &str, limit: usize) -> Result<Vec<AppSummary>> {
@@ -151,10 +139,7 @@ impl Source for Aur {
     fn releases(&self, key: &str) -> Result<Vec<Release>> {
         let pkg = self.info(key)?;
         let base = pkg.package_base.clone().unwrap_or_else(|| pkg.name.clone());
-        let snapshot = pkg
-            .url_path
-            .clone()
-            .unwrap_or_else(|| format!("/cgit/aur.git/snapshot/{base}.tar.gz"));
+        let snapshot = pkg.url_path.clone().unwrap_or_else(|| format!("/cgit/aur.git/snapshot/{base}.tar.gz"));
         let mut notes = String::new();
         if let Some(upstream) = &pkg.url {
             notes.push_str(&format!("Upstream: {upstream}\n"));

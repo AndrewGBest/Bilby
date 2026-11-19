@@ -7,6 +7,8 @@
 //! * [`index`]    – the curated list behind the Discover page
 //! * [`catalog`]  – glue: browse / search / details, filtered to this machine
 //! * [`install`]  – what installing a given file means on this machine
+//! * [`state`]    – settings, library and history, stored locally
+//! * [`version`]  – is this release newer than the installed one?
 //! * [`demo`]     – fictional offline catalog for demos and tests
 
 pub mod asset;
@@ -20,6 +22,8 @@ pub mod install;
 pub mod model;
 pub mod platform;
 pub mod source;
+pub mod state;
+pub mod version;
 
 pub use catalog::Catalog;
 pub use error::{Error, Result};

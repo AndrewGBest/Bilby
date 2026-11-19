@@ -225,11 +225,7 @@ const APPS: &[DemoApp] = &[
         category: "Utilities",
         tv: false,
         os: &["android"],
-        releases: &[(
-            "v0.9.3",
-            "2026-10-19",
-            &["fern-launcher-0.9.3.apk", "fern-launcher-0.9.3.apk.asc"],
-        )],
+        releases: &[("v0.9.3", "2026-10-19", &["fern-launcher-0.9.3.apk", "fern-launcher-0.9.3.apk.asc"])],
     },
     DemoApp {
         owner: "marquee-tv",
@@ -290,10 +286,7 @@ const APPS: &[DemoApp] = &[
         releases: &[(
             "v4.0.2",
             "2026-07-11",
-            &[
-                "atlas-4.0.2-leanback-arm64-v8a.apk",
-                "atlas-4.0.2-leanback-armeabi-v7a.apk",
-            ],
+            &["atlas-4.0.2-leanback-arm64-v8a.apk", "atlas-4.0.2-leanback-armeabi-v7a.apk"],
         )],
     },
     DemoApp {
@@ -309,11 +302,7 @@ const APPS: &[DemoApp] = &[
         releases: &[(
             "v0.77",
             "2026-10-30",
-            &[
-                "Winspect-0.77-x64.msix",
-                "Winspect-0.77-arm64.msix",
-                "WinspectSetup-0.77-x64.exe",
-            ],
+            &["Winspect-0.77-x64.msix", "Winspect-0.77-arm64.msix", "WinspectSetup-0.77-x64.exe"],
         )],
     },
     DemoApp {
@@ -326,11 +315,7 @@ const APPS: &[DemoApp] = &[
         category: "Utilities",
         tv: false,
         os: &["macos"],
-        releases: &[(
-            "v2.11.4",
-            "2026-11-01",
-            &["Barley-2.11.4.dmg", "Barley.app.zip"],
-        )],
+        releases: &[("v2.11.4", "2026-11-01", &["Barley-2.11.4.dmg", "Barley.app.zip"])],
     },
 ];
 
@@ -385,14 +370,8 @@ const PAYLOAD: &[u8] = b"untitledstore demo payload\n";
 
 fn fake_size(name: &str) -> u64 {
     // Stable, plausible-looking sizes derived from the name.
-    let h = name
-        .bytes()
-        .fold(7u64, |acc, b| acc.wrapping_mul(31).wrapping_add(b as u64));
-    let base = if name.ends_with(".tar.gz") || name.ends_with(".zip") {
-        6
-    } else {
-        38
-    };
+    let h = name.bytes().fold(7u64, |acc, b| acc.wrapping_mul(31).wrapping_add(b as u64));
+    let base = if name.ends_with(".tar.gz") || name.ends_with(".zip") { 6 } else { 38 };
     (base + h % 60) * 1024 * 1024 + h % 900_000
 }
 
@@ -446,11 +425,7 @@ fn url_decode(s: &str) -> String {
     let mut out = Vec::with_capacity(bytes.len());
     let mut i = 0;
     while i < bytes.len() {
-        if bytes[i] == b'%'
-            && i + 2 < bytes.len()
-            && s.is_char_boundary(i + 1)
-            && s.is_char_boundary(i + 3)
-        {
+        if bytes[i] == b'%' && i + 2 < bytes.len() && s.is_char_boundary(i + 1) && s.is_char_boundary(i + 3) {
             if let Ok(v) = u8::from_str_radix(&s[i + 1..i + 3], 16) {
                 out.push(v);
                 i += 3;
@@ -465,9 +440,11 @@ fn url_decode(s: &str) -> String {
 
 fn matches(query: &str, haystacks: &[&str]) -> bool {
     let q = query.to_lowercase();
-    q.split_whitespace()
-        .all(|word| haystacks.iter().any(|h| h.to_lowercase().contains(word)))
+    q.split_whitespace().all(|word| haystacks.iter().any(|h| h.to_lowercase().contains(word)))
 }
+
+/// Delay per tenth of a demo download, so progress is visible. Tests set it to 0.
+pub static DOWNLOAD_STEP_MS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(60);
 
 pub struct DemoHttp;
 
@@ -477,21 +454,15 @@ impl Http for DemoHttp {
         if let Some(rest) = url.strip_prefix("https://api.github.com/search/repositories?q=") {
             let q = url_decode(rest.split('&').next().unwrap_or(""));
             let q = q.split(" in:").next().unwrap_or("").to_string();
-            let items: Vec<Value> = APPS
-                .iter()
-                .filter(|a| matches(&q, &[a.name, a.repo, a.summary]))
-                .map(repo_json)
-                .collect();
+            let items: Vec<Value> =
+                APPS.iter().filter(|a| matches(&q, &[a.name, a.repo, a.summary])).map(repo_json).collect();
             return Ok(json!({ "total_count": items.len(), "items": items }).to_string());
         }
         if let Some(rest) = url.strip_prefix("https://api.github.com/repos/") {
             let path = rest.split('?').next().unwrap_or("");
             let mut parts = path.split('/');
             let (owner, repo, tail) = (parts.next(), parts.next(), parts.next());
-            let app = APPS
-                .iter()
-                .find(|a| Some(a.owner) == owner && Some(a.repo) == repo)
-                .ok_or_else(not_found)?;
+            let app = APPS.iter().find(|a| Some(a.owner) == owner && Some(a.repo) == repo).ok_or_else(not_found)?;
             return match tail {
                 None => Ok(repo_json(app).to_string()),
                 Some("releases") => Ok(releases_json(app).to_string()),
@@ -500,38 +471,32 @@ impl Http for DemoHttp {
         }
         if let Some(rest) = url.strip_prefix("https://aur.archlinux.org/rpc/v5/search/") {
             let q = url_decode(rest.split('?').next().unwrap_or(""));
-            let results: Vec<Value> = AUR
-                .iter()
-                .filter(|p| matches(&q, &[p.name, p.summary]))
-                .map(aur_json)
-                .collect();
-            return Ok(json!({ "resultcount": results.len(), "results": results, "type": "search", "version": 5 }).to_string());
+            let results: Vec<Value> = AUR.iter().filter(|p| matches(&q, &[p.name, p.summary])).map(aur_json).collect();
+            return Ok(
+                json!({ "resultcount": results.len(), "results": results, "type": "search", "version": 5 }).to_string()
+            );
         }
         if let Some(name) = url.strip_prefix("https://aur.archlinux.org/rpc/v5/info?arg[]=") {
             let name = url_decode(name);
-            let results: Vec<Value> = AUR
-                .iter()
-                .filter(|p| p.name == name)
-                .map(aur_json)
-                .collect();
-            return Ok(json!({ "resultcount": results.len(), "results": results, "type": "multiinfo", "version": 5 }).to_string());
+            let results: Vec<Value> = AUR.iter().filter(|p| p.name == name).map(aur_json).collect();
+            return Ok(json!({ "resultcount": results.len(), "results": results, "type": "multiinfo", "version": 5 })
+                .to_string());
         }
         Err(not_found())
     }
 
-    fn download(
-        &self,
-        _url: &str,
-        dest: &Path,
-        progress: &mut dyn FnMut(u64, Option<u64>),
-    ) -> Result<String> {
+    fn download(&self, _url: &str, dest: &Path, progress: &mut dyn FnMut(u64, Option<u64>) -> bool) -> Result<String> {
         if let Some(parent) = dest.parent() {
             std::fs::create_dir_all(parent)?;
         }
         let total = PAYLOAD.len() as u64;
         for step in 1..=10u64 {
-            std::thread::sleep(std::time::Duration::from_millis(60));
-            progress(total * step / 10, Some(total));
+            std::thread::sleep(std::time::Duration::from_millis(
+                DOWNLOAD_STEP_MS.load(std::sync::atomic::Ordering::Relaxed),
+            ));
+            if !progress(total * step / 10, Some(total)) {
+                return Err(Error::Cancelled);
+            }
         }
         std::fs::write(dest, PAYLOAD)?;
         Ok(hex(&Sha256::digest(PAYLOAD)))
@@ -551,12 +516,7 @@ pub fn index() -> Index {
             os: a.os.iter().map(|s| s.to_string()).collect(),
             tv: a.tv,
             // Files of the recent releases, as an index generator would record them.
-            files: a
-                .releases
-                .iter()
-                .flat_map(|(_, _, files)| files.iter())
-                .map(|f| f.to_string())
-                .collect(),
+            files: a.releases.iter().flat_map(|(_, _, files)| files.iter()).map(|f| f.to_string()).collect(),
         })
         .collect();
     apps.extend(AUR.iter().map(|p| IndexEntry {

@@ -25,11 +25,7 @@ pub struct Verdict {
 
 impl Verdict {
     fn no(reason: impl Into<String>) -> Verdict {
-        Verdict {
-            level: Level::Incompatible,
-            note: Some(reason.into()),
-            score: 0,
-        }
+        Verdict { level: Level::Incompatible, note: Some(reason.into()), score: 0 }
     }
     pub fn usable(&self) -> bool {
         self.level != Level::Incompatible
@@ -58,14 +54,10 @@ pub fn evaluate(info: &AssetInfo, p: &Platform) -> Verdict {
             Format::Deb if !linux.dpkg => Some("Debian packages need a Debian/Ubuntu based system"),
             Format::Rpm if !linux.rpm => Some("RPM packages need a Fedora/openSUSE based system"),
             Format::PacmanPkg if !linux.pacman => Some("Pacman packages need an Arch based system"),
-            Format::AurBuild if linux.family != LinuxFamily::Arch => {
-                Some("The AUR is for Arch based systems")
-            }
+            Format::AurBuild if linux.family != LinuxFamily::Arch => Some("The AUR is for Arch based systems"),
             Format::Flatpak if !linux.flatpak => Some("Flatpak is not installed"),
             Format::Snap if !linux.snap => Some("snapd is not installed"),
-            Format::AppImage if linux.libc == Libc::Musl => {
-                Some("AppImages need glibc; this system uses musl")
-            }
+            Format::AppImage if linux.libc == Libc::Musl => Some("AppImages need glibc; this system uses musl"),
             _ => None,
         };
         if let Some(reason) = missing {
@@ -108,15 +100,10 @@ pub fn evaluate(info: &AssetInfo, p: &Platform) -> Verdict {
                 }
                 Some(a) if p.also_runs.contains(&a) => {
                     level = Level::Compatible;
-                    note = Some(format!(
-                        "Architecture not stated; assumed {a}. {}",
-                        emulation_note(a, p)
-                    ));
+                    note = Some(format!("Architecture not stated; assumed {a}. {}", emulation_note(a, p)));
                 }
                 Some(a) => {
-                    return Verdict::no(format!(
-                        "Architecture not stated; such files are normally {a}"
-                    ));
+                    return Verdict::no(format!("Architecture not stated; such files are normally {a}"));
                 }
             }
         }
@@ -125,9 +112,7 @@ pub fn evaluate(info: &AssetInfo, p: &Platform) -> Verdict {
     // 4. Platform caveats that do not block.
     if p.os == Os::Ios {
         level = Level::Compatible;
-        note = Some(
-            "iOS cannot install this directly: it is handed to a sideloading tool".to_string(),
-        );
+        note = Some("iOS cannot install this directly: it is handed to a sideloading tool".to_string());
     }
 
     // 5. Rank.
@@ -162,9 +147,7 @@ fn emulation_note(asset_arch: Arch, p: &Platform) -> String {
     match (p.os, p.arch, asset_arch) {
         (Os::Windows, Arch::Aarch64, _) => format!("Runs through Windows' {asset_arch} emulation"),
         (Os::Windows, Arch::X86_64, Arch::X86) => "32-bit program".to_string(),
-        (Os::MacOs, Arch::Aarch64, Arch::X86_64) => {
-            "Intel build; runs through Rosetta 2".to_string()
-        }
+        (Os::MacOs, Arch::Aarch64, Arch::X86_64) => "Intel build; runs through Rosetta 2".to_string(),
         (Os::Android, _, _) => format!("{asset_arch} build; supported as a secondary ABI"),
         (Os::Linux, _, Arch::X86) => "32-bit program; needs 32-bit libraries".to_string(),
         _ => format!("{asset_arch} build"),
@@ -198,11 +181,7 @@ fn format_preference(format: Format, p: &Platform) -> i32 {
             _ => 0,
         },
         Os::Linux => {
-            let family = p
-                .linux
-                .as_ref()
-                .map(|l| l.family)
-                .unwrap_or(LinuxFamily::Other);
+            let family = p.linux.as_ref().map(|l| l.family).unwrap_or(LinuxFamily::Other);
             let native = match family {
                 LinuxFamily::Debian => Some(Deb),
                 LinuxFamily::Fedora | LinuxFamily::Suse => Some(Rpm),
@@ -293,96 +272,39 @@ mod tests {
 
     #[test]
     fn wrong_os_is_incompatible() {
-        assert_eq!(
-            level("Thing-2.0-x64.msi", "linux-x64-debian"),
-            Level::Incompatible
-        );
-        assert_eq!(
-            level("Thing-2.0-universal.dmg", "windows-x64"),
-            Level::Incompatible
-        );
-        assert_eq!(
-            level("thing_2.0_amd64.deb", "android-arm64"),
-            Level::Incompatible
-        );
+        assert_eq!(level("Thing-2.0-x64.msi", "linux-x64-debian"), Level::Incompatible);
+        assert_eq!(level("Thing-2.0-universal.dmg", "windows-x64"), Level::Incompatible);
+        assert_eq!(level("thing_2.0_amd64.deb", "android-arm64"), Level::Incompatible);
         // A Linux binary is not an Android app even on the same CPU.
-        assert_eq!(
-            level("thing-2.0-linux-aarch64.tar.gz", "android-arm64"),
-            Level::Incompatible
-        );
-        assert_eq!(
-            level("thing-x86_64-unknown-freebsd.tar.gz", "linux-x64-debian"),
-            Level::Incompatible
-        );
+        assert_eq!(level("thing-2.0-linux-aarch64.tar.gz", "android-arm64"), Level::Incompatible);
+        assert_eq!(level("thing-x86_64-unknown-freebsd.tar.gz", "linux-x64-debian"), Level::Incompatible);
     }
 
     #[test]
     fn wrong_cpu_is_incompatible() {
-        assert_eq!(
-            level("thing_2.0_arm64.deb", "linux-x64-debian"),
-            Level::Incompatible
-        );
-        assert_eq!(
-            level("Thing-2.0-x86_64.apk", "android-arm64"),
-            Level::Incompatible
-        );
-        assert_eq!(
-            level("Thing-2.0-arm64-v8a.apk", "android-arm32"),
-            Level::Incompatible
-        );
-        assert_eq!(
-            level("thing-linux-ppc64le.tar.gz", "linux-x64-debian"),
-            Level::Incompatible
-        );
+        assert_eq!(level("thing_2.0_arm64.deb", "linux-x64-debian"), Level::Incompatible);
+        assert_eq!(level("Thing-2.0-x86_64.apk", "android-arm64"), Level::Incompatible);
+        assert_eq!(level("Thing-2.0-arm64-v8a.apk", "android-arm32"), Level::Incompatible);
+        assert_eq!(level("thing-linux-ppc64le.tar.gz", "linux-x64-debian"), Level::Incompatible);
     }
 
     #[test]
     fn linux_package_formats_follow_the_distro() {
-        assert_eq!(
-            level("thing_2.0_amd64.deb", "linux-x64-fedora"),
-            Level::Incompatible
-        );
-        assert_eq!(
-            level("thing-2.0-1.x86_64.rpm", "linux-x64-debian"),
-            Level::Incompatible
-        );
-        assert_eq!(
-            level("thing-2.0-1-x86_64.pkg.tar.zst", "linux-x64-debian"),
-            Level::Incompatible
-        );
-        assert_eq!(
-            level("Thing-2.0-x86_64.AppImage", "linux-x64-fedora"),
-            Level::Native
-        );
+        assert_eq!(level("thing_2.0_amd64.deb", "linux-x64-fedora"), Level::Incompatible);
+        assert_eq!(level("thing-2.0-1.x86_64.rpm", "linux-x64-debian"), Level::Incompatible);
+        assert_eq!(level("thing-2.0-1-x86_64.pkg.tar.zst", "linux-x64-debian"), Level::Incompatible);
+        assert_eq!(level("Thing-2.0-x86_64.AppImage", "linux-x64-fedora"), Level::Native);
     }
 
     #[test]
     fn musl_and_glibc() {
-        assert_eq!(
-            level("t-x86_64-unknown-linux-gnu.tar.gz", "linux-x64-alpine"),
-            Level::Incompatible
-        );
-        assert_eq!(
-            level("t-x86_64-unknown-linux-musl.tar.gz", "linux-x64-alpine"),
-            Level::Native
-        );
-        assert_eq!(
-            level("t-x86_64-unknown-linux-musl.tar.gz", "linux-x64-debian"),
-            Level::Native
-        );
-        assert_eq!(
-            level("Thing-2.0-x86_64.AppImage", "linux-x64-alpine"),
-            Level::Incompatible
-        );
+        assert_eq!(level("t-x86_64-unknown-linux-gnu.tar.gz", "linux-x64-alpine"), Level::Incompatible);
+        assert_eq!(level("t-x86_64-unknown-linux-musl.tar.gz", "linux-x64-alpine"), Level::Native);
+        assert_eq!(level("t-x86_64-unknown-linux-musl.tar.gz", "linux-x64-debian"), Level::Native);
+        assert_eq!(level("Thing-2.0-x86_64.AppImage", "linux-x64-alpine"), Level::Incompatible);
         // Both offered on glibc: the glibc build is preferred.
         assert_eq!(
-            best(
-                &[
-                    "t-x86_64-unknown-linux-musl.tar.gz",
-                    "t-x86_64-unknown-linux-gnu.tar.gz"
-                ],
-                "linux-x64-debian"
-            ),
+            best(&["t-x86_64-unknown-linux-musl.tar.gz", "t-x86_64-unknown-linux-gnu.tar.gz"], "linux-x64-debian"),
             Some("t-x86_64-unknown-linux-gnu.tar.gz")
         );
     }
@@ -395,25 +317,13 @@ mod tests {
         let v = verdict("thing-x86_64-apple-darwin.tar.gz", "macos-arm64");
         assert_eq!(v.level, Level::Compatible);
         assert!(v.note.unwrap().contains("Rosetta"));
+        assert_eq!(level("thing-aarch64-apple-darwin.tar.gz", "macos-x64"), Level::Incompatible);
         assert_eq!(
-            level("thing-aarch64-apple-darwin.tar.gz", "macos-x64"),
-            Level::Incompatible
-        );
-        assert_eq!(
-            best(
-                &[
-                    "t-x86_64-apple-darwin.tar.gz",
-                    "t-aarch64-apple-darwin.tar.gz"
-                ],
-                "macos-arm64"
-            ),
+            best(&["t-x86_64-apple-darwin.tar.gz", "t-aarch64-apple-darwin.tar.gz"], "macos-arm64"),
             Some("t-aarch64-apple-darwin.tar.gz")
         );
         // 32-bit APK on a 64-bit phone that still accepts 32-bit ABIs.
-        assert_eq!(
-            level("Thing-2.0-armeabi-v7a.apk", "android-arm64"),
-            Level::Compatible
-        );
+        assert_eq!(level("Thing-2.0-armeabi-v7a.apk", "android-arm64"), Level::Compatible);
     }
 
     #[test]
@@ -424,17 +334,11 @@ mod tests {
         assert_eq!(level("ThingSetup.exe", "windows-x64"), Level::Native);
         assert_eq!(level("ThingSetup.exe", "windows-arm64"), Level::Compatible);
         // Linux AppImage without arch on an Arm board: hidden, we will not guess wrong.
-        assert_eq!(
-            level("Thing.AppImage", "linux-arm64-debian"),
-            Level::Incompatible
-        );
+        assert_eq!(level("Thing.AppImage", "linux-arm64-debian"), Level::Incompatible);
         assert_eq!(level("Thing.dmg", "macos-arm64"), Level::Native);
         // A file that names its arch beats one that does not.
         assert_eq!(
-            best(
-                &["Thing.AppImage", "Thing-x86_64.AppImage"],
-                "linux-x64-fedora"
-            ),
+            best(&["Thing.AppImage", "Thing-x86_64.AppImage"], "linux-x64-fedora"),
             Some("Thing-x86_64.AppImage")
         );
     }
@@ -442,25 +346,16 @@ mod tests {
     #[test]
     fn tv_builds() {
         let both = ["player-arm64-v8a.apk", "player-androidtv-arm64-v8a.apk"];
-        assert_eq!(
-            best(&both, "android-tv"),
-            Some("player-androidtv-arm64-v8a.apk")
-        );
+        assert_eq!(best(&both, "android-tv"), Some("player-androidtv-arm64-v8a.apk"));
         assert_eq!(best(&both, "android-arm64"), Some("player-arm64-v8a.apk"));
-        assert_eq!(
-            level("player-androidtv-arm64-v8a.apk", "android-arm64"),
-            Level::Incompatible
-        );
+        assert_eq!(level("player-androidtv-arm64-v8a.apk", "android-arm64"), Level::Incompatible);
         // The phone build still works on a TV; it just ranks below the TV build.
         assert_eq!(level("player-arm64-v8a.apk", "android-tv"), Level::Native);
     }
 
     #[test]
     fn unknown_os_and_bundles_are_hidden() {
-        assert_eq!(
-            level("project-1.0.zip", "linux-x64-debian"),
-            Level::Incompatible
-        );
+        assert_eq!(level("project-1.0.zip", "linux-x64-debian"), Level::Incompatible);
         assert_eq!(level("app.xapk", "android-arm64"), Level::Incompatible);
     }
 

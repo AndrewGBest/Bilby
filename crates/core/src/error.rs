@@ -25,6 +25,8 @@ pub enum Error {
         actual: String,
     },
     Unsupported(String),
+    /// The user stopped a download.
+    Cancelled,
 }
 
 impl fmt::Display for Error {
@@ -37,12 +39,10 @@ impl fmt::Display for Error {
             Error::Parse(m) => write!(f, "unexpected response: {m}"),
             Error::Io(e) => write!(f, "I/O error: {e}"),
             Error::DigestMismatch { expected, actual } => {
-                write!(
-                    f,
-                    "checksum mismatch (expected {expected}, got {actual}); file deleted"
-                )
+                write!(f, "checksum mismatch (expected {expected}, got {actual}); file deleted")
             }
             Error::Unsupported(m) => write!(f, "{m}"),
+            Error::Cancelled => write!(f, "cancelled"),
         }
     }
 }

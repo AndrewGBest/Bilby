@@ -34,10 +34,7 @@ pub struct AppId {
 
 impl AppId {
     pub fn new(source: SourceKind, key: impl Into<String>) -> Self {
-        AppId {
-            source,
-            key: key.into(),
-        }
+        AppId { source, key: key.into() }
     }
 
     pub fn parse(s: &str) -> Option<AppId> {
@@ -48,6 +45,49 @@ impl AppId {
             _ => return None,
         };
         (!key.is_empty()).then(|| AppId::new(source, key))
+    }
+}
+
+impl AppId {
+    /// Understand what people paste: a repository URL, `owner/repo`, an AUR package page,
+    /// or an id. Returns `None` for anything that looks like ordinary search words.
+    pub fn from_user_input(input: &str) -> Option<AppId> {
+        let input = input.trim();
+        if input.contains(char::is_whitespace) || input.is_empty() {
+            return None;
+        }
+        if let Some(id) = AppId::parse(input) {
+            return valid_key(id.source, &id.key).then_some(id);
+        }
+        let stripped = input.trim_start_matches("https://").trim_start_matches("http://").trim_start_matches("www.");
+        if let Some(rest) = stripped.strip_prefix("aur.archlinux.org/packages/") {
+            let name = rest.split(['/', '?', '#']).next().unwrap_or("");
+            return valid_key(SourceKind::Aur, name).then(|| AppId::new(SourceKind::Aur, name));
+        }
+        let path = stripped.strip_prefix("github.com/").unwrap_or(stripped);
+        // Without the host, only a bare `owner/repo` counts; `a/b/c` is not a repository.
+        let had_host = path.len() != stripped.len();
+        let mut parts = path.split(['?', '#']).next().unwrap_or("").split('/').filter(|p| !p.is_empty());
+        let (owner, repo, extra) = (parts.next()?, parts.next()?, parts.next());
+        if extra.is_some() && !had_host {
+            return None;
+        }
+        let key = format!("{owner}/{}", repo.trim_end_matches(".git"));
+        valid_key(SourceKind::GitHub, &key).then(|| AppId::new(SourceKind::GitHub, key))
+    }
+}
+
+/// Keys end up in URLs, so they are checked against what the source allows in names.
+pub fn valid_key(source: SourceKind, key: &str) -> bool {
+    let ok = |part: &str, extra: &[char]| {
+        !part.is_empty()
+            && !part.starts_with('.')
+            && part.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.') || extra.contains(&c))
+    };
+    match source {
+        SourceKind::GitHub => matches!(key.split_once('/'), Some((owner, repo)) if ok(owner, &[]) && ok(repo, &[])),
+        // Arch package names may also contain `+` and `@`.
+        SourceKind::Aur => ok(key, &['+', '@']),
     }
 }
 
@@ -182,6 +222,23 @@ mod tests {
         assert_eq!(AppId::parse("aur:paru").unwrap().key, "paru");
         assert!(AppId::parse("nope").is_none());
         assert!(AppId::parse("npm:left-pad").is_none());
+    }
+
+    #[test]
+    fn pasted_links_are_understood() {
+        let gh = |s: &str| AppId::from_user_input(s).map(|id| id.to_string());
+        assert_eq!(gh("https://github.com/sharkdp/bat").as_deref(), Some("github:sharkdp/bat"));
+        assert_eq!(gh("https://github.com/sharkdp/bat/releases/tag/v0.24.0").as_deref(), Some("github:sharkdp/bat"));
+        assert_eq!(gh("github.com/sharkdp/bat.git").as_deref(), Some("github:sharkdp/bat"));
+        assert_eq!(gh("  sharkdp/bat ").as_deref(), Some("github:sharkdp/bat"));
+        assert_eq!(gh("github:sharkdp/bat").as_deref(), Some("github:sharkdp/bat"));
+        assert_eq!(gh("https://aur.archlinux.org/packages/paru-bin").as_deref(), Some("aur:paru-bin"));
+        assert_eq!(gh("aur:yay").as_deref(), Some("aur:yay"));
+        // Ordinary searches are left alone.
+        for words in ["bat", "text editor", "a/b/c", "", "https://example.com", "../etc", "github:../x", "c++/thing?x"]
+        {
+            assert_eq!(gh(words), None, "{words:?}");
+        }
     }
 
     #[test]

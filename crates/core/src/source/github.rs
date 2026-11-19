@@ -88,10 +88,7 @@ impl From<Repo> for AppSummary {
             summary: r.description.unwrap_or_default(),
             popularity: Some(r.stargazers_count),
             homepage: r.html_url,
-            license: r
-                .license
-                .and_then(|l| l.spdx_id)
-                .filter(|id| id != "NOASSERTION"),
+            license: r.license.and_then(|l| l.spdx_id).filter(|id| id != "NOASSERTION"),
             category: None,
             version: None,
             install_label: None,
@@ -101,14 +98,7 @@ impl From<Repo> for AppSummary {
 }
 
 fn valid_key(key: &str) -> bool {
-    let ok = |part: &str| {
-        !part.is_empty()
-            && !part.starts_with('.')
-            && part
-                .chars()
-                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
-    };
-    matches!(key.split_once('/'), Some((owner, repo)) if ok(owner) && ok(repo))
+    crate::model::valid_key(SourceKind::GitHub, key)
 }
 
 impl Source for GitHub {
@@ -123,20 +113,14 @@ impl Source for GitHub {
     fn search(&self, query: &str, limit: usize) -> Result<Vec<AppSummary>> {
         // Forks and archived repos practically never carry the releases people want.
         let q = format!("{query} in:name,description fork:false archived:false");
-        let url = format!(
-            "{API}/search/repositories?q={}&per_page={}",
-            url_encode(&q),
-            limit.clamp(1, 100)
-        );
+        let url = format!("{API}/search/repositories?q={}&per_page={}", url_encode(&q), limit.clamp(1, 100));
         let resp: SearchResponse = serde_json::from_str(&self.http.get(&url)?)?;
         Ok(resp.items.into_iter().map(AppSummary::from).collect())
     }
 
     fn summary(&self, key: &str) -> Result<AppSummary> {
         if !valid_key(key) {
-            return Err(Error::NotFound(format!(
-                "\"{key}\" is not an owner/repository name"
-            )));
+            return Err(Error::NotFound(format!("\"{key}\" is not an owner/repository name")));
         }
         let repo: Repo = serde_json::from_str(&self.http.get(&format!("{API}/repos/{key}"))?)?;
         Ok(repo.into())
@@ -144,9 +128,7 @@ impl Source for GitHub {
 
     fn releases(&self, key: &str) -> Result<Vec<Release>> {
         if !valid_key(key) {
-            return Err(Error::NotFound(format!(
-                "\"{key}\" is not an owner/repository name"
-            )));
+            return Err(Error::NotFound(format!("\"{key}\" is not an owner/repository name")));
         }
         let url = format!("{API}/repos/{key}/releases?per_page={RELEASES_PER_APP}");
         let releases: Vec<ApiRelease> = serde_json::from_str(&self.http.get(&url)?)?;
@@ -155,12 +137,7 @@ impl Source for GitHub {
             .filter(|r| !r.draft)
             .map(|r| Release {
                 version: r.tag_name,
-                published: r
-                    .published_at
-                    .unwrap_or_default()
-                    .chars()
-                    .take(10)
-                    .collect(),
+                published: r.published_at.unwrap_or_default().chars().take(10).collect(),
                 prerelease: r.prerelease,
                 notes: r.body.unwrap_or_default(),
                 assets: r

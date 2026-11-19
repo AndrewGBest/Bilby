@@ -11,9 +11,7 @@ use std::sync::{Arc, Mutex};
 use ustore_core::catalog::SearchOutcome;
 use ustore_core::index::Section as CoreSection;
 use ustore_core::install::{self, Dirs};
-use ustore_core::model::{
-    human_count, human_size, AppDetails, AppId, AppSummary, InstallOption, SourceKind,
-};
+use ustore_core::model::{human_count, human_size, AppDetails, AppId, AppSummary, InstallOption, SourceKind};
 use ustore_core::platform::{FormFactor, PRESETS};
 use ustore_core::{Catalog, Platform};
 
@@ -62,10 +60,7 @@ impl Options {
         let mut o = Options::default();
         let mut args = args.peekable();
         while let Some(arg) = args.next() {
-            let mut value = |name: &str| {
-                args.next()
-                    .ok_or_else(|| format!("{name} needs a value\n\n{USAGE}"))
-            };
+            let mut value = |name: &str| args.next().ok_or_else(|| format!("{name} needs a value\n\n{USAGE}"));
             match arg.as_str() {
                 "--demo" => o.demo = true,
                 "--ui" => {
@@ -73,40 +68,28 @@ impl Options {
                         "desktop" => Shell::Desktop,
                         "mobile" => Shell::Mobile,
                         "tv" => Shell::Tv,
-                        other => {
-                            return Err(format!(
-                                "unknown interface \"{other}\" (desktop, mobile, tv)"
-                            ))
-                        }
+                        other => return Err(format!("unknown interface \"{other}\" (desktop, mobile, tv)")),
                     })
                 }
                 "--as" => {
                     let name = value("--as")?;
-                    o.platform = Some(Platform::preset(&name).ok_or_else(|| {
-                        format!("unknown platform \"{name}\". Known: {}", PRESETS.join(", "))
-                    })?);
+                    o.platform = Some(
+                        Platform::preset(&name)
+                            .ok_or_else(|| format!("unknown platform \"{name}\". Known: {}", PRESETS.join(", ")))?,
+                    );
                 }
                 "--open" => o.open = Some(value("--open")?),
                 "--search" => o.search = Some(value("--search")?),
                 "--page" => o.page = value("--page")?.parse().ok(),
                 "--size" => {
                     let v = value("--size")?;
-                    let parsed = v
-                        .split_once('x')
-                        .and_then(|(w, h)| Some((w.parse().ok()?, h.parse().ok()?)));
-                    o.size = Some(
-                        parsed
-                            .ok_or_else(|| format!("--size expects WIDTHxHEIGHT, got \"{v}\""))?,
-                    );
+                    let parsed = v.split_once('x').and_then(|(w, h)| Some((w.parse().ok()?, h.parse().ok()?)));
+                    o.size = Some(parsed.ok_or_else(|| format!("--size expects WIDTHxHEIGHT, got \"{v}\""))?);
                 }
                 "--screenshot" => o.screenshot = Some(PathBuf::from(value("--screenshot")?)),
-                "--script" => {
-                    o.script = value("--script")?.split(' ').map(str::to_string).collect()
-                }
+                "--script" => o.script = value("--script")?.split(' ').map(str::to_string).collect(),
                 "--settle" => {
-                    o.settle_ms = value("--settle")?
-                        .parse()
-                        .map_err(|_| "--settle expects milliseconds".to_string())?
+                    o.settle_ms = value("--settle")?.parse().map_err(|_| "--settle expects milliseconds".to_string())?
                 }
                 "-h" | "--help" => return Err(USAGE.to_string()),
                 other => return Err(format!("unknown option \"{other}\"\n\n{USAGE}")),
@@ -118,24 +101,15 @@ impl Options {
 
 // ---- core data -> UI data ---------------------------------------------------------
 
-const TINTS: [u32; 10] = [
-    0x5b8def, 0x8e6cf0, 0xe0679a, 0xe8804a, 0xd9a521, 0x4fb477, 0x2fa7a0, 0x3d9bd8, 0x7a86a8,
-    0xc65fd0,
-];
+const TINTS: [u32; 10] =
+    [0x5b8def, 0x8e6cf0, 0xe0679a, 0xe8804a, 0xd9a521, 0x4fb477, 0x2fa7a0, 0x3d9bd8, 0x7a86a8, 0xc65fd0];
 
 fn initials(name: &str) -> String {
-    let words: Vec<&str> = name
-        .split(|c: char| !c.is_alphanumeric())
-        .filter(|w| !w.is_empty())
-        .collect();
+    let words: Vec<&str> = name.split(|c: char| !c.is_alphanumeric()).filter(|w| !w.is_empty()).collect();
     let letters: String = match words.as_slice() {
         [] => "?".to_string(),
         [one] => one.chars().take(2).collect(),
-        [first, second, ..] => first
-            .chars()
-            .take(1)
-            .chain(second.chars().take(1))
-            .collect(),
+        [first, second, ..] => first.chars().take(1).chain(second.chars().take(1)).collect(),
     };
     let mut chars = letters.chars();
     match (chars.next(), chars.next()) {
@@ -146,11 +120,7 @@ fn initials(name: &str) -> String {
 }
 
 fn card(app: &AppSummary) -> AppCard {
-    let hash = app
-        .id
-        .key
-        .bytes()
-        .fold(5381u32, |h, b| h.wrapping_mul(33) ^ b as u32);
+    let hash = app.id.key.bytes().fold(5381u32, |h, b| h.wrapping_mul(33) ^ b as u32);
     let popularity = match (app.popularity, app.id.source) {
         (Some(n), SourceKind::GitHub) => format!("★ {}", human_count(n)),
         (Some(n), SourceKind::Aur) => format!("{} votes", human_count(n)),
@@ -175,12 +145,7 @@ fn cards(apps: &[AppSummary]) -> ModelRc<AppCard> {
 }
 
 fn sections(list: &[CoreSection]) -> Vec<Section> {
-    list.iter()
-        .map(|s| Section {
-            title: s.title.clone().into(),
-            apps: cards(&s.apps),
-        })
-        .collect()
+    list.iter().map(|s| Section { title: s.title.clone().into(), apps: cards(&s.apps) }).collect()
 }
 
 /// Release notes are Markdown; show them as readable plain text.
@@ -237,22 +202,12 @@ impl App {
         store.set_searched(true);
         store.set_results(cards(&outcome.apps));
         let mut note = if outcome.apps.is_empty() {
-            format!(
-                "Nothing installable on {} matches “{query}”.",
-                self.catalog.platform.title()
-            )
+            format!("Nothing installable on {} matches “{query}”.", self.catalog.platform.title())
         } else {
-            format!(
-                "{} for “{query}” on {}.",
-                plural(outcome.apps.len(), "app"),
-                self.catalog.platform.title()
-            )
+            format!("{} for “{query}” on {}.", plural(outcome.apps.len(), "app"), self.catalog.platform.title())
         };
         if outcome.hidden > 0 {
-            note.push_str(&format!(
-                " {} more matched but have no file for this device.",
-                outcome.hidden
-            ));
+            note.push_str(&format!(" {} more matched but have no file for this device.", outcome.hidden));
         }
         for e in &outcome.errors {
             note.push_str(&format!(" {e}"));
@@ -261,10 +216,7 @@ impl App {
         // TV shows results as the first row of the same grid.
         let mut rows = Vec::new();
         if !outcome.apps.is_empty() {
-            rows.push(Section {
-                title: format!("Results for “{query}”").into(),
-                apps: cards(&outcome.apps),
-            });
+            rows.push(Section { title: format!("Results for “{query}”").into(), apps: cards(&outcome.apps) });
         }
         rows.extend(sections(&self.featured));
         store.set_tv_rows(ModelRc::new(VecModel::from(rows)));
@@ -283,32 +235,16 @@ impl App {
         store.set_app(app_card);
         store.set_license(details.summary.license.clone().unwrap_or_default().into());
         store.set_warning(details.summary.warning.clone().unwrap_or_default().into());
-        store.set_unavailable(
-            details
-                .unavailable_reason
-                .clone()
-                .unwrap_or_default()
-                .into(),
-        );
+        store.set_unavailable(details.unavailable_reason.clone().unwrap_or_default().into());
         let (options, hidden, notes, date) = match &details.release {
-            Some(r) => (
-                r.options.clone(),
-                r.hidden.clone(),
-                plain_notes(&r.notes),
-                r.published.clone(),
-            ),
+            Some(r) => (r.options.clone(), r.hidden.clone(), plain_notes(&r.notes), r.published.clone()),
             None => (vec![], vec![], String::new(), String::new()),
         };
-        store.set_options(ModelRc::new(VecModel::from(
-            options.iter().map(option_row).collect::<Vec<_>>(),
-        )));
+        store.set_options(ModelRc::new(VecModel::from(options.iter().map(option_row).collect::<Vec<_>>())));
         store.set_hidden(ModelRc::new(VecModel::from(
             hidden
                 .iter()
-                .map(|h| HiddenRow {
-                    file: h.name.clone().into(),
-                    reason: h.reason.clone().into(),
-                })
+                .map(|h| HiddenRow { file: h.name.clone().into(), reason: h.reason.clone().into() })
                 .collect::<Vec<_>>(),
         )));
         store.set_notes(notes.into());
@@ -332,11 +268,7 @@ impl App {
         // Show what the list already knew while the releases load.
         let known = find_card(&store, id);
         let parsed = AppId::parse(id);
-        store.set_app(known.unwrap_or_else(|| AppCard {
-            id: id.into(),
-            name: id.into(),
-            ..Default::default()
-        }));
+        store.set_app(known.unwrap_or_else(|| AppCard { id: id.into(), name: id.into(), ..Default::default() }));
         match parsed {
             Some(app_id) => {
                 store.set_details_loading(true);
@@ -360,11 +292,7 @@ fn plural(n: usize, word: &str) -> String {
 }
 
 fn find_card(store: &Store, id: &str) -> Option<AppCard> {
-    let in_sections = store
-        .get_sections()
-        .iter()
-        .flat_map(|s| s.apps.iter().collect::<Vec<_>>())
-        .find(|c| c.id == id);
+    let in_sections = store.get_sections().iter().flat_map(|s| s.apps.iter().collect::<Vec<_>>()).find(|c| c.id == id);
     in_sections.or_else(|| store.get_results().iter().find(|c| c.id == id))
 }
 
@@ -381,27 +309,19 @@ pub fn run(options: Options) -> Result<(), Box<dyn std::error::Error>> {
     // Forcing the TV interface also means "prefer TV builds", and vice versa.
     match options.shell {
         Some(Shell::Tv) => platform.form_factor = FormFactor::Tv,
-        Some(_) if platform.form_factor == FormFactor::Tv => {
-            platform.form_factor = FormFactor::Desktop
-        }
+        Some(_) if platform.form_factor == FormFactor::Tv => platform.form_factor = FormFactor::Desktop,
         _ => {}
     }
     let dirs = options.dirs.clone().unwrap_or_else(Dirs::for_current_user);
     let catalog = Arc::new(if options.demo {
         Catalog::demo(platform.clone())
     } else {
-        Catalog::live(
-            platform.clone(),
-            std::env::var("GITHUB_TOKEN").ok(),
-            dirs.cache.clone(),
-        )
+        Catalog::live(platform.clone(), std::env::var("GITHUB_TOKEN").ok(), dirs.cache.clone())
     });
 
     let ui = AppWindow::new()?;
     let store = ui.global::<Store>();
-    let shell = options
-        .shell
-        .unwrap_or_else(|| shell_for(platform.form_factor));
+    let shell = options.shell.unwrap_or_else(|| shell_for(platform.form_factor));
     store.set_shell(shell);
     // A forced interface stays put; otherwise desktop and mobile follow the window width.
     store.set_adaptive(options.shell.is_none());
@@ -411,10 +331,7 @@ pub fn run(options: Options) -> Result<(), Box<dyn std::error::Error>> {
         platform
             .facts()
             .into_iter()
-            .map(|(name, value)| Fact {
-                name: name.into(),
-                value: value.into(),
-            })
+            .map(|(name, value)| Fact { name: name.into(), value: value.into() })
             .collect::<Vec<_>>(),
     )));
 
@@ -533,8 +450,7 @@ pub fn run(options: Options) -> Result<(), Box<dyn std::error::Error>> {
                         let weak = weak.clone();
                         let _ = slint::invoke_from_event_loop(move || {
                             if let Some(ui) = weak.upgrade() {
-                                ui.global::<Store>()
-                                    .set_install_progress(percent as f32 / 100.0);
+                                ui.global::<Store>().set_install_progress(percent as f32 / 100.0);
                             }
                         });
                     }
@@ -568,8 +484,7 @@ pub fn run(options: Options) -> Result<(), Box<dyn std::error::Error>> {
     });
 
     if let Some((w, h)) = options.size {
-        ui.window()
-            .set_size(slint::LogicalSize::new(w as f32, h as f32));
+        ui.window().set_size(slint::LogicalSize::new(w as f32, h as f32));
     } else if shell == Shell::Tv && options.screenshot.is_none() {
         ui.window().set_fullscreen(true);
     }
@@ -603,107 +518,78 @@ fn screenshot_after_script(ui: &AppWindow, script: Vec<String>, settle_ms: u64, 
     let mut steps = script.into_iter().filter(|s| !s.is_empty());
     let timer = std::rc::Rc::new(slint::Timer::default());
     let timer_handle = timer.clone();
-    timer.start(
-        slint::TimerMode::Repeated,
-        std::time::Duration::from_millis(250),
-        move || {
-            let Some(ui) = weak.upgrade() else { return };
-            let window = ui.window();
-            let key = |text: SharedString| {
-                window.dispatch_event(WindowEvent::KeyPressed { text: text.clone() });
-                window.dispatch_event(WindowEvent::KeyReleased { text });
-            };
-            match steps.next() {
-                Some(step) => match step.as_str() {
-                    "up" => key(Key::UpArrow.into()),
-                    "down" => key(Key::DownArrow.into()),
-                    "left" => key(Key::LeftArrow.into()),
-                    "right" => key(Key::RightArrow.into()),
-                    "ok" => key(Key::Return.into()),
-                    "back" => key(Key::Escape.into()),
-                    other => {
-                        if let Some((x, y)) =
-                            other.strip_prefix("click:").and_then(|p| p.split_once(','))
-                        {
-                            let position = slint::LogicalPosition::new(
-                                x.parse().unwrap_or(0.0),
-                                y.parse().unwrap_or(0.0),
-                            );
-                            window.dispatch_event(WindowEvent::PointerMoved { position });
-                            window.dispatch_event(WindowEvent::PointerPressed {
-                                position,
-                                button: PointerEventButton::Left,
-                            });
-                            window.dispatch_event(WindowEvent::PointerReleased {
-                                position,
-                                button: PointerEventButton::Left,
-                            });
-                        } else if let Some(text) = other.strip_prefix("text:") {
-                            for c in text.chars() {
-                                key(c.to_string().into());
-                            }
-                        } else {
-                            eprintln!("unknown script step \"{other}\"");
+    timer.start(slint::TimerMode::Repeated, std::time::Duration::from_millis(250), move || {
+        let Some(ui) = weak.upgrade() else { return };
+        let window = ui.window();
+        let key = |text: SharedString| {
+            window.dispatch_event(WindowEvent::KeyPressed { text: text.clone() });
+            window.dispatch_event(WindowEvent::KeyReleased { text });
+        };
+        match steps.next() {
+            Some(step) => match step.as_str() {
+                "up" => key(Key::UpArrow.into()),
+                "down" => key(Key::DownArrow.into()),
+                "left" => key(Key::LeftArrow.into()),
+                "right" => key(Key::RightArrow.into()),
+                "ok" => key(Key::Return.into()),
+                "back" => key(Key::Escape.into()),
+                other => {
+                    if let Some((x, y)) = other.strip_prefix("click:").and_then(|p| p.split_once(',')) {
+                        let position = slint::LogicalPosition::new(x.parse().unwrap_or(0.0), y.parse().unwrap_or(0.0));
+                        window.dispatch_event(WindowEvent::PointerMoved { position });
+                        window
+                            .dispatch_event(WindowEvent::PointerPressed { position, button: PointerEventButton::Left });
+                        window.dispatch_event(WindowEvent::PointerReleased {
+                            position,
+                            button: PointerEventButton::Left,
+                        });
+                    } else if let Some(text) = other.strip_prefix("text:") {
+                        for c in text.chars() {
+                            key(c.to_string().into());
                         }
+                    } else {
+                        eprintln!("unknown script step \"{other}\"");
                     }
-                },
-                None => {
-                    timer_handle.stop();
-                    let weak = ui.as_weak();
-                    let path = path.clone();
-                    slint::Timer::single_shot(settle, move || {
-                        let Some(ui) = weak.upgrade() else { return };
-                        let result = ui
-                            .window()
-                            .take_snapshot()
-                            .map_err(|e| e.to_string())
-                            .and_then(|pixels| {
-                                let file =
-                                    std::fs::File::create(&path).map_err(|e| e.to_string())?;
-                                let mut encoder = png::Encoder::new(
-                                    std::io::BufWriter::new(file),
-                                    pixels.width(),
-                                    pixels.height(),
-                                );
-                                encoder.set_color(png::ColorType::Rgba);
-                                encoder.set_depth(png::BitDepth::Eight);
-                                let mut writer =
-                                    encoder.write_header().map_err(|e| e.to_string())?;
-                                writer
-                                    .write_image_data(pixels.as_bytes())
-                                    .map_err(|e| e.to_string())
-                            });
-                        if let Err(e) = result {
-                            eprintln!("screenshot failed: {e}");
-                        }
-                        let _ = slint::quit_event_loop();
-                    });
                 }
+            },
+            None => {
+                timer_handle.stop();
+                let weak = ui.as_weak();
+                let path = path.clone();
+                slint::Timer::single_shot(settle, move || {
+                    let Some(ui) = weak.upgrade() else { return };
+                    let result = ui.window().take_snapshot().map_err(|e| e.to_string()).and_then(|pixels| {
+                        let file = std::fs::File::create(&path).map_err(|e| e.to_string())?;
+                        let mut encoder =
+                            png::Encoder::new(std::io::BufWriter::new(file), pixels.width(), pixels.height());
+                        encoder.set_color(png::ColorType::Rgba);
+                        encoder.set_depth(png::BitDepth::Eight);
+                        let mut writer = encoder.write_header().map_err(|e| e.to_string())?;
+                        writer.write_image_data(pixels.as_bytes()).map_err(|e| e.to_string())
+                    });
+                    if let Err(e) = result {
+                        eprintln!("screenshot failed: {e}");
+                    }
+                    let _ = slint::quit_event_loop();
+                });
             }
-        },
-    );
+        }
+    });
 }
 
 /// Android entry point (NativeActivity / GameActivity via `android-activity`).
 #[cfg(target_os = "android")]
 #[no_mangle]
 fn android_main(android_app: slint::android::AndroidApp) {
-    let internal = android_app
-        .internal_data_path()
-        .unwrap_or_else(std::env::temp_dir);
-    let downloads = android_app
-        .external_data_path()
-        .unwrap_or_else(|| internal.clone());
+    let internal = android_app.internal_data_path().unwrap_or_else(std::env::temp_dir);
+    let downloads = android_app.external_data_path().unwrap_or_else(|| internal.clone());
     slint::android::init(android_app).expect("Slint Android backend failed to start");
     let dirs = Dirs {
         downloads: downloads.join("downloads"),
         applications: internal.join("apps"),
         cache: internal.join("cache"),
     };
-    if let Err(e) = run(Options {
-        dirs: Some(dirs),
-        ..Default::default()
-    }) {
+    if let Err(e) = run(Options { dirs: Some(dirs), ..Default::default() }) {
         eprintln!("untitledstore: {e}");
     }
 }
@@ -723,26 +609,13 @@ mod tests {
 
     #[test]
     fn notes_lose_their_markdown() {
-        assert_eq!(
-            plain_notes("## New\n\n- **Fast** `startup`\n* Fixes"),
-            "New\n\n•  Fast startup\n•  Fixes"
-        );
+        assert_eq!(plain_notes("## New\n\n- **Fast** `startup`\n* Fixes"), "New\n\n•  Fast startup\n•  Fixes");
     }
 
     #[test]
     fn options_parse() {
         let o = Options::from_args(
-            [
-                "--demo",
-                "--ui",
-                "tv",
-                "--size",
-                "1920x1080",
-                "--as",
-                "android-tv",
-            ]
-            .map(String::from)
-            .into_iter(),
+            ["--demo", "--ui", "tv", "--size", "1920x1080", "--as", "android-tv"].map(String::from).into_iter(),
         )
         .unwrap();
         assert!(o.demo);

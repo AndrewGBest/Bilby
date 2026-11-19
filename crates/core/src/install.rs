@@ -55,58 +55,32 @@ pub fn plan(asset: &Asset, info: &AssetInfo, p: &Platform) -> InstallPlan {
             (Action::OpenFile, "Install", None)
         }
         Format::Dmg | Format::MacPkg => {
-            steps.push(
-                "macOS opens it; drag the app to Applications or follow the installer".to_string(),
-            );
+            steps.push("macOS opens it; drag the app to Applications or follow the installer".to_string());
             (Action::OpenFile, "Install", None)
         }
         Format::Deb => {
-            steps.push(
-                "Your software installer opens the package and asks for your password".to_string(),
-            );
-            (
-                Action::OpenFile,
-                "Install",
-                Some(format!("sudo apt install ./{file}")),
-            )
+            steps.push("Your software installer opens the package and asks for your password".to_string());
+            (Action::OpenFile, "Install", Some(format!("sudo apt install ./{file}")))
         }
         Format::Rpm => {
-            steps.push(
-                "Your software installer opens the package and asks for your password".to_string(),
-            );
+            steps.push("Your software installer opens the package and asks for your password".to_string());
             let tool = match p.linux.as_ref().map(|l| l.family) {
                 Some(LinuxFamily::Suse) => "zypper",
                 _ => "dnf",
             };
-            (
-                Action::OpenFile,
-                "Install",
-                Some(format!("sudo {tool} install ./{file}")),
-            )
+            (Action::OpenFile, "Install", Some(format!("sudo {tool} install ./{file}")))
         }
         Format::PacmanPkg => {
             steps.push("Install the package with pacman".to_string());
-            (
-                Action::OpenFile,
-                "Install",
-                Some(format!("sudo pacman -U ./{file}")),
-            )
+            (Action::OpenFile, "Install", Some(format!("sudo pacman -U ./{file}")))
         }
         Format::Flatpak => {
             steps.push("Your software installer opens the bundle".to_string());
-            (
-                Action::OpenFile,
-                "Install",
-                Some(format!("flatpak install --user ./{file}")),
-            )
+            (Action::OpenFile, "Install", Some(format!("flatpak install --user ./{file}")))
         }
         Format::Snap => {
             steps.push("Install the snap".to_string());
-            (
-                Action::OpenFile,
-                "Install",
-                Some(format!("sudo snap install --dangerous ./{file}")),
-            )
+            (Action::OpenFile, "Install", Some(format!("sudo snap install --dangerous ./{file}")))
         }
         Format::AppImage => {
             steps.push("Mark it executable and move it to ~/Applications".to_string());
@@ -117,51 +91,37 @@ pub fn plan(asset: &Asset, info: &AssetInfo, p: &Platform) -> InstallPlan {
             (Action::OpenFile, "Download", None)
         }
         Format::Archive | Format::Binary | Format::ApkBundle => {
-            steps
-                .push("Show it in your downloads folder; unpack and run it from there".to_string());
+            steps.push("Show it in your downloads folder; unpack and run it from there".to_string());
             (Action::Reveal, "Download", None)
         }
         Format::AurBuild => {
-            let name = asset
-                .name
-                .split_whitespace()
-                .next()
-                .unwrap_or(&asset.name)
-                .to_string();
+            let name = asset.name.split_whitespace().next().unwrap_or(&asset.name).to_string();
             let command = match p.linux.as_ref().and_then(|l| l.aur_helper.clone()) {
                 Some(helper) => format!("{helper} -S {name}"),
-                None => format!(
-                    "git clone https://aur.archlinux.org/{name}.git && cd {name} && makepkg -si"
-                ),
+                None => format!("git clone https://aur.archlinux.org/{name}.git && cd {name} && makepkg -si"),
             };
             steps = vec![
-                "Read the PKGBUILD: AUR recipes are user-submitted and run on your machine"
-                    .to_string(),
+                "Read the PKGBUILD: AUR recipes are user-submitted and run on your machine".to_string(),
                 "Build and install with the command below".to_string(),
             ];
             (Action::ShowCommand, "Build from AUR", Some(command))
         }
     };
-    InstallPlan {
-        action,
-        verb: verb.to_string(),
-        steps,
-        command,
-    }
+    InstallPlan { action, verb: verb.to_string(), steps, command }
 }
 
 /// A file name that cannot escape the downloads folder, whatever the release calls it.
 pub fn safe_file_name(name: &str) -> String {
-    let cleaned: String = name
-        .chars()
-        .map(|c| {
-            if c.is_control() || matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|') {
-                '_'
-            } else {
-                c
-            }
-        })
-        .collect();
+    let cleaned: String =
+        name.chars()
+            .map(|c| {
+                if c.is_control() || matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|') {
+                    '_'
+                } else {
+                    c
+                }
+            })
+            .collect();
     let trimmed = cleaned.trim_matches(|c: char| c == '.' || c.is_whitespace());
     if trimmed.is_empty() {
         "download".to_string()
@@ -177,18 +137,14 @@ pub struct Dirs {
     /// Per-user folder for AppImages.
     pub applications: PathBuf,
     pub cache: PathBuf,
+    /// Settings and library (`state.json`).
+    pub config: PathBuf,
 }
 
 impl Dirs {
     pub fn for_current_user() -> Dirs {
-        let var = |k: &str| {
-            std::env::var_os(k)
-                .map(PathBuf::from)
-                .filter(|p| !p.as_os_str().is_empty())
-        };
-        let home = var("HOME")
-            .or_else(|| var("USERPROFILE"))
-            .unwrap_or_else(std::env::temp_dir);
+        let var = |k: &str| std::env::var_os(k).map(PathBuf::from).filter(|p| !p.as_os_str().is_empty());
+        let home = var("HOME").or_else(|| var("USERPROFILE")).unwrap_or_else(std::env::temp_dir);
         let cache = if cfg!(target_os = "windows") {
             var("LOCALAPPDATA").unwrap_or_else(|| home.join("AppData").join("Local"))
         } else if cfg!(target_os = "macos") {
@@ -196,12 +152,18 @@ impl Dirs {
         } else {
             var("XDG_CACHE_HOME").unwrap_or_else(|| home.join(".cache"))
         };
+        let config = if cfg!(target_os = "windows") {
+            var("APPDATA").unwrap_or_else(|| home.join("AppData").join("Roaming"))
+        } else if cfg!(target_os = "macos") {
+            home.join("Library").join("Application Support")
+        } else {
+            var("XDG_CONFIG_HOME").unwrap_or_else(|| home.join(".config"))
+        };
         Dirs {
-            downloads: var("XDG_DOWNLOAD_DIR")
-                .unwrap_or_else(|| home.join("Downloads"))
-                .join("untitledstore"),
+            downloads: var("XDG_DOWNLOAD_DIR").unwrap_or_else(|| home.join("Downloads")).join("untitledstore"),
             applications: home.join("Applications"),
             cache: cache.join("untitledstore"),
+            config: config.join("untitledstore"),
         }
     }
 }
@@ -211,6 +173,8 @@ pub struct Outcome {
     /// One sentence for the UI.
     pub message: String,
     pub file: Option<PathBuf>,
+    /// The store placed the app itself (AppImage), so deleting `file` uninstalls it.
+    pub store_managed: bool,
 }
 
 /// Open a file or folder with the desktop's default handler.
@@ -224,10 +188,7 @@ pub fn open_with_system(path: &Path) -> Result<()> {
     } else {
         std::process::Command::new("xdg-open")
     };
-    cmd.arg(path)
-        .spawn()
-        .map(|_| ())
-        .map_err(|e| Error::Unsupported(format!("Could not open {}: {e}", path.display())))
+    cmd.arg(path).spawn().map(|_| ()).map_err(|e| Error::Unsupported(format!("Could not open {}: {e}", path.display())))
 }
 
 /// Carry out `plan` for `asset`. `open` is how files are handed to the system
@@ -238,36 +199,22 @@ pub fn execute(
     http: &dyn Http,
     dirs: &Dirs,
     open: &dyn Fn(&Path) -> Result<()>,
-    progress: &mut dyn FnMut(u64, Option<u64>),
+    progress: &mut dyn FnMut(u64, Option<u64>) -> bool,
 ) -> Result<Outcome> {
     if plan.action == Action::ShowCommand {
         let command = plan.command.clone().unwrap_or_default();
-        return Ok(Outcome {
-            message: format!("Run in a terminal: {command}"),
-            file: None,
-        });
+        return Ok(Outcome { message: format!("Run in a terminal: {command}"), file: None, store_managed: false });
     }
 
     let dest = dirs.downloads.join(safe_file_name(&asset.name));
     let actual = http.download(&asset.url, &dest, progress)?;
-    if let Some(expected) = asset
-        .digest
-        .as_deref()
-        .and_then(|d| d.strip_prefix("sha256:"))
-    {
+    if let Some(expected) = asset.digest.as_deref().and_then(|d| d.strip_prefix("sha256:")) {
         if !expected.eq_ignore_ascii_case(&actual) {
             let _ = std::fs::remove_file(&dest);
-            return Err(Error::DigestMismatch {
-                expected: expected.to_string(),
-                actual,
-            });
+            return Err(Error::DigestMismatch { expected: expected.to_string(), actual });
         }
     }
-    let verified = if asset.digest.is_some() {
-        "Checksum verified. "
-    } else {
-        ""
-    };
+    let verified = if asset.digest.is_some() { "Checksum verified. " } else { "" };
 
     match plan.action {
         Action::PlaceAppImage => {
@@ -283,7 +230,7 @@ pub fn execute(
                 std::fs::copy(&dest, &target)?;
                 std::fs::remove_file(&dest)?;
             }
-            Ok(Outcome { message: format!("{verified}Installed to {}", target.display()), file: Some(target) })
+            Ok(Outcome { message: format!("{verified}Installed to {}", target.display()), file: Some(target), store_managed: true })
         }
         Action::OpenFile => {
             // The download succeeded either way; a missing handler is not a failure.
@@ -291,12 +238,12 @@ pub fn execute(
                 Ok(()) => format!("{verified}Opened {} with your system installer", dest.display()),
                 Err(_) => format!("{verified}Saved to {}. Open it to finish installing.", dest.display()),
             };
-            Ok(Outcome { message, file: Some(dest) })
+            Ok(Outcome { message, file: Some(dest), store_managed: false })
         }
         Action::Reveal => {
             // Failing to open a file manager is not a failed download.
             let _ = open(&dirs.downloads);
-            Ok(Outcome { message: format!("{verified}Saved to {}", dest.display()), file: Some(dest) })
+            Ok(Outcome { message: format!("{verified}Saved to {}", dest.display()), file: Some(dest), store_managed: false })
         }
         Action::AndroidInstaller => Err(Error::Unsupported(format!(
             "{verified}Saved to {}. Handing APKs to Android's installer is not implemented in this build yet; open the file to install it.",
@@ -319,78 +266,47 @@ mod tests {
         fn get(&self, _: &str) -> Result<String> {
             unreachable!()
         }
-        fn download(
-            &self,
-            _: &str,
-            dest: &Path,
-            progress: &mut dyn FnMut(u64, Option<u64>),
-        ) -> Result<String> {
+        fn download(&self, _: &str, dest: &Path, progress: &mut dyn FnMut(u64, Option<u64>) -> bool) -> Result<String> {
             std::fs::create_dir_all(dest.parent().unwrap())?;
             std::fs::write(dest, self.0)?;
-            progress(self.0.len() as u64, Some(self.0.len() as u64));
+            assert!(progress(self.0.len() as u64, Some(self.0.len() as u64)));
             Ok(hex(&Sha256::digest(self.0)))
         }
     }
 
     fn asset(name: &str, digest: Option<String>) -> Asset {
-        Asset {
-            name: name.to_string(),
-            size: 4,
-            url: format!("https://example.invalid/{name}"),
-            digest,
-            info: None,
-        }
+        Asset { name: name.to_string(), size: 4, url: format!("https://example.invalid/{name}"), digest, info: None }
     }
 
     fn temp_dirs(tag: &str) -> Dirs {
-        let root =
-            std::env::temp_dir().join(format!("ustore-install-{tag}-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("ustore-install-{tag}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         Dirs {
             downloads: root.join("dl"),
             applications: root.join("apps"),
             cache: root.join("cache"),
+            config: root.join("config"),
         }
     }
 
     fn plan_for(name: &str, preset: &str) -> InstallPlan {
-        plan(
-            &asset(name, None),
-            &classify(name).unwrap(),
-            &Platform::preset(preset).unwrap(),
-        )
+        plan(&asset(name, None), &classify(name).unwrap(), &Platform::preset(preset).unwrap())
     }
 
     #[test]
     fn plans_match_the_format() {
         assert_eq!(
-            plan_for("a_1.0_amd64.deb", "linux-x64-debian")
-                .command
-                .as_deref(),
+            plan_for("a_1.0_amd64.deb", "linux-x64-debian").command.as_deref(),
             Some("sudo apt install ./a_1.0_amd64.deb")
         );
         assert_eq!(
-            plan_for("a-1.0.x86_64.rpm", "linux-x64-fedora")
-                .command
-                .as_deref(),
+            plan_for("a-1.0.x86_64.rpm", "linux-x64-fedora").command.as_deref(),
             Some("sudo dnf install ./a-1.0.x86_64.rpm")
         );
-        assert_eq!(
-            plan_for("A-x86_64.AppImage", "linux-x64-fedora").action,
-            Action::PlaceAppImage
-        );
-        assert_eq!(
-            plan_for("a-arm64-v8a.apk", "android-arm64").action,
-            Action::AndroidInstaller
-        );
-        assert_eq!(
-            plan_for("a-x64.msi", "windows-x64").action,
-            Action::OpenFile
-        );
-        assert_eq!(
-            plan_for("a-linux-x86_64.tar.gz", "linux-x64-debian").verb,
-            "Download"
-        );
+        assert_eq!(plan_for("A-x86_64.AppImage", "linux-x64-fedora").action, Action::PlaceAppImage);
+        assert_eq!(plan_for("a-arm64-v8a.apk", "android-arm64").action, Action::AndroidInstaller);
+        assert_eq!(plan_for("a-x64.msi", "windows-x64").action, Action::OpenFile);
+        assert_eq!(plan_for("a-linux-x86_64.tar.gz", "linux-x64-debian").verb, "Download");
     }
 
     #[test]
@@ -407,27 +323,21 @@ mod tests {
         let good = format!("sha256:{}", hex(&Sha256::digest(b"data")));
         let a = asset("Thing-x86_64.AppImage", Some(good));
         let p = plan_for("Thing-x86_64.AppImage", "linux-x64-fedora");
-        let out = execute(&p, &a, &Fake(b"data"), &dirs, &|_| Ok(()), &mut |_, _| {}).unwrap();
+        let out = execute(&p, &a, &Fake(b"data"), &dirs, &|_| Ok(()), &mut |_, _| true).unwrap();
         let file = out.file.unwrap();
         assert_eq!(file, dirs.applications.join("Thing-x86_64.AppImage"));
         assert!(out.message.starts_with("Checksum verified."));
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            assert_eq!(
-                std::fs::metadata(&file).unwrap().permissions().mode() & 0o111,
-                0o111
-            );
+            assert_eq!(std::fs::metadata(&file).unwrap().permissions().mode() & 0o111, 0o111);
         }
     }
 
     #[test]
     fn tampered_download_is_rejected_and_deleted() {
         let dirs = temp_dirs("tamper");
-        let a = asset(
-            "a_1.0_amd64.deb",
-            Some(format!("sha256:{}", "0".repeat(64))),
-        );
+        let a = asset("a_1.0_amd64.deb", Some(format!("sha256:{}", "0".repeat(64))));
         let p = plan_for("a_1.0_amd64.deb", "linux-x64-debian");
         let opened = RefCell::new(Vec::new());
         let err = execute(
@@ -439,14 +349,11 @@ mod tests {
                 opened.borrow_mut().push(path.to_path_buf());
                 Ok(())
             },
-            &mut |_, _| {},
+            &mut |_, _| true,
         )
         .unwrap_err();
         assert!(matches!(err, Error::DigestMismatch { .. }));
-        assert!(
-            opened.borrow().is_empty(),
-            "a file that fails verification is never opened"
-        );
+        assert!(opened.borrow().is_empty(), "a file that fails verification is never opened");
         assert!(!dirs.downloads.join("a_1.0_amd64.deb").exists());
     }
 
@@ -465,12 +372,9 @@ mod tests {
                 opened.borrow_mut().push(path.to_path_buf());
                 Ok(())
             },
-            &mut |_, _| {},
+            &mut |_, _| true,
         )
         .unwrap();
-        assert_eq!(
-            *opened.borrow(),
-            vec![dirs.downloads.join("a_1.0_amd64.deb")]
-        );
+        assert_eq!(*opened.borrow(), vec![dirs.downloads.join("a_1.0_amd64.deb")]);
     }
 }

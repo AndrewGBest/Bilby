@@ -1,10 +1,13 @@
 //! `ustore`: the store without a window. Useful on servers, in scripts, and for checking
 //! what the compatibility engine thinks of a release.
 
+use std::path::Path;
 use std::process::ExitCode;
+use ustore_core::catalog::UpdateStatus;
 use ustore_core::install::{self, Dirs};
 use ustore_core::model::{human_count, human_size, AppId};
 use ustore_core::platform::PRESETS;
+use ustore_core::state::{now_unix, InstalledApp, State};
 use ustore_core::{Catalog, Platform};
 
 const USAGE: &str = "\
@@ -19,9 +22,11 @@ COMMANDS:
     search <words>         Search all sources; only installable apps are listed
     show <id>              Files this machine can install from an app, and why others are hidden
     install <id> [n]       Download and install option n (default 1) of an app
+    library                Apps installed through the store
+    updates                Check the library for newer releases
     classify <file name>   Explain how a release file name is interpreted
 
-    <id> is github:owner/repo or aur:package
+    <id> is github:owner/repo or aur:package; a repository URL works too
 
 OPTIONS:
     --as <platform>        Pretend to be another machine (see --list-platforms)
@@ -67,15 +72,12 @@ fn main() -> ExitCode {
     }
     let platform = platform.unwrap_or_else(Platform::detect);
     let dirs = Dirs::for_current_user();
-    let catalog = if demo {
-        Catalog::demo(platform)
-    } else {
-        Catalog::live(
-            platform,
-            std::env::var("GITHUB_TOKEN").ok(),
-            dirs.cache.clone(),
-        )
-    };
+    let state_path = dirs.config.join(if demo { "demo-state.json" } else { "state.json" });
+    let saved = State::load(&state_path);
+    let token = std::env::var("GITHUB_TOKEN").ok().or(Some(saved.settings.github_token.clone()));
+    let catalog = if demo { Catalog::demo(platform) } else { Catalog::live(platform, token, dirs.cache.clone()) };
+    let mut catalog = catalog;
+    catalog.include_prereleases = saved.settings.include_prereleases;
 
     let result = match args.first().map(String::as_str) {
         Some("device") => {
@@ -91,7 +93,15 @@ fn main() -> ExitCode {
             Ok(())
         }
         Some("show") if args.len() == 2 => show(&catalog, &args[1]),
-        Some("install") if args.len() >= 2 => install_cmd(&catalog, &dirs, &args[1], args.get(2)),
+        Some("install") if args.len() >= 2 => install_cmd(&catalog, &dirs, &state_path, &args[1], args.get(2)),
+        Some("library") => {
+            library(&catalog, &state_path, false);
+            Ok(())
+        }
+        Some("updates") => {
+            library(&catalog, &state_path, true);
+            Ok(())
+        }
         Some("classify") if args.len() == 2 => {
             classify(&catalog, &args[1]);
             Ok(())
@@ -145,16 +155,10 @@ fn search(catalog: &Catalog, query: &str) {
         }
     }
     if outcome.apps.is_empty() {
-        println!(
-            "Nothing installable on {} matches \"{query}\".",
-            catalog.platform.title()
-        );
+        println!("Nothing installable on {} matches \"{query}\".", catalog.platform.title());
     }
     if outcome.hidden > 0 {
-        println!(
-            "({} more matched but have no files for this machine)",
-            outcome.hidden
-        );
+        println!("({} more matched but have no files for this machine)", outcome.hidden);
     }
     for e in outcome.errors {
         eprintln!("warning: {e}");
@@ -162,8 +166,7 @@ fn search(catalog: &Catalog, query: &str) {
 }
 
 fn parse_id(id: &str) -> Result<AppId, String> {
-    AppId::parse(id)
-        .ok_or_else(|| format!("\"{id}\" is not an app id; use github:owner/repo or aur:package"))
+    AppId::from_user_input(id).ok_or_else(|| format!("\"{id}\" is not an app id; use github:owner/repo or aur:package"))
 }
 
 fn show(catalog: &Catalog, id: &str) -> Result<(), String> {
@@ -188,13 +191,7 @@ fn show(catalog: &Catalog, id: &str) -> Result<(), String> {
     }
     for (n, o) in release.options.iter().enumerate() {
         let mark = if n == 0 { "*" } else { " " };
-        println!(
-            "{mark} {}. {:<46} {:<30} {}",
-            n + 1,
-            o.asset.name,
-            o.label(),
-            human_size(o.asset.size)
-        );
+        println!("{mark} {}. {:<46} {:<30} {}", n + 1, o.asset.name, o.label(), human_size(o.asset.size));
         if let Some(note) = &o.verdict.note {
             println!("       note: {note}");
         }
@@ -214,24 +211,18 @@ fn show(catalog: &Catalog, id: &str) -> Result<(), String> {
 fn install_cmd(
     catalog: &Catalog,
     dirs: &Dirs,
+    state_path: &Path,
     id: &str,
     choice: Option<&String>,
 ) -> Result<(), String> {
     let details = catalog.details(&parse_id(id)?).map_err(|e| e.to_string())?;
-    let release = details
-        .release
-        .ok_or_else(|| details.unavailable_reason.clone().unwrap_or_default())?;
+    let release = details.release.ok_or_else(|| details.unavailable_reason.clone().unwrap_or_default())?;
     let n: usize = match choice {
-        Some(c) => c
-            .parse()
-            .map_err(|_| format!("\"{c}\" is not an option number"))?,
+        Some(c) => c.parse().map_err(|_| format!("\"{c}\" is not an option number"))?,
         None => 1,
     };
     let option = release.options.get(n.wrapping_sub(1)).ok_or_else(|| {
-        details
-            .unavailable_reason
-            .clone()
-            .unwrap_or_else(|| format!("there is no option {n}; see `ustore show {id}`"))
+        details.unavailable_reason.clone().unwrap_or_else(|| format!("there is no option {n}; see `ustore show {id}`"))
     })?;
     for step in &option.plan.steps {
         println!("- {step}");
@@ -252,11 +243,45 @@ fn install_cmd(
                     eprintln!("  {pct}%");
                 }
             }
+            true
         },
     )
     .map_err(|e| e.to_string())?;
     println!("{}", outcome.message);
+    if option.plan.action != install::Action::ShowCommand {
+        let mut state = State::load(state_path);
+        let mut entry =
+            InstalledApp::new(&details.summary, &release.version, &option.label(), &option.asset.name, now_unix());
+        entry.path = outcome.file.as_ref().map(|p| p.display().to_string());
+        entry.store_managed = outcome.store_managed;
+        state.record_install(entry);
+        state.save(state_path).map_err(|e| format!("installed, but the library could not be saved: {e}"))?;
+    }
     Ok(())
+}
+
+fn library(catalog: &Catalog, state_path: &Path, check: bool) {
+    let state = State::load(state_path);
+    if state.library.is_empty() {
+        println!("Nothing here yet. Apps you install with `ustore install` are listed here.");
+        return;
+    }
+    let statuses = if check {
+        let apps: Vec<_> =
+            state.library.iter().filter_map(|a| Some((AppId::parse(&a.id)?, a.version.clone()))).collect();
+        catalog.check_updates(&apps)
+    } else {
+        vec![]
+    };
+    for (i, app) in state.library.iter().enumerate() {
+        let status = match statuses.get(i) {
+            Some(UpdateStatus::Available { version, .. }) => format!("update available: {version}"),
+            Some(UpdateStatus::UpToDate) => "up to date".to_string(),
+            Some(UpdateStatus::Unknown(why)) => format!("could not check: {why}"),
+            None => String::new(),
+        };
+        println!("{:<34} {:<14} {:<28} {}", app.id, app.version, app.label, status);
+    }
 }
 
 fn classify(catalog: &Catalog, name: &str) {
