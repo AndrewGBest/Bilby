@@ -431,15 +431,38 @@ fn updates_are_found_and_applied() {
     assert_eq!(s.store().get_toast(), "1 update available");
     assert_eq!(s.store().get_last_checked(), "just now");
 
+    // One click updates in place: no detour through the app page.
     s.click("Update Kestrel");
-    assert!(s.store().get_details_open());
-    assert_eq!(s.store().get_installed_version(), "v1.20.0");
-    assert_eq!(s.store().get_app().version, "v1.21.0");
-    assert!(s.has("Update Portable archive · x86_64") || s.has("Download Portable archive · x86_64"));
-    s.app.install(&s.ui, 0);
+    assert!(!s.store().get_details_open());
     assert_eq!(s.saved().library[0].version, "v1.21.0");
     assert_eq!(s.store().get_updates_count(), 0);
     assert_eq!(s.store().get_library().row_data(0).unwrap().status, 2);
+    assert_eq!(s.store().get_toast(), "Kestrel updated to v1.21.0");
+    assert_eq!(s.store().get_updating_id(), "");
+    assert_eq!(s.store().get_install_state(), 0);
+    assert!(s.dirs.downloads.join("kestrel-x86_64-unknown-linux-gnu.tar.gz").is_file());
+
+    // The app page is still one click away, and agrees.
+    s.click("Details of Kestrel");
+    assert!(s.store().get_details_open());
+    assert_eq!(s.store().get_installed_version(), "v1.21.0");
+    assert_eq!(s.store().get_app().version, "v1.21.0");
+}
+
+#[test]
+fn updating_an_app_that_lost_its_build_says_so() {
+    // Winspect has nothing for Linux; pretend it was in the library anyway.
+    let seed = r#"{"settings":{"welcomed":true},"library":[{"id":"github:winspect/winspect","name":"Winspect","version":"v0.1"}]}"#;
+    let s = start_with("linux-x64-debian", Shell::Desktop, Some(seed));
+    s.app.update_app(&s.ui, "github:winspect/winspect");
+    assert_eq!(s.store().get_toast(), "Winspect no longer has a file for this device");
+    assert!(s.store().get_toast_is_error());
+    assert_eq!(s.store().get_updating_id(), "");
+    assert_eq!(s.saved().library[0].version, "v0.1", "the library is untouched");
+    // Unknown ids and apps outside the library are ignored.
+    s.app.update_app(&s.ui, "github:tidewave/tidewave");
+    s.app.update_app(&s.ui, "nonsense");
+    assert_eq!(s.store().get_updating_id(), "");
 }
 
 #[test]

@@ -186,6 +186,30 @@ fn an_update_check_without_network_marks_apps_as_unchecked_not_current() {
 }
 
 #[test]
+fn an_update_that_fails_is_reported_and_can_be_repeated() {
+    let seed = r#"{"settings":{"welcomed":true},"library":[{"id":"github:kestrel-sh/kestrel","name":"Kestrel","version":"v1.20.0"}]}"#;
+    let s = start(seed);
+    s.app.check_updates(&s.ui, false);
+    assert_eq!(s.store().get_updates_count(), 1);
+
+    s.go(OFFLINE);
+    s.app.update_app(&s.ui, "github:kestrel-sh/kestrel");
+    assert!(
+        s.store().get_toast().starts_with("Couldn't update Kestrel: couldn't connect"),
+        "{}",
+        s.store().get_toast()
+    );
+    assert!(s.store().get_toast_is_error());
+    assert_eq!(s.store().get_updating_id(), "", "the row is not left spinning");
+    assert_eq!(s.store().get_updates_count(), 1, "the update is still on offer");
+
+    s.go(ONLINE);
+    s.app.update_app(&s.ui, "github:kestrel-sh/kestrel");
+    assert_eq!(s.store().get_toast(), "Kestrel updated to v1.21.0");
+    assert_eq!(s.store().get_updates_count(), 0);
+}
+
+#[test]
 fn a_download_that_fails_leaves_the_library_alone() {
     let s = start(WELCOMED);
     s.app.open(&s.ui, "github:tidewave/tidewave");

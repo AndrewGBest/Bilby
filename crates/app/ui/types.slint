@@ -125,6 +125,8 @@ export global Store {
     in property <int> updates-count;
     in property <bool> checking-updates;
     in property <string> last-checked;
+    // The library app being updated in place right now, "" when none.
+    in property <string> updating-id;
 
     // --- settings ---------------------------------------------------------------
     in property <int> theme-mode;
@@ -150,6 +152,7 @@ export global Store {
     callback install(int);
     callback cancel-install();
     callback check-updates();
+    callback update-app(string);
     callback remove-from-library(string);
     callback set-theme(int);
     callback set-prereleases(bool);

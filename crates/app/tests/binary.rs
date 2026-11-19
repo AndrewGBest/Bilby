@@ -131,6 +131,38 @@ fn start_up_finds_updates_in_the_background() {
 }
 
 #[test]
+fn one_click_update_with_real_threads() {
+    if !have_xvfb() {
+        return;
+    }
+    let seed = r#"{"settings":{"welcomed":true},"library":[
+        {"id":"github:kestrel-sh/kestrel","name":"Kestrel","version":"v1.20.0"}]}"#;
+    let run = run(
+        seed,
+        &[
+            "--as",
+            "linux-x64-debian",
+            "--ui",
+            "desktop",
+            "--size",
+            "1280x800",
+            "--page",
+            "library",
+            "--script",
+            "wait wait update:github:kestrel-sh/kestrel wait wait wait wait wait wait",
+            "--settle",
+            "1200",
+        ],
+    );
+    assert_eq!(run.get("page"), "2");
+    assert_eq!(run.get("details_open"), "false");
+    assert_eq!(run.get("updating"), "");
+    assert_eq!(run.get("updates"), "0");
+    assert_eq!(run.get("toast"), "Kestrel updated to v1.21.0");
+    assert!(run.home.join("Downloads").join("untitledstore").join("kestrel-x86_64-unknown-linux-gnu.tar.gz").is_file());
+}
+
+#[test]
 fn the_start_up_check_respects_the_setting() {
     if !have_xvfb() {
         return;

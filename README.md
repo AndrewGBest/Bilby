@@ -32,8 +32,9 @@ Screenshots show the built-in demo catalog; the apps in it are fictional.
 - **Installs**: downloads, verifies the SHA-256 GitHub publishes, then places AppImages
   itself or hands packages to the system installer. Shows the steps first; downloads can
   be cancelled. AUR packages get the exact command to run, not a silent build.
-- **Library and updates**: remembers what you installed and checks the sources for
-  newer releases that fit your device. Older versions can be picked from the app page.
+- **Library and updates**: remembers what you installed, checks the sources for newer
+  releases that fit your device, and updates an app with one click from the Library.
+  Older versions can be picked from the app page.
 - **App pictures**: the owner's avatar, fetched straight from GitHub and cached on the
   device; initials on a colour until it arrives, or if there is none.
 - **Three interfaces** in one app: desktop (mouse and full keyboard use), mobile (touch),
@@ -51,9 +52,9 @@ A working vertical slice. It has only ever been looked at on Linux.
 
 | | State |
 |---|---|
-| Engine, sources, library, updates, install planning | Implemented; 147 automated tests in total |
-| Desktop, mobile and TV interfaces | Implemented; 42 tests drive the real window headlessly, 6 more run the real binary under a virtual display |
-| Linux | Builds, runs, all tests pass |
+| Engine, sources, library, updates, install planning | Implemented; 150 automated tests in total |
+| Desktop, mobile and TV interfaces | Implemented; 43 tests drive the real window headlessly, 7 more run the real binary under a virtual display |
+| Linux | Builds (debug and release), runs, all tests pass |
 | Windows, macOS | Builds and the test suite passes on GitHub's Windows and macOS runners. Those tests use a headless backend: **nobody has seen the window on either system**, and installer hand-off there is untried |
 | Android (phone, tablet, TV) | Core type-checks; entry point written; **no APK packaging**, and handing APKs to the system installer is not implemented (the UI says so) |
 | iOS | Can only ever be a catalog: see [the design notes](docs/DESIGN.md#ios) |
@@ -101,7 +102,7 @@ cargo test --workspace
 ```
 
 No internet needed. The network tests start their own server on localhost and the UI
-tests use Slint's headless backend. On Linux, six more tests run the real binary under
+tests use Slint's headless backend. On Linux, seven more tests run the real binary under
 `xvfb-run` and are skipped if it is not installed. CI runs the suite on Linux, Windows
 and macOS. See [Testing](docs/DESIGN.md#8-testing).
 

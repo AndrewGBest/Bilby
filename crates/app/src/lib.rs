@@ -915,6 +915,48 @@ impl App {
 
     // ---- install ----
 
+    /// Update a library app in place: look up its newest release for this device and
+    /// install the best option, without leaving the Library page.
+    pub fn update_app(self: &Arc<Self>, ui: &AppWindow, id: &str) {
+        let store = ui.global::<Store>();
+        if store.get_install_state() == 1 || !store.get_updating_id().is_empty() {
+            return;
+        }
+        let Some(app_id) = AppId::parse(id) else { return };
+        let Some(entry) = self.state.lock().unwrap().installed(id).cloned() else { return };
+        store.set_updating_id(id.into());
+        store.set_install_progress(0.0);
+        let id = id.to_string();
+        self.job(
+            move |app| app.catalog().details(&app_id).map_err(|e| e.to_string()),
+            move |app, ui, result| {
+                let store = ui.global::<Store>();
+                let fail = |message: String| {
+                    store.set_updating_id(SharedString::new());
+                    app.toast(ui, &message, true);
+                };
+                let details = match result {
+                    Ok(details) => details,
+                    Err(e) => return fail(format!("Couldn't update {}: {e}", entry.name)),
+                };
+                let Some(picked) =
+                    details.release.as_ref().filter(|r| !r.options.is_empty()).map(|r| r.version.clone())
+                else {
+                    return fail(format!("{} no longer has a file for this device", entry.name));
+                };
+                let selected = details.versions.iter().position(|r| r.version == picked);
+                // The install step reads the app in focus; make it this one.
+                store.set_app(app.library_card(&entry));
+                *app.current.lock().unwrap() = Current { id, details: Some(details), selected };
+                app.install(ui, 0);
+                // Nothing started (should not happen once an option exists): do not get stuck.
+                if store.get_install_state() == 0 && !store.get_updating_id().is_empty() {
+                    store.set_updating_id(SharedString::new());
+                }
+            },
+        );
+    }
+
     pub fn install(self: &Arc<Self>, ui: &AppWindow, index: i32) {
         let store = ui.global::<Store>();
         if store.get_install_state() == 1 {
@@ -976,6 +1018,9 @@ impl App {
             },
             move |app, ui, result| {
                 let store = ui.global::<Store>();
+                // Started from the Library page rather than an app page?
+                let updating_in_place = !store.get_updating_id().is_empty();
+                store.set_updating_id(SharedString::new());
                 match result {
                     Ok(outcome) => {
                         store.set_install_state(2);
@@ -1007,15 +1052,26 @@ impl App {
                         app.updates.lock().unwrap().insert(id, status);
                         store.set_installed_version(version.into());
                         app.refresh(ui);
-                        app.toast(ui, &format!("{name} is in your library"), false);
+                        if updating_in_place {
+                            store.set_install_state(0);
+                            app.toast(ui, &format!("{name} updated to {}", store.get_installed_version()), false);
+                        } else {
+                            app.toast(ui, &format!("{name} is in your library"), false);
+                        }
                     }
                     Err(Error::Cancelled) => {
                         store.set_install_state(0);
                         app.toast(ui, "Download cancelled", false);
                     }
                     Err(e) => {
-                        store.set_install_state(3);
-                        store.set_install_message(e.to_string().into());
+                        if updating_in_place {
+                            // There is no app page open to show the message on.
+                            store.set_install_state(0);
+                            app.toast(ui, &format!("Update failed: {e}"), true);
+                        } else {
+                            store.set_install_state(3);
+                            store.set_install_message(e.to_string().into());
+                        }
                     }
                 }
             },
@@ -1205,6 +1261,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         app.cancel_install.store(true, Ordering::SeqCst);
     });
     on!(on_check_updates, |app, ui| { app.check_updates(ui, true) });
+    on!(on_update_app, |app, ui, id| { app.update_app(ui, &id) });
     on!(on_remove_from_library, |app, ui, id| { app.remove_from_library(ui, &id) });
     on!(on_set_theme, |app, ui, mode| {
         let name = ["system", "light", "dark"].get(mode as usize).copied().unwrap_or("system");
@@ -1349,6 +1406,8 @@ fn screenshot_after_script(
                             position,
                             button: PointerEventButton::Left,
                         });
+                    } else if let Some(id) = other.strip_prefix("update:") {
+                        ui.global::<Store>().invoke_update_app(id.into());
                     } else if let Some(index) = other.strip_prefix("install:") {
                         // The same callback the Install button calls; independent of layout.
                         ui.global::<Store>().invoke_install(index.parse().unwrap_or(0));
@@ -1421,6 +1480,7 @@ fn describe(ui: &AppWindow) -> String {
         format!("library={}", store.get_library().row_count()),
         format!("updates={}", store.get_updates_count()),
         format!("checking_updates={}", store.get_checking_updates()),
+        format!("updating={}", store.get_updating_id()),
         format!("toast={}", store.get_toast()),
     ]
     .join("\n")

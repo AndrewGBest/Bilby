@@ -839,6 +839,18 @@ component LibraryItem inherits Rectangle {
     in property <LibraryRow> entry;
     in property <bool> compact;
     property <bool> confirm: false;
+    property <bool> updating: Store.updating-id == entry.card.id;
+    // One update at a time; the others wait their turn.
+    property <bool> can-act: Store.updating-id == "" || updating;
+    function act() {
+        if (entry.status != 3) {
+            Store.open(entry.card.id);
+        } else if (updating) {
+            Store.cancel-install();
+        } else {
+            Store.update-app(entry.card.id);
+        }
+    }
     border-radius: 12px;
     background: Theme.surface;
     border-width: 1px;
@@ -857,7 +869,7 @@ component LibraryItem inherits Rectangle {
                 spacing: 3px;
                 horizontal-stretch: 1;
                 Text { text: entry.card.name; color: Theme.text; font-size: 15px; font-weight: 600; overflow: elide; }
-                Text { text: entry.detail; color: Theme.text-dim; font-size: 12px; overflow: elide; }
+                Text { text: updating ? "Updating…" : entry.detail; color: Theme.text-dim; font-size: 12px; overflow: elide; }
                 if entry.status != 0 : Text {
                     text: entry.status-text;
                     color: entry.status == 3 ? Theme.accent : entry.status == 4 ? Theme.warn : entry.status == 2 ? Theme.ok : Theme.text-dim;
@@ -871,10 +883,11 @@ component LibraryItem inherits Rectangle {
                 VerticalLayout {
                     alignment: center;
                     Button {
-                        text: entry.status == 3 ? "Update" : "Details";
-                        primary: entry.status == 3;
-                        accessible-label: (entry.status == 3 ? "Update " : "Details of ") + entry.card.name;
-                        clicked => { Store.open(entry.card.id); }
+                        text: entry.status != 3 ? "Details" : updating ? "Cancel" : "Update";
+                        primary: entry.status == 3 && !updating;
+                        enabled: root.can-act;
+                        accessible-label: (entry.status != 3 ? "Details of " : updating ? "Cancel updating " : "Update ") + entry.card.name;
+                        clicked => { root.act(); }
                     }
                 }
                 VerticalLayout {
@@ -898,10 +911,11 @@ component LibraryItem inherits Rectangle {
             spacing: 8px;
             Button {
                 horizontal-stretch: 1;
-                text: entry.status == 3 ? "Update" : "Details";
-                primary: entry.status == 3;
-                accessible-label: (entry.status == 3 ? "Update " : "Details of ") + entry.card.name;
-                clicked => { Store.open(entry.card.id); }
+                text: entry.status != 3 ? "Details" : updating ? "Cancel" : "Update";
+                primary: entry.status == 3 && !updating;
+                enabled: root.can-act;
+                accessible-label: (entry.status != 3 ? "Details of " : updating ? "Cancel updating " : "Update ") + entry.card.name;
+                clicked => { root.act(); }
             }
             Button {
                 horizontal-stretch: 1;
@@ -915,6 +929,18 @@ component LibraryItem inherits Rectangle {
                     }
                     root.confirm = !root.confirm;
                 }
+            }
+        }
+        if updating : Rectangle {
+            height: 4px;
+            border-radius: 2px;
+            background: Theme.surface-2;
+            Rectangle {
+                x: 0;
+                width: parent.width * clamp(Store.install-progress, 0.02, 1.0);
+                border-radius: 2px;
+                background: Theme.accent;
+                animate width { duration: 120ms; }
             }
         }
         if root.confirm : Text {
