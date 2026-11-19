@@ -94,6 +94,11 @@ component Spotlight inherits Rectangle {
     height: 148px;
     border-radius: 18px;
     background: @linear-gradient(100deg, app.tint.darker(45%) 0%, app.tint.darker(10%) 100%);
+    // The whole banner opens the app, not just the button.
+    TouchArea {
+        mouse-cursor: pointer;
+        clicked => { Store.open(app.id); }
+    }
     HorizontalLayout {
         padding: 24px;
         spacing: 20px;
@@ -143,6 +148,9 @@ component Spotlight inherits Rectangle {
 
 export component DesktopShell inherits Rectangle {
     background: Theme.bg;
+
+    // Keyboard shortcuts must work before anything was clicked.
+    init => { keys.focus(); }
 
     function go(page: int) {
         Store.close-details();

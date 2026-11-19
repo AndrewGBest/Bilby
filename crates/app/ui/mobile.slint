@@ -56,8 +56,10 @@ export component MobileShell inherits Rectangle {
     in property <length> inset-bottom;
     background: Theme.bg;
 
+    init => { keys.focus(); }
+
     // Android's Back button and Escape leave the details page.
-    FocusScope {
+    keys := FocusScope {
         capture-key-pressed(event) => {
             if ((event.text == Key.Escape || event.text == Key.Back) && Store.details-open) {
                 Store.close-details();

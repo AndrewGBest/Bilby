@@ -4627,6 +4627,7 @@ checksum = "ebc1c04c71510c7f702b52b7c350734c9ff1295c464a03335b00bb84fc54f853"
 name = "untitledstore"
 version = "0.1.0"
 dependencies = [
+ "i-slint-backend-testing",
  "png 0.17.16",
  "slint",
  "slint-build",
