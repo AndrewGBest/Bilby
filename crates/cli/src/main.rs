@@ -5,7 +5,7 @@ use std::path::Path;
 use std::process::ExitCode;
 use ustore_core::catalog::UpdateStatus;
 use ustore_core::install::{self, Dirs};
-use ustore_core::model::{human_count, human_size, AppId};
+use ustore_core::model::{human_count, human_size, AppId, SourceKind};
 use ustore_core::platform::PRESETS;
 use ustore_core::state::{now_unix, InstalledApp, State};
 use ustore_core::{Catalog, Platform};
@@ -25,6 +25,8 @@ COMMANDS:
     library                Apps installed through the store
     updates                Check the library for newer releases
     classify <file name>   Explain how a release file name is interpreted
+    doctor                 Check that the sources answer and that every featured app
+                           really has something for this machine
 
     <id> is github:owner/repo or aur:package; a repository URL works too
 
@@ -94,6 +96,7 @@ fn main() -> ExitCode {
         }
         Some("show") if args.len() == 2 => show(&catalog, &args[1]),
         Some("install") if args.len() >= 2 => install_cmd(&catalog, &dirs, &state_path, &args[1], args.get(2)),
+        Some("doctor") => doctor(&catalog, demo),
         Some("library") => {
             library(&catalog, &state_path, false);
             Ok(())
@@ -281,6 +284,80 @@ fn library(catalog: &Catalog, state_path: &Path, check: bool) {
             None => String::new(),
         };
         println!("{:<34} {:<14} {:<28} {}", app.id, app.version, app.label, status);
+    }
+}
+
+/// A self-check against whatever the catalog talks to. Each line is one thing a person
+/// would otherwise discover by something not working.
+fn doctor(catalog: &Catalog, demo: bool) -> Result<(), String> {
+    // Probe with an app the featured list says exists for this machine.
+    let first = catalog.featured().into_iter().flat_map(|s| s.apps).find(|a| a.id.source == SourceKind::GitHub);
+    let (query, probe) = match &first {
+        Some(app) => (app.name.clone(), app.id.clone()),
+        None => ("ripgrep".to_string(), AppId::new(SourceKind::GitHub, "BurntSushi/ripgrep")),
+    };
+    let query = query.as_str();
+    let mut problems = 0;
+    let mut report = |ok: bool, line: String| {
+        println!("{} {line}", if ok { "ok  " } else { "FAIL" });
+        if !ok {
+            problems += 1;
+        }
+    };
+
+    println!("Checking as {}{}", catalog.platform.title(), if demo { " (demo catalog)" } else { "" });
+    let sources: Vec<_> = catalog.active_sources().iter().map(|s| s.label()).collect();
+    report(!sources.is_empty(), format!("sources for this machine: {}", sources.join(", ")));
+
+    let outcome = catalog.search(query);
+    for error in &outcome.errors {
+        report(false, error.clone());
+    }
+    report(
+        outcome.errors.is_empty(),
+        format!(
+            "search \"{query}\": {} installable, {} without a file for this machine",
+            outcome.apps.len(),
+            outcome.hidden
+        ),
+    );
+
+    match catalog.details(&probe) {
+        Ok(details) => match details.release.as_ref().and_then(|r| r.options.first().map(|o| (r, o))) {
+            Some((release, option)) => report(
+                true,
+                format!("{probe} {}: would install {} ({})", release.version, option.asset.name, option.label()),
+            ),
+            None => report(false, format!("{probe}: {}", details.unavailable_reason.unwrap_or_default())),
+        },
+        Err(e) => report(false, format!("{probe}: {e}")),
+    }
+
+    // The featured list ships inside the app and promises each entry works here.
+    // Hold it to that: one request per entry.
+    let featured: Vec<_> = catalog.featured().into_iter().flat_map(|s| s.apps).collect();
+    let mut seen = std::collections::HashSet::new();
+    let mut checked = 0;
+    for app in featured.iter().filter(|a| seen.insert(a.id.clone())) {
+        checked += 1;
+        match catalog.details(&app.id) {
+            Ok(details) if details.unavailable_reason.is_none() => {}
+            Ok(details) => {
+                report(false, format!("featured {}: {}", app.id, details.unavailable_reason.unwrap_or_default()))
+            }
+            Err(e) => report(false, format!("featured {}: {e}", app.id)),
+        }
+    }
+    report(true, format!("checked {checked} featured apps"));
+
+    if let Some(quota) = catalog.quota() {
+        report(quota.remaining > 0, quota.describe(ustore_core::state::now_unix()));
+    }
+    if problems == 0 {
+        println!("\nAll checks passed.");
+        Ok(())
+    } else {
+        Err(format!("{problems} check{} failed", if problems == 1 { "" } else { "s" }))
     }
 }
 

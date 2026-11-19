@@ -143,6 +143,28 @@ fn install_then_library_then_updates() {
 }
 
 #[test]
+fn doctor_checks_sources_and_the_featured_list() {
+    for preset in [
+        "linux-x64-debian",
+        "linux-x64-arch",
+        "linux-x64-alpine",
+        "windows-arm64",
+        "macos-arm64",
+        "android-arm64",
+        "android-tv",
+    ] {
+        let report = out(&["--demo", "--as", preset, "doctor"]);
+        assert!(report.contains("All checks passed."), "{preset}:\n{report}");
+        assert!(!report.contains("FAIL"), "{preset}:\n{report}");
+        assert!(report.contains("featured apps"));
+    }
+    let debian = out(&["--demo", "--as", "linux-x64-debian", "doctor"]);
+    assert!(debian.contains("would install tidewave_3.4.0_amd64.deb (Debian package · x86_64)"), "{debian}");
+    let tv = out(&["--demo", "--as", "android-tv", "doctor"]);
+    assert!(tv.contains("APK · arm64 · TV"), "{tv}");
+}
+
+#[test]
 fn an_empty_library_says_what_to_do() {
     assert!(out(&["--demo", "library"]).contains("Nothing here yet"));
 }

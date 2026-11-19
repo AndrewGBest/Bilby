@@ -438,6 +438,9 @@ licensed separately.
 ## 12. Next steps, in order of value
 
 1. Run against the live GitHub and AUR APIs and fix whatever the real responses break.
+   `ustore doctor` does this in one command: it searches, loads an app, checks every
+   featured entry against this machine and prints GitHub's remaining allowance. It also
+   exposes wrong entries in the hand-written featured list.
 2. Run the classifier over a large sample of real release file names; fix the misses.
 3. Run the app on real Windows and macOS desktops; package it for each.
 4. Android: NDK build, APK, `PackageInstaller` hand-off; then Android TV launcher entry.

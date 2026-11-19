@@ -75,6 +75,10 @@ cargo run -p ustore-cli -- classify ripgrep-14.1.0-x86_64-unknown-linux-musl.tar
 
 # Against the real GitHub and AUR: drop --demo.
 cargo run -p ustore-cli -- search ripgrep
+
+# First thing to run on a real connection: checks that GitHub and the AUR answer the way
+# the code expects, and that every featured app really has a file for this machine.
+cargo run -p ustore-cli -- doctor
 ```
 
 Keyboard on desktop: `Ctrl+K` or `/` search, `Esc` or `Alt+Left` back, `Tab` and

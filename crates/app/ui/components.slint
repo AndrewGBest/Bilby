@@ -789,7 +789,7 @@ export component DetailsBody inherits Rectangle {
             if Store.notes != "" : VerticalLayout {
                 spacing: 8px;
                 Text {
-                    text: Store.release-date != "" ? "Release notes  ·  " + Store.release-date + (Store.release-age != "" ? "  ·  " + Store.release-age : "") : "Release notes";
+                    text: (Store.app.source == "AUR" ? "About this package" : "Release notes") + (Store.release-date != "" ? "  ·  " + (Store.app.source == "AUR" ? "updated " : "") + Store.release-date + (Store.release-age != "" ? "  ·  " + Store.release-age : "") : "");
                     color: Theme.text-dim;
                     font-size: 12px;
                     font-weight: 700;
