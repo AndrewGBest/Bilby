@@ -210,6 +210,24 @@ fn an_update_that_fails_is_reported_and_can_be_repeated() {
 }
 
 #[test]
+fn update_all_offline_reports_and_leaves_everything_on_offer() {
+    let seed = r#"{"settings":{"welcomed":true},"library":[
+        {"id":"github:kestrel-sh/kestrel","name":"Kestrel","version":"v1.20.0"},
+        {"id":"github:tidewave/tidewave","name":"Tidewave","version":"v3.0.0"}]}"#;
+    let s = start(seed);
+    s.app.check_updates(&s.ui, false);
+    assert_eq!(s.store().get_updates_count(), 2);
+    s.go(OFFLINE);
+    s.app.update_all(&s.ui);
+    assert!(s.store().get_toast_is_error());
+    assert_eq!(s.store().get_updating_id(), "", "the queue ran dry instead of hanging");
+    assert_eq!(s.store().get_updates_count(), 2);
+    s.go(ONLINE);
+    s.app.update_all(&s.ui);
+    assert_eq!(s.store().get_updates_count(), 0);
+}
+
+#[test]
 fn a_download_that_fails_leaves_the_library_alone() {
     let s = start(WELCOMED);
     s.app.open(&s.ui, "github:tidewave/tidewave");

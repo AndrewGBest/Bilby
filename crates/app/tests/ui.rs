@@ -450,6 +450,33 @@ fn updates_are_found_and_applied() {
 }
 
 #[test]
+fn update_all_works_through_the_queue_and_survives_a_failure() {
+    // Two real updates with a broken entry between them.
+    let seed = r#"{"settings":{"welcomed":true},"library":[
+        {"id":"github:kestrel-sh/kestrel","name":"Kestrel","version":"v1.20.0"},
+        {"id":"github:winspect/winspect","name":"Winspect","version":"v0.1"},
+        {"id":"github:tidewave/tidewave","name":"Tidewave","version":"v3.0.0"},
+        {"id":"github:lumen-labs/lumen","name":"Lumen","version":"v0.19.2"}]}"#;
+    let s = start_with("linux-x64-debian", Shell::Desktop, Some(seed));
+    s.store().set_page(2);
+    assert!(!s.has("Update all"), "nothing to update before a check");
+    s.app.check_updates(&s.ui, false);
+    assert_eq!(s.store().get_updates_count(), 2);
+    assert!(s.has("Update all"));
+
+    s.click("Update all");
+    let versions: Vec<(String, String)> =
+        s.saved().library.iter().map(|a| (a.name.clone(), a.version.clone())).collect();
+    assert!(versions.contains(&("Kestrel".into(), "v1.21.0".into())), "{versions:?}");
+    assert!(versions.contains(&("Tidewave".into(), "v3.4.0".into())), "{versions:?}");
+    assert!(versions.contains(&("Lumen".into(), "v0.19.2".into())), "up-to-date apps are left alone");
+    assert!(versions.contains(&("Winspect".into(), "v0.1".into())));
+    assert_eq!(s.store().get_updates_count(), 0);
+    assert_eq!(s.store().get_updating_id(), "");
+    assert!(!s.has("Update all"), "the button goes away when there is nothing left");
+}
+
+#[test]
 fn updating_an_app_that_lost_its_build_says_so() {
     // Winspect has nothing for Linux; pretend it was in the library anyway.
     let seed = r#"{"settings":{"welcomed":true},"library":[{"id":"github:winspect/winspect","name":"Winspect","version":"v0.1"}]}"#;

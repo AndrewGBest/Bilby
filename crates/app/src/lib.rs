@@ -372,6 +372,8 @@ pub struct App {
     details_generation: AtomicU64,
     toast_generation: Arc<AtomicU64>,
     cancel_install: Arc<AtomicBool>,
+    /// Library apps waiting their turn after "Update all".
+    update_queue: Mutex<std::collections::VecDeque<String>>,
     /// Owners whose picture has been asked for in this session (found or not).
     pictures_requested: Mutex<HashSet<String>>,
     opener: Opener,
@@ -915,6 +917,34 @@ impl App {
 
     // ---- install ----
 
+    /// Update every library app that has an update waiting, one after another. A failure
+    /// is reported and the rest carry on.
+    pub fn update_all(self: &Arc<Self>, ui: &AppWindow) {
+        if !ui.global::<Store>().get_updating_id().is_empty() {
+            return;
+        }
+        let waiting: Vec<String> = {
+            let updates = self.updates.lock().unwrap();
+            self.state()
+                .library
+                .iter()
+                .filter(|app| matches!(updates.get(&app.id), Some(UpdateStatus::Available { .. })))
+                .map(|app| app.id.clone())
+                .collect()
+        };
+        *self.update_queue.lock().unwrap() = waiting.into();
+        self.update_next(ui);
+    }
+
+    /// Start the next queued update, if any and if nothing is running.
+    fn update_next(self: &Arc<Self>, ui: &AppWindow) {
+        let store = ui.global::<Store>();
+        while store.get_updating_id().is_empty() && store.get_install_state() != 1 {
+            let Some(id) = self.update_queue.lock().unwrap().pop_front() else { return };
+            self.update_app(ui, &id);
+        }
+    }
+
     /// Update a library app in place: look up its newest release for this device and
     /// install the best option, without leaving the Library page.
     pub fn update_app(self: &Arc<Self>, ui: &AppWindow, id: &str) {
@@ -934,6 +964,7 @@ impl App {
                 let fail = |message: String| {
                     store.set_updating_id(SharedString::new());
                     app.toast(ui, &message, true);
+                    app.update_next(ui);
                 };
                 let details = match result {
                     Ok(details) => details,
@@ -1061,6 +1092,8 @@ impl App {
                     }
                     Err(Error::Cancelled) => {
                         store.set_install_state(0);
+                        // Cancelling one stops the rest of an "Update all" too.
+                        app.update_queue.lock().unwrap().clear();
                         app.toast(ui, "Download cancelled", false);
                     }
                     Err(e) => {
@@ -1073,6 +1106,9 @@ impl App {
                             store.set_install_message(e.to_string().into());
                         }
                     }
+                }
+                if updating_in_place {
+                    app.update_next(ui);
                 }
             },
         );
@@ -1215,6 +1251,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         details_generation: AtomicU64::new(0),
         toast_generation: Arc::new(AtomicU64::new(0)),
         cancel_install: Arc::new(AtomicBool::new(false)),
+        update_queue: Mutex::new(std::collections::VecDeque::new()),
         pictures_requested: Mutex::new(HashSet::new()),
         opener: options.opener.clone().unwrap_or_else(|| Arc::new(install::open_with_system)),
         catalog_factory,
@@ -1262,6 +1299,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     });
     on!(on_check_updates, |app, ui| { app.check_updates(ui, true) });
     on!(on_update_app, |app, ui, id| { app.update_app(ui, &id) });
+    on!(on_update_all, |app, ui| { app.update_all(ui) });
     on!(on_remove_from_library, |app, ui, id| { app.remove_from_library(ui, &id) });
     on!(on_set_theme, |app, ui, mode| {
         let name = ["system", "light", "dark"].get(mode as usize).copied().unwrap_or("system");

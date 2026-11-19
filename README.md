@@ -33,7 +33,7 @@ Screenshots show the built-in demo catalog; the apps in it are fictional.
   itself or hands packages to the system installer. Shows the steps first; downloads can
   be cancelled. AUR packages get the exact command to run, not a silent build.
 - **Library and updates**: remembers what you installed, checks the sources for newer
-  releases that fit your device, and updates an app with one click from the Library.
+  releases that fit your device, and updates one app or all of them with one click from the Library.
   Older versions can be picked from the app page.
 - **App pictures**: the owner's avatar, fetched straight from GitHub and cached on the
   device; initials on a colour until it arrives, or if there is none.
@@ -52,8 +52,8 @@ A working vertical slice. It has only ever been looked at on Linux.
 
 | | State |
 |---|---|
-| Engine, sources, library, updates, install planning | Implemented; 150 automated tests in total |
-| Desktop, mobile and TV interfaces | Implemented; 43 tests drive the real window headlessly, 7 more run the real binary under a virtual display |
+| Engine, sources, library, updates, install planning | Implemented; 152 automated tests in total |
+| Desktop, mobile and TV interfaces | Implemented; 45 tests drive the real window headlessly, 7 more run the real binary under a virtual display |
 | Linux | Builds (debug and release), runs, all tests pass |
 | Windows, macOS | Builds and the test suite passes on GitHub's Windows and macOS runners. Those tests use a headless backend: **nobody has seen the window on either system**, and installer hand-off there is untried |
 | Android (phone, tablet, TV) | Core type-checks; entry point written; **no APK packaging**, and handing APKs to the system installer is not implemented (the UI says so) |

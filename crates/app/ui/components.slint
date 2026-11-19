@@ -986,21 +986,34 @@ export component LibraryBody inherits Rectangle {
                         overflow: elide;
                     }
                 }
-                // On a phone the button gets its own row below.
+                // On a phone the buttons get their own rows below.
+                if !compact && Store.updates-count > 1 : VerticalLayout {
+                    alignment: center;
+                    Button {
+                        text: "Update all";
+                        enabled: Store.updating-id == "";
+                        clicked => { Store.update-all(); }
+                    }
+                }
                 if !compact : VerticalLayout {
                     alignment: center;
                     Button {
                         text: "Check for updates";
                         primary: false;
-                        enabled: !Store.checking-updates;
+                        enabled: !Store.checking-updates && Store.updating-id == "";
                         clicked => { Store.check-updates(); }
                     }
                 }
             }
+            if compact && Store.updates-count > 1 : Button {
+                text: "Update all";
+                enabled: Store.updating-id == "";
+                clicked => { Store.update-all(); }
+            }
             if compact : Button {
                 text: "Check for updates";
                 primary: false;
-                enabled: !Store.checking-updates;
+                enabled: !Store.checking-updates && Store.updating-id == "";
                 clicked => { Store.check-updates(); }
             }
             if Store.checking-updates : Busy { }
