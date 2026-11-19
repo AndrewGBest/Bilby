@@ -80,7 +80,9 @@ fn desktop_open_and_install_with_real_threads() {
     if !have_xvfb() {
         return;
     }
-    // Start on an app page (loaded on a worker), then click the AppImage's Install button.
+    // Start on an app page (loaded on a worker), then install the second option, the
+    // AppImage, through the same callback its button calls. (Real clicks on real buttons
+    // are covered by tests/ui.rs; this test is about the threads.)
     let run = run(
         RETURNING,
         &[
@@ -93,7 +95,7 @@ fn desktop_open_and_install_with_real_threads() {
             "--open",
             "tidewave/tidewave",
             "--script",
-            "wait wait click:1190,451 wait wait wait wait wait",
+            "wait wait install:1 wait wait wait wait wait",
             "--settle",
             "1200",
         ],

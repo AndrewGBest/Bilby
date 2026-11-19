@@ -38,7 +38,8 @@ OPTIONS:
     --state <file>             Use this file for settings and library instead of the default
     --screenshot <file.png>    Render one frame to a PNG and exit
     --script <steps>           With --screenshot: replay input first. Steps are separated by
-                               spaces: up down left right ok back tab click:X,Y text:WORD
+                               spaces: up down left right ok back tab wait click:X,Y
+                               text:WORD install:N
     --settle <ms>              With --screenshot: wait after the script (default 600)
     --report <file>            With --screenshot: also write the interface's state as text
 
@@ -1076,6 +1077,9 @@ fn screenshot_after_script(
                             position,
                             button: PointerEventButton::Left,
                         });
+                    } else if let Some(index) = other.strip_prefix("install:") {
+                        // The same callback the Install button calls; independent of layout.
+                        ui.global::<Store>().invoke_install(index.parse().unwrap_or(0));
                     } else if let Some(text) = other.strip_prefix("text:") {
                         for c in text.chars() {
                             key(c.to_string().into());
