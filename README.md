@@ -33,7 +33,7 @@ Screenshots show the built-in demo catalog; the apps in it are fictional.
   itself or hands packages to the system installer. Shows the steps first; downloads can
   be cancelled. AUR packages get the exact command to run, not a silent build.
 - **Library and updates**: remembers what you installed and checks the sources for
-  newer releases that fit your device.
+  newer releases that fit your device. Older versions can be picked from the app page.
 - **Three interfaces** in one app: desktop (mouse and full keyboard use), mobile (touch),
   TV (remote only). Light and dark themes.
 - **Honest about limits**: shows GitHub's remaining request allowance, takes an optional

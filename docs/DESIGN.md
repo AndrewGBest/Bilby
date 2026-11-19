@@ -280,8 +280,11 @@ AppImages the store placed itself; for everything else it says to use the system
 software manager. Reading the system's package database, and Android's package list,
 would close that gap.
 
-Not designed yet: desktop menu entries for AppImages, unpacking archives onto `PATH`,
-installing an older version on request.
+App pages list every recent release (up to six) that has a file for this machine, so an
+older version can be chosen when an update breaks something; the page says it is not the
+newest and the library shows the pending update straight away. **[verified]** by test.
+
+Not designed yet: desktop menu entries for AppImages, unpacking archives onto `PATH`.
 
 ## 7. The three interfaces
 

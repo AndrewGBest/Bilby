@@ -738,18 +738,22 @@ export component DetailsBody inherits Rectangle {
                 }
             }
 
-            if Store.versions.length > 1 : HorizontalLayout {
-                spacing: 8px;
-                alignment: start;
-                VerticalLayout {
-                    alignment: center;
-                    Text { text: "Version"; color: Theme.text-dim; font-size: 12px; font-weight: 700; }
-                }
-                for version[i] in Store.versions : ChoiceChip {
-                    text: version;
-                    selected: i == Store.selected-version;
-                    accessible-label: "Version " + version;
-                    clicked => { Store.select-version(i); }
+            // Scrolls sideways when a project has more releases than fit.
+            if Store.versions.length > 1 : Flickable {
+                height: 32px;
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+                    VerticalLayout {
+                        alignment: center;
+                        Text { text: "Version"; color: Theme.text-dim; font-size: 12px; font-weight: 700; }
+                    }
+                    for version[i] in Store.versions : ChoiceChip {
+                        text: version;
+                        selected: i == Store.selected-version;
+                        accessible-label: "Version " + version;
+                        clicked => { Store.select-version(i); }
+                    }
                 }
             }
 
