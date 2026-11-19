@@ -40,6 +40,10 @@ shape the rest of this document:
 | Idea | Seen in | Here |
 |---|---|---|
 | Library with update checks against the source | Obtainium, F-Droid | Library page, badge, start-up check |
+| "Update" and "Update all" that just do it | Play Store, F-Droid | One-click updates from the Library, queued one at a time |
+| Choosing an older version | F-Droid, Obtainium | Version picker on the app page |
+| Suggestions while typing | Most stores | Instant matches from the bundled catalog, no network |
+| The publisher's picture next to the app | GitHub itself | Owner avatars, cached on the device |
 | Paste a repository link to add an app | Obtainium | Search field accepts links and `owner/repo` |
 | One prominent install button, details below | Flathub, GNOME Software, Play Store | Best option first, the rest listed under it |
 | Say what a package can and cannot be trusted for | F-Droid's anti-features | First-run notice, checksum line, AUR warning |
