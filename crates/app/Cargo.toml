@@ -15,11 +15,11 @@ path = "src/main.rs"
 
 [dependencies]
 ustore-core = { path = "../core" }
-slint = { version = "1.19", default-features = false, features = ["std", "compat-1-2", "backend-winit", "renderer-software", "renderer-femtovg"] }
+slint = { version = "1.19", default-features = false, features = ["std", "compat-1-2", "backend-winit", "renderer-software", "renderer-femtovg", "image-default-formats"] }
 png = "0.17"
 
 [target.'cfg(target_os = "android")'.dependencies]
-slint = { version = "1.19", default-features = false, features = ["std", "compat-1-2", "backend-android-activity-06"] }
+slint = { version = "1.19", default-features = false, features = ["std", "compat-1-2", "backend-android-activity-06", "image-default-formats"] }
 
 [dev-dependencies]
 i-slint-backend-testing = "=1.19.0"

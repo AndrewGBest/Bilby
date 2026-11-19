@@ -6,7 +6,8 @@
 //! UI thread. Under test the same code runs inline, so tests exercise the real handlers.
 
 use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel};
-use std::collections::HashMap;
+use std::cell::RefCell;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
@@ -309,6 +310,19 @@ fn make_catalog(platform: &Platform, demo: bool, settings: &Settings, dirs: &Dir
 
 // ---- application state ------------------------------------------------------------
 
+thread_local! {
+    /// Decoded app pictures by owner. Images belong to the UI thread, so they live here
+    /// rather than in `App`, which worker threads share.
+    static PICTURES: RefCell<HashMap<String, slint::Image>> = RefCell::new(HashMap::new());
+}
+
+fn picture_for(id: &str) -> slint::Image {
+    AppId::parse(id)
+        .and_then(|id| ustore_core::icons::icon_key(&id))
+        .and_then(|key| PICTURES.with(|p| p.borrow().get(&key).cloned()))
+        .unwrap_or_default()
+}
+
 /// The app currently on the details page.
 #[derive(Default)]
 struct Current {
@@ -346,6 +360,8 @@ pub struct App {
     details_generation: AtomicU64,
     toast_generation: Arc<AtomicU64>,
     cancel_install: Arc<AtomicBool>,
+    /// Owners whose picture has been asked for in this session (found or not).
+    pictures_requested: Mutex<HashSet<String>>,
     opener: Opener,
     catalog_factory: CatalogFactory,
 }
@@ -383,6 +399,7 @@ impl App {
             if let Some(ui) = self.ui.upgrade() {
                 done(self, &ui, result);
                 self.refresh_quota(&ui);
+                self.load_pictures(&ui);
             }
             return;
         }
@@ -394,9 +411,75 @@ impl App {
                 if let Some(ui) = weak.upgrade() {
                     done(&app, &ui, result);
                     app.refresh_quota(&ui);
+                    app.load_pictures(&ui);
                 }
             });
         });
+    }
+
+    /// Fetch pictures for every app on screen that does not have one yet. Runs after
+    /// each job, so whatever a job put on screen gets its pictures; owners already asked
+    /// for are skipped, which is also what ends the chain.
+    pub fn load_pictures(self: &Arc<Self>, ui: &AppWindow) {
+        let store = ui.global::<Store>();
+        let mut shown: Vec<String> = Vec::new();
+        for section in store.get_sections().iter() {
+            shown.extend(section.apps.iter().map(|c| c.id.to_string()));
+        }
+        shown.extend(store.get_results().iter().map(|c| c.id.to_string()));
+        shown.extend(store.get_suggestions().iter().map(|c| c.id.to_string()));
+        shown.extend(store.get_library().iter().map(|r| r.card.id.to_string()));
+        shown.push(store.get_app().id.to_string());
+
+        let wanted: Vec<(String, AppId)> = {
+            let mut requested = self.pictures_requested.lock().unwrap();
+            shown
+                .iter()
+                .filter_map(|id| AppId::parse(id))
+                .filter_map(|id| Some((ustore_core::icons::icon_key(&id)?, id)))
+                .filter(|(key, _)| requested.insert(key.clone()))
+                .collect()
+        };
+        if wanted.is_empty() {
+            return;
+        }
+        let dir = self.dirs.cache.join("icons");
+        self.job(
+            move |app| {
+                let http = app.catalog().http();
+                wanted
+                    .into_iter()
+                    .filter_map(|(key, id)| Some((key, ustore_core::icons::fetch(http.as_ref(), &dir, &id).ok()??)))
+                    .collect::<Vec<_>>()
+            },
+            |app, ui, found| {
+                if found.is_empty() {
+                    return;
+                }
+                PICTURES.with(|pictures| {
+                    for (key, path) in found {
+                        // A file that will not decode is simply not shown.
+                        if let Ok(image) = slint::Image::load_from_path(&path) {
+                            pictures.borrow_mut().insert(key, image);
+                        }
+                    }
+                });
+                app.refresh(ui);
+                let store = ui.global::<Store>();
+                let mut card = store.get_app();
+                card.icon = picture_for(&card.id);
+                store.set_app(card);
+                let suggestions: Vec<AppCard> = store
+                    .get_suggestions()
+                    .iter()
+                    .map(|mut c| {
+                        c.icon = picture_for(&c.id);
+                        c
+                    })
+                    .collect();
+                store.set_suggestions(ModelRc::new(VecModel::from(suggestions)));
+            },
+        );
     }
 
     fn toast(&self, ui: &AppWindow, message: &str, is_error: bool) {
@@ -432,6 +515,7 @@ impl App {
         let has_update = matches!(self.updates.lock().unwrap().get(&id), Some(UpdateStatus::Available { .. }));
         AppCard {
             tint: tint_for(&id),
+            icon: picture_for(&id),
             id: id.into(),
             name: app.name.clone().into(),
             author: app.author.clone().into(),
@@ -467,6 +551,7 @@ impl App {
             popularity: SharedString::new(),
             initials: initials(&app.name).into(),
             tint: tint_for(&app.id),
+            icon: picture_for(&app.id),
             installed: true,
             has_update,
         }
@@ -696,6 +781,7 @@ impl App {
                 name: name.into(),
                 initials: initials(name).into(),
                 tint: tint_for(id),
+                icon: picture_for(id),
                 ..Default::default()
             }
         });
@@ -1061,6 +1147,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         details_generation: AtomicU64::new(0),
         toast_generation: Arc::new(AtomicU64::new(0)),
         cancel_install: Arc::new(AtomicBool::new(false)),
+        pictures_requested: Mutex::new(HashSet::new()),
         opener: options.opener.clone().unwrap_or_else(|| Arc::new(install::open_with_system)),
         catalog_factory,
     });
@@ -1070,6 +1157,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     ui.global::<Theme>().set_mode(if shell == Shell::Tv { 2 } else { theme_mode(&theme) });
     app.refresh(&ui);
     app.refresh_settings(&ui);
+    app.load_pictures(&ui);
     if let Some(theme) = &options.theme {
         store.set_theme_mode(theme_mode(theme));
     }
@@ -1139,9 +1227,15 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         app.toast(ui, if cleared { "Token forgotten" } else { "Token saved on this device" }, false);
     });
     on!(on_clear_cache, |app, ui| {
-        // Only the store's own cache folder, never a path from outside.
-        let cache = app.dirs.cache.join("http");
-        let result = if cache.exists() { std::fs::remove_dir_all(&cache) } else { Ok(()) };
+        // Only the store's own cache folders, never a path from outside.
+        let result = ["http", "icons"].iter().try_for_each(|name| {
+            let folder = app.dirs.cache.join(name);
+            if folder.exists() {
+                std::fs::remove_dir_all(&folder)
+            } else {
+                Ok(())
+            }
+        });
         match result {
             Ok(()) => app.toast(ui, "Cached catalog data cleared", false),
             Err(e) => app.toast(ui, &format!("Couldn't clear the cache: {e}"), true),

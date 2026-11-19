@@ -15,6 +15,8 @@ export struct AppCard {
     popularity: string,
     initials: string,
     tint: color,
+    // The owner's picture once it has been fetched; empty until then.
+    icon: image,
     // In the library, and whether a newer release is known.
     installed: bool,
     has-update: bool,

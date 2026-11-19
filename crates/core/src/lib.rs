@@ -6,6 +6,7 @@
 //! * [`source`]   – where apps come from (GitHub Releases, the AUR, ...)
 //! * [`index`]    – the curated list behind the Discover page
 //! * [`catalog`]  – glue: browse / search / details, filtered to this machine
+//! * [`icons`]    – app pictures, fetched from the source and cached
 //! * [`install`]  – what installing a given file means on this machine
 //! * [`state`]    – settings, library and history, stored locally
 //! * [`version`]  – is this release newer than the installed one?
@@ -17,6 +18,7 @@ pub mod compat;
 pub mod demo;
 pub mod error;
 pub mod http;
+pub mod icons;
 pub mod index;
 pub mod install;
 pub mod model;

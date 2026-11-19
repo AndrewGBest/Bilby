@@ -235,6 +235,20 @@ tells you to read the PKGBUILD, because a recipe is arbitrary code from an unvet
 author. The RPC does not say which CPUs a package supports **[assumption]**, so
 that check is left to `makepkg`.
 
+### App pictures
+
+GitHub projects have no icon in the API. The store shows the owner's avatar, which for
+organisations is normally the project's logo, from `https://github.com/<owner>.png`.
+That is an ordinary web request to GitHub, not an API call. It is expected not to count
+against the API allowance and to redirect to the avatar host **[assumption]**: the URL
+form is widely used but was not exercised here, since GitHub is unreachable from the
+build environment. Pictures are fetched in the background after each page of results,
+decoded by what the bytes are rather than what the URL says (avatars are often JPEGs
+behind a `.png` address), and cached under the owner's name; "this owner has none" is
+cached too. Until a picture arrives, or if there is none, the tile shows the app's
+initials. **[verified]** by tests with a stand-in server; never against GitHub.
+The demo catalog has no pictures. AUR packages have none.
+
 ### The index
 
 `crates/core/data/index.json` lists featured apps with the platforms they ship for and,
@@ -329,18 +343,19 @@ been run on a television.
 
 ## 8. Testing
 
-139 tests, none needing the internet. **[verified]**: all pass on Linux here. The suite
+146 tests, none needing the internet. **[verified]**: all pass on Linux here. The suite
 also passed on GitHub's Linux, Windows and macOS runners at an earlier commit (CI run 3);
 see the end of the hand-over notes for the status of the final commit.
 
 | Suite | Count | What it exercises |
 |---|---|---|
-| `ustore-core` unit tests | 60 | detection, classification, compatibility, versions, state file, install plans and execution, index, suggestions, catalog |
+| `ustore-core` unit tests | 66 | detection, classification, compatibility, versions, state file, install plans and execution, index, suggestions, icons, catalog |
 | `core/tests/corpus.rs` | 4 | 169 real-world-style names; cross-OS/CPU safety property; 20,000 generated names |
 | `core/tests/http_sources.rs` | 16 | the real HTTP client and both sources against a local server: headers, token scoping, rate limits, allowance, progress, cancel, cache, documented JSON shapes, garbage responses |
 | `cli/tests/cli.rs` | 8 | the `ustore` binary end to end, including install, library, updates and `doctor` |
 | `app/tests/ui.rs` | 34 | the real window on Slint's headless backend: clicks by accessible label, key presses, all three interfaces |
 | `app/tests/offline.rs` | 5 | the same window with a transport that goes offline or rate limited on demand, then recovers |
+| `app/tests/pictures.rs` | 1 | app pictures: fetched, decoded, shown, cached on disk, harmless when missing |
 | `app/tests/binary.rs` | 6 | the real application (threads, event loop, software renderer) under `xvfb-run`, Linux only |
 | `app/tests/contrast.rs` | 1 | WCAG contrast of every text/background pairing in both themes |
 | app unit tests | 5 | option parsing, release-note rendering, formatting |
@@ -460,6 +475,6 @@ licensed separately.
 5. Regenerate the bundled index at build time, with file names.
 6. Ask the system what is installed (dpkg/rpm/pacman databases, Android's package list)
    instead of relying on the store's own record.
-7. App icons and screenshots from repositories; Markdown release notes.
+7. Screenshots and a project's own icon from its repository; Markdown release notes.
 8. More sources: Codeberg / Forgejo, GitLab, F-Droid, Flathub.
 9. Translations; a Settings page for TV.

@@ -4,18 +4,28 @@ import { AppCard, OptionRow, LibraryRow, Store } from "types.slint";
 export component AppIcon inherits Rectangle {
     in property <string> initials;
     in property <color> tint;
+    in property <image> icon;
     in property <length> size: 44px;
+    property <bool> has-picture: icon.width > 0;
     width: size;
     height: size;
     border-radius: size * 0.26;
-    background: @linear-gradient(135deg, tint.brighter(25%) 0%, tint.darker(35%) 100%);
-    Text {
+    clip: true;
+    // Until (or unless) a picture arrives: the app's initials on its own colour.
+    background: has-picture ? Theme.surface-2 : @linear-gradient(135deg, tint.brighter(25%) 0%, tint.darker(35%) 100%);
+    if !has-picture : Text {
         text: initials;
         color: white;
         font-size: size * 0.4;
         font-weight: 700;
         horizontal-alignment: center;
         vertical-alignment: center;
+    }
+    if has-picture : Image {
+        source: icon;
+        width: 100%;
+        height: 100%;
+        image-fit: cover;
     }
 }
 
@@ -286,7 +296,7 @@ export component AppTile inherits Rectangle {
         spacing: 10px;
         HorizontalLayout {
             spacing: 12px;
-            AppIcon { initials: app.initials; tint: app.tint; }
+            AppIcon { initials: app.initials; tint: app.tint; icon: app.icon; }
             VerticalLayout {
                 alignment: center;
                 spacing: 2px;
@@ -334,7 +344,7 @@ export component AppRow inherits Rectangle {
         spacing: 14px;
         VerticalLayout {
             alignment: center;
-            AppIcon { initials: app.initials; tint: app.tint; size: 48px; }
+            AppIcon { initials: app.initials; tint: app.tint; icon: app.icon; size: 48px; }
         }
         VerticalLayout {
             alignment: center;
@@ -660,7 +670,7 @@ export component DetailsBody inherits Rectangle {
 
             HorizontalLayout {
                 spacing: compact ? 14px : 20px;
-                AppIcon { initials: Store.app.initials; tint: Store.app.tint; size: compact ? 64px : 88px; }
+                AppIcon { initials: Store.app.initials; tint: Store.app.tint; icon: Store.app.icon; size: compact ? 64px : 88px; }
                 VerticalLayout {
                     alignment: center;
                     spacing: 4px;
@@ -840,7 +850,7 @@ component LibraryItem inherits Rectangle {
             spacing: 12px;
             VerticalLayout {
                 alignment: center;
-                AppIcon { initials: entry.card.initials; tint: entry.card.tint; size: 44px; }
+                AppIcon { initials: entry.card.initials; tint: entry.card.tint; icon: entry.card.icon; size: 44px; }
             }
             VerticalLayout {
                 alignment: center;

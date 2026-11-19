@@ -25,7 +25,7 @@ component TvTile inherits Rectangle {
         spacing: 5 * u;
         HorizontalLayout {
             spacing: 7 * u;
-            AppIcon { initials: app.initials; tint: app.tint; size: 26 * u; }
+            AppIcon { initials: app.initials; tint: app.tint; icon: app.icon; size: 26 * u; }
             VerticalLayout {
                 alignment: center;
                 spacing: 1 * u;
@@ -279,7 +279,7 @@ export component TvShell inherits Rectangle {
                 width: 250 * u;
                 spacing: 8 * u;
                 alignment: start;
-                AppIcon { initials: Store.app.initials; tint: Store.app.tint; size: 56 * u; }
+                AppIcon { initials: Store.app.initials; tint: Store.app.tint; icon: Store.app.icon; size: 56 * u; }
                 Text { text: Store.app.name; color: Theme.text; font-size: 28 * u; font-weight: 800; wrap: word-wrap; }
                 Text { text: Store.app.author + "  ·  " + Store.app.source; color: Theme.text-dim; font-size: 10 * u; }
                 Text { text: Store.app.summary; color: Theme.text; font-size: 11 * u; wrap: word-wrap; }

@@ -524,7 +524,11 @@ impl Http for DemoHttp {
         Err(not_found())
     }
 
-    fn download(&self, _url: &str, dest: &Path, progress: &mut dyn FnMut(u64, Option<u64>) -> bool) -> Result<String> {
+    fn download(&self, url: &str, dest: &Path, progress: &mut dyn FnMut(u64, Option<u64>) -> bool) -> Result<String> {
+        // The fictional owners have no pictures.
+        if url.ends_with(".png?size=128") {
+            return Err(Error::NotFound(url.to_string()));
+        }
         if let Some(parent) = dest.parent() {
             std::fs::create_dir_all(parent)?;
         }
