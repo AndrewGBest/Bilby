@@ -116,11 +116,22 @@ impl Session {
         !self.labelled(label).is_empty()
     }
 
-    /// Click the element with this accessible label, with a real pointer press at its centre.
+    /// Press the element with this accessible label: a real pointer press at its centre
+    /// when it is in view. When the page has scrolled it out of view (how much fits
+    /// differs between systems), a person would scroll to it first; the test activates
+    /// it directly instead, which exercises the same handler.
     fn click(&self, label: &str) {
         let found = self.labelled(label);
         let element = found.first().unwrap_or_else(|| panic!("nothing on screen is labelled {label:?}"));
-        element.mock_single_click(PointerEventButton::Left);
+        let window = self.ui.window().size().to_logical(self.ui.window().scale_factor());
+        let (position, size) = (element.absolute_position(), element.size());
+        let centre = (position.x + size.width / 2.0, position.y + size.height / 2.0);
+        let in_view = centre.0 >= 0.0 && centre.0 <= window.width && centre.1 >= 0.0 && centre.1 <= window.height;
+        if in_view {
+            element.mock_single_click(PointerEventButton::Left);
+        } else {
+            element.invoke_accessible_default_action();
+        }
     }
 
     /// Trigger the element's default accessible action, as a screen reader would.
