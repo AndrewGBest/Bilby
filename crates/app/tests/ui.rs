@@ -85,7 +85,9 @@ fn start_with(preset: &str, shell: Shell, seed: Option<&str>) -> Session {
     let (w, h) = match shell {
         Shell::Mobile => (412.0, 892.0),
         Shell::Tv => (1920.0, 1080.0),
-        Shell::Desktop => (1280.0, 800.0),
+        // Tall, so a whole page is in view: the test backend only finds what is visible,
+        // and how much fits in a normal window differs between systems.
+        Shell::Desktop => (1280.0, 2400.0),
     };
     ui.window().set_size(slint::LogicalSize::new(w, h));
     ui.show().unwrap();
