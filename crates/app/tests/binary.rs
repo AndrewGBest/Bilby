@@ -131,6 +131,18 @@ fn start_up_finds_updates_in_the_background() {
 }
 
 #[test]
+fn the_start_up_check_respects_the_setting() {
+    if !have_xvfb() {
+        return;
+    }
+    let seed = r#"{"settings":{"welcomed":true,"skip_update_check_on_start":true},"library":[
+        {"id":"github:kestrel-sh/kestrel","name":"Kestrel","version":"v1.20.0"}]}"#;
+    let run = run(seed, &["--as", "linux-x64-debian", "--ui", "desktop", "--size", "1280x800", "--page", "library"]);
+    assert_eq!(run.get("library"), "1");
+    assert_eq!(run.get("updates"), "0", "nothing was checked, so nothing is claimed");
+}
+
+#[test]
 fn tv_remote_and_typed_search_with_real_key_events() {
     if !have_xvfb() {
         return;

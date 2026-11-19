@@ -577,6 +577,36 @@ fn settings_apply_immediately_and_survive_a_restart() {
 }
 
 #[test]
+fn start_up_update_checks_can_be_turned_off_and_the_downloads_folder_opened() {
+    let s = start("linux-x64-debian", Shell::Desktop);
+    s.store().set_page(3);
+    assert!(s.store().get_check_updates_on_start(), "on by default");
+    s.activate("Check for updates when the store opens");
+    assert!(!s.store().get_check_updates_on_start());
+    assert!(s.saved().settings.skip_update_check_on_start);
+    s.activate("Check for updates when the store opens");
+    assert!(!s.saved().settings.skip_update_check_on_start);
+
+    s.store().invoke_open_downloads();
+    assert_eq!(*s.opened.lock().unwrap(), vec![s.dirs.downloads.clone()]);
+    assert!(s.dirs.downloads.is_dir(), "the folder exists by the time it is opened");
+}
+
+#[test]
+fn the_library_lists_waiting_updates_first() {
+    let seed = r#"{"settings":{"welcomed":true},"library":[
+        {"id":"github:tidewave/tidewave","name":"Tidewave","version":"v3.4.0"},
+        {"id":"github:lumen-labs/lumen","name":"Lumen","version":"v0.19.2"},
+        {"id":"github:kestrel-sh/kestrel","name":"Kestrel","version":"v1.20.0"}]}"#;
+    let s = start_with("linux-x64-debian", Shell::Desktop, Some(seed));
+    let names =
+        |s: &Session| -> Vec<String> { s.store().get_library().iter().map(|r| r.card.name.to_string()).collect() };
+    assert_eq!(names(&s), ["Tidewave", "Lumen", "Kestrel"], "saved order before anything is known");
+    s.app.check_updates(&s.ui, false);
+    assert_eq!(names(&s), ["Kestrel", "Tidewave", "Lumen"], "the app with an update moves to the top");
+}
+
+#[test]
 fn clearing_the_cache_only_touches_the_cache() {
     let s = start("linux-x64-debian", Shell::Desktop);
     let cached = s.dirs.cache.join("http").join("x.json");

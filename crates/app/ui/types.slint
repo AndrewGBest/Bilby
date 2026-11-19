@@ -127,6 +127,7 @@ export global Store {
     // --- settings ---------------------------------------------------------------
     in property <int> theme-mode;
     in property <bool> include-prereleases;
+    in property <bool> check-updates-on-start;
     in property <bool> has-token;
     in property <string> downloads-dir;
     // GitHub's remaining request allowance, in words. Empty until known.
@@ -150,6 +151,8 @@ export global Store {
     callback remove-from-library(string);
     callback set-theme(int);
     callback set-prereleases(bool);
+    callback set-check-on-start(bool);
+    callback open-downloads();
     callback save-token(string);
     callback clear-cache();
     callback clear-recent();

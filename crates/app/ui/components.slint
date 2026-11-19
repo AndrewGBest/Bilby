@@ -1051,6 +1051,32 @@ export component SettingsBody inherits Rectangle {
             }
 
             SettingsCard {
+                title: "Updates";
+                HorizontalLayout {
+                    spacing: 12px;
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 3px;
+                        Text { text: "Check for updates when the store opens"; color: Theme.text; font-size: 14px; wrap: word-wrap; }
+                        Text {
+                            text: "Uses one request per app in your library. Turn it off if GitHub's allowance is tight; you can still check from the Library page.";
+                            color: Theme.text-dim;
+                            font-size: 12px;
+                            wrap: word-wrap;
+                        }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle {
+                            label: "Check for updates when the store opens";
+                            checked: Store.check-updates-on-start;
+                            toggled(on) => { Store.set-check-on-start(on); }
+                        }
+                    }
+                }
+            }
+
+            SettingsCard {
                 title: "GitHub access";
                 Text {
                     text: Store.has-token ? "A token is saved on this device. GitHub allows 5,000 requests an hour with it." : "Without a token GitHub allows 60 requests an hour, which a few searches can use up. A personal access token with no scopes raises that to 5,000. It is stored only on this device and sent only to api.github.com.";
@@ -1133,6 +1159,7 @@ export component SettingsBody inherits Rectangle {
                 HorizontalLayout {
                     spacing: 8px;
                     alignment: start;
+                    Button { text: "Open folder"; primary: false; accessible-label: "Open downloads folder"; clicked => { Store.open-downloads(); } }
                     Button { text: "Clear cached catalog data"; primary: false; clicked => { Store.clear-cache(); } }
                     if Store.recent.length > 0 : Button { text: "Clear search history"; primary: false; clicked => { Store.clear-recent(); } }
                 }

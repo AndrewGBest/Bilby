@@ -290,6 +290,7 @@ export component TvShell inherits Rectangle {
                     if Store.app.popularity != "" : Chip { text: Store.app.popularity; font-size: 8 * u; }
                     if Store.release-date != "" : Chip { text: Store.release-date; font-size: 8 * u; }
                 }
+                if Store.warning != "" : Text { text: Store.warning; color: Theme.warn; font-size: 9 * u; wrap: word-wrap; }
                 Text { text: "Back  ·  Return to browsing"; color: Theme.text-dim; font-size: 8.5 * u; }
             }
             VerticalLayout {

@@ -494,7 +494,7 @@ impl App {
         let state = self.state();
         let updates = self.updates.lock().unwrap().clone();
         let now = now_unix();
-        let rows: Vec<LibraryRow> = state
+        let mut rows: Vec<LibraryRow> = state
             .library
             .iter()
             .map(|app| {
@@ -521,6 +521,8 @@ impl App {
                 }
             })
             .collect();
+        // Apps with an update waiting come first; otherwise most recently installed first.
+        rows.sort_by_key(|r| r.status != 3);
         let update_count = rows.iter().filter(|r| r.status == 3).count();
         store.set_updates_count(update_count as i32);
         store.set_library(ModelRc::new(VecModel::from(rows)));
@@ -565,6 +567,7 @@ impl App {
         let settings = self.state().settings;
         store.set_theme_mode(theme_mode(&settings.theme));
         store.set_include_prereleases(settings.include_prereleases);
+        store.set_check_updates_on_start(!settings.skip_update_check_on_start);
         store.set_has_token(!settings.github_token.trim().is_empty());
         store.set_downloads_dir(self.dirs.downloads.display().to_string().into());
         store.set_show_welcome(!settings.welcomed);
@@ -1116,6 +1119,17 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         app.rebuild_catalog();
         app.refresh_settings(ui);
     });
+    on!(on_set_check_on_start, |app, ui, enabled| {
+        app.update_state(ui, |state| state.settings.skip_update_check_on_start = !enabled);
+        app.refresh_settings(ui);
+    });
+    on!(on_open_downloads, |app, ui| {
+        let folder = app.dirs.downloads.clone();
+        let result = std::fs::create_dir_all(&folder).map_err(Error::from).and_then(|_| (app.opener)(&folder));
+        if let Err(e) = result {
+            app.toast(ui, &format!("Couldn't open the downloads folder: {e}"), true);
+        }
+    });
     on!(on_save_token, |app, ui, token| {
         let token = token.trim().to_string();
         let cleared = token.is_empty();
@@ -1173,8 +1187,11 @@ pub fn run(options: Options) -> Result<(), Box<dyn std::error::Error>> {
         let id = AppId::from_user_input(target).map(|id| id.to_string()).unwrap_or_else(|| target.clone());
         app.open(&ui, &id);
     }
-    // Quietly look for updates at start-up: it is the reason to open the store again.
-    app.check_updates(&ui, false);
+    // Quietly look for updates at start-up (unless turned off): it is the reason to open
+    // the store again.
+    if !app.state().settings.skip_update_check_on_start {
+        app.check_updates(&ui, false);
+    }
 
     if let Some(path) = options.screenshot.clone() {
         screenshot_after_script(&ui, options.script.clone(), options.settle_ms, path, options.report.clone());

@@ -20,6 +20,8 @@ pub struct Settings {
     pub include_prereleases: bool,
     /// The first-run explanation was read and dismissed.
     pub welcomed: bool,
+    /// Do not look for updates when the store starts (saves requests on a tight allowance).
+    pub skip_update_check_on_start: bool,
 }
 
 /// An app obtained through the store.
