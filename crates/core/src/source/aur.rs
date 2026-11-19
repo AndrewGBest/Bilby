@@ -19,18 +19,24 @@ const RPC: &str = "https://aur.archlinux.org/rpc/v5";
 
 pub struct Aur {
     http: Arc<dyn Http>,
+    rpc: String,
 }
 
 impl Aur {
     pub fn new(http: Arc<dyn Http>) -> Aur {
-        Aur { http }
+        Aur::with_rpc(http, RPC)
+    }
+
+    /// Talk to a different aurweb instance (a mirror, a test server).
+    pub fn with_rpc(http: Arc<dyn Http>, rpc: &str) -> Aur {
+        Aur { http, rpc: rpc.trim_end_matches('/').to_string() }
     }
 
     fn info(&self, name: &str) -> Result<Package> {
         if !crate::model::valid_key(SourceKind::Aur, name) {
             return Err(Error::NotFound(format!("\"{name}\" is not an AUR package name")));
         }
-        let url = format!("{RPC}/info?arg[]={}", url_encode(name));
+        let url = format!("{}/info?arg[]={}", self.rpc, url_encode(name));
         let resp: RpcResponse = serde_json::from_str(&self.http.get(&url)?)?;
         resp.into_results()?.into_iter().next().ok_or_else(|| Error::NotFound(format!("AUR package {name}")))
     }
@@ -124,7 +130,7 @@ impl Source for Aur {
         if query.trim().chars().count() < 2 {
             return Ok(vec![]);
         }
-        let url = format!("{RPC}/search/{}?by=name-desc", url_encode(query.trim()));
+        let url = format!("{}/search/{}?by=name-desc", self.rpc, url_encode(query.trim()));
         let resp: RpcResponse = serde_json::from_str(&self.http.get(&url)?)?;
         let mut packages = resp.into_results()?;
         // The RPC has no ranking; most-voted first is what the AUR website defaults to.

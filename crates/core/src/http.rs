@@ -36,24 +36,38 @@ pub fn hex(bytes: &[u8]) -> String {
 pub struct NetHttp {
     agent: ureq::Agent,
     github_token: Option<String>,
+    /// Requests to URLs starting with this get GitHub's headers and the token.
+    github_api: String,
 }
+
+pub const GITHUB_API: &str = "https://api.github.com";
 
 #[cfg(feature = "net")]
 impl NetHttp {
     /// `github_token` raises GitHub's limit from 60 requests/hour per IP to 5,000/hour.
     pub fn new(github_token: Option<String>) -> NetHttp {
+        NetHttp::with_options(github_token, GITHUB_API, true)
+    }
+
+    /// For tests and unusual setups: a different API host (GitHub Enterprise, a local
+    /// test server) and whether to honour the proxy environment variables.
+    pub fn with_options(github_token: Option<String>, github_api: &str, proxy_from_env: bool) -> NetHttp {
         let agent = ureq::AgentBuilder::new()
             .timeout_connect(Duration::from_secs(15))
             .timeout_read(Duration::from_secs(30))
-            .try_proxy_from_env(true)
+            .try_proxy_from_env(proxy_from_env)
             .user_agent(concat!("untitledstore/", env!("CARGO_PKG_VERSION")))
             .build();
-        NetHttp { agent, github_token: github_token.filter(|t| !t.trim().is_empty()) }
+        NetHttp {
+            agent,
+            github_token: github_token.filter(|t| !t.trim().is_empty()),
+            github_api: format!("{}/", github_api.trim_end_matches('/')),
+        }
     }
 
     fn request(&self, url: &str) -> ureq::Request {
         let mut req = self.agent.get(url);
-        if url.starts_with("https://api.github.com/") {
+        if url.starts_with(&self.github_api) {
             req = req.set("Accept", "application/vnd.github+json").set("X-GitHub-Api-Version", "2022-11-28");
             // The token is only ever sent to the API host, never to download redirects
             // or other sources.
@@ -68,7 +82,7 @@ impl NetHttp {
         match self.request(url).call() {
             Ok(resp) => Ok(resp),
             Err(ureq::Error::Status(code, resp)) => {
-                let github = url.starts_with("https://api.github.com/");
+                let github = url.starts_with(&self.github_api);
                 let exhausted =
                     resp.header("x-ratelimit-remaining") == Some("0") || resp.header("retry-after").is_some();
                 if github && (code == 429 || (code == 403 && exhausted)) {

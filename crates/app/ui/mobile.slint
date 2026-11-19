@@ -58,6 +58,11 @@ export component MobileShell inherits Rectangle {
 
     init => { keys.focus(); }
 
+    // Opening or leaving an app page hides whatever had the focus; take it back so
+    // Escape, Back and the shortcuts keep working.
+    property <bool> on-app-page: Store.details-open;
+    changed on-app-page => { keys.focus(); }
+
     // Android's Back button and Escape leave the details page.
     keys := FocusScope {
         capture-key-pressed(event) => {

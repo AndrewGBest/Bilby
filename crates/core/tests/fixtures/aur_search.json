@@ -1,0 +1,39 @@
+{
+  "resultcount": 2,
+  "results": [
+    {
+      "Description": "A feature packed AUR helper (prebuilt)",
+      "FirstSubmitted": 1604085272,
+      "ID": 1486951,
+      "LastModified": 1720532395,
+      "Maintainer": null,
+      "Name": "paru-bin",
+      "NumVotes": 321,
+      "OutOfDate": 1720000000,
+      "PackageBase": "paru-bin",
+      "PackageBaseID": 160001,
+      "Popularity": 6.1,
+      "URL": "https://github.com/morganamilo/paru",
+      "URLPath": "/cgit/aur.git/snapshot/paru-bin.tar.gz",
+      "Version": "2.0.4-1"
+    },
+    {
+      "Description": "Feature packed AUR helper",
+      "FirstSubmitted": 1603658600,
+      "ID": 1486950,
+      "LastModified": 1720532290,
+      "Maintainer": "Morganamilo",
+      "Name": "paru",
+      "NumVotes": 1045,
+      "OutOfDate": null,
+      "PackageBase": "paru",
+      "PackageBaseID": 159927,
+      "Popularity": 18.27,
+      "URL": "https://github.com/morganamilo/paru",
+      "URLPath": "/cgit/aur.git/snapshot/paru.tar.gz",
+      "Version": "2.0.4-1"
+    }
+  ],
+  "type": "search",
+  "version": 5
+}

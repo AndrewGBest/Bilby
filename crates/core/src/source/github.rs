@@ -13,19 +13,23 @@ use crate::platform::Platform;
 use serde::Deserialize;
 use std::sync::Arc;
 
-const API: &str = "https://api.github.com";
-
 /// How many releases to look back through for one that has a file for this machine.
 /// Some projects publish each platform as its own release.
 const RELEASES_PER_APP: usize = 6;
 
 pub struct GitHub {
     http: Arc<dyn Http>,
+    api: String,
 }
 
 impl GitHub {
     pub fn new(http: Arc<dyn Http>) -> GitHub {
-        GitHub { http }
+        GitHub::with_api(http, crate::http::GITHUB_API)
+    }
+
+    /// Talk to a different API host (GitHub Enterprise, a test server).
+    pub fn with_api(http: Arc<dyn Http>, api: &str) -> GitHub {
+        GitHub { http, api: api.trim_end_matches('/').to_string() }
     }
 }
 
@@ -113,7 +117,7 @@ impl Source for GitHub {
     fn search(&self, query: &str, limit: usize) -> Result<Vec<AppSummary>> {
         // Forks and archived repos practically never carry the releases people want.
         let q = format!("{query} in:name,description fork:false archived:false");
-        let url = format!("{API}/search/repositories?q={}&per_page={}", url_encode(&q), limit.clamp(1, 100));
+        let url = format!("{}/search/repositories?q={}&per_page={}", self.api, url_encode(&q), limit.clamp(1, 100));
         let resp: SearchResponse = serde_json::from_str(&self.http.get(&url)?)?;
         Ok(resp.items.into_iter().map(AppSummary::from).collect())
     }
@@ -122,7 +126,7 @@ impl Source for GitHub {
         if !valid_key(key) {
             return Err(Error::NotFound(format!("\"{key}\" is not an owner/repository name")));
         }
-        let repo: Repo = serde_json::from_str(&self.http.get(&format!("{API}/repos/{key}"))?)?;
+        let repo: Repo = serde_json::from_str(&self.http.get(&format!("{}/repos/{key}", self.api))?)?;
         Ok(repo.into())
     }
 
@@ -130,7 +134,7 @@ impl Source for GitHub {
         if !valid_key(key) {
             return Err(Error::NotFound(format!("\"{key}\" is not an owner/repository name")));
         }
-        let url = format!("{API}/repos/{key}/releases?per_page={RELEASES_PER_APP}");
+        let url = format!("{}/repos/{key}/releases?per_page={RELEASES_PER_APP}", self.api);
         let releases: Vec<ApiRelease> = serde_json::from_str(&self.http.get(&url)?)?;
         Ok(releases
             .into_iter()

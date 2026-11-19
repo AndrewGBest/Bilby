@@ -152,6 +152,11 @@ export component DesktopShell inherits Rectangle {
     // Keyboard shortcuts must work before anything was clicked.
     init => { keys.focus(); }
 
+    // Opening or leaving an app page hides whatever had the focus; take it back so
+    // Escape, Back and the shortcuts keep working.
+    property <bool> on-app-page: Store.details-open;
+    changed on-app-page => { keys.focus(); }
+
     function go(page: int) {
         Store.close-details();
         Store.page = page;

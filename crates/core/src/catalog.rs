@@ -53,6 +53,16 @@ impl Catalog {
         Catalog { platform, sources, index, http, check_limit: 8, include_prereleases: false }
     }
 
+    /// Assemble a catalog from explicit sources (other hosts, tests, future stores).
+    pub fn with_sources(
+        platform: Platform,
+        http: Arc<dyn Http>,
+        sources: Vec<Arc<dyn Source>>,
+        index: Index,
+    ) -> Catalog {
+        Catalog { platform, sources, index, http, check_limit: 8, include_prereleases: false }
+    }
+
     /// Talks to the real GitHub and AUR, caching responses under `cache_dir`.
     #[cfg(feature = "net")]
     pub fn live(platform: Platform, github_token: Option<String>, cache_dir: std::path::PathBuf) -> Catalog {

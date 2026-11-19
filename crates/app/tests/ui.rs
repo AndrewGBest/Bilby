@@ -485,6 +485,41 @@ fn escape_leaves_the_app_page_on_desktop() {
 }
 
 #[test]
+fn desktop_works_without_a_mouse() {
+    let s = start("linux-x64-debian", Shell::Desktop);
+    // Tab walks the sidebar: Discover, Search, Library, Settings.
+    s.press(Key::Tab);
+    s.press(Key::Tab);
+    s.press(Key::Tab);
+    s.press(Key::Return);
+    assert_eq!(s.store().get_page(), 2, "third Tab stop is Library");
+    s.press(Key::Tab);
+    s.press(" ");
+    assert_eq!(s.store().get_page(), 3, "Space activates like Enter");
+
+    // Keep tabbing from the sidebar into the page until an app opens with Enter.
+    let s = start("linux-x64-debian", Shell::Desktop);
+    let mut opened = false;
+    for _ in 0..12 {
+        s.press(Key::Tab);
+        if s.labelled("View Tidewave").is_empty() {
+            break;
+        }
+    }
+    for _ in 0..12 {
+        s.press(Key::Return);
+        if s.store().get_details_open() {
+            opened = true;
+            break;
+        }
+        s.press(Key::Tab);
+    }
+    assert!(opened, "an app can be opened with Tab and Enter alone");
+    s.press(Key::Escape);
+    assert!(!s.store().get_details_open());
+}
+
+#[test]
 fn mobile_has_bottom_navigation_and_back() {
     let s = start("android-arm64", Shell::Mobile);
     assert_eq!(s.ui.get_effective(), Shell::Mobile);
