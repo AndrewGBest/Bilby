@@ -262,7 +262,7 @@ fn option_row(o: &InstallOption) -> OptionRow {
         size: human_size(o.asset.size).into(),
         note: o.verdict.note.clone().unwrap_or_default().into(),
         native: o.verdict.level == ustore_core::compat::Level::Native,
-        verified: o.asset.digest.is_some() && o.plan.action != Action::ShowCommand,
+        verified: install::checkable_digest(&o.asset).is_some() && o.plan.action != Action::ShowCommand,
         verb: o.plan.verb.clone().into(),
         steps: ModelRc::new(VecModel::from(o.plan.steps.iter().map(SharedString::from).collect::<Vec<_>>())),
         command: o.plan.command.clone().unwrap_or_default().into(),

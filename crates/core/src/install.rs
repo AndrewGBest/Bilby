@@ -42,7 +42,7 @@ pub struct InstallPlan {
 pub fn plan(asset: &Asset, info: &AssetInfo, p: &Platform) -> InstallPlan {
     let file = safe_file_name(&asset.name);
     let mut steps = vec![format!("Download {file}")];
-    if asset.digest.is_some() {
+    if checkable_digest(asset).is_some() {
         steps.push("Check it against the SHA-256 published with the release".to_string());
     }
     let (action, verb, command) = match info.format {
@@ -108,6 +108,12 @@ pub fn plan(asset: &Asset, info: &AssetInfo, p: &Platform) -> InstallPlan {
         }
     };
     InstallPlan { action, verb: verb.to_string(), steps, command }
+}
+
+/// The published SHA-256 for this file, if there is one the store can check.
+pub fn checkable_digest(asset: &Asset) -> Option<&str> {
+    let hex = asset.digest.as_deref()?.strip_prefix("sha256:")?;
+    (hex.len() == 64 && hex.chars().all(|c| c.is_ascii_hexdigit())).then_some(hex)
 }
 
 /// A file name that cannot escape the downloads folder, whatever the release calls it.
@@ -180,9 +186,10 @@ pub struct Outcome {
 /// Open a file or folder with the desktop's default handler.
 pub fn open_with_system(path: &Path) -> Result<()> {
     let mut cmd = if cfg!(target_os = "windows") {
-        let mut c = std::process::Command::new("cmd");
-        c.args(["/C", "start", ""]);
-        c
+        // Not `cmd /C start`: file names come from release authors, and cmd.exe gives
+        // characters such as & and ^ a meaning even inside quotes. Explorer receives the
+        // path as a plain argument and opens it with the default handler.
+        std::process::Command::new("explorer")
     } else if cfg!(target_os = "macos") {
         std::process::Command::new("open")
     } else {
@@ -217,13 +224,15 @@ pub fn execute(
 
     let dest = dirs.downloads.join(safe_file_name(&asset.name));
     let actual = http.download(&asset.url, &dest, progress)?;
-    if let Some(expected) = asset.digest.as_deref().and_then(|d| d.strip_prefix("sha256:")) {
+    let expected = checkable_digest(asset);
+    if let Some(expected) = expected {
         if !expected.eq_ignore_ascii_case(&actual) {
             let _ = std::fs::remove_file(&dest);
             return Err(Error::DigestMismatch { expected: expected.to_string(), actual });
         }
     }
-    let verified = if asset.digest.is_some() { "Checksum verified. " } else { "" };
+    // Only claim what was done: a digest in a format we cannot check is not a check.
+    let verified = if expected.is_some() { "Checksum verified. " } else { "" };
 
     match plan.action {
         Action::PlaceAppImage => {
@@ -350,6 +359,25 @@ mod tests {
             use std::os::unix::fs::PermissionsExt;
             assert_eq!(std::fs::metadata(&file).unwrap().permissions().mode() & 0o111, 0o111);
         }
+    }
+
+    #[test]
+    fn only_a_digest_that_can_be_checked_counts_as_one() {
+        let dirs = temp_dirs("digest-kinds");
+        let p = plan_for("a-linux-x86_64.tar.gz", "linux-x64-debian");
+        for odd in ["sha512:abcdef", "md5:900150983cd24fb0d6963f7d28e17f72", "sha256:", "sha256:xyz", "garbage"] {
+            let a = asset("a-linux-x86_64.tar.gz", Some(odd.to_string()));
+            assert_eq!(checkable_digest(&a), None, "{odd}");
+            let planned = plan(&a, &classify(&a.name).unwrap(), &Platform::preset("linux-x64-debian").unwrap());
+            assert!(!planned.steps.iter().any(|s| s.contains("SHA-256")), "{odd}: no check is promised");
+            let out = execute(&p, &a, &Fake(b"data"), &dirs, &|_| Ok(()), &mut |_, _| true).unwrap();
+            assert!(!out.message.contains("verified"), "{odd}: no check is claimed: {}", out.message);
+        }
+        // Upper-case hex is the same digest.
+        let upper = format!("sha256:{}", hex(&Sha256::digest(b"data")).to_uppercase());
+        let a = asset("a-linux-x86_64.tar.gz", Some(upper));
+        let out = execute(&p, &a, &Fake(b"data"), &dirs, &|_| Ok(()), &mut |_, _| true).unwrap();
+        assert!(out.message.starts_with("Checksum verified."));
     }
 
     #[test]
