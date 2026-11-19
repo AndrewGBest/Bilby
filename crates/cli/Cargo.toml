@@ -1,0 +1,13 @@
+[package]
+name = "ustore-cli"
+description = "Command-line front end for untitledstore"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "ustore"
+path = "src/main.rs"
+
+[dependencies]
+ustore-core = { path = "../core" }

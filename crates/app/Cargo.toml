@@ -1,0 +1,25 @@
+[package]
+name = "untitledstore"
+description = "App store for GitHub Releases and the AUR that only shows what runs on your machine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+# cdylib is what Android loads; rlib is what the desktop binary links.
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "untitledstore"
+path = "src/main.rs"
+
+[dependencies]
+ustore-core = { path = "../core" }
+slint = { version = "1.19", default-features = false, features = ["std", "compat-1-2", "backend-winit", "renderer-software", "renderer-femtovg"] }
+png = "0.17"
+
+[target.'cfg(target_os = "android")'.dependencies]
+slint = { version = "1.19", default-features = false, features = ["std", "compat-1-2", "backend-android-activity-06"] }
+
+[build-dependencies]
+slint-build = "1.19"

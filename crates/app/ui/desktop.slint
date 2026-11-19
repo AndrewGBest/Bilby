@@ -1,0 +1,216 @@
+// Desktop: sidebar navigation, a search field that is always visible, and a card grid
+// that reflows with the window. Built for a pointer and a keyboard.
+import { Theme } from "theme.slint";
+import { AppCard, Section, Store } from "types.slint";
+import { AppTile, Chip, SearchField, DetailsBody, DeviceBody } from "components.slint";
+
+component NavItem inherits Rectangle {
+    in property <string> label;
+    in property <image> icon;
+    in property <bool> active;
+    callback clicked;
+    height: 40px;
+    border-radius: 10px;
+    background: active ? Theme.accent.with-alpha(0.16) : ta.has-hover ? Theme.surface-2 : transparent;
+    accessible-role: button;
+    accessible-label: label;
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+    HorizontalLayout {
+        padding-left: 12px;
+        spacing: 12px;
+        alignment: start;
+        VerticalLayout {
+            alignment: center;
+            Image { source: icon; colorize: active ? Theme.accent : Theme.text-dim; width: 18px; height: 18px; }
+        }
+        Text {
+            text: label;
+            color: active ? Theme.text : Theme.text-dim;
+            font-size: 14px;
+            font-weight: active ? 600 : 500;
+            vertical-alignment: center;
+        }
+    }
+}
+
+component CardGrid inherits Rectangle {
+    in property <[AppCard]> apps;
+    property <length> gap: 14px;
+    property <int> cols: max(1, floor((self.width + gap) / (264px + gap)));
+    property <length> tile-w: (self.width - (cols - 1) * gap) / cols;
+    property <length> tile-h: 156px;
+    property <int> rows: ceil(apps.length / cols);
+    height: max(0px, rows * (tile-h + gap) - gap);
+    for app[i] in apps : AppTile {
+        x: mod(i, cols) * (tile-w + gap);
+        y: floor(i / cols) * (tile-h + gap);
+        width: tile-w;
+        height: tile-h;
+        app: app;
+        clicked => { Store.open(app.id); }
+    }
+}
+
+component Heading inherits Text {
+    color: Theme.text;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+export component DesktopShell inherits Rectangle {
+    background: Theme.bg;
+    HorizontalLayout {
+        // ---- sidebar ----
+        Rectangle {
+            width: 228px;
+            background: Theme.surface.with-alpha(0.6);
+            VerticalLayout {
+                padding: 14px;
+                spacing: 4px;
+                HorizontalLayout {
+                    padding: 8px;
+                    padding-bottom: 18px;
+                    spacing: 10px;
+                    alignment: start;
+                    Rectangle {
+                        width: 28px;
+                        height: 28px;
+                        border-radius: 8px;
+                        background: @linear-gradient(135deg, #8aa6ff 0%, #b28cff 100%);
+                    }
+                    Text { text: "untitledstore"; color: Theme.text; font-size: 16px; font-weight: 700; vertical-alignment: center; }
+                }
+                NavItem {
+                    label: "Discover";
+                    icon: @image-url("icons/discover.svg");
+                    active: Store.page == 0 && !Store.details-open;
+                    clicked => { Store.close-details(); Store.page = 0; }
+                }
+                NavItem {
+                    label: "Search";
+                    icon: @image-url("icons/search.svg");
+                    active: Store.page == 1 && !Store.details-open;
+                    clicked => { Store.close-details(); Store.page = 1; search.grab-focus(); }
+                }
+                NavItem {
+                    label: "This device";
+                    icon: @image-url("icons/device.svg");
+                    active: Store.page == 2 && !Store.details-open;
+                    clicked => { Store.close-details(); Store.page = 2; }
+                }
+                Rectangle { vertical-stretch: 1; }
+                Rectangle {
+                    height: 58px;
+                    border-radius: 12px;
+                    background: Theme.surface;
+                    border-width: 1px;
+                    border-color: Theme.stroke;
+                    VerticalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
+                        alignment: center;
+                        spacing: 3px;
+                        Text { text: "Showing apps for"; color: Theme.text-dim; font-size: 11px; }
+                        Text { text: Store.platform-title; color: Theme.ok; font-size: 13px; font-weight: 600; overflow: elide; }
+                    }
+                }
+            }
+        }
+        Rectangle { width: 1px; background: Theme.stroke; }
+
+        // ---- content ----
+        VerticalLayout {
+            horizontal-stretch: 1;
+            HorizontalLayout {
+                padding-left: 32px;
+                padding-right: 32px;
+                padding-top: 18px;
+                padding-bottom: 10px;
+                spacing: 14px;
+                if Store.details-open : Rectangle {
+                    width: 42px;
+                    height: 42px;
+                    border-radius: 21px;
+                    background: back-ta.has-hover ? Theme.surface-2 : Theme.surface;
+                    border-width: 1px;
+                    border-color: Theme.stroke;
+                    accessible-role: button;
+                    accessible-label: "Back";
+                    back-ta := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { Store.close-details(); }
+                    }
+                    Image { source: @image-url("icons/back.svg"); colorize: Theme.text; width: 18px; height: 18px; }
+                }
+                search := SearchField {
+                    horizontal-stretch: 1;
+                    max-width: 560px;
+                    text <=> Store.query;
+                    placeholder: "Search apps for " + Store.platform-title;
+                    accepted(text) => { Store.search(text); }
+                }
+                Rectangle { horizontal-stretch: 1; }
+            }
+
+            Rectangle {
+                vertical-stretch: 1;
+                clip: true;
+                if Store.details-open : DetailsBody { compact: false; }
+
+                if !Store.details-open && Store.page == 0 : Flickable {
+                    VerticalLayout {
+                        padding: 32px;
+                        padding-top: 14px;
+                        spacing: 16px;
+                        alignment: start;
+                        for section in Store.sections : VerticalLayout {
+                            spacing: 14px;
+                            padding-bottom: 12px;
+                            Heading { text: section.title; }
+                            CardGrid { apps: section.apps; }
+                        }
+                        if Store.sections.length == 0 : Text {
+                            text: "Nothing featured for this device yet. Try a search.";
+                            color: Theme.text-dim;
+                            font-size: 14px;
+                        }
+                    }
+                }
+
+                if !Store.details-open && Store.page == 1 : Flickable {
+                    VerticalLayout {
+                        padding: 32px;
+                        padding-top: 14px;
+                        spacing: 14px;
+                        alignment: start;
+                        Heading {
+                            text: Store.searching ? "Searching…" : Store.searched ? "Results" : "Search";
+                        }
+                        if Store.search-note != "" : Text {
+                            text: Store.search-note;
+                            color: Theme.text-dim;
+                            font-size: 13px;
+                            wrap: word-wrap;
+                        }
+                        if !Store.searched && !Store.searching : Text {
+                            text: "Type a name and press Enter. Only apps with a file for " + Store.platform-title + " are listed.";
+                            color: Theme.text-dim;
+                            font-size: 14px;
+                            wrap: word-wrap;
+                        }
+                        CardGrid { apps: Store.results; }
+                    }
+                }
+
+                if !Store.details-open && Store.page == 2 : DeviceBody {
+                    compact: false;
+                    max-width: 720px;
+                    x: 0;
+                }
+            }
+        }
+    }
+}

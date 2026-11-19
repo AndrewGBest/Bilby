@@ -1,0 +1,447 @@
+import { Theme } from "theme.slint";
+import { AppCard, OptionRow, Store } from "types.slint";
+
+export component AppIcon inherits Rectangle {
+    in property <string> initials;
+    in property <color> tint;
+    in property <length> size: 44px;
+    width: size;
+    height: size;
+    border-radius: size * 0.26;
+    background: @linear-gradient(135deg, tint.brighter(25%) 0%, tint.darker(35%) 100%);
+    Text {
+        text: initials;
+        color: white;
+        font-size: size * 0.4;
+        font-weight: 700;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+export component Chip inherits Rectangle {
+    in property <string> text;
+    in property <color> tone: Theme.text-dim;
+    in property <length> font-size: 11px;
+    height: font-size * 2;
+    border-radius: self.height / 2;
+    background: tone.with-alpha(0.14);
+    HorizontalLayout {
+        padding-left: root.font-size * 0.8;
+        padding-right: root.font-size * 0.8;
+        Text {
+            text: root.text;
+            color: tone;
+            font-size: root.font-size;
+            font-weight: 600;
+            vertical-alignment: center;
+        }
+    }
+}
+
+export component Button inherits Rectangle {
+    in property <string> text;
+    in property <bool> primary: true;
+    in property <bool> enabled: true;
+    in property <length> font-size: 14px;
+    callback clicked;
+    height: font-size * 2.9;
+    border-radius: 10px;
+    background: !enabled ? Theme.surface-2 : primary ? (ta.pressed ? Theme.accent.darker(15%) : ta.has-hover ? Theme.accent.brighter(8%) : Theme.accent) : (ta.has-hover ? Theme.surface-2 : Theme.surface);
+    border-width: primary ? 0px : 1px;
+    border-color: Theme.stroke;
+    accessible-role: button;
+    accessible-label: text;
+    animate background { duration: 100ms; }
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+    HorizontalLayout {
+        padding-left: root.font-size * 1.4;
+        padding-right: root.font-size * 1.4;
+        Text {
+            text: root.text;
+            color: !root.enabled ? Theme.text-dim : root.primary ? Theme.on-accent : Theme.text;
+            font-size: root.font-size;
+            font-weight: 600;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+}
+
+export component SearchField inherits Rectangle {
+    in-out property <string> text <=> input.text;
+    in property <string> placeholder: "Search apps";
+    out property <bool> has-focus: input.has-focus;
+    callback accepted(string);
+    public function grab-focus() {
+        input.focus();
+    }
+    height: 42px;
+    border-radius: self.height / 2;
+    background: Theme.surface;
+    border-width: 1px;
+    border-color: input.has-focus ? Theme.accent : Theme.stroke;
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 16px;
+        spacing: 10px;
+        VerticalLayout {
+            alignment: center;
+            Image {
+                source: @image-url("icons/search.svg");
+                colorize: Theme.text-dim;
+                width: 18px;
+                height: 18px;
+            }
+        }
+        Rectangle {
+            horizontal-stretch: 1;
+            if input.text == "" : Text {
+                width: 100%;
+                height: 100%;
+                text: root.placeholder;
+                color: Theme.text-dim;
+                font-size: 15px;
+                vertical-alignment: center;
+            }
+            input := TextInput {
+                width: 100%;
+                height: 100%;
+                color: Theme.text;
+                font-size: 15px;
+                single-line: true;
+                vertical-alignment: center;
+                accepted => { root.accepted(self.text); }
+            }
+        }
+    }
+}
+
+// Card used in the desktop grid.
+export component AppTile inherits Rectangle {
+    in property <AppCard> app;
+    callback clicked;
+    border-radius: 14px;
+    background: ta.has-hover ? Theme.surface-2 : Theme.surface;
+    border-width: 1px;
+    border-color: ta.has-hover ? Theme.accent.with-alpha(0.5) : Theme.stroke;
+    accessible-role: button;
+    accessible-label: app.name;
+    animate background, border-color { duration: 120ms; }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+    VerticalLayout {
+        padding: 16px;
+        spacing: 10px;
+        HorizontalLayout {
+            spacing: 12px;
+            AppIcon { initials: app.initials; tint: app.tint; }
+            VerticalLayout {
+                alignment: center;
+                spacing: 2px;
+                Text { text: app.name; color: Theme.text; font-size: 16px; font-weight: 600; overflow: elide; }
+                Text { text: app.author; color: Theme.text-dim; font-size: 12px; overflow: elide; }
+            }
+        }
+        Text {
+            vertical-stretch: 1;
+            text: app.summary;
+            color: Theme.text-dim;
+            font-size: 13px;
+            wrap: word-wrap;
+            overflow: elide;
+            vertical-alignment: top;
+        }
+        HorizontalLayout {
+            spacing: 6px;
+            alignment: start;
+            Chip { text: app.source; }
+            if app.badge != "" : Chip { text: app.badge; tone: Theme.ok; }
+            if app.version != "" : Chip { text: app.version; }
+        }
+    }
+}
+
+// Row used in the mobile lists.
+export component AppRow inherits Rectangle {
+    in property <AppCard> app;
+    callback clicked;
+    height: 76px;
+    background: ta.pressed ? Theme.surface-2 : transparent;
+    accessible-role: button;
+    accessible-label: app.name;
+    ta := TouchArea {
+        clicked => { root.clicked(); }
+    }
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        spacing: 14px;
+        VerticalLayout {
+            alignment: center;
+            AppIcon { initials: app.initials; tint: app.tint; size: 48px; }
+        }
+        VerticalLayout {
+            alignment: center;
+            spacing: 3px;
+            horizontal-stretch: 1;
+            Text { text: app.name; color: Theme.text; font-size: 16px; font-weight: 600; overflow: elide; }
+            Text { text: app.summary; color: Theme.text-dim; font-size: 13px; overflow: elide; }
+            Text {
+                text: app.badge != "" ? app.source + " · " + app.badge : app.source + " · " + app.author;
+                color: app.badge != "" ? Theme.ok : Theme.text-dim;
+                font-size: 11px;
+                font-weight: 600;
+                overflow: elide;
+            }
+        }
+    }
+}
+
+// One installable file on the details page.
+export component OptionCard inherits Rectangle {
+    in property <OptionRow> option;
+    in property <int> index;
+    in property <bool> recommended;
+    in property <bool> compact;
+    property <bool> busy: Store.install-state == 1;
+    property <bool> mine: Store.install-index == index && Store.install-state != 0;
+    border-radius: 12px;
+    background: Theme.surface;
+    border-width: 1px;
+    border-color: recommended ? Theme.accent.with-alpha(0.55) : Theme.stroke;
+    VerticalLayout {
+        padding: 14px;
+        spacing: 8px;
+        HorizontalLayout {
+            spacing: 12px;
+            VerticalLayout {
+                horizontal-stretch: 1;
+                spacing: 4px;
+                alignment: center;
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+                    Text { text: option.label; color: Theme.text; font-size: 15px; font-weight: 600; vertical-alignment: center; }
+                    if recommended : Chip { text: "Best for this device"; tone: Theme.accent; }
+                    if !option.native && !compact : Chip { text: "Compatible"; tone: Theme.warn; }
+                }
+                Text {
+                    text: option.size != "" ? option.file + "  ·  " + option.size : option.file;
+                    color: Theme.text-dim;
+                    font-size: 12px;
+                    overflow: elide;
+                }
+            }
+            VerticalLayout {
+                alignment: center;
+                Button {
+                    text: mine && busy ? "Working…" : option.verb;
+                    primary: recommended;
+                    enabled: !busy;
+                    clicked => { Store.install(index); }
+                }
+            }
+        }
+        if option.note != "" : Text { text: option.note; color: Theme.warn; font-size: 12px; wrap: word-wrap; }
+        if option.command != "" : Rectangle {
+            height: cmd.preferred-height + 14px;
+            border-radius: 8px;
+            background: Theme.bg;
+            cmd := Text {
+                x: 10px;
+                width: parent.width - 20px;
+                text: "$ " + option.command;
+                color: Theme.text;
+                font-family: "monospace";
+                font-size: 12px;
+                wrap: char-wrap;
+                vertical-alignment: center;
+            }
+        }
+        if mine && busy : Rectangle {
+            height: 4px;
+            border-radius: 2px;
+            background: Theme.surface-2;
+            Rectangle {
+                x: 0;
+                width: parent.width * clamp(Store.install-progress, 0.02, 1.0);
+                border-radius: 2px;
+                background: Theme.accent;
+                animate width { duration: 120ms; }
+            }
+        }
+        if mine && !busy : Text {
+            text: Store.install-message;
+            color: Store.install-state == 3 ? Theme.bad : Theme.ok;
+            font-size: 12px;
+            wrap: word-wrap;
+        }
+    }
+}
+
+// The details page body, shared by the desktop and mobile shells.
+export component DetailsBody inherits Rectangle {
+    in property <bool> compact;
+    property <bool> show-hidden: false;
+    property <length> pad: compact ? 16px : 32px;
+    Flickable {
+        VerticalLayout {
+            padding: pad;
+            padding-bottom: pad + 24px;
+            spacing: 18px;
+            alignment: start;
+
+            HorizontalLayout {
+                spacing: compact ? 14px : 20px;
+                AppIcon { initials: Store.app.initials; tint: Store.app.tint; size: compact ? 64px : 88px; }
+                VerticalLayout {
+                    alignment: center;
+                    spacing: 4px;
+                    horizontal-stretch: 1;
+                    Text { text: Store.app.name; color: Theme.text; font-size: compact ? 24px : 30px; font-weight: 700; overflow: elide; }
+                    Text { text: Store.app.author; color: Theme.text-dim; font-size: 14px; }
+                    HorizontalLayout {
+                        spacing: 6px;
+                        alignment: start;
+                        Chip { text: Store.app.source; }
+                        if Store.app.version != "" : Chip { text: Store.app.version; }
+                        if Store.app.popularity != "" : Chip { text: Store.app.popularity; }
+                        if Store.license != "" && !compact : Chip { text: Store.license; }
+                    }
+                }
+            }
+
+            if Store.app.summary != "" : Text {
+                text: Store.app.summary;
+                color: Theme.text;
+                font-size: 15px;
+                wrap: word-wrap;
+            }
+
+            if Store.details-loading : Text { text: "Checking releases against this device…"; color: Theme.text-dim; font-size: 14px; }
+            if Store.details-error != "" : Text { text: Store.details-error; color: Theme.bad; font-size: 14px; wrap: word-wrap; }
+            if Store.warning != "" : Text { text: Store.warning; color: Theme.warn; font-size: 13px; wrap: word-wrap; }
+
+            if Store.unavailable != "" : Rectangle {
+                height: un.preferred-height + 28px;
+                border-radius: 12px;
+                background: Theme.warn.with-alpha(0.1);
+                un := Text {
+                    x: 14px;
+                    width: parent.width - 28px;
+                    text: Store.unavailable;
+                    color: Theme.warn;
+                    font-size: 14px;
+                    wrap: word-wrap;
+                    vertical-alignment: center;
+                }
+            }
+
+            if Store.options.length > 0 : VerticalLayout {
+                spacing: 10px;
+                Text {
+                    text: "Works on " + Store.platform-title;
+                    color: Theme.text-dim;
+                    font-size: 12px;
+                    font-weight: 700;
+                }
+                for option[i] in Store.options : OptionCard {
+                    option: option;
+                    index: i;
+                    recommended: i == 0;
+                    compact: root.compact;
+                }
+            }
+
+            if Store.hidden.length > 0 : VerticalLayout {
+                spacing: 8px;
+                Rectangle {
+                    height: 32px;
+                    TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { root.show-hidden = !root.show-hidden; }
+                    }
+                    Text {
+                        x: 0;
+                        text: (root.show-hidden ? "Hide " : "Show ") + Store.hidden.length + (Store.hidden.length == 1 ? " file" : " files") + " that won't work on this device";
+                        color: Theme.accent;
+                        font-size: 13px;
+                        font-weight: 600;
+                        vertical-alignment: center;
+                    }
+                }
+                if root.show-hidden : VerticalLayout {
+                    spacing: 6px;
+                    for row in Store.hidden : VerticalLayout {
+                        spacing: 1px;
+                        Text { text: row.file; color: Theme.text-dim; font-size: 12px; overflow: elide; }
+                        Text { text: row.reason; color: Theme.text-dim.with-alpha(0.65); font-size: 11px; wrap: word-wrap; }
+                    }
+                }
+            }
+
+            if Store.notes != "" : VerticalLayout {
+                spacing: 8px;
+                Text {
+                    text: Store.release-date != "" ? "Release notes  ·  " + Store.release-date : "Release notes";
+                    color: Theme.text-dim;
+                    font-size: 12px;
+                    font-weight: 700;
+                }
+                Text { text: Store.notes; color: Theme.text; font-size: 14px; wrap: word-wrap; }
+            }
+        }
+    }
+}
+
+// "This device" page body.
+export component DeviceBody inherits Rectangle {
+    in property <bool> compact;
+    Flickable {
+        VerticalLayout {
+            padding: compact ? 16px : 32px;
+            spacing: 14px;
+            alignment: start;
+            Text {
+                text: Store.platform-title;
+                color: Theme.text;
+                font-size: compact ? 24px : 30px;
+                font-weight: 700;
+            }
+            Text {
+                text: "The store only lists apps with a file that can be installed here. This is what it detected.";
+                color: Theme.text-dim;
+                font-size: 14px;
+                wrap: word-wrap;
+            }
+            Rectangle {
+                border-radius: 12px;
+                background: Theme.surface;
+                border-width: 1px;
+                border-color: Theme.stroke;
+                VerticalLayout {
+                    padding: 6px;
+                    for fact in Store.facts : VerticalLayout {
+                        padding: 10px;
+                        spacing: 3px;
+                        Text { text: fact.name; color: Theme.text-dim; font-size: 12px; }
+                        Text { text: fact.value; color: Theme.text; font-size: 15px; wrap: word-wrap; }
+                    }
+                }
+            }
+            if Store.demo : Text {
+                text: "Demo mode: the catalog is fictional and nothing is fetched from the network.";
+                color: Theme.warn;
+                font-size: 13px;
+                wrap: word-wrap;
+            }
+        }
+    }
+}

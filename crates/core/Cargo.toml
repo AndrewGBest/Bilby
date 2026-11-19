@@ -1,0 +1,21 @@
+[package]
+name = "ustore-core"
+description = "Platform detection, asset compatibility and package sources for untitledstore"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[features]
+default = ["net"]
+# Real HTTP (rustls). Without it the crate is pure Rust: classification, compatibility,
+# planning and the demo catalog still work, which is what the cross-target checks use.
+net = ["dep:ureq"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+ureq = { version = "2", default-features = false, features = ["tls", "gzip"], optional = true }
+
+[target.'cfg(target_os = "android")'.dependencies]
+libc = "0.2"

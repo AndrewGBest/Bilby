@@ -1,0 +1,178 @@
+// Mobile: one column, thumb-reachable bottom navigation, full-screen details with the
+// install button on the best option. Built for touch.
+import { Theme } from "theme.slint";
+import { Store } from "types.slint";
+import { AppRow, SearchField, DetailsBody, DeviceBody } from "components.slint";
+
+component Tab inherits Rectangle {
+    in property <string> label;
+    in property <image> icon;
+    in property <bool> active;
+    callback clicked;
+    horizontal-stretch: 1;
+    accessible-role: tab;
+    accessible-label: label;
+    TouchArea {
+        clicked => { root.clicked(); }
+    }
+    VerticalLayout {
+        alignment: center;
+        spacing: 4px;
+        HorizontalLayout {
+            alignment: center;
+            Rectangle {
+                width: 56px;
+                height: 28px;
+                border-radius: 14px;
+                background: active ? Theme.accent.with-alpha(0.18) : transparent;
+                Image { source: icon; colorize: active ? Theme.accent : Theme.text-dim; width: 20px; height: 20px; }
+            }
+        }
+        Text {
+            text: label;
+            color: active ? Theme.text : Theme.text-dim;
+            font-size: 11px;
+            font-weight: active ? 700 : 500;
+            horizontal-alignment: center;
+        }
+    }
+}
+
+export component MobileShell inherits Rectangle {
+    // Space taken by status bar, notch and gesture bar; set by the window.
+    in property <length> inset-top;
+    in property <length> inset-bottom;
+    background: Theme.bg;
+    VerticalLayout {
+        padding-top: root.inset-top;
+        // ---- top bar ----
+        if Store.details-open : HorizontalLayout {
+            height: 56px;
+            padding-left: 4px;
+            spacing: 4px;
+            Rectangle {
+                width: 48px;
+                accessible-role: button;
+                accessible-label: "Back";
+                TouchArea {
+                    clicked => { Store.close-details(); }
+                }
+                Image { source: @image-url("icons/back.svg"); colorize: Theme.text; width: 22px; height: 22px; }
+            }
+            Text {
+                text: Store.app.name;
+                color: Theme.text;
+                font-size: 18px;
+                font-weight: 600;
+                vertical-alignment: center;
+                overflow: elide;
+            }
+        }
+        if !Store.details-open : VerticalLayout {
+            padding: 16px;
+            padding-bottom: 8px;
+            spacing: 12px;
+            HorizontalLayout {
+                Text {
+                    text: Store.page == 0 ? "Discover" : Store.page == 1 ? "Search" : "This device";
+                    color: Theme.text;
+                    font-size: 26px;
+                    font-weight: 700;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+                VerticalLayout {
+                    alignment: center;
+                    Text { text: Store.platform-title; color: Theme.ok; font-size: 12px; font-weight: 600; }
+                }
+            }
+            if Store.page == 1 : SearchField {
+                text <=> Store.query;
+                accepted(text) => { Store.search(text); }
+            }
+        }
+
+        // ---- content ----
+        Rectangle {
+            vertical-stretch: 1;
+            clip: true;
+            if Store.details-open : DetailsBody { compact: true; }
+
+            if !Store.details-open && Store.page == 0 : Flickable {
+                VerticalLayout {
+                    alignment: start;
+                    padding-bottom: 16px;
+                    for section in Store.sections : VerticalLayout {
+                        HorizontalLayout {
+                            height: 40px;
+                            padding-left: 16px;
+                            Text {
+                                text: section.title;
+                                color: Theme.text-dim;
+                                font-size: 13px;
+                                font-weight: 700;
+                                vertical-alignment: center;
+                            }
+                        }
+                        for app in section.apps : AppRow {
+                            app: app;
+                            clicked => { Store.open(app.id); }
+                        }
+                    }
+                }
+            }
+
+            if !Store.details-open && Store.page == 1 : Flickable {
+                VerticalLayout {
+                    alignment: start;
+                    padding-bottom: 16px;
+                    if Store.searching || Store.search-note != "" || !Store.searched : HorizontalLayout {
+                        padding: 16px;
+                        padding-top: 8px;
+                        padding-bottom: 8px;
+                        Text {
+                            text: Store.searching ? "Searching…" : Store.search-note != "" ? Store.search-note : "Only apps with a file for " + Store.platform-title + " are listed.";
+                            color: Theme.text-dim;
+                            font-size: 13px;
+                            wrap: word-wrap;
+                        }
+                    }
+                    for app in Store.results : AppRow {
+                        app: app;
+                        clicked => { Store.open(app.id); }
+                    }
+                }
+            }
+
+            if !Store.details-open && Store.page == 2 : DeviceBody { compact: true; }
+        }
+
+        // ---- bottom navigation ----
+        if !Store.details-open : Rectangle {
+            height: 68px + root.inset-bottom;
+            background: Theme.surface;
+            Rectangle { y: 0; height: 1px; background: Theme.stroke; }
+            HorizontalLayout {
+                padding-bottom: root.inset-bottom;
+                Tab {
+                    label: "Discover";
+                    icon: @image-url("icons/discover.svg");
+                    active: Store.page == 0;
+                    clicked => { Store.page = 0; }
+                }
+                Tab {
+                    label: "Search";
+                    icon: @image-url("icons/search.svg");
+                    active: Store.page == 1;
+                    clicked => { Store.page = 1; }
+                }
+                Tab {
+                    label: "This device";
+                    icon: @image-url("icons/device.svg");
+                    active: Store.page == 2;
+                    clicked => { Store.page = 2; }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,29 @@
+import { Theme } from "theme.slint";
+import { Shell, Store, AppCard, Section, OptionRow, HiddenRow, Fact } from "types.slint";
+import { DesktopShell } from "desktop.slint";
+import { MobileShell } from "mobile.slint";
+import { TvShell } from "tv.slint";
+
+export { Store, Shell, AppCard, Section, OptionRow, HiddenRow, Fact }
+
+export component AppWindow inherits Window {
+    title: "untitledstore";
+    preferred-width: 1180px;
+    preferred-height: 760px;
+    min-width: 320px;
+    min-height: 480px;
+    background: Theme.bg;
+    default-font-family: "Inter";
+
+    // TV is chosen by the device (or a flag). Otherwise the window decides: a narrow
+    // window gets the mobile interface, so a phone, a split-screen tablet and a small
+    // desktop window all get the layout that fits.
+    property <Shell> effective: Store.shell == Shell.tv ? Shell.tv : Store.adaptive ? (self.width < 700px ? Shell.mobile : Shell.desktop) : Store.shell;
+
+    if effective == Shell.desktop : DesktopShell { }
+    if effective == Shell.mobile : MobileShell {
+        inset-top: root.safe-area-insets.top;
+        inset-bottom: root.safe-area-insets.bottom;
+    }
+    if effective == Shell.tv : TvShell { }
+}

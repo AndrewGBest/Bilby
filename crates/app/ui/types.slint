@@ -1,0 +1,93 @@
+// Everything the Rust side and the three interfaces share. The interfaces never talk to
+// each other or to the network: they render `Store` and call its callbacks.
+
+export enum Shell { desktop, mobile, tv }
+
+export struct AppCard {
+    id: string,
+    name: string,
+    author: string,
+    summary: string,
+    source: string,
+    // What would be installed here, e.g. "AppImage · x86_64". Empty until checked.
+    badge: string,
+    version: string,
+    popularity: string,
+    initials: string,
+    tint: color,
+}
+
+export struct Section {
+    title: string,
+    apps: [AppCard],
+}
+
+export struct OptionRow {
+    file: string,
+    label: string,
+    size: string,
+    // Caveat such as "runs through Rosetta 2". Empty for native builds.
+    note: string,
+    native: bool,
+    verb: string,
+    steps: string,
+    command: string,
+}
+
+export struct HiddenRow {
+    file: string,
+    reason: string,
+}
+
+export struct Fact {
+    name: string,
+    value: string,
+}
+
+export global Store {
+    // --- device -----------------------------------------------------------------
+    in property <Shell> shell: Shell.desktop;
+    // Desktop and mobile swap automatically with the window width; TV is explicit.
+    in property <bool> adaptive: true;
+    in property <string> platform-title;
+    in property <[Fact]> facts;
+    in property <bool> demo;
+
+    // --- browse -----------------------------------------------------------------
+    in property <[Section]> sections;
+    // Same content arranged for the TV grid: search results, when present, are row one.
+    in property <[Section]> tv-rows;
+    // 0 discover, 1 search, 2 this device
+    in-out property <int> page;
+    in-out property <string> query;
+    in property <bool> searching;
+    in property <bool> searched;
+    in property <[AppCard]> results;
+    in property <string> search-note;
+
+    // --- details ----------------------------------------------------------------
+    in-out property <bool> details-open;
+    in property <bool> details-loading;
+    in property <string> details-error;
+    in property <AppCard> app;
+    in property <string> release-date;
+    in property <string> license;
+    in property <string> notes;
+    in property <string> warning;
+    // Set when nothing in the app's releases fits this machine.
+    in property <string> unavailable;
+    in property <[OptionRow]> options;
+    in property <[HiddenRow]> hidden;
+
+    // --- install ----------------------------------------------------------------
+    // 0 idle, 1 working, 2 done, 3 failed
+    in property <int> install-state;
+    in property <int> install-index;
+    in property <float> install-progress;
+    in property <string> install-message;
+
+    callback search(string);
+    callback open(string);
+    callback close-details();
+    callback install(int);
+}

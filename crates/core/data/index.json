@@ -1,0 +1,23 @@
+{
+  "apps": [
+    {"id": "github:localsend/localsend", "name": "LocalSend", "author": "localsend", "summary": "Share files with nearby devices over the local network.", "category": "Utilities", "os": ["windows", "linux", "macos", "android"]},
+    {"id": "github:rustdesk/rustdesk", "name": "RustDesk", "author": "rustdesk", "summary": "Open-source remote desktop.", "category": "Utilities", "os": ["windows", "linux", "macos", "android"]},
+    {"id": "github:syncthing/syncthing", "name": "Syncthing", "author": "syncthing", "summary": "Continuous file synchronization between your devices.", "category": "Utilities", "os": ["windows", "linux", "macos"]},
+    {"id": "github:ImranR98/Obtainium", "name": "Obtainium", "author": "ImranR98", "summary": "Get Android app updates directly from their source.", "category": "Utilities", "os": ["android"]},
+    {"id": "github:helix-editor/helix", "name": "Helix", "author": "helix-editor", "summary": "A post-modern modal text editor.", "category": "Developer tools", "os": ["windows", "linux", "macos"]},
+    {"id": "github:neovim/neovim", "name": "Neovim", "author": "neovim", "summary": "Vim-fork focused on extensibility and usability.", "category": "Developer tools", "os": ["windows", "linux", "macos"]},
+    {"id": "github:BurntSushi/ripgrep", "name": "ripgrep", "author": "BurntSushi", "summary": "Recursively search directories for a regex pattern.", "category": "Developer tools", "os": ["windows", "linux", "macos"]},
+    {"id": "github:sharkdp/bat", "name": "bat", "author": "sharkdp", "summary": "A cat clone with syntax highlighting and Git integration.", "category": "Developer tools", "os": ["windows", "linux", "macos"]},
+    {"id": "github:sharkdp/fd", "name": "fd", "author": "sharkdp", "summary": "A simple, fast and user-friendly alternative to find.", "category": "Developer tools", "os": ["windows", "linux", "macos"]},
+    {"id": "github:jesseduffield/lazygit", "name": "lazygit", "author": "jesseduffield", "summary": "Simple terminal UI for git commands.", "category": "Developer tools", "os": ["windows", "linux", "macos"]},
+    {"id": "github:starship/starship", "name": "Starship", "author": "starship", "summary": "The minimal, fast, customizable prompt for any shell.", "category": "Developer tools", "os": ["windows", "linux", "macos"]},
+    {"id": "github:alacritty/alacritty", "name": "Alacritty", "author": "alacritty", "summary": "A cross-platform, OpenGL terminal emulator.", "category": "Developer tools", "os": ["windows", "macos"]},
+    {"id": "github:moonlight-stream/moonlight-qt", "name": "Moonlight", "author": "moonlight-stream", "summary": "Game streaming client for Sunshine and GameStream hosts.", "category": "Media", "os": ["windows", "linux", "macos"], "tv": true},
+    {"id": "github:moonlight-stream/moonlight-android", "name": "Moonlight for Android", "author": "moonlight-stream", "summary": "Game streaming client for Android phones, tablets and TVs.", "category": "Media", "os": ["android"], "tv": true},
+    {"id": "github:jellyfin/jellyfin-androidtv", "name": "Jellyfin for Android TV", "author": "jellyfin", "summary": "Jellyfin media client for Android TV and Fire TV.", "category": "Media", "os": ["android"], "tv": true},
+    {"id": "github:TeamNewPipe/NewPipe", "name": "NewPipe", "author": "TeamNewPipe", "summary": "A lightweight streaming front-end for Android.", "category": "Media", "os": ["android"]},
+    {"id": "github:mpv-android/mpv-android", "name": "mpv for Android", "author": "mpv-android", "summary": "Video player for Android based on libmpv.", "category": "Media", "os": ["android"]},
+    {"id": "aur:paru", "name": "paru", "author": "AUR", "summary": "Feature packed AUR helper.", "category": "Arch User Repository", "os": ["arch"]},
+    {"id": "aur:yay", "name": "yay", "author": "AUR", "summary": "Yet another yogurt. Pacman wrapper and AUR helper written in Go.", "category": "Arch User Repository", "os": ["arch"]}
+  ]
+}
