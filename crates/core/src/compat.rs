@@ -135,6 +135,9 @@ pub fn evaluate(info: &AssetInfo, p: &Platform) -> Verdict {
         (_, true) => score -= 20,
         (_, false) => {}
     }
+    if info.debug {
+        score -= 15;
+    }
     score += match level {
         Level::Native => 100,
         Level::Compatible => 50,

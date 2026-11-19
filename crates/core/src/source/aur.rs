@@ -167,6 +167,7 @@ impl Source for Aur {
                     arch: TargetArch::Unknown,
                     libc: None,
                     tv: false,
+                    debug: false,
                 }),
             }],
         }])

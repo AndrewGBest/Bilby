@@ -103,6 +103,8 @@ pub struct AssetInfo {
     pub libc: Option<Libc>,
     /// Name mentions tv / leanback / firetv.
     pub tv: bool,
+    /// A debug build (only kept for APKs).
+    pub debug: bool,
 }
 
 impl AssetInfo {
@@ -217,7 +219,6 @@ const NOT_INSTALLABLE_TOKENS: &[&str] = &[
     "_src_",
     "_source_",
     "_sources_",
-    "_debug_",
     "_symbols_",
     "_dbgsym_",
     "_debuginfo_",
@@ -229,6 +230,9 @@ const NOT_INSTALLABLE_TOKENS: &[&str] = &[
     "_devel_",
     "_dev_",
 ];
+
+/// Updater payloads that sit next to the real installers (Tauri, Electron).
+const NOT_INSTALLABLE_SUFFIX: &[&str] = &[".appimage.tar.gz", ".nsis.zip", ".msi.zip", ".deb.tar.gz", ".asar.gz"];
 
 fn detect_format(lower: &str) -> Option<Format> {
     const BY_EXT: &[(&str, Format)] = &[
@@ -363,7 +367,21 @@ fn detect_arch(norm: &str) -> TargetArch {
     ) {
         return One(Arch::X86_64);
     }
-    if any(norm, &["_aarch64_", "_arm64_", "_armv8_", "_armv8a_", "_arm64ec_", "_winarm64_", "_aarch64v8a_"]) {
+    if any(
+        norm,
+        &[
+            "_aarch64_",
+            "_arm64_",
+            "_arm_64_",
+            "_arm64v8_",
+            "_arm64v8a_",
+            "_armv8_",
+            "_armv8a_",
+            "_armv8l_",
+            "_arm64ec_",
+            "_winarm64_",
+        ],
+    ) {
         return One(Arch::Aarch64);
     }
     if any(norm, &["_universal_", "_universal2_", "_fat_"]) {
@@ -391,7 +409,19 @@ fn detect_arch(norm: &str) -> TargetArch {
     }
     if any(
         norm,
-        &["_i386_", "_i486_", "_i586_", "_i686_", "_x86_", "_ia32_", "_win32_", "_32bit_", "_32_bit_", "_linux32_"],
+        &[
+            "_i386_",
+            "_i486_",
+            "_i586_",
+            "_i686_",
+            "_386_",
+            "_x86_",
+            "_ia32_",
+            "_win32_",
+            "_32bit_",
+            "_32_bit_",
+            "_linux32_",
+        ],
     ) {
         return One(Arch::X86);
     }
@@ -426,7 +456,7 @@ pub fn classify(name: &str) -> Option<AssetInfo> {
     let lower = name.to_ascii_lowercase();
     let norm = normalize(name);
 
-    if any(&norm, NOT_INSTALLABLE_TOKENS) {
+    if any(&norm, NOT_INSTALLABLE_TOKENS) || NOT_INSTALLABLE_SUFFIX.iter().any(|suffix| lower.ends_with(suffix)) {
         return None;
     }
     let format = match detect_format(&lower) {
@@ -452,6 +482,13 @@ pub fn classify(name: &str) -> Option<AssetInfo> {
         return None;
     }
 
+    // "debug" marks debugging leftovers for desktop builds, but many Android projects
+    // only publish debug-signed APKs. Keep those, ranked below a release build.
+    let debug = norm.contains("_debug_");
+    if debug && format != Format::Apk {
+        return None;
+    }
+
     let libc = match os {
         TargetOs::Known(Os::Linux) if any(&norm, &["_musl_", "_musleabihf_", "_static_"]) => Some(Libc::Musl),
         TargetOs::Known(Os::Linux) if any(&norm, &["_gnu_", "_glibc", "_gnueabihf_"]) => Some(Libc::Gnu),
@@ -459,7 +496,7 @@ pub fn classify(name: &str) -> Option<AssetInfo> {
     };
     let tv = any(&norm, &["_tv_", "_androidtv_", "_leanback_", "_firetv_", "_atv_", "_googletv_"]);
 
-    Some(AssetInfo { format, os, arch: detect_arch(&norm), libc, tv })
+    Some(AssetInfo { format, os, arch: detect_arch(&norm), libc, tv, debug })
 }
 
 #[cfg(test)]
