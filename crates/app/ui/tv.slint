@@ -83,7 +83,11 @@ export component TvShell inherits Rectangle {
                 } else if (event.text == Key.DownArrow) {
                     root.opt = max(0, min(Store.options.length - 1, root.opt + 1));
                 } else if (event.text == Key.Return || event.text == " ") {
-                    if (Store.options.length > 0 && Store.install-state != 1) {
+                    if (Store.details-error != "") {
+                        Store.retry-details();
+                    } else if (Store.install-state == 1) {
+                        Store.cancel-install();
+                    } else if (Store.options.length > 0) {
                         Store.install(root.opt);
                     }
                 }
@@ -195,6 +199,8 @@ export component TvShell inherits Rectangle {
                     alignment: start;
                     if current.badge != "" : Chip { text: current.badge; tone: Theme.ok; font-size: 8 * u; }
                     if current.version != "" : Chip { text: current.version; font-size: 8 * u; }
+                    if current.has-update : Chip { text: "Update available"; tone: Theme.accent; font-size: 8 * u; }
+                    if current.installed && !current.has-update : Chip { text: "Installed"; tone: Theme.accent; font-size: 8 * u; }
                     if current.id != "" : Chip { text: "OK  ·  Details"; tone: Theme.accent; font-size: 8 * u; }
                 }
                 if rows.length == 0 : Text {
@@ -293,7 +299,7 @@ export component TvShell inherits Rectangle {
                 spacing: 7 * u;
                 alignment: start;
                 Text {
-                    text: Store.details-loading ? "Checking releases against this device…" : Store.details-error != "" ? Store.details-error : Store.unavailable != "" ? Store.unavailable : "Works on " + Store.platform-title;
+                    text: Store.details-loading ? "Checking releases against this device…" : Store.details-error != "" ? Store.details-error + "  Press OK to try again." : Store.unavailable != "" ? Store.unavailable : Store.installed-version != "" && Store.installed-version != Store.app.version ? "Update available: you have " + Store.installed-version : "Works on " + Store.platform-title;
                     color: Store.details-error != "" ? Theme.bad : Store.unavailable != "" ? Theme.warn : Theme.text-dim;
                     font-size: 10 * u;
                     font-weight: 700;
@@ -336,7 +342,7 @@ export component TvShell inherits Rectangle {
                         }
                         VerticalLayout {
                             alignment: center;
-                            if focused : Chip { text: "OK  ·  " + option.verb; tone: Theme.ok; font-size: 8 * u; }
+                            if focused : Chip { text: mine && Store.install-state == 1 ? "OK  ·  Cancel" : "OK  ·  " + option.verb; tone: Theme.ok; font-size: 8 * u; }
                         }
                     }
                 }
@@ -346,6 +352,22 @@ export component TvShell inherits Rectangle {
                     font-size: 8.5 * u;
                 }
             }
+        }
+    }
+    if Store.toast != "" : Rectangle {
+        x: (parent.width - self.width) / 2;
+        y: parent.height - 44 * u;
+        width: toast-label.preferred-width + 28 * u;
+        height: 24 * u;
+        border-radius: 12 * u;
+        background: #eceef3;
+        toast-label := Text {
+            text: Store.toast;
+            color: Store.toast-is-error ? #b3261e : #0e1014;
+            font-size: 10 * u;
+            font-weight: 700;
+            horizontal-alignment: center;
+            vertical-alignment: center;
         }
     }
 }

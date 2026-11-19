@@ -1,5 +1,5 @@
 import { Theme } from "theme.slint";
-import { AppCard, OptionRow, Store } from "types.slint";
+import { AppCard, OptionRow, LibraryRow, Store } from "types.slint";
 
 export component AppIcon inherits Rectangle {
     in property <string> initials;
@@ -39,36 +39,150 @@ export component Chip inherits Rectangle {
     }
 }
 
+// A chip that can be pressed: category filters, recent searches.
+export component ChoiceChip inherits Rectangle {
+    in property <string> text;
+    in property <bool> selected;
+    callback clicked;
+    height: 32px;
+    border-radius: 16px;
+    background: selected ? Theme.accent : ta.has-hover ? Theme.surface-2 : Theme.surface;
+    border-width: selected ? 0px : 1px;
+    border-color: fs.has-focus ? Theme.focus : Theme.stroke;
+    accessible-role: button;
+    accessible-label: text;
+    accessible-action-default => { root.clicked(); }
+    animate background { duration: 100ms; }
+    fs := FocusScope {
+        focus-on-click: false;
+        key-pressed(event) => {
+            if (event.text == Key.Return || event.text == " ") {
+                root.clicked();
+                return accept;
+            }
+            reject
+        }
+        ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => { root.clicked(); }
+        }
+    }
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 14px;
+        Text {
+            text: root.text;
+            color: selected ? Theme.on-accent : Theme.text;
+            font-size: 13px;
+            font-weight: 600;
+            vertical-alignment: center;
+        }
+    }
+}
+
 export component Button inherits Rectangle {
     in property <string> text;
     in property <bool> primary: true;
+    in property <bool> danger: false;
     in property <bool> enabled: true;
     in property <length> font-size: 14px;
     callback clicked;
     height: font-size * 2.9;
     border-radius: 10px;
     background: !enabled ? Theme.surface-2 : primary ? (ta.pressed ? Theme.accent.darker(15%) : ta.has-hover ? Theme.accent.brighter(8%) : Theme.accent) : (ta.has-hover ? Theme.surface-2 : Theme.surface);
-    border-width: primary ? 0px : 1px;
-    border-color: Theme.stroke;
+    border-width: fs.has-focus ? 2px : primary ? 0px : 1px;
+    border-color: fs.has-focus ? Theme.focus : Theme.stroke;
     accessible-role: button;
     accessible-label: text;
+    accessible-enabled: enabled;
+    accessible-action-default => {
+        if (root.enabled) {
+            root.clicked();
+        }
+    }
     animate background { duration: 100ms; }
-    ta := TouchArea {
+    fs := FocusScope {
         enabled: root.enabled;
-        mouse-cursor: pointer;
-        clicked => { root.clicked(); }
+        focus-on-click: false;
+        key-pressed(event) => {
+            if (event.text == Key.Return || event.text == " ") {
+                root.clicked();
+                return accept;
+            }
+            reject
+        }
+        ta := TouchArea {
+            enabled: root.enabled;
+            mouse-cursor: pointer;
+            clicked => { root.clicked(); }
+        }
     }
     HorizontalLayout {
         padding-left: root.font-size * 1.4;
         padding-right: root.font-size * 1.4;
         Text {
             text: root.text;
-            color: !root.enabled ? Theme.text-dim : root.primary ? Theme.on-accent : Theme.text;
+            color: !root.enabled ? Theme.text-dim : root.primary ? Theme.on-accent : root.danger ? Theme.bad : Theme.text;
             font-size: root.font-size;
             font-weight: 600;
             horizontal-alignment: center;
             vertical-alignment: center;
         }
+    }
+}
+
+// An activity bar for work of unknown length.
+export component Busy inherits Rectangle {
+    height: 3px;
+    border-radius: 1.5px;
+    background: Theme.surface-2;
+    clip: true;
+    property <float> t: mod(animation-tick() / 1.4s, 1.0);
+    Rectangle {
+        x: parent.width * (t * 1.4 - 0.4);
+        width: parent.width * 0.4;
+        border-radius: 1.5px;
+        background: Theme.accent;
+    }
+}
+
+export component Toggle inherits Rectangle {
+    in property <bool> checked;
+    in property <string> label;
+    callback toggled(bool);
+    width: 46px;
+    height: 26px;
+    border-radius: 13px;
+    background: checked ? Theme.accent : Theme.surface-2;
+    border-width: fs.has-focus ? 2px : 1px;
+    border-color: fs.has-focus ? Theme.focus : Theme.stroke;
+    accessible-role: switch;
+    accessible-label: label;
+    accessible-checkable: true;
+    accessible-checked: checked;
+    accessible-action-default => { root.toggled(!root.checked); }
+    animate background { duration: 120ms; }
+    fs := FocusScope {
+        focus-on-click: false;
+        key-pressed(event) => {
+            if (event.text == Key.Return || event.text == " ") {
+                root.toggled(!root.checked);
+                return accept;
+            }
+            reject
+        }
+        TouchArea {
+            mouse-cursor: pointer;
+            clicked => { root.toggled(!root.checked); }
+        }
+    }
+    Rectangle {
+        x: checked ? parent.width - self.width - 3px : 3px;
+        width: 20px;
+        height: 20px;
+        border-radius: 10px;
+        background: checked ? Theme.on-accent : Theme.text-dim;
+        animate x { duration: 120ms; easing: ease-out; }
     }
 }
 
@@ -79,15 +193,16 @@ export component SearchField inherits Rectangle {
     callback accepted(string);
     public function grab-focus() {
         input.focus();
+        input.select-all();
     }
     height: 42px;
     border-radius: self.height / 2;
     background: Theme.surface;
-    border-width: 1px;
+    border-width: input.has-focus ? 2px : 1px;
     border-color: input.has-focus ? Theme.accent : Theme.stroke;
     HorizontalLayout {
         padding-left: 14px;
-        padding-right: 16px;
+        padding-right: 8px;
         spacing: 10px;
         VerticalLayout {
             alignment: center;
@@ -107,6 +222,7 @@ export component SearchField inherits Rectangle {
                 color: Theme.text-dim;
                 font-size: 15px;
                 vertical-alignment: center;
+                overflow: elide;
             }
             input := TextInput {
                 width: 100%;
@@ -115,8 +231,22 @@ export component SearchField inherits Rectangle {
                 font-size: 15px;
                 single-line: true;
                 vertical-alignment: center;
+                accessible-label: "Search";
                 accepted => { root.accepted(self.text); }
             }
+        }
+        if input.text != "" : Rectangle {
+            width: 28px;
+            accessible-role: button;
+            accessible-label: "Clear search";
+            TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    input.text = "";
+                    input.focus();
+                }
+            }
+            Text { text: "✕"; color: Theme.text-dim; font-size: 13px; horizontal-alignment: center; vertical-alignment: center; }
         }
     }
 }
@@ -127,14 +257,26 @@ export component AppTile inherits Rectangle {
     callback clicked;
     border-radius: 14px;
     background: ta.has-hover ? Theme.surface-2 : Theme.surface;
-    border-width: 1px;
-    border-color: ta.has-hover ? Theme.accent.with-alpha(0.5) : Theme.stroke;
+    border-width: fs.has-focus ? 2px : 1px;
+    border-color: fs.has-focus ? Theme.focus : ta.has-hover ? Theme.accent.with-alpha(0.5) : Theme.stroke;
     accessible-role: button;
     accessible-label: app.name;
+    accessible-description: app.summary;
+    accessible-action-default => { root.clicked(); }
     animate background, border-color { duration: 120ms; }
-    ta := TouchArea {
-        mouse-cursor: pointer;
-        clicked => { root.clicked(); }
+    fs := FocusScope {
+        focus-on-click: false;
+        key-pressed(event) => {
+            if (event.text == Key.Return || event.text == " ") {
+                root.clicked();
+                return accept;
+            }
+            reject
+        }
+        ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => { root.clicked(); }
+        }
     }
     VerticalLayout {
         padding: 16px;
@@ -161,8 +303,10 @@ export component AppTile inherits Rectangle {
         HorizontalLayout {
             spacing: 6px;
             alignment: start;
-            Chip { text: app.source; }
+            if app.has-update : Chip { text: "Update"; tone: Theme.accent; }
+            if app.installed && !app.has-update : Chip { text: "Installed"; tone: Theme.accent; }
             if app.badge != "" : Chip { text: app.badge; tone: Theme.ok; }
+            if app.badge == "" : Chip { text: app.source; }
             if app.version != "" : Chip { text: app.version; }
         }
     }
@@ -176,6 +320,8 @@ export component AppRow inherits Rectangle {
     background: ta.pressed ? Theme.surface-2 : transparent;
     accessible-role: button;
     accessible-label: app.name;
+    accessible-description: app.summary;
+    accessible-action-default => { root.clicked(); }
     ta := TouchArea {
         clicked => { root.clicked(); }
     }
@@ -194,11 +340,62 @@ export component AppRow inherits Rectangle {
             Text { text: app.name; color: Theme.text; font-size: 16px; font-weight: 600; overflow: elide; }
             Text { text: app.summary; color: Theme.text-dim; font-size: 13px; overflow: elide; }
             Text {
-                text: app.badge != "" ? app.source + " · " + app.badge : app.source + " · " + app.author;
-                color: app.badge != "" ? Theme.ok : Theme.text-dim;
+                text: (app.has-update ? "Update available · " : app.installed ? "Installed · " : "") + (app.badge != "" ? app.source + " · " + app.badge : app.source + " · " + app.author);
+                color: app.has-update || app.installed ? Theme.accent : app.badge != "" ? Theme.ok : Theme.text-dim;
                 font-size: 11px;
                 font-weight: 600;
                 overflow: elide;
+            }
+        }
+    }
+}
+
+// A terminal command with a copy button.
+component CommandBox inherits Rectangle {
+    in property <string> command;
+    property <bool> copied;
+    height: max(34px, cmd.preferred-height + 14px);
+    border-radius: 8px;
+    background: Theme.bg;
+    border-width: 1px;
+    border-color: Theme.stroke;
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 4px;
+        spacing: 6px;
+        Text { text: "$"; color: Theme.text-dim; font-family: "monospace"; font-size: 12px; vertical-alignment: center; }
+        cmd := TextInput {
+            horizontal-stretch: 1;
+            text: root.command;
+            read-only: true;
+            color: Theme.text;
+            font-family: "monospace";
+            font-size: 12px;
+            wrap: char-wrap;
+            single-line: false;
+            vertical-alignment: center;
+            accessible-label: "Command";
+        }
+        Rectangle {
+            width: 54px;
+            accessible-role: button;
+            accessible-label: "Copy command";
+            TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    cmd.select-all();
+                    cmd.copy();
+                    cmd.clear-selection();
+                    root.copied = true;
+                }
+            }
+            Text {
+                text: root.copied ? "Copied" : "Copy";
+                color: root.copied ? Theme.ok : Theme.accent;
+                font-size: 12px;
+                font-weight: 600;
+                horizontal-alignment: center;
+                vertical-alignment: center;
             }
         }
     }
@@ -212,6 +409,7 @@ export component OptionCard inherits Rectangle {
     in property <bool> compact;
     property <bool> busy: Store.install-state == 1;
     property <bool> mine: Store.install-index == index && Store.install-state != 0;
+    property <bool> show-steps: false;
     border-radius: 12px;
     background: Theme.surface;
     border-width: 1px;
@@ -229,7 +427,7 @@ export component OptionCard inherits Rectangle {
                     spacing: 8px;
                     alignment: start;
                     Text { text: option.label; color: Theme.text; font-size: 15px; font-weight: 600; vertical-alignment: center; }
-                    if recommended : Chip { text: "Best for this device"; tone: Theme.accent; }
+                    if recommended && !compact : Chip { text: "Best for this device"; tone: Theme.accent; }
                     if !option.native && !compact : Chip { text: "Compatible"; tone: Theme.warn; }
                 }
                 Text {
@@ -242,27 +440,65 @@ export component OptionCard inherits Rectangle {
             VerticalLayout {
                 alignment: center;
                 Button {
-                    text: mine && busy ? "Working…" : option.verb;
-                    primary: recommended;
-                    enabled: !busy;
-                    clicked => { Store.install(index); }
+                    text: mine && busy ? "Cancel" : recommended && Store.installed-version != "" && Store.installed-version != Store.app.version ? "Update" : recommended && Store.installed-version != "" && option.verb == "Install" ? "Reinstall" : option.verb;
+                    primary: recommended && !(mine && busy);
+                    enabled: !busy || mine;
+                    accessible-label: (mine && busy ? "Cancel" : option.verb) + " " + option.label;
+                    clicked => {
+                        if (mine && busy) {
+                            Store.cancel-install();
+                        } else {
+                            Store.install(index);
+                        }
+                    }
                 }
             }
         }
+        if recommended && compact : HorizontalLayout {
+            alignment: start;
+            Chip { text: "Best for this device"; tone: Theme.accent; }
+        }
         if option.note != "" : Text { text: option.note; color: Theme.warn; font-size: 12px; wrap: word-wrap; }
-        if option.command != "" : Rectangle {
-            height: cmd.preferred-height + 14px;
-            border-radius: 8px;
-            background: Theme.bg;
-            cmd := Text {
-                x: 10px;
-                width: parent.width - 20px;
-                text: "$ " + option.command;
-                color: Theme.text;
-                font-family: "monospace";
+        if option.command != "" : CommandBox { command: option.command; }
+        HorizontalLayout {
+            spacing: 14px;
+            alignment: start;
+            if option.verified : HorizontalLayout {
+                spacing: 5px;
+                VerticalLayout {
+                    alignment: center;
+                    Image { source: @image-url("icons/shield.svg"); colorize: Theme.ok; width: 13px; height: 13px; }
+                }
+                Text { text: "Checksum is checked after download"; color: Theme.ok; font-size: 11px; font-weight: 600; vertical-alignment: center; }
+            }
+            Rectangle {
+                height: 18px;
+                width: steps-label.preferred-width;
+                accessible-role: button;
+                accessible-label: "What happens when I install " + option.label;
+                accessible-expandable: true;
+                accessible-expanded: root.show-steps;
+                accessible-action-default => { root.show-steps = !root.show-steps; }
+                TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => { root.show-steps = !root.show-steps; }
+                }
+                steps-label := Text {
+                    text: root.show-steps ? "Hide steps" : "What will happen?";
+                    color: Theme.text-dim;
+                    font-size: 11px;
+                    font-weight: 600;
+                    vertical-alignment: center;
+                }
+            }
+        }
+        if root.show-steps : VerticalLayout {
+            spacing: 3px;
+            for step[n] in option.steps : Text {
+                text: (n + 1) + ".  " + step;
+                color: Theme.text-dim;
                 font-size: 12px;
-                wrap: char-wrap;
-                vertical-alignment: center;
+                wrap: word-wrap;
             }
         }
         if mine && busy : Rectangle {
@@ -282,7 +518,36 @@ export component OptionCard inherits Rectangle {
             color: Store.install-state == 3 ? Theme.bad : Theme.ok;
             font-size: 12px;
             wrap: word-wrap;
+            accessible-role: text;
         }
+    }
+}
+
+// A friendly "nothing here" block with an optional action.
+export component EmptyState inherits VerticalLayout {
+    in property <string> title;
+    in property <string> body;
+    in property <string> action;
+    in property <bool> error;
+    callback acted;
+    alignment: center;
+    spacing: 10px;
+    padding: 32px;
+    HorizontalLayout {
+        alignment: center;
+        Image {
+            source: @image-url("icons/empty.svg");
+            colorize: error ? Theme.bad : Theme.text-dim;
+            width: 40px;
+            height: 40px;
+        }
+    }
+    Text { text: title; color: Theme.text; font-size: 17px; font-weight: 700; horizontal-alignment: center; wrap: word-wrap; }
+    Text { text: body; color: Theme.text-dim; font-size: 14px; horizontal-alignment: center; wrap: word-wrap; }
+    if action != "" : HorizontalLayout {
+        alignment: center;
+        padding-top: 6px;
+        Button { text: action; primary: false; clicked => { root.acted(); } }
     }
 }
 
@@ -316,6 +581,14 @@ export component DetailsBody inherits Rectangle {
                         if Store.license != "" && !compact : Chip { text: Store.license; }
                     }
                 }
+                if Store.homepage != "" && !compact : VerticalLayout {
+                    alignment: start;
+                    Button {
+                        text: "Project page";
+                        primary: false;
+                        clicked => { Store.open-url(Store.homepage); }
+                    }
+                }
             }
 
             if Store.app.summary != "" : Text {
@@ -325,8 +598,34 @@ export component DetailsBody inherits Rectangle {
                 wrap: word-wrap;
             }
 
-            if Store.details-loading : Text { text: "Checking releases against this device…"; color: Theme.text-dim; font-size: 14px; }
-            if Store.details-error != "" : Text { text: Store.details-error; color: Theme.bad; font-size: 14px; wrap: word-wrap; }
+            if Store.installed-version != "" : Rectangle {
+                height: 40px;
+                border-radius: 10px;
+                background: Theme.accent.with-alpha(0.12);
+                Text {
+                    x: 14px;
+                    width: parent.width - 28px;
+                    text: Store.installed-version == Store.app.version || Store.app.version == "" ? "In your library  ·  " + Store.installed-version : "Update available  ·  you have " + Store.installed-version + ", latest is " + Store.app.version;
+                    color: Theme.accent;
+                    font-size: 13px;
+                    font-weight: 600;
+                    vertical-alignment: center;
+                    overflow: elide;
+                }
+            }
+
+            if Store.details-loading : VerticalLayout {
+                spacing: 10px;
+                Text { text: "Checking releases against this device…"; color: Theme.text-dim; font-size: 14px; }
+                Busy { }
+            }
+            if Store.details-error != "" : EmptyState {
+                error: true;
+                title: "Couldn't load this app";
+                body: Store.details-error;
+                action: "Try again";
+                acted => { Store.retry-details(); }
+            }
             if Store.warning != "" : Text { text: Store.warning; color: Theme.warn; font-size: 13px; wrap: word-wrap; }
 
             if Store.unavailable != "" : Rectangle {
@@ -364,6 +663,11 @@ export component DetailsBody inherits Rectangle {
                 spacing: 8px;
                 Rectangle {
                     height: 32px;
+                    accessible-role: button;
+                    accessible-label: "Files that won't work on this device";
+                    accessible-expandable: true;
+                    accessible-expanded: root.show-hidden;
+                    accessible-action-default => { root.show-hidden = !root.show-hidden; }
                     TouchArea {
                         mouse-cursor: pointer;
                         clicked => { root.show-hidden = !root.show-hidden; }
@@ -382,7 +686,7 @@ export component DetailsBody inherits Rectangle {
                     for row in Store.hidden : VerticalLayout {
                         spacing: 1px;
                         Text { text: row.file; color: Theme.text-dim; font-size: 12px; overflow: elide; }
-                        Text { text: row.reason; color: Theme.text-dim.with-alpha(0.65); font-size: 11px; wrap: word-wrap; }
+                        Text { text: row.reason; color: Theme.text-dim.with-alpha(0.7); font-size: 11px; wrap: word-wrap; }
                     }
                 }
             }
@@ -390,58 +694,370 @@ export component DetailsBody inherits Rectangle {
             if Store.notes != "" : VerticalLayout {
                 spacing: 8px;
                 Text {
-                    text: Store.release-date != "" ? "Release notes  ·  " + Store.release-date : "Release notes";
+                    text: Store.release-date != "" ? "Release notes  ·  " + Store.release-date + (Store.release-age != "" ? "  ·  " + Store.release-age : "") : "Release notes";
                     color: Theme.text-dim;
                     font-size: 12px;
                     font-weight: 700;
                 }
                 Text { text: Store.notes; color: Theme.text; font-size: 14px; wrap: word-wrap; }
             }
+
+            if Store.homepage != "" && compact : Button {
+                text: "Project page";
+                primary: false;
+                clicked => { Store.open-url(Store.homepage); }
+            }
         }
     }
 }
 
-// "This device" page body.
-export component DeviceBody inherits Rectangle {
+component LibraryItem inherits Rectangle {
+    in property <LibraryRow> entry;
     in property <bool> compact;
-    Flickable {
-        VerticalLayout {
-            padding: compact ? 16px : 32px;
-            spacing: 14px;
-            alignment: start;
-            Text {
-                text: Store.platform-title;
-                color: Theme.text;
-                font-size: compact ? 24px : 30px;
-                font-weight: 700;
+    property <bool> confirm: false;
+    border-radius: 12px;
+    background: Theme.surface;
+    border-width: 1px;
+    border-color: entry.status == 3 ? Theme.accent.with-alpha(0.55) : Theme.stroke;
+    VerticalLayout {
+        padding: 12px;
+        spacing: 10px;
+        HorizontalLayout {
+            spacing: 12px;
+            VerticalLayout {
+                alignment: center;
+                AppIcon { initials: entry.card.initials; tint: entry.card.tint; size: 44px; }
             }
-            Text {
-                text: "The store only lists apps with a file that can be installed here. This is what it detected.";
-                color: Theme.text-dim;
-                font-size: 14px;
-                wrap: word-wrap;
+            VerticalLayout {
+                alignment: center;
+                spacing: 3px;
+                horizontal-stretch: 1;
+                Text { text: entry.card.name; color: Theme.text; font-size: 15px; font-weight: 600; overflow: elide; }
+                Text { text: entry.detail; color: Theme.text-dim; font-size: 12px; overflow: elide; }
+                if entry.status != 0 : Text {
+                    text: entry.status-text;
+                    color: entry.status == 3 ? Theme.accent : entry.status == 4 ? Theme.warn : entry.status == 2 ? Theme.ok : Theme.text-dim;
+                    font-size: 12px;
+                    font-weight: 600;
+                    overflow: elide;
+                }
             }
-            Rectangle {
-                border-radius: 12px;
-                background: Theme.surface;
-                border-width: 1px;
-                border-color: Theme.stroke;
+            if !compact : HorizontalLayout {
+                spacing: 8px;
                 VerticalLayout {
-                    padding: 6px;
-                    for fact in Store.facts : VerticalLayout {
-                        padding: 10px;
-                        spacing: 3px;
-                        Text { text: fact.name; color: Theme.text-dim; font-size: 12px; }
-                        Text { text: fact.value; color: Theme.text; font-size: 15px; wrap: word-wrap; }
+                    alignment: center;
+                    Button {
+                        text: entry.status == 3 ? "Update" : "Open";
+                        primary: entry.status == 3;
+                        accessible-label: (entry.status == 3 ? "Update " : "Open ") + entry.card.name;
+                        clicked => { Store.open(entry.card.id); }
+                    }
+                }
+                VerticalLayout {
+                    alignment: center;
+                    Button {
+                        text: root.confirm ? "Really remove?" : "Remove";
+                        primary: false;
+                        danger: true;
+                        accessible-label: (root.confirm ? "Confirm removing " : "Remove ") + entry.card.name;
+                        clicked => {
+                            if (root.confirm) {
+                                Store.remove-from-library(entry.card.id);
+                            }
+                            root.confirm = !root.confirm;
+                        }
                     }
                 }
             }
-            if Store.demo : Text {
-                text: "Demo mode: the catalog is fictional and nothing is fetched from the network.";
-                color: Theme.warn;
-                font-size: 13px;
-                wrap: word-wrap;
+        }
+        if compact : HorizontalLayout {
+            spacing: 8px;
+            Button {
+                horizontal-stretch: 1;
+                text: entry.status == 3 ? "Update" : "Open";
+                primary: entry.status == 3;
+                accessible-label: (entry.status == 3 ? "Update " : "Open ") + entry.card.name;
+                clicked => { Store.open(entry.card.id); }
             }
+            Button {
+                horizontal-stretch: 1;
+                text: root.confirm ? "Really remove?" : "Remove";
+                primary: false;
+                danger: true;
+                accessible-label: (root.confirm ? "Confirm removing " : "Remove ") + entry.card.name;
+                clicked => {
+                    if (root.confirm) {
+                        Store.remove-from-library(entry.card.id);
+                    }
+                    root.confirm = !root.confirm;
+                }
+            }
+        }
+        if root.confirm : Text {
+            text: entry.store-managed ? "This deletes the app's file from your Applications folder." : "This only forgets the app here. To uninstall it, use your system's software manager.";
+            color: Theme.text-dim;
+            font-size: 12px;
+            wrap: word-wrap;
+        }
+    }
+}
+
+export component LibraryBody inherits Rectangle {
+    in property <bool> compact;
+    if Store.library.length == 0 : EmptyState {
+        title: "Your library is empty";
+        body: "Apps you install from the store show up here, and the store can tell you when they have a new release.";
+        action: "Browse apps";
+        acted => { Store.page = 0; }
+    }
+    if Store.library.length > 0 : Flickable {
+        VerticalLayout {
+            padding: compact ? 16px : 32px;
+            padding-top: compact ? 8px : 14px;
+            spacing: 12px;
+            alignment: start;
+            HorizontalLayout {
+                spacing: 12px;
+                VerticalLayout {
+                    alignment: center;
+                    horizontal-stretch: 1;
+                    spacing: 2px;
+                    Text {
+                        text: Store.checking-updates ? "Checking for updates…" : Store.updates-count == 0 ? (Store.last-checked != "" ? "Everything is up to date" : Store.library.length + (Store.library.length == 1 ? " app" : " apps")) : Store.updates-count == 1 ? "1 update available" : Store.updates-count + " updates available";
+                        color: Theme.text;
+                        font-size: compact ? 16px : 20px;
+                        font-weight: 700;
+                    }
+                    if Store.last-checked != "" : Text { text: "Last checked " + Store.last-checked; color: Theme.text-dim; font-size: 12px; }
+                }
+                VerticalLayout {
+                    alignment: center;
+                    Button {
+                        text: "Check for updates";
+                        primary: false;
+                        enabled: !Store.checking-updates;
+                        clicked => { Store.check-updates(); }
+                    }
+                }
+            }
+            if Store.checking-updates : Busy { }
+            for item in Store.library : LibraryItem { entry: item; compact: root.compact; }
+        }
+    }
+}
+
+component SettingsCard inherits Rectangle {
+    in property <string> title;
+    border-radius: 12px;
+    background: Theme.surface;
+    border-width: 1px;
+    border-color: Theme.stroke;
+    VerticalLayout {
+        padding: 16px;
+        spacing: 12px;
+        Text { text: root.title; color: Theme.text; font-size: 15px; font-weight: 700; }
+        @children
+    }
+}
+
+// Settings, including what the store detected about this device.
+export component SettingsBody inherits Rectangle {
+    in property <bool> compact;
+    property <bool> token-saved: false;
+    Flickable {
+        VerticalLayout {
+            padding: compact ? 16px : 32px;
+            padding-top: compact ? 8px : 14px;
+            spacing: 14px;
+            alignment: start;
+
+            SettingsCard {
+                title: "This device  ·  " + Store.platform-title;
+                Text {
+                    text: "The store only lists apps with a file that can be installed here. This is what it detected.";
+                    color: Theme.text-dim;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                }
+                for fact in Store.facts : HorizontalLayout {
+                    spacing: 12px;
+                    Text { width: compact ? 110px : 170px; text: fact.name; color: Theme.text-dim; font-size: 13px; wrap: word-wrap; }
+                    Text { horizontal-stretch: 1; text: fact.value; color: Theme.text; font-size: 13px; wrap: word-wrap; }
+                }
+            }
+
+            SettingsCard {
+                title: "Appearance";
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+                    ChoiceChip { text: "Match system"; selected: Store.theme-mode == 0; clicked => { Store.set-theme(0); } }
+                    ChoiceChip { text: "Light"; selected: Store.theme-mode == 1; clicked => { Store.set-theme(1); } }
+                    ChoiceChip { text: "Dark"; selected: Store.theme-mode == 2; clicked => { Store.set-theme(2); } }
+                }
+            }
+
+            SettingsCard {
+                title: "Releases";
+                HorizontalLayout {
+                    spacing: 12px;
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 3px;
+                        Text { text: "Include pre-releases"; color: Theme.text; font-size: 14px; }
+                        Text {
+                            text: "Offer betas and release candidates as soon as they are published. They may be unstable.";
+                            color: Theme.text-dim;
+                            font-size: 12px;
+                            wrap: word-wrap;
+                        }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle {
+                            label: "Include pre-releases";
+                            checked: Store.include-prereleases;
+                            toggled(on) => { Store.set-prereleases(on); }
+                        }
+                    }
+                }
+            }
+
+            SettingsCard {
+                title: "GitHub access";
+                Text {
+                    text: Store.has-token ? "A token is saved on this device. GitHub allows 5,000 requests an hour with it." : "Without a token GitHub allows 60 requests an hour, which a few searches can use up. A personal access token with no scopes raises that to 5,000. It is stored only on this device and sent only to api.github.com.";
+                    color: Theme.text-dim;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        height: 40px;
+                        border-radius: 10px;
+                        background: Theme.bg;
+                        border-width: token.has-focus ? 2px : 1px;
+                        border-color: token.has-focus ? Theme.accent : Theme.stroke;
+                        if token.text == "" : Text {
+                            x: 12px;
+                            text: Store.has-token ? "Paste a new token to replace it" : "Paste a token";
+                            color: Theme.text-dim;
+                            font-size: 13px;
+                            vertical-alignment: center;
+                        }
+                        token := TextInput {
+                            x: 12px;
+                            width: parent.width - 24px;
+                            height: 100%;
+                            color: Theme.text;
+                            font-size: 13px;
+                            single-line: true;
+                            input-type: password;
+                            vertical-alignment: center;
+                            accessible-label: "GitHub token";
+                            edited => { root.token-saved = false; }
+                            accepted => {
+                                Store.save-token(self.text);
+                                self.text = "";
+                                root.token-saved = true;
+                            }
+                        }
+                    }
+                    Button {
+                        text: root.token-saved ? "Saved" : "Save";
+                        primary: false;
+                        enabled: token.text != "";
+                        accessible-label: "Save token";
+                        clicked => {
+                            Store.save-token(token.text);
+                            token.text = "";
+                            root.token-saved = true;
+                        }
+                    }
+                    if Store.has-token : Button {
+                        text: "Forget";
+                        primary: false;
+                        danger: true;
+                        accessible-label: "Forget token";
+                        clicked => {
+                            Store.save-token("");
+                            root.token-saved = false;
+                        }
+                    }
+                }
+            }
+
+            SettingsCard {
+                title: "Storage";
+                HorizontalLayout {
+                    spacing: 12px;
+                    Text { width: compact ? 110px : 170px; text: "Downloads go to"; color: Theme.text-dim; font-size: 13px; }
+                    Text { horizontal-stretch: 1; text: Store.downloads-dir; color: Theme.text; font-size: 13px; wrap: char-wrap; }
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+                    Button { text: "Clear cached catalog data"; primary: false; clicked => { Store.clear-cache(); } }
+                    if Store.recent.length > 0 : Button { text: "Clear search history"; primary: false; clicked => { Store.clear-recent(); } }
+                }
+            }
+
+            SettingsCard {
+                title: "About";
+                Text {
+                    text: "untitledstore " + Store.app-version + ". Everything runs on this device: there is no account and no server of ours. The store talks directly to GitHub and the AUR, and keeps your library and settings in a file on this device.";
+                    color: Theme.text-dim;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                }
+                Text {
+                    text: "Apps come straight from their authors and are not reviewed by anyone. Install software you trust. Made with Slint.";
+                    color: Theme.text-dim;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                }
+                if Store.demo : Text {
+                    text: "Demo mode: the catalog is fictional and nothing is fetched from the network.";
+                    color: Theme.warn;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                }
+            }
+        }
+    }
+}
+
+// Short feedback that goes away by itself. Fills its parent; only the pill is drawn.
+export component Toast inherits Rectangle {
+    in property <length> bottom: 24px;
+    property <bool> shown: Store.toast != "";
+    Rectangle {
+        x: (root.width - self.width) / 2;
+        y: root.height - self.height - root.bottom;
+        width: min(root.width - 32px, label.preferred-width + 60px);
+        height: 44px;
+        border-radius: 22px;
+        background: Theme.text;
+        opacity: root.shown ? 1 : 0;
+        visible: self.opacity > 0;
+        accessible-role: text;
+        accessible-label: Store.toast;
+        animate opacity { duration: 160ms; }
+        TouchArea {
+            clicked => { Store.dismiss-toast(); }
+        }
+        label := Text {
+            x: 20px;
+            width: parent.width - 40px;
+            text: Store.toast;
+            color: Store.toast-is-error ? (Theme.dark ? #b3261e : #ffb4ab) : Theme.bg;
+            font-size: 13px;
+            font-weight: 600;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            overflow: elide;
         }
     }
 }

@@ -191,6 +191,15 @@ pub fn open_with_system(path: &Path) -> Result<()> {
     cmd.arg(path).spawn().map(|_| ()).map_err(|e| Error::Unsupported(format!("Could not open {}: {e}", path.display())))
 }
 
+/// Open a web page in the user's browser. Only `https://` links are opened: URLs come
+/// from repository metadata, which anyone can write.
+pub fn open_url(url: &str) -> Result<()> {
+    if !url.starts_with("https://") || url.chars().any(|c| c.is_whitespace() || c.is_control()) {
+        return Err(Error::Unsupported(format!("Refusing to open \"{url}\": not an https link")));
+    }
+    open_with_system(Path::new(url))
+}
+
 /// Carry out `plan` for `asset`. `open` is how files are handed to the system
 /// ([`open_with_system`] in the app; a recorder in tests).
 pub fn execute(
@@ -307,6 +316,15 @@ mod tests {
         assert_eq!(plan_for("a-arm64-v8a.apk", "android-arm64").action, Action::AndroidInstaller);
         assert_eq!(plan_for("a-x64.msi", "windows-x64").action, Action::OpenFile);
         assert_eq!(plan_for("a-linux-x86_64.tar.gz", "linux-x64-debian").verb, "Download");
+    }
+
+    #[test]
+    fn only_https_links_are_opened() {
+        for bad in
+            ["file:///etc/passwd", "javascript:alert(1)", "http://example.com", "", "https://a b", "/bin/sh", "-rf"]
+        {
+            assert!(open_url(bad).is_err(), "{bad:?}");
+        }
     }
 
     #[test]

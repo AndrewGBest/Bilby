@@ -198,6 +198,37 @@ pub fn human_size(bytes: u64) -> String {
     }
 }
 
+/// Days since the Unix epoch for a `YYYY-MM-DD` date (Howard Hinnant's days-from-civil).
+fn days_from_date(date: &str) -> Option<i64> {
+    let mut parts = date.get(..10)?.split('-').map(|p| p.parse::<i64>().ok());
+    let (y, m, d) = (parts.next()??, parts.next()??, parts.next()??);
+    if !(1..=12).contains(&m) || !(1..=31).contains(&d) {
+        return None;
+    }
+    let y = if m <= 2 { y - 1 } else { y };
+    let era = y.div_euclid(400);
+    let yoe = y.rem_euclid(400);
+    let doy = (153 * (if m > 2 { m - 3 } else { m + 9 }) + 2) / 5 + d - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    Some(era * 146_097 + doe - 719_468)
+}
+
+/// "today", "3 days ago", "5 months ago", "2 years ago" for a `YYYY-MM-DD` date.
+/// Empty when the date cannot be read or lies in the future.
+pub fn age_label(date: &str, now_unix: u64) -> String {
+    let Some(then) = days_from_date(date) else { return String::new() };
+    let days = (now_unix / 86_400) as i64 - then;
+    let plural = |n: i64, unit: &str| if n == 1 { format!("1 {unit} ago") } else { format!("{n} {unit}s ago") };
+    match days {
+        d if d < 0 => String::new(),
+        0 => "today".to_string(),
+        1 => "yesterday".to_string(),
+        d if d < 60 => plural(d, "day"),
+        d if d < 730 => plural(d / 30, "month"),
+        d => plural(d / 365, "year"),
+    }
+}
+
 pub fn human_count(n: u64) -> String {
     if n >= 1_000_000 {
         format!("{:.1}M", n as f64 / 1_000_000.0)
@@ -239,6 +270,20 @@ mod tests {
         {
             assert_eq!(gh(words), None, "{words:?}");
         }
+    }
+
+    #[test]
+    fn ages() {
+        let now = 1_700_000_000; // 2023-11-14
+        assert_eq!(age_label("2023-11-14", now), "today");
+        assert_eq!(age_label("2023-11-13T23:00:00Z", now), "yesterday");
+        assert_eq!(age_label("2023-11-04", now), "10 days ago");
+        assert_eq!(age_label("2023-08-14", now), "3 months ago");
+        assert_eq!(age_label("2020-11-14", now), "3 years ago");
+        assert_eq!(age_label("2024-01-01", now), "", "future dates say nothing");
+        assert_eq!(age_label("", now), "");
+        assert_eq!(age_label("not-a-date", now), "");
+        assert_eq!(age_label("2023-13-40", now), "");
     }
 
     #[test]

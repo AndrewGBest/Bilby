@@ -15,6 +15,9 @@ export struct AppCard {
     popularity: string,
     initials: string,
     tint: color,
+    // In the library, and whether a newer release is known.
+    installed: bool,
+    has-update: bool,
 }
 
 export struct Section {
@@ -29,8 +32,10 @@ export struct OptionRow {
     // Caveat such as "runs through Rosetta 2". Empty for native builds.
     note: string,
     native: bool,
+    // The release publishes a SHA-256 for this file; it is checked after download.
+    verified: bool,
     verb: string,
-    steps: string,
+    steps: [string],
     command: string,
 }
 
@@ -44,6 +49,17 @@ export struct Fact {
     value: string,
 }
 
+export struct LibraryRow {
+    card: AppCard,
+    // "AppImage · x86_64  ·  installed 2026-11-19"
+    detail: string,
+    // 0 not checked, 1 checking, 2 up to date, 3 update available, 4 could not check
+    status: int,
+    status-text: string,
+    // The store placed the file itself, so it can also delete it.
+    store-managed: bool,
+}
+
 export global Store {
     // --- device -----------------------------------------------------------------
     in property <Shell> shell: Shell.desktop;
@@ -52,18 +68,25 @@ export global Store {
     in property <string> platform-title;
     in property <[Fact]> facts;
     in property <bool> demo;
+    in property <string> app-version;
 
     // --- browse -----------------------------------------------------------------
     in property <[Section]> sections;
-    // Same content arranged for the TV grid: search results, when present, are row one.
+    in property <[string]> categories;
+    // "" shows every category.
+    in-out property <string> category;
+    in property <AppCard> spotlight;
+    // Same content arranged for the TV grid: library and search results come first.
     in property <[Section]> tv-rows;
-    // 0 discover, 1 search, 2 this device
+    // 0 discover, 1 search, 2 library, 3 settings
     in-out property <int> page;
     in-out property <string> query;
     in property <bool> searching;
     in property <bool> searched;
     in property <[AppCard]> results;
     in property <string> search-note;
+    in property <string> search-error;
+    in property <[string]> recent;
 
     // --- details ----------------------------------------------------------------
     in-out property <bool> details-open;
@@ -71,13 +94,17 @@ export global Store {
     in property <string> details-error;
     in property <AppCard> app;
     in property <string> release-date;
+    in property <string> release-age;
     in property <string> license;
     in property <string> notes;
     in property <string> warning;
+    in property <string> homepage;
     // Set when nothing in the app's releases fits this machine.
     in property <string> unavailable;
     in property <[OptionRow]> options;
     in property <[HiddenRow]> hidden;
+    // Version in the library, "" when not installed.
+    in property <string> installed-version;
 
     // --- install ----------------------------------------------------------------
     // 0 idle, 1 working, 2 done, 3 failed
@@ -86,8 +113,35 @@ export global Store {
     in property <float> install-progress;
     in property <string> install-message;
 
+    // --- library ----------------------------------------------------------------
+    in property <[LibraryRow]> library;
+    in property <int> updates-count;
+    in property <bool> checking-updates;
+    in property <string> last-checked;
+
+    // --- settings ---------------------------------------------------------------
+    in property <int> theme-mode;
+    in property <bool> include-prereleases;
+    in property <bool> has-token;
+    in property <string> downloads-dir;
+
+    // --- feedback ---------------------------------------------------------------
+    in property <string> toast;
+    in property <bool> toast-is-error;
+
     callback search(string);
     callback open(string);
     callback close-details();
+    callback retry-details();
     callback install(int);
+    callback cancel-install();
+    callback check-updates();
+    callback remove-from-library(string);
+    callback set-theme(int);
+    callback set-prereleases(bool);
+    callback save-token(string);
+    callback clear-cache();
+    callback clear-recent();
+    callback open-url(string);
+    callback dismiss-toast();
 }
