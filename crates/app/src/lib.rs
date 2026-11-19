@@ -73,9 +73,14 @@ pub struct Options {
     /// How downloaded files are handed to the system. Defaults to the desktop's own
     /// handler; tests record the call instead of launching installers.
     pub opener: Option<Opener>,
+    pub catalog_factory: Option<CatalogFactory>,
 }
 
 pub type Opener = Arc<dyn Fn(&std::path::Path) -> ustore_core::Result<()> + Send + Sync>;
+
+/// Builds the catalog for a platform and the current settings. The default talks to the
+/// real sources (or the demo); tests substitute one that can go offline on demand.
+pub type CatalogFactory = Arc<dyn Fn(&Platform, &Settings, &Dirs) -> Arc<Catalog> + Send + Sync>;
 
 impl Options {
     pub fn from_args(args: impl Iterator<Item = String>) -> Result<Options, String> {
@@ -315,7 +320,6 @@ pub struct App {
     ui: slint::Weak<AppWindow>,
     catalog: RwLock<Arc<Catalog>>,
     platform: Platform,
-    demo: bool,
     inline: bool,
     dirs: Dirs,
     state_path: PathBuf,
@@ -330,6 +334,7 @@ pub struct App {
     toast_generation: Arc<AtomicU64>,
     cancel_install: Arc<AtomicBool>,
     opener: Opener,
+    catalog_factory: CatalogFactory,
 }
 
 impl App {
@@ -561,7 +566,7 @@ impl App {
 
     fn rebuild_catalog(&self) {
         let settings = self.state().settings;
-        *self.catalog.write().unwrap() = make_catalog(&self.platform, self.demo, &settings, &self.dirs);
+        *self.catalog.write().unwrap() = (self.catalog_factory)(&self.platform, &settings, &self.dirs);
     }
 
     // ---- search ----
@@ -951,7 +956,13 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         .clone()
         .unwrap_or_else(|| dirs.config.join(if options.demo { "demo-state.json" } else { "state.json" }));
     let state = State::load(&state_path);
-    let catalog = make_catalog(&platform, options.demo, &state.settings, &dirs);
+    let demo = options.demo;
+    let catalog_factory: CatalogFactory = options.catalog_factory.clone().unwrap_or_else(|| {
+        Arc::new(move |platform: &Platform, settings: &Settings, dirs: &Dirs| {
+            make_catalog(platform, demo, settings, dirs)
+        })
+    });
+    let catalog = catalog_factory(&platform, &state.settings, &dirs);
 
     let ui = AppWindow::new()?;
     let store = ui.global::<Store>();
@@ -973,7 +984,6 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         ui: ui.as_weak(),
         catalog: RwLock::new(catalog),
         platform,
-        demo: options.demo,
         inline: options.inline,
         dirs,
         state_path,
@@ -987,6 +997,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         toast_generation: Arc::new(AtomicU64::new(0)),
         cancel_install: Arc::new(AtomicBool::new(false)),
         opener: options.opener.clone().unwrap_or_else(|| Arc::new(install::open_with_system)),
+        catalog_factory,
     });
 
     // The TV interface is designed dark; elsewhere the saved preference applies.
