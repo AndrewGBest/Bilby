@@ -15,6 +15,21 @@ fn home() -> PathBuf {
     dir
 }
 
+/// Config locations differ per OS; look the file up instead of assuming one.
+fn find(dir: &Path, name: &str) -> Option<PathBuf> {
+    for entry in std::fs::read_dir(dir).ok()?.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            if let Some(found) = find(&path, name) {
+                return Some(found);
+            }
+        } else if path.file_name().is_some_and(|n| n == name) {
+            return Some(path);
+        }
+    }
+    None
+}
+
 fn run_in(home: &Path, args: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_ustore"))
         .args(args)
@@ -114,7 +129,7 @@ fn install_then_library_then_updates() {
     assert!(current.contains("up to date"));
 
     // Pretend an older version is installed.
-    let state = home.join("config").join("untitledstore").join("demo-state.json");
+    let state = find(&home, "demo-state.json").expect("the library was saved somewhere under the home directory");
     let text = std::fs::read_to_string(&state).unwrap().replace("v3.4.0", "v3.0.0");
     std::fs::write(&state, text).unwrap();
     let outdated = String::from_utf8(run_in(&home, &["--demo", "updates"]).stdout).unwrap();

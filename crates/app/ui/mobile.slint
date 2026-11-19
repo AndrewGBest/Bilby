@@ -121,6 +121,7 @@ export component MobileShell inherits Rectangle {
                     text <=> Store.query;
                     placeholder: "Search, or paste a GitHub link";
                     accepted(text) => { Store.search(text); }
+                    edited(text) => { Store.typing(text); }
                 }
             }
 
@@ -232,6 +233,17 @@ export component MobileShell inherits Rectangle {
                                             Store.search(q);
                                         }
                                     }
+                                }
+                            }
+                            if Store.suggestions.length > 0 && !Store.searching : VerticalLayout {
+                                HorizontalLayout {
+                                    height: 36px;
+                                    padding-left: 16px;
+                                    Text { text: "Featured apps"; color: Theme.text-dim; font-size: 13px; font-weight: 700; vertical-alignment: center; }
+                                }
+                                for app in Store.suggestions : AppRow {
+                                    app: app;
+                                    clicked => { Store.open(app.id); }
                                 }
                             }
                             for app in Store.results : AppRow {

@@ -87,6 +87,8 @@ export global Store {
     in property <string> search-note;
     in property <string> search-error;
     in property <[string]> recent;
+    // Featured apps matching what is being typed. Instant, no network.
+    in property <[AppCard]> suggestions;
 
     // --- details ----------------------------------------------------------------
     in-out property <bool> details-open;
@@ -134,6 +136,7 @@ export global Store {
     in property <bool> toast-is-error;
 
     callback search(string);
+    callback typing(string);
     callback open(string);
     callback close-details();
     callback retry-details();

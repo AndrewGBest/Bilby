@@ -113,6 +113,38 @@ impl Catalog {
         sections
     }
 
+    /// Featured apps matching what has been typed so far. Instant and free: it only looks
+    /// at the bundled index, so it can run on every keystroke.
+    pub fn suggest(&self, query: &str, limit: usize) -> Vec<AppSummary> {
+        let words: Vec<String> = query.split_whitespace().map(str::to_lowercase).collect();
+        if words.iter().map(String::len).sum::<usize>() < 2 {
+            return Vec::new();
+        }
+        let mut scored: Vec<(u8, AppSummary)> = Vec::new();
+        for app in self.featured().into_iter().flat_map(|s| s.apps) {
+            if scored.iter().any(|(_, seen)| seen.id == app.id) {
+                continue;
+            }
+            let name = app.name.to_lowercase();
+            let rest =
+                format!("{} {} {}", app.author, app.summary, app.category.clone().unwrap_or_default()).to_lowercase();
+            if !words.iter().all(|w| name.contains(w.as_str()) || rest.contains(w.as_str())) {
+                continue;
+            }
+            // Names that start with the query first, then names containing it, then the rest.
+            let rank = if name.starts_with(&words[0]) {
+                0
+            } else if words.iter().any(|w| name.contains(w.as_str())) {
+                1
+            } else {
+                2
+            };
+            scored.push((rank, app));
+        }
+        scored.sort_by_key(|(rank, _)| *rank);
+        scored.into_iter().take(limit).map(|(_, app)| app).collect()
+    }
+
     /// Sort a release's files into "works here" (best first) and "hidden, because ...".
     pub fn resolve_release(&self, release: &Release) -> ResolvedRelease {
         let mut options = Vec::new();
@@ -325,6 +357,28 @@ mod tests {
         assert!(d.unavailable_reason.is_none());
         let d = demo("linux-x64-debian").details(&id("github:kestrel-sh/kestrel")).unwrap();
         assert_eq!(d.release.unwrap().version, "v1.21.0");
+    }
+
+    #[test]
+    fn suggestions_come_from_the_index_and_respect_the_device() {
+        let names =
+            |preset: &str, q: &str| -> Vec<String> { demo(preset).suggest(q, 5).into_iter().map(|a| a.name).collect() };
+        assert_eq!(names("linux-x64-debian", "lu"), ["Lumen"]);
+        assert_eq!(names("linux-x64-debian", "LUMEN"), ["Lumen"], "case does not matter");
+        assert_eq!(names("linux-x64-debian", "editor"), ["Lumen"], "summaries are searched too");
+        assert_eq!(names("linux-x64-debian", "media"), ["Tidewave", "Marquee", "Couchplay"], "and categories");
+        assert_eq!(names("linux-x64-debian", "music player"), ["Tidewave"], "every word must match");
+        assert!(names("linux-x64-debian", "l").is_empty(), "one letter is too little");
+        assert!(names("linux-x64-debian", "").is_empty());
+        // Device filtering applies: a Windows-only app is not suggested on Linux.
+        assert!(names("linux-x64-debian", "winspect").is_empty());
+        assert_eq!(names("windows-x64", "winspect"), ["Winspect"]);
+        // Name matches come before summary matches.
+        assert_eq!(names("android-arm64", "re")[0], "Relay");
+        // On a TV the same app sits in two rows; it is suggested once.
+        assert_eq!(names("android-tv", "tide"), ["Tidewave"]);
+        assert_eq!(demo("linux-x64-debian").suggest("a", 2).len(), 0);
+        assert!(demo("linux-x64-debian").suggest("an", 2).len() <= 2, "the limit holds");
     }
 
     #[test]

@@ -191,6 +191,7 @@ export component SearchField inherits Rectangle {
     in property <string> placeholder: "Search apps";
     out property <bool> has-focus: input.has-focus;
     callback accepted(string);
+    callback edited(string);
     public function grab-focus() {
         input.focus();
         input.select-all();
@@ -233,6 +234,7 @@ export component SearchField inherits Rectangle {
                 vertical-alignment: center;
                 accessible-label: "Search";
                 accepted => { root.accepted(self.text); }
+                edited => { root.edited(self.text); }
             }
         }
         if input.text != "" : Rectangle {
@@ -243,6 +245,7 @@ export component SearchField inherits Rectangle {
                 mouse-cursor: pointer;
                 clicked => {
                     input.text = "";
+                    root.edited("");
                     input.focus();
                 }
             }

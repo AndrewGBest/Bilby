@@ -66,7 +66,12 @@ pub struct Options {
     pub state_file: Option<PathBuf>,
     /// Run catalog work on the calling thread instead of workers. For tests.
     pub inline: bool,
+    /// How downloaded files are handed to the system. Defaults to the desktop's own
+    /// handler; tests record the call instead of launching installers.
+    pub opener: Option<Opener>,
 }
+
+pub type Opener = Arc<dyn Fn(&std::path::Path) -> ustore_core::Result<()> + Send + Sync>;
 
 impl Options {
     pub fn from_args(args: impl Iterator<Item = String>) -> Result<Options, String> {
@@ -253,6 +258,7 @@ pub struct App {
     details_generation: AtomicU64,
     toast_generation: Arc<AtomicU64>,
     cancel_install: Arc<AtomicBool>,
+    opener: Opener,
 }
 
 impl App {
@@ -489,6 +495,24 @@ impl App {
 
     // ---- search ----
 
+    /// While typing: instant matches from the bundled catalog. No network, no history.
+    pub fn typing(&self, ui: &AppWindow, text: &str) {
+        let store = ui.global::<Store>();
+        let suggestions = self.catalog().suggest(text, 6);
+        if !suggestions.is_empty() && !store.get_details_open() {
+            store.set_page(1);
+        }
+        // Old results belong to the previous query; typing starts a new one.
+        if store.get_searched() {
+            store.set_searched(false);
+            store.set_search_note(SharedString::new());
+            store.set_search_error(SharedString::new());
+            *self.results.lock().unwrap() = (String::new(), Vec::new());
+            store.set_results(ModelRc::default());
+        }
+        store.set_suggestions(self.cards(&suggestions));
+    }
+
     pub fn search(self: &Arc<Self>, ui: &AppWindow, query: &str) {
         let query = query.trim().to_string();
         if query.is_empty() {
@@ -529,6 +553,8 @@ impl App {
         let store = ui.global::<Store>();
         store.set_searching(false);
         store.set_searched(true);
+        // The real results replace the as-you-type suggestions.
+        store.set_suggestions(ModelRc::default());
         let mut note = if outcome.apps.is_empty() {
             String::new()
         } else {
@@ -703,7 +729,7 @@ impl App {
                     &work_option.asset,
                     http.as_ref(),
                     &app.dirs,
-                    &install::open_with_system,
+                    app.opener.as_ref(),
                     &mut progress,
                 )
             },
@@ -825,6 +851,7 @@ fn find_card(store: &Store, id: &str) -> Option<AppCard> {
     let in_sections = store.get_sections().iter().flat_map(|s| s.apps.iter().collect::<Vec<_>>()).find(|c| c.id == id);
     in_sections
         .or_else(|| store.get_results().iter().find(|c| c.id == id))
+        .or_else(|| store.get_suggestions().iter().find(|c| c.id == id))
         .or_else(|| store.get_library().iter().map(|r| r.card).find(|c| c.id == id))
 }
 
@@ -879,6 +906,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         details_generation: AtomicU64::new(0),
         toast_generation: Arc::new(AtomicU64::new(0)),
         cancel_install: Arc::new(AtomicBool::new(false)),
+        opener: options.opener.clone().unwrap_or_else(|| Arc::new(install::open_with_system)),
     });
 
     // The TV interface is designed dark; elsewhere the saved preference applies.
@@ -905,6 +933,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         };
     }
     on!(on_search, |app, ui, query| { app.search(ui, &query) });
+    on!(on_typing, |app, ui, text| { app.typing(ui, &text) });
     on!(on_open, |app, ui, id| { app.open(ui, &id) });
     on!(on_close_details, |app, ui| { app.close_details(ui) });
     on!(on_retry_details, |app, ui| {

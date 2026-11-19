@@ -10,7 +10,7 @@ use slint::platform::{Key, PointerEventButton, WindowEvent};
 use slint::{ComponentHandle, Model, SharedString};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU32, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use untitledstore::{build, App, AppWindow, Options, Shell, Store, Theme};
 use ustore_core::install::Dirs;
 use ustore_core::state::State;
@@ -21,6 +21,8 @@ struct Session {
     app: Arc<App>,
     dirs: Dirs,
     state_file: PathBuf,
+    /// Files the store handed to "the system installer" (recorded, never launched).
+    opened: Arc<Mutex<Vec<PathBuf>>>,
 }
 
 static COUNTER: AtomicU32 = AtomicU32::new(0);
@@ -65,12 +67,18 @@ fn start_with(preset: &str, shell: Shell, seed: Option<&str>) -> Session {
         std::fs::create_dir_all(&dirs.config).unwrap();
         std::fs::write(&state_file, json).unwrap();
     }
+    let opened: Arc<Mutex<Vec<PathBuf>>> = Arc::default();
+    let record = opened.clone();
     let options = Options {
         demo: true,
         inline: true,
         platform: Some(Platform::preset(preset).unwrap()),
         shell: Some(shell),
         dirs: Some(dirs.clone()),
+        opener: Some(Arc::new(move |path: &std::path::Path| {
+            record.lock().unwrap().push(path.to_path_buf());
+            Ok(())
+        })),
         ..Default::default()
     };
     let (ui, app) = build(&options).unwrap();
@@ -81,7 +89,7 @@ fn start_with(preset: &str, shell: Shell, seed: Option<&str>) -> Session {
     };
     ui.window().set_size(slint::LogicalSize::new(w, h));
     ui.show().unwrap();
-    Session { ui, app, dirs, state_file }
+    Session { ui, app, dirs, state_file, opened }
 }
 
 /// A store that has been opened before (the first-run welcome is out of the way).
@@ -224,6 +232,7 @@ fn install_an_appimage_end_to_end() {
     assert!(s.store().get_install_message().starts_with("Checksum verified."));
     let file = s.dirs.applications.join("Tidewave-3.4.0-x86_64.AppImage");
     assert!(file.is_file(), "the AppImage is in the Applications folder");
+    assert!(s.opened.lock().unwrap().is_empty(), "an AppImage needs no system installer");
     assert_eq!(s.store().get_toast(), "Tidewave is in your library");
     assert_eq!(s.store().get_installed_version(), "v3.4.0");
 
@@ -263,6 +272,8 @@ fn packages_are_recorded_but_never_deleted_by_the_store() {
     assert!(!saved.library[0].store_managed);
     let downloaded = PathBuf::from(saved.library[0].path.clone().unwrap());
     assert!(downloaded.is_file());
+    assert_eq!(*s.opened.lock().unwrap(), vec![downloaded.clone()], "the .deb was handed to the system, once");
+    assert!(s.store().get_install_message().contains("Opened"));
     s.app.remove_from_library(&s.ui, "github:lumen-labs/lumen");
     assert!(downloaded.is_file(), "a package handed to the system is not ours to delete");
     assert_eq!(s.store().get_toast(), "Lumen removed from your library");
@@ -421,6 +432,35 @@ fn pasting_a_link_opens_the_app_and_searches_are_remembered() {
 
     s.app.search(&s.ui, "x");
     assert_eq!(s.store().get_search_note(), "Type at least two characters.");
+}
+
+#[test]
+fn typing_suggests_featured_apps_without_searching() {
+    let s = start("linux-x64-debian", Shell::Desktop);
+    s.app.typing(&s.ui, "lum");
+    assert_eq!(s.store().get_page(), 1, "typing brings up the search page");
+    let names: Vec<String> = s.store().get_suggestions().iter().map(|a| a.name.to_string()).collect();
+    assert_eq!(names, ["Lumen"]);
+    assert!(!s.store().get_searched() && !s.store().get_searching(), "nothing was sent anywhere");
+    assert!(s.saved().recent_searches.is_empty(), "keystrokes are not history");
+    assert!(s.has("Lumen"));
+
+    // A suggestion opens like any other tile.
+    s.click("Lumen");
+    assert_eq!(s.store().get_app().id, "github:lumen-labs/lumen");
+    s.click("Back");
+
+    // Enter runs the real search and replaces the suggestions.
+    s.app.search(&s.ui, "lum");
+    assert_eq!(s.store().get_suggestions().row_count(), 0);
+    assert_eq!(s.store().get_results().row_count(), 1);
+
+    // Typing again clears the old results so the two never mix.
+    s.app.typing(&s.ui, "tide");
+    assert_eq!(s.store().get_results().row_count(), 0);
+    assert_eq!(s.store().get_suggestions().row_data(0).unwrap().name, "Tidewave");
+    s.app.typing(&s.ui, "");
+    assert_eq!(s.store().get_suggestions().row_count(), 0);
 }
 
 #[test]
