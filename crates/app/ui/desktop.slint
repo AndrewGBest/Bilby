@@ -330,14 +330,17 @@ export component DesktopShell inherits Rectangle {
                                 if Store.show-welcome : Welcome { compact: false; }
                                 if Store.updates-count > 0 : UpdatesBanner { }
                                 if Store.spotlight.id != "" && Store.category == "" && !Store.show-welcome : Spotlight { app: Store.spotlight; }
-                                if Store.categories.length > 1 : HorizontalLayout {
-                                    spacing: 8px;
-                                    alignment: start;
-                                    ChoiceChip { text: "All"; selected: Store.category == ""; clicked => { Store.category = ""; } }
-                                    for name in Store.categories : ChoiceChip {
-                                        text: name;
-                                        selected: Store.category == name;
-                                        clicked => { Store.category = name; }
+                                if Store.categories.length > 1 : Flickable {
+                                    height: 32px;
+                                    HorizontalLayout {
+                                        spacing: 8px;
+                                        alignment: start;
+                                        ChoiceChip { text: "All"; selected: Store.category == ""; clicked => { Store.category = ""; } }
+                                        for name in Store.categories : ChoiceChip {
+                                            text: name;
+                                            selected: Store.category == name;
+                                            clicked => { Store.category = name; }
+                                        }
                                     }
                                 }
                                 for section in Store.sections : VerticalLayout {
@@ -402,18 +405,22 @@ export component DesktopShell inherits Rectangle {
                                         wrap: word-wrap;
                                     }
                                 }
-                                if Store.recent.length > 0 && !Store.searching : HorizontalLayout {
-                                    spacing: 8px;
-                                    alignment: start;
-                                    VerticalLayout {
-                                        alignment: center;
-                                        Text { text: "Recent"; color: Theme.text-dim; font-size: 12px; font-weight: 700; }
-                                    }
-                                    for q in Store.recent : ChoiceChip {
-                                        text: q;
-                                        clicked => {
-                                            Store.query = q;
-                                            Store.search(q);
+                                if Store.recent.length > 0 && !Store.searching : Flickable {
+                                    height: 32px;
+                                    HorizontalLayout {
+                                        spacing: 8px;
+                                        alignment: start;
+                                        VerticalLayout {
+                                            alignment: center;
+                                            Text { text: "Recent"; color: Theme.text-dim; font-size: 12px; font-weight: 700; }
+                                        }
+                                        for q in Store.recent : ChoiceChip {
+                                            text: q;
+                                            accessible-label: "Search again for " + q;
+                                            clicked => {
+                                                Store.query = q;
+                                                Store.search(q);
+                                            }
                                         }
                                     }
                                 }

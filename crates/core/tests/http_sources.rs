@@ -463,6 +463,30 @@ fn aur_search_and_info_parse_the_documented_shape() {
 }
 
 #[test]
+fn an_aur_search_costs_one_request() {
+    let server = Server::start(vec![("/rpc/v5/search/paru?by=name-desc", Reply::json(&fixture("aur_search.json")))]);
+    let http: Arc<dyn Http> = Arc::new(client(&server, None));
+    let source: Arc<dyn Source> = Arc::new(Aur::with_rpc(http.clone(), &server.url("/rpc/v5")));
+    let on = |preset: &str| {
+        Catalog::with_sources(Platform::preset(preset).unwrap(), http.clone(), vec![source.clone()], Index::default())
+    };
+
+    let outcome = on("linux-x64-arch").search("paru");
+    assert!(outcome.errors.is_empty(), "{:?}", outcome.errors);
+    let found: Vec<_> =
+        outcome.apps.iter().map(|a| (a.name.as_str(), a.install_label.as_deref(), a.version.as_deref())).collect();
+    assert_eq!(
+        found,
+        [("paru", Some("AUR package"), Some("2.0.4-1")), ("paru-bin", Some("AUR package"), Some("2.0.4-1"))]
+    );
+    assert_eq!(server.requests().len(), 1, "no per-package lookups: the search result is enough");
+
+    // Not an Arch system: the AUR is not asked at all.
+    assert!(on("linux-x64-debian").search("paru").apps.is_empty());
+    assert_eq!(server.requests().len(), 1);
+}
+
+#[test]
 fn aur_errors_and_short_queries() {
     let server = Server::start(vec![("/rpc/v5/search/zz?by=name-desc", Reply::json(&fixture("aur_error.json")))]);
     let source = aur(&server);

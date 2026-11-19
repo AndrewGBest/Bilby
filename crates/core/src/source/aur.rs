@@ -142,6 +142,12 @@ impl Source for Aur {
         Ok(self.info(key)?.summary())
     }
 
+    fn search_hits_are_final(&self) -> Option<&'static str> {
+        // Every AUR package builds on every Arch system (as far as the RPC can tell),
+        // and the search result already has the version.
+        Some(Format::AurBuild.label())
+    }
+
     fn releases(&self, key: &str) -> Result<Vec<Release>> {
         let pkg = self.info(key)?;
         let base = pkg.package_base.clone().unwrap_or_else(|| pkg.name.clone());

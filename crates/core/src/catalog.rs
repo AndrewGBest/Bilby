@@ -276,6 +276,14 @@ impl Catalog {
                     continue;
                 }
             };
+            if let Some(label) = source.search_hits_are_final() {
+                let finished = hits.into_iter().take(self.check_limit).map(|mut app| {
+                    app.install_label = Some(label.to_string());
+                    app
+                });
+                per_source.push(finished.collect());
+                continue;
+            }
             // Each hit is checked in parallel: one request each, bounded by check_limit.
             let checked: Vec<Result<Option<AppSummary>>> = std::thread::scope(|scope| {
                 let handles: Vec<_> = hits

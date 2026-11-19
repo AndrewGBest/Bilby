@@ -20,4 +20,12 @@ pub trait Source: Send + Sync {
 
     /// Newest first.
     fn releases(&self, key: &str) -> Result<Vec<Release>>;
+
+    /// When every search hit is installable wherever the source is available, and
+    /// already carries its version, return what would be installed (e.g. "AUR
+    /// package"). The catalog then skips the per-hit release lookup: one request per
+    /// search instead of one per result.
+    fn search_hits_are_final(&self) -> Option<&'static str> {
+        None
+    }
 }
