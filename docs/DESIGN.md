@@ -322,39 +322,57 @@ been run on a television.
 
 ## 8. Testing
 
-111 tests, none needing the internet or a display. **[verified]**: all pass on Linux.
+126 tests, none needing the internet. **[verified]**: all pass on Linux here, and the
+suite passed on GitHub's Linux, Windows and macOS runners (run 3 of the CI workflow, at
+the "Match search suggestions on word starts" commit; later commits are checked by the
+same workflow).
 
 | Suite | Count | What it exercises |
 |---|---|---|
-| `ustore-core` unit tests | 57 | detection, classification, compatibility, versions, state file, install plans and execution, index, catalog |
-| `tests/corpus.rs` | 4 | 169 real-world-style names; cross-OS/CPU safety property; 20,000 generated names |
-| `tests/http_sources.rs` | 15 | the real HTTP client and both sources against a local server: headers, token scoping, rate limits, allowance, progress, cancel, cache, documented JSON shapes, garbage responses |
-| `ustore` CLI tests | 7 | the binary end to end, including install, library and updates |
-| `untitledstore` UI tests | 24 | the real window on Slint's headless backend: clicks by accessible label, key presses, all three interfaces |
-| app unit tests | 4 | option parsing and formatting |
+| `ustore-core` unit tests | 58 | detection, classification, compatibility, versions, state file, install plans and execution, index, suggestions, catalog |
+| `core/tests/corpus.rs` | 4 | 169 real-world-style names; cross-OS/CPU safety property; 20,000 generated names |
+| `core/tests/http_sources.rs` | 15 | the real HTTP client and both sources against a local server: headers, token scoping, rate limits, allowance, progress, cancel, cache, documented JSON shapes, garbage responses |
+| `cli/tests/cli.rs` | 7 | the `ustore` binary end to end, including install, library and updates |
+| `app/tests/ui.rs` | 31 | the real window on Slint's headless backend: clicks by accessible label, key presses, all three interfaces |
+| `app/tests/binary.rs` | 5 | the real application (threads, event loop, software renderer) under `xvfb-run`, Linux only |
+| `app/tests/contrast.rs` | 1 | WCAG contrast of every text/background pairing in both themes |
+| app unit tests | 5 | option parsing, release-note rendering, formatting |
 
-The UI tests found real bugs while being written: Escape did nothing until a control had
-been focused, Android's Back was not handled on mobile, focus was lost when an app page
-opened from the keyboard, and the spotlight banner only reacted on its button.
+Things the tests found while being written, all fixed:
 
-Gaps: no test talks to the live services; nothing runs on Windows, macOS, Android or
-iOS yet (a CI workflow that would is in `.github/workflows/ci.yml`, itself untested);
-there are no visual regression tests, only the screenshots in `docs/screenshots/`.
+- Escape did nothing until a control had been focused; Android's Back was not handled
+  on mobile; focus was lost when an app page was opened from the keyboard.
+- The spotlight banner only reacted on its button.
+- At 320 px wide the app page and library ran off the right edge
+  (`everything_fits_on_the_narrowest_phone` now checks every control on every page).
+- The light theme's chips and status colours were as low as 3.7:1 contrast; all text
+  pairings now reach 4.5:1.
+- 14 file-name misclassifications (section 4).
+- A test that clicked fixed coordinates broke when the layout changed; scripted runs
+  now trigger actions by name instead.
+
+Also checked automatically: every button, tab and switch has an accessible name; a
+state file that cannot be written or read produces a message instead of a crash.
+
+Gaps: no test talks to the live services. The Windows and macOS runs use the headless
+backend, so they prove the code builds and behaves there, not that the window looks
+right or that installers launch. Nothing runs on Android or iOS. There are no visual
+regression tests, only the screenshots in `docs/screenshots/`.
 
 ## 9. Platform support
 
 | Platform | Where it stands | What is missing |
 |---|---|---|
 | Linux | Builds, runs, tested | Packaging (AppImage / Flatpak / AUR package of the store itself) |
-| Windows | Core type-checks for `x86_64-pc-windows-msvc` | Build and run the app; precise CPU detection; installer |
-| macOS | Core type-checks for `aarch64-apple-darwin` | Build and run; app bundle, signing, notarisation |
+| Windows | Builds; test suite passes in CI (headless) | Run it on a real desktop; precise CPU detection; try the installer hand-off; packaging |
+| macOS | Builds; test suite passes in CI (headless) | Run it on a real desktop; app bundle, signing, notarisation |
 | Android phone / tablet | Core type-checks for `aarch64-linux-android`; `android_main` written | NDK build, APK packaging, `REQUEST_INSTALL_PACKAGES` + `PackageInstaller` JNI, TLS roots check |
 | Android TV | Same as Android | Also a leanback launcher entry and banner |
 | iOS | Core type-checks for `aarch64-apple-ios` | See below |
 
 "Type-checks" means `cargo check -p ustore-core --no-default-features --target ...`
-passed here: the core's own code compiles for that target. The network stack and the UI
-were not cross-compiled (no cross toolchains in the build environment).
+passes (in CI on every push): the core's own code compiles for that target. The network
+stack and the UI have not been built for Android or iOS.
 
 ### iOS
 
@@ -421,7 +439,7 @@ licensed separately.
 
 1. Run against the live GitHub and AUR APIs and fix whatever the real responses break.
 2. Run the classifier over a large sample of real release file names; fix the misses.
-3. Windows and macOS builds in CI (the workflow exists; it has never run).
+3. Run the app on real Windows and macOS desktops; package it for each.
 4. Android: NDK build, APK, `PackageInstaller` hand-off; then Android TV launcher entry.
 5. Regenerate the bundled index at build time, with file names.
 6. Ask the system what is installed (dpkg/rpm/pacman databases, Android's package list)

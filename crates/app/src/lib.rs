@@ -164,17 +164,32 @@ fn tint_for(id: &str) -> slint::Color {
     slint::Color::from_argb_encoded(0xff00_0000 | TINTS[hash as usize % TINTS.len()])
 }
 
-/// Release notes are Markdown; show them as readable plain text.
+/// Release notes are Markdown, often with HTML mixed in; show them as readable plain
+/// text. Links keep their words, images and tags go, list markers become bullets.
 fn plain_notes(markdown: &str) -> String {
     let mut out = String::new();
+    let mut blank_run = 0;
     for line in markdown.lines() {
-        let line = line.trim_end();
-        let line = line.trim_start_matches('#').trim_start();
-        let line = match line.strip_prefix("- ").or_else(|| line.strip_prefix("* ")) {
-            Some(item) => format!("•  {item}"),
-            None => line.to_string(),
+        let line = strip_inline_markup(line.trim_end());
+        let trimmed = line.trim_start();
+        let indent = line.len() - trimmed.len();
+        let text = trimmed.trim_start_matches('#').trim_start();
+        let text = match text.strip_prefix("- ").or_else(|| text.strip_prefix("* ")).or_else(|| text.strip_prefix("+ "))
+        {
+            Some(item) => format!("{}•  {item}", " ".repeat(indent.min(6))),
+            None => text.to_string(),
         };
-        out.push_str(&line.replace("**", "").replace('`', ""));
+        // Horizontal rules and now-empty lines collapse into a single blank line.
+        let text = if text.chars().all(|c| matches!(c, '-' | '=' | '_' | '*' | ' ')) { String::new() } else { text };
+        if text.is_empty() {
+            blank_run += 1;
+            if blank_run > 1 || out.is_empty() {
+                continue;
+            }
+        } else {
+            blank_run = 0;
+        }
+        out.push_str(&text);
         out.push('\n');
         if out.len() > 2400 {
             out.push('…');
@@ -182,6 +197,57 @@ fn plain_notes(markdown: &str) -> String {
         }
     }
     out.trim().to_string()
+}
+
+/// `[words](url)` -> `words`, `![alt](url)` -> nothing, `<tag>` -> nothing, and the
+/// emphasis markers `**`, `__` and backticks are dropped.
+fn strip_inline_markup(line: &str) -> String {
+    let chars: Vec<char> = line.chars().collect();
+    let mut out = String::with_capacity(line.len());
+    let mut i = 0;
+    while i < chars.len() {
+        let c = chars[i];
+        let image = c == '!' && chars.get(i + 1) == Some(&'[');
+        if c == '[' || image {
+            let open = if image { i + 1 } else { i };
+            if let Some(close) = (open + 1..chars.len()).find(|&j| chars[j] == ']') {
+                if chars.get(close + 1) == Some(&'(') {
+                    if let Some(end) = (close + 2..chars.len()).find(|&j| chars[j] == ')') {
+                        if !image {
+                            out.extend(&chars[open + 1..close]);
+                        }
+                        i = end + 1;
+                        continue;
+                    }
+                }
+            }
+        }
+        if c == '<' {
+            // An HTML tag or an autolink; a lone "<" in prose is kept.
+            if let Some(end) = (i + 1..chars.len()).find(|&j| chars[j] == '>') {
+                let inner: String = chars[i + 1..end].iter().collect();
+                if inner.starts_with("http") {
+                    out.push_str(&inner);
+                    i = end + 1;
+                    continue;
+                }
+                let tag_like = inner.starts_with('/')
+                    || inner.starts_with('!')
+                    || inner.chars().next().is_some_and(|c| c.is_ascii_alphabetic());
+                if tag_like && !inner.contains('<') {
+                    i = end + 1;
+                    continue;
+                }
+            }
+        }
+        if c == '`' || (c == '*' && chars.get(i + 1) == Some(&'*')) || (c == '_' && chars.get(i + 1) == Some(&'_')) {
+            i += if c == '`' { 1 } else { 2 };
+            continue;
+        }
+        out.push(c);
+        i += 1;
+    }
+    out
 }
 
 fn option_row(o: &InstallOption) -> OptionRow {
@@ -649,7 +715,6 @@ impl App {
         }
         store.set_app(card);
         store.set_license(details.summary.license.clone().unwrap_or_default().into());
-        store.set_warning(details.summary.warning.clone().unwrap_or_default().into());
         store.set_homepage(details.summary.homepage.as_str().into());
         store.set_unavailable(details.unavailable_reason.clone().unwrap_or_default().into());
         let (options, hidden, notes, date) = match &details.release {
@@ -664,7 +729,17 @@ impl App {
                 .collect::<Vec<_>>(),
         )));
         store.set_notes(notes.into());
-        store.set_release_age(age_label(&date, now_unix()).into());
+        // Things worth knowing before installing, most important first.
+        let age = age_label(&date, now_unix());
+        let mut warnings: Vec<String> = details.summary.warning.clone().into_iter().collect();
+        if details.release.as_ref().is_some_and(|r| r.prerelease && !r.options.is_empty()) {
+            warnings.push("This is a pre-release. It may be unfinished or unstable.".to_string());
+        }
+        if let Some(years) = age.strip_suffix(" years ago").and_then(|n| n.parse::<u32>().ok()) {
+            warnings.push(format!("The latest release is {years} years old. The project may no longer be maintained."));
+        }
+        store.set_warning(warnings.join("\n").into());
+        store.set_release_age(age.into());
         store.set_release_date(date.into());
         self.current.lock().unwrap().details = Some(details);
     }
@@ -1189,6 +1264,22 @@ mod tests {
     #[test]
     fn notes_lose_their_markdown() {
         assert_eq!(plain_notes("## New\n\n- **Fast** `startup`\n* Fixes"), "New\n\n•  Fast startup\n•  Fixes");
+    }
+
+    #[test]
+    fn notes_keep_their_words_and_lose_their_plumbing() {
+        let notes = "<!-- generated -->\r\n# What's Changed\r\n\r\n\r\n* Fix crash by [@someone](https://github.com/someone) in [#12](https://github.com/a/b/pull/12)\r\n  - nested __point__\r\n\r\n![screenshot](https://example.com/x.png)\r\n\r\n---\r\n<details><summary>More</summary>\r\n\r\nSee <https://example.com/changelog> if a < b.\r\n</details>\r\n**Full Changelog**: https://github.com/a/b/compare/v1...v2";
+        assert_eq!(
+            plain_notes(notes),
+            "What's Changed\n\n•  Fix crash by @someone in #12\n  •  nested point\n\nMore\n\nSee https://example.com/changelog if a < b.\n\nFull Changelog: https://github.com/a/b/compare/v1...v2"
+        );
+        assert_eq!(plain_notes(""), "");
+        assert_eq!(plain_notes("[unclosed link and <odd"), "[unclosed link and <odd");
+        assert_eq!(plain_notes("snake_case_name and 2 * 3"), "snake_case_name and 2 * 3");
+        // Very long notes are cut, not dumped.
+        let long = "word ".repeat(5000);
+        assert!(plain_notes(&long).chars().count() < 30_000);
+        assert!(plain_notes(&"line\n".repeat(5000)).ends_with('…'));
     }
 
     #[test]

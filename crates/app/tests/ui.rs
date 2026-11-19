@@ -311,6 +311,29 @@ fn app_without_a_build_for_this_machine_says_so() {
 }
 
 #[test]
+fn the_app_page_warns_about_what_matters() {
+    // A current, stable release: nothing to warn about.
+    let s = start("linux-x64-debian", Shell::Desktop);
+    s.app.open(&s.ui, "github:tidewave/tidewave");
+    assert_eq!(s.store().get_warning(), "");
+    assert!(!s.store().get_release_age().is_empty());
+    assert_eq!(s.ui.window().is_visible(), true);
+
+    // The AUR's own "out of date" flag is passed on.
+    let arch = start("linux-x64-arch", Shell::Desktop);
+    arch.app.open(&arch.ui, "aur:quillfeed");
+    assert!(arch.store().get_warning().contains("out of date"), "{}", arch.store().get_warning());
+
+    // An abandoned project says so; so does a pre-release.
+    arch.app.open(&arch.ui, "github:oldtimer/relic");
+    assert!(arch.store().get_warning().contains("years old"), "{}", arch.store().get_warning());
+    assert!(arch.store().get_release_age().ends_with("years ago"));
+    arch.app.open(&arch.ui, "github:edge-labs/nightjar");
+    assert!(arch.store().get_warning().contains("pre-release"), "{}", arch.store().get_warning());
+    assert_eq!(arch.store().get_app().version, "v0.9.0-beta.3");
+}
+
+#[test]
 fn failed_lookups_can_be_retried() {
     let s = start("linux-x64-debian", Shell::Desktop);
     s.app.open(&s.ui, "github:nobody/nothing");

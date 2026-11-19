@@ -319,12 +319,46 @@ const APPS: &[DemoApp] = &[
     },
 ];
 
+/// Projects that exist in the demo "GitHub" but are not featured: an abandoned one and
+/// one that has only ever published pre-releases.
+const UNLISTED: &[DemoApp] = &[
+    DemoApp {
+        owner: "oldtimer",
+        repo: "relic",
+        name: "Relic",
+        summary: "A calculator from another era.",
+        stars: 812,
+        license: "MIT",
+        category: "Utilities",
+        tv: false,
+        os: &["linux", "windows"],
+        releases: &[("v1.4.2", "2021-03-09", &["relic-1.4.2-x86_64.AppImage", "relic-1.4.2-setup.exe"])],
+    },
+    DemoApp {
+        owner: "edge-labs",
+        repo: "nightjar",
+        name: "Nightjar",
+        summary: "Experimental window compositor.",
+        stars: 2_310,
+        license: "MIT",
+        category: "Utilities",
+        tv: false,
+        os: &["linux"],
+        releases: &[("v0.9.0-beta.3", "2026-11-15", &["nightjar-0.9.0-beta.3-x86_64.AppImage"])],
+    },
+];
+
+fn all_apps() -> impl Iterator<Item = &'static DemoApp> {
+    APPS.iter().chain(UNLISTED.iter())
+}
+
 struct DemoAurPackage {
     name: &'static str,
     version: &'static str,
     summary: &'static str,
     votes: u64,
     maintainer: &'static str,
+    out_of_date: bool,
 }
 
 const AUR: &[DemoAurPackage] = &[
@@ -334,6 +368,7 @@ const AUR: &[DemoAurPackage] = &[
         summary: "Fast, keyboard-driven text editor (prebuilt binary)",
         votes: 412,
         maintainer: "ostrich",
+        out_of_date: false,
     },
     DemoAurPackage {
         name: "lumen-git",
@@ -341,6 +376,7 @@ const AUR: &[DemoAurPackage] = &[
         summary: "Fast, keyboard-driven text editor (development version)",
         votes: 96,
         maintainer: "ostrich",
+        out_of_date: false,
     },
     DemoAurPackage {
         name: "kestrel-git",
@@ -348,6 +384,7 @@ const AUR: &[DemoAurPackage] = &[
         summary: "A friendly prompt for any shell (development version)",
         votes: 58,
         maintainer: "magpie",
+        out_of_date: false,
     },
     DemoAurPackage {
         name: "tidewave",
@@ -355,6 +392,7 @@ const AUR: &[DemoAurPackage] = &[
         summary: "Music player for local libraries and self-hosted servers",
         votes: 233,
         maintainer: "heron",
+        out_of_date: false,
     },
     DemoAurPackage {
         name: "quillfeed",
@@ -362,6 +400,7 @@ const AUR: &[DemoAurPackage] = &[
         summary: "Terminal feed reader with offline sync",
         votes: 187,
         maintainer: "wren",
+        out_of_date: true,
     },
 ];
 
@@ -396,7 +435,7 @@ fn releases_json(app: &DemoApp) -> Value {
                 json!({
                     "tag_name": tag,
                     "draft": false,
-                    "prerelease": false,
+                    "prerelease": tag.contains("beta") || tag.contains("-rc"),
                     "published_at": format!("{date}T12:00:00Z"),
                     "body": format!("## What's new in {} {tag}\n\n- Faster startup\n- Fixes for reported crashes\n- Updated translations\n\n(Fictional release notes: this is demo data.)", app.name),
                     "assets": files.iter().map(|f| json!({
@@ -415,7 +454,7 @@ fn aur_json(p: &DemoAurPackage) -> Value {
     json!({
         "Name": p.name, "PackageBase": p.name, "Version": p.version, "Description": p.summary,
         "URL": "https://example.invalid/", "NumVotes": p.votes, "Popularity": 1.0, "Maintainer": p.maintainer,
-        "OutOfDate": null, "LastModified": 1_793_000_000i64, "URLPath": format!("/cgit/aur.git/snapshot/{}.tar.gz", p.name),
+        "OutOfDate": if p.out_of_date { json!(1_792_000_000i64) } else { Value::Null }, "LastModified": 1_793_000_000i64, "URLPath": format!("/cgit/aur.git/snapshot/{}.tar.gz", p.name),
         "License": ["MIT"],
     })
 }
@@ -455,14 +494,14 @@ impl Http for DemoHttp {
             let q = url_decode(rest.split('&').next().unwrap_or(""));
             let q = q.split(" in:").next().unwrap_or("").to_string();
             let items: Vec<Value> =
-                APPS.iter().filter(|a| matches(&q, &[a.name, a.repo, a.summary])).map(repo_json).collect();
+                all_apps().filter(|a| matches(&q, &[a.name, a.repo, a.summary])).map(repo_json).collect();
             return Ok(json!({ "total_count": items.len(), "items": items }).to_string());
         }
         if let Some(rest) = url.strip_prefix("https://api.github.com/repos/") {
             let path = rest.split('?').next().unwrap_or("");
             let mut parts = path.split('/');
             let (owner, repo, tail) = (parts.next(), parts.next(), parts.next());
-            let app = APPS.iter().find(|a| Some(a.owner) == owner && Some(a.repo) == repo).ok_or_else(not_found)?;
+            let app = all_apps().find(|a| Some(a.owner) == owner && Some(a.repo) == repo).ok_or_else(not_found)?;
             return match tail {
                 None => Ok(repo_json(app).to_string()),
                 Some("releases") => Ok(releases_json(app).to_string()),

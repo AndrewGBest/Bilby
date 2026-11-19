@@ -27,8 +27,8 @@ Screenshots show the built-in demo catalog; the apps in it are fictional.
 
 - **Filters by device**: OS, CPU (including what can be emulated), Linux package format,
   libc, and phone vs TV. Hidden files are listed with the reason on request.
-- **Discover, search, or paste a link**: a GitHub URL or `owner/repo` in the search box
-  opens that project directly.
+- **Discover, search, or paste a link**: typing suggests featured apps instantly;
+  Enter searches the sources; a GitHub URL or `owner/repo` opens that project directly.
 - **Installs**: downloads, verifies the SHA-256 GitHub publishes, then places AppImages
   itself or hands packages to the system installer. Shows the steps first; downloads can
   be cancelled. AUR packages get the exact command to run, not a silent build.
@@ -37,18 +37,19 @@ Screenshots show the built-in demo catalog; the apps in it are fictional.
 - **Three interfaces** in one app: desktop (mouse and full keyboard use), mobile (touch),
   TV (remote only). Light and dark themes.
 - **Honest about limits**: shows GitHub's remaining request allowance, takes an optional
-  token to raise it, and says plainly that nothing in the catalog is reviewed.
+  token to raise it, says plainly that nothing in the catalog is reviewed, and warns
+  about pre-releases, abandoned projects and out-of-date AUR packages.
 
 ## Status
 
-A working vertical slice, tested on Linux only.
+A working vertical slice. It has only ever been looked at on Linux.
 
 | | State |
 |---|---|
-| Engine, sources, library, updates, install planning | Implemented; 111 automated tests |
-| Desktop, mobile and TV interfaces | Implemented; 24 of those tests drive the real window headlessly |
-| Linux | Builds and runs |
-| Windows, macOS | Core type-checks for these targets; the app has **not** been built or run there |
+| Engine, sources, library, updates, install planning | Implemented; 126 automated tests |
+| Desktop, mobile and TV interfaces | Implemented; 31 tests drive the real window headlessly, 5 more run the real binary under a virtual display |
+| Linux | Builds, runs, all tests pass |
+| Windows, macOS | Builds and the test suite passes on GitHub's Windows and macOS runners. Those tests use a headless backend: **nobody has seen the window on either system**, and installer hand-off there is untried |
 | Android (phone, tablet, TV) | Core type-checks; entry point written; **no APK packaging**, and handing APKs to the system installer is not implemented (the UI says so) |
 | iOS | Can only ever be a catalog: see [the design notes](docs/DESIGN.md#ios) |
 | Live GitHub / AUR requests | Tested over real HTTP against a local server speaking the documented API shapes; **never run against the real services** (blocked where this was built) |
@@ -90,8 +91,10 @@ Linux build requirements: a C toolchain and `fontconfig`; at runtime `libxkbcomm
 cargo test --workspace
 ```
 
-No internet or display needed. The network tests start their own server on localhost;
-the UI tests use Slint's headless backend. See [Testing](docs/DESIGN.md#8-testing).
+No internet needed. The network tests start their own server on localhost and the UI
+tests use Slint's headless backend. On Linux, five more tests run the real binary under
+`xvfb-run` and are skipped if it is not installed. CI runs the suite on Linux, Windows
+and macOS. See [Testing](docs/DESIGN.md#8-testing).
 
 ## Layout
 
