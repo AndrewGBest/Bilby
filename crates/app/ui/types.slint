@@ -107,8 +107,10 @@ export global Store {
     in property <string> unavailable;
     in property <[OptionRow]> options;
     in property <[HiddenRow]> hidden;
-    // Version in the library, "" when not installed.
+    // Version in the library or installed by the system's package manager, "" when neither.
     in property <string> installed-version;
+    // The app is a package (AUR or a system repository) rather than a project's release.
+    in property <bool> is-package;
     // Releases that have a file for this machine, newest first, and the one shown.
     in property <[string]> versions;
     in property <int> selected-version;

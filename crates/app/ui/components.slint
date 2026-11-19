@@ -710,7 +710,7 @@ export component DetailsBody inherits Rectangle {
                 Text {
                     x: 14px;
                     width: parent.width - 28px;
-                    text: Store.installed-version == Store.app.version || Store.app.version == "" ? "In your library  ·  " + Store.installed-version : "Update available  ·  you have " + Store.installed-version + ", latest is " + Store.app.version;
+                    text: Store.installed-version == Store.app.version || Store.app.version == "" ? "Installed  ·  " + Store.installed-version : "Update available  ·  you have " + Store.installed-version + ", latest is " + Store.app.version;
                     color: Theme.accent;
                     font-size: 13px;
                     font-weight: 600;
@@ -818,7 +818,7 @@ export component DetailsBody inherits Rectangle {
             if Store.notes != "" : VerticalLayout {
                 spacing: 8px;
                 Text {
-                    text: (Store.app.source == "AUR" ? "About this package" : "Release notes") + (Store.release-date != "" ? "  ·  " + (Store.app.source == "AUR" ? "updated " : "") + Store.release-date + (Store.release-age != "" ? "  ·  " + Store.release-age : "") : "");
+                    text: (Store.is-package ? "About this package" : "Release notes") + (Store.release-date != "" ? "  ·  " + (Store.is-package ? "updated " : "") + Store.release-date + (Store.release-age != "" ? "  ·  " + Store.release-age : "") : "");
                     color: Theme.text-dim;
                     font-size: 12px;
                     font-weight: 700;

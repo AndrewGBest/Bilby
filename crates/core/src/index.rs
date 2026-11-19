@@ -106,6 +106,8 @@ impl Index {
                         version: None,
                         install_label: Self::install_label(e, p),
                         warning: None,
+                        origin: None,
+                        installed_version: None,
                     },
                 ))
             })

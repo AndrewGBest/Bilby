@@ -94,6 +94,30 @@ pub fn plan(asset: &Asset, info: &AssetInfo, p: &Platform) -> InstallPlan {
             steps.push("Show it in your downloads folder; unpack and run it from there".to_string());
             (Action::Reveal, "Download", None)
         }
+        Format::RepoPackage => {
+            let name = asset.name.split_whitespace().next().unwrap_or(&asset.name).to_string();
+            let pacman = p.linux.as_ref().is_some_and(|l| l.pacman);
+            let (manager, command) = if pacman {
+                ("pacman", format!("sudo pacman -S {name}"))
+            } else {
+                ("apt", format!("sudo apt install {name}"))
+            };
+            let mut steps = vec![
+                format!("{manager} downloads it from your configured repositories and checks its signature"),
+                "Run the command below; it asks for your password".to_string(),
+                format!("From then on {manager} keeps it up to date with the rest of the system"),
+            ];
+            if pacman {
+                // Arch-based systems do not support upgrading single packages.
+                steps.push("If it is already installed, update the whole system instead: sudo pacman -Syu".to_string());
+            }
+            return InstallPlan {
+                action: Action::ShowCommand,
+                verb: format!("Install with {manager}"),
+                steps,
+                command: Some(command),
+            };
+        }
         Format::AurBuild => {
             let name = asset.name.split_whitespace().next().unwrap_or(&asset.name).to_string();
             let command = match p.linux.as_ref().and_then(|l| l.aur_helper.clone()) {
@@ -334,6 +358,33 @@ mod tests {
         {
             assert!(open_url(bad).is_err(), "{bad:?}");
         }
+    }
+
+    #[test]
+    fn repository_packages_are_left_to_the_package_manager() {
+        use crate::asset::{TargetArch, TargetOs};
+        use crate::platform::Os;
+        let info = AssetInfo {
+            format: Format::RepoPackage,
+            os: TargetOs::Known(Os::Linux),
+            arch: TargetArch::Any,
+            libc: None,
+            tv: false,
+            debug: false,
+        };
+        let a = asset("linux-cachyos (cachyos-v3)", None);
+        let arch = plan(&a, &info, &Platform::preset("linux-x64-arch").unwrap());
+        assert_eq!(arch.action, Action::ShowCommand);
+        assert_eq!(arch.command.as_deref(), Some("sudo pacman -S linux-cachyos"));
+        assert_eq!(arch.verb, "Install with pacman");
+        let debian =
+            plan(&asset("ripgrep (noble/universe)", None), &info, &Platform::preset("linux-x64-debian").unwrap());
+        assert_eq!(debian.command.as_deref(), Some("sudo apt install ripgrep"));
+        // Nothing is downloaded by the store for these.
+        let dirs = temp_dirs("repo");
+        let out = execute(&arch, &a, &Fake(b""), &dirs, &|_| unreachable!(), &mut |_, _| true).unwrap();
+        assert_eq!(out.message, "Run in a terminal: sudo pacman -S linux-cachyos");
+        assert!(!dirs.downloads.exists());
     }
 
     #[test]

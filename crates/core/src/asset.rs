@@ -30,6 +30,8 @@ pub enum Format {
     Binary,
     /// An AUR package: a build recipe, not a file from a release.
     AurBuild,
+    /// A package in a repository the system's package manager is configured for.
+    RepoPackage,
 }
 
 impl Format {
@@ -52,6 +54,7 @@ impl Format {
             Format::Archive => "Portable archive",
             Format::Binary => "Standalone binary",
             Format::AurBuild => "AUR package",
+            Format::RepoPackage => "Repository package",
         }
     }
 
@@ -66,7 +69,8 @@ impl Format {
             | Format::Flatpak
             | Format::Snap
             | Format::PacmanPkg
-            | Format::AurBuild => Os::Linux,
+            | Format::AurBuild
+            | Format::RepoPackage => Os::Linux,
             Format::Dmg | Format::MacPkg => Os::MacOs,
             Format::Ipa => Os::Ios,
             Format::Archive | Format::Binary => return None,

@@ -1,7 +1,9 @@
 # untitledstore
 
-An app store for **GitHub Releases** and the **AUR**, written in Rust, that only shows
-you what actually runs on the machine in front of you.
+An app store for **GitHub Releases**, the **AUR** and **your distribution's own
+repositories** (Arch, CachyOS, Debian, Ubuntu and whatever else your package manager is
+set up for), written in Rust, that only shows you what actually runs on the machine in
+front of you.
 
 A release with 18 files becomes one **Install** button: the `.deb` on Ubuntu, the `.rpm`
 on Fedora, the pacman package on Arch, the arm64 installer on a Windows-on-Arm laptop,
@@ -27,6 +29,12 @@ Screenshots show the built-in demo catalog; the apps in it are fictional.
 
 - **Filters by device**: OS, CPU (including what can be emulated), Linux package format,
   libc, and phone vs TV. Hidden files are listed with the reason on request.
+- **Your system's repositories**: on a pacman system it lists every repository in
+  `pacman.conf` (`core`, `extra`, CachyOS's `cachyos` and `cachyos-v3`, Chaotic-AUR, a
+  personal repo, ...); on an apt system every configured archive and PPA. It reads the
+  databases the package manager already keeps on disk, so it costs no network requests
+  and shows exactly what `pacman -S` or `apt install` can install. Packages already
+  installed are marked, with the version you have.
 - **Discover, search, or paste a link**: typing suggests featured apps instantly;
   Enter searches the sources; a GitHub URL or `owner/repo` opens that project directly.
 - **Installs**: downloads, verifies the SHA-256 GitHub publishes, then places AppImages
@@ -52,8 +60,11 @@ A working vertical slice. It has only ever been looked at on Linux.
 
 | | State |
 |---|---|
-| Engine, sources, library, updates, install planning | Implemented; 153 automated tests in total |
-| Desktop, mobile and TV interfaces | Implemented; 45 tests drive the real window headlessly, 7 more run the real binary under a virtual display |
+| Engine, sources, library, updates, install planning | Implemented; 166 automated tests in total |
+| Desktop, mobile and TV interfaces | Implemented; 46 tests drive the real window headlessly, 7 more run the real binary under a virtual display |
+| apt repositories | Read from real Ubuntu 24.04 package lists on the build machine |
+| pacman repositories (Arch, CachyOS, ...) | Tested against databases built in the tests from the documented format; **never read from a real Arch or CachyOS system** |
+| Fedora (dnf), openSUSE (zypper), Flathub, winget, Homebrew | Not yet |
 | Linux | Builds (debug and release), runs, all tests pass |
 | Windows, macOS | Builds and the test suite passes on GitHub's Windows and macOS runners. Those tests use a headless backend: **nobody has seen the window on either system**, and installer hand-off there is untried |
 | Android (phone, tablet, TV) | Core type-checks; entry point written; **no APK packaging**, and handing APKs to the system installer is not implemented (the UI says so) |

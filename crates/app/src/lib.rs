@@ -523,9 +523,10 @@ impl App {
         let popularity = match (app.popularity, app.id.source) {
             (Some(n), SourceKind::GitHub) => format!("★ {}", human_count(n)),
             (Some(n), SourceKind::Aur) => format!("{} votes", human_count(n)),
-            (None, _) => String::new(),
+            _ => String::new(),
         };
-        let installed = self.state.lock().unwrap().installed(&id).is_some();
+        // In the store's library, or already installed by the system's package manager.
+        let installed = self.state.lock().unwrap().installed(&id).is_some() || app.installed_version.is_some();
         let has_update = matches!(self.updates.lock().unwrap().get(&id), Some(UpdateStatus::Available { .. }));
         AppCard {
             tint: tint_for(&id),
@@ -534,7 +535,8 @@ impl App {
             name: app.name.clone().into(),
             author: app.author.clone().into(),
             summary: app.summary.clone().into(),
-            source: app.id.source.label().into(),
+            // A repository package says which repository; the rest say which service.
+            source: app.origin.clone().unwrap_or_else(|| app.id.source.label().to_string()).into(),
             badge: app.install_label.clone().unwrap_or_default().into(),
             version: app.version.clone().unwrap_or_default().into(),
             popularity: popularity.into(),
@@ -711,7 +713,7 @@ impl App {
         }
         // A pasted link or owner/repo goes straight to that app.
         if let Some(id) = AppId::from_user_input(&query) {
-            if id.source != SourceKind::Aur || self.catalog().active_sources().contains(&SourceKind::Aur) {
+            if self.catalog().active_sources().contains(&id.source) {
                 self.open(ui, &id.to_string());
                 return;
             }
@@ -844,6 +846,11 @@ impl App {
         store.set_versions(ModelRc::new(VecModel::from(
             details.versions.iter().map(|r| SharedString::from(&r.version)).collect::<Vec<_>>(),
         )));
+        store.set_is_package(details.summary.id.source != SourceKind::GitHub);
+        // What the system's package manager has, when the store's own library has nothing.
+        if store.get_installed_version().is_empty() {
+            store.set_installed_version(details.summary.installed_version.clone().unwrap_or_default().into());
+        }
         // Start on the release the catalog picked (the newest stable one that fits).
         let picked = details.release.as_ref().map(|r| r.version.clone());
         let selected = details.versions.iter().position(|r| Some(&r.version) == picked.as_ref());
@@ -1264,6 +1271,20 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     app.refresh(&ui);
     app.refresh_settings(&ui);
     app.load_pictures(&ui);
+    // Read the system's package databases in the background: it can take a moment on a
+    // large distribution, and the first search should not be the one to pay for it.
+    app.job(
+        |app| app.catalog().system_repositories(),
+        |_app, ui, repositories| {
+            if repositories.is_empty() {
+                return;
+            }
+            let store = ui.global::<Store>();
+            let mut facts: Vec<Fact> = store.get_facts().iter().collect();
+            facts.push(Fact { name: "System repositories".into(), value: repositories.join(", ").into() });
+            store.set_facts(ModelRc::new(VecModel::from(facts)));
+        },
+    );
     if let Some(theme) = &options.theme {
         store.set_theme_mode(theme_mode(theme));
     }

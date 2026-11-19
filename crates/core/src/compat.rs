@@ -55,6 +55,7 @@ pub fn evaluate(info: &AssetInfo, p: &Platform) -> Verdict {
             Format::Rpm if !linux.rpm => Some("RPM packages need a Fedora/openSUSE based system"),
             Format::PacmanPkg if !linux.pacman => Some("Pacman packages need an Arch based system"),
             Format::AurBuild if linux.family != LinuxFamily::Arch => Some("The AUR is for Arch based systems"),
+            Format::RepoPackage if !(linux.pacman || linux.dpkg) => Some("No supported package manager on this system"),
             Format::Flatpak if !linux.flatpak => Some("Flatpak is not installed"),
             Format::Snap if !linux.snap => Some("snapd is not installed"),
             Format::AppImage if linux.libc == Libc::Musl => Some("AppImages need glibc; this system uses musl"),
@@ -88,7 +89,7 @@ pub fn evaluate(info: &AssetInfo, p: &Platform) -> Verdict {
             // and say that it is an assumption.
             let assumed = match (p.os, info.format) {
                 // A lone APK is normally a universal one; AUR recipes build for the host.
-                (Os::Android, _) | (Os::Ios, _) | (_, Format::AurBuild) => None,
+                (Os::Android, _) | (Os::Ios, _) | (_, Format::AurBuild | Format::RepoPackage) => None,
                 // macOS downloads without an arch are universal or Intel; both run.
                 (Os::MacOs, _) if p.can_run(Arch::X86_64) => None,
                 _ => Some(Arch::X86_64),
@@ -193,6 +194,10 @@ fn format_preference(format: Format, p: &Platform) -> i32 {
             };
             if Some(format) == native {
                 return 30;
+            }
+            // Maintained and updated by the distribution: the first choice when offered.
+            if format == RepoPackage {
+                return 32;
             }
             match format {
                 AppImage => 24,

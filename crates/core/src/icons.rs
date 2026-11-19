@@ -21,7 +21,7 @@ const SIZE: u32 = 128;
 pub fn icon_key(id: &AppId) -> Option<String> {
     match id.source {
         SourceKind::GitHub => id.key.split('/').next().filter(|o| !o.is_empty()).map(str::to_lowercase),
-        SourceKind::Aur => None,
+        SourceKind::Aur | SourceKind::Pacman | SourceKind::Apt => None,
     }
 }
 

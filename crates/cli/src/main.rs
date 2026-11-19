@@ -186,7 +186,14 @@ fn show(catalog: &Catalog, id: &str) -> Result<(), String> {
         println!("\n{}", details.unavailable_reason.unwrap_or_default());
         return Ok(());
     };
-    println!("\nRelease {} ({})", release.version, release.published);
+    if let Some(installed) = &s.installed_version {
+        println!("Installed on this system: {installed}");
+    }
+    if release.published.is_empty() {
+        println!("\nVersion {}", release.version);
+    } else {
+        println!("\nRelease {} ({})", release.version, release.published);
+    }
     if let Some(reason) = &details.unavailable_reason {
         println!("{reason}");
     } else {

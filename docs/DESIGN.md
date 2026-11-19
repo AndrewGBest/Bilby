@@ -179,8 +179,9 @@ file has a reason. **[verified]**
 
 ## 5. Sources
 
-`trait Source { search, summary, releases, available_on }`. Adding GitLab, Codeberg /
-Forgejo, F-Droid, Flathub or winget means one new file.
+`trait Source { search, summary, releases, available_on }`. Three exist: GitHub Releases,
+the AUR, and the system's own repositories. Adding GitLab, Codeberg / Forgejo, F-Droid,
+Flathub or winget means one new file.
 
 ### GitHub
 
@@ -238,6 +239,64 @@ command (`paru -S name`, or `git clone` + `makepkg -si` when no helper is instal
 tells you to read the PKGBUILD, because a recipe is arbitrary code from an unvetted
 author. The RPC does not say which CPUs a package supports **[assumption]**, so
 that check is left to `makepkg`.
+
+### System repositories (pacman, apt)
+
+"Repositories" could be done two ways. One is a client for each distribution's web
+service (archlinux.org's package search, a mirror's database for CachyOS, packages.
+debian.org, ...): one integration per distribution, a network request per search, and
+no way to know which of them this machine can actually install from. The other, chosen
+here, is to read what the system's own package manager already has on disk:
+
+- **pacman**: `/var/lib/pacman/sync/<repo>.db` for every repository in `pacman.conf`.
+  That covers Arch's `core`, `extra` and `multilib`, CachyOS's `cachyos`, `cachyos-v3`,
+  `cachyos-core-v3`, `cachyos-extra-v3` and the v4/znver4 variants
+  ([CachyOS wiki](https://wiki.cachyos.org/features/optimized_repos/)), Chaotic-AUR,
+  EndeavourOS, Manjaro, or a private repository, with no code specific to any of them.
+- **apt**: `/var/lib/apt/lists/*_Packages` for every configured archive, suite and
+  component, including PPAs and vendor repositories.
+
+It costs no requests, works offline, and lists exactly what `pacman -S` / `apt install`
+can install, because it is the same data. The trade-offs: the lists are as fresh as the
+last `pacman -Sy` / `apt update` (the store does not refresh them, which needs root),
+and a repository this machine does not have configured is not browsable, on the grounds
+that its packages could not be installed anyway.
+
+Details:
+
+- A package in several repositories is listed from the first one in `pacman.conf`
+  order, as pacman itself resolves a bare name; with apt the newest version wins.
+- CachyOS's optimised packages declare architectures such as `x86_64_v3`. They are
+  treated as x86_64: a machine has such a repository configured only if its CPU
+  qualifies **[sourced]** (same wiki page).
+- Databases may be gzip, zstd or lz4 compressed or plain; the format is taken from the
+  file's first bytes. xz is not supported yet and such a database is skipped.
+- Results are ranked by how well the name matches (there is no popularity to go by),
+  with libraries, `-dev`, `-doc` and similar listed after applications.
+- What is installed comes from `/var/lib/pacman/local` and `/var/lib/dpkg/status`, so a
+  package shows "Installed" with the version you have, and "Update available" when the
+  repository has a newer one.
+- Installing is left to the package manager: the store shows `sudo pacman -S name` or
+  `sudo apt install name`. It does not run them, in keeping with never elevating
+  itself, and does not add these to its own library, since the package manager already
+  tracks and updates them. On Arch-based systems the steps add that an installed
+  package should be updated with a full `pacman -Syu`, because partial upgrades are
+  unsupported there **[assumption]** (from memory of the Arch wiki).
+- The demo catalog uses fictional repositories and never reads the real machine's.
+
+Status: the apt reader was run against the real Ubuntu 24.04 lists on the build machine
+(lz4-compressed, about 70,000 packages; `ripgrep 14.1.0-1` from `noble/universe`, `curl`
+recognised as installed). **[verified]** The pacman reader is tested against databases
+the tests build in the layout `repo-add` produces (`name-version/desc` entries with
+`%NAME%`-style fields, per [alpm-repo-desc](https://man.archlinux.org/man/extra/alpm-repo-db/alpm-repo-desc.5.en))
+but that layout was written from memory **[assumption]** and no real Arch or CachyOS
+database was available to read. Parsing a large distribution takes a few seconds in a
+debug build; it happens once, in the background at start-up, and again only when the
+files change.
+
+Not done: dnf (Fedora) and zypper (openSUSE) metadata, Flatpak remotes (Flathub),
+winget and Homebrew. Each is another `Backend` in `source/system.rs` or another
+`Source`; nothing else in the app needs to change.
 
 ### App pictures
 
@@ -354,7 +413,7 @@ been run on a television.
 
 ## 8. Testing
 
-153 tests, none needing the internet. **[verified]**: all pass on Linux here. CI runs
+166 tests, none needing the internet. **[verified]**: all pass on Linux here. CI runs
 the suite on Linux, Windows and macOS on every push. It passed on all three for the
 version-picker commit (run 13). The run after that failed on Windows only, because a
 test clicked a button that was below the window there; the test helper was fixed. Check
@@ -362,11 +421,11 @@ the Actions tab for the state of the latest commit rather than trusting this par
 
 | Suite | Count | What it exercises |
 |---|---|---|
-| `ustore-core` unit tests | 67 | detection, classification, compatibility, versions, state file, install plans and execution, index, suggestions, icons, catalog |
+| `ustore-core` unit tests | 79 | detection, classification, compatibility, versions, state file, install plans and execution, index, suggestions, icons, catalog |
 | `core/tests/corpus.rs` | 4 | 169 real-world-style names; cross-OS/CPU safety property; 20,000 generated names |
 | `core/tests/http_sources.rs` | 16 | the real HTTP client and both sources against a local server: headers, token scoping, rate limits, allowance, progress, cancel, cache, documented JSON shapes, garbage responses |
 | `cli/tests/cli.rs` | 8 | the `ustore` binary end to end, including install, library, updates and `doctor` |
-| `app/tests/ui.rs` | 37 | the real window on Slint's headless backend: clicks by accessible label, key presses, all three interfaces |
+| `app/tests/ui.rs` | 38 | the real window on Slint's headless backend: clicks by accessible label, key presses, all three interfaces |
 | `app/tests/offline.rs` | 7 | the same window with a transport that goes offline or rate limited on demand, then recovers |
 | `app/tests/pictures.rs` | 1 | app pictures: fetched, decoded, shown, cached on disk, harmless when missing |
 | `app/tests/binary.rs` | 7 | the real application (threads, event loop, software renderer) under `xvfb-run`, Linux only |
@@ -489,5 +548,7 @@ licensed separately.
 6. Ask the system what is installed (dpkg/rpm/pacman databases, Android's package list)
    instead of relying on the store's own record.
 7. Screenshots and a project's own icon from its repository; Markdown release notes.
-8. More sources: Codeberg / Forgejo, GitLab, F-Droid, Flathub.
+8. More repositories: dnf and zypper metadata, Flatpak remotes (Flathub), winget,
+   Homebrew, F-Droid; more release hosts: Codeberg / Forgejo, GitLab. Try the pacman
+   reader on a real Arch or CachyOS system first.
 9. Translations; a Settings page for TV.

@@ -3,6 +3,7 @@
 
 pub mod aur;
 pub mod github;
+pub mod system;
 
 use crate::error::Result;
 use crate::model::{AppSummary, Release, SourceKind};
@@ -27,5 +28,10 @@ pub trait Source: Send + Sync {
     /// search instead of one per result.
     fn search_hits_are_final(&self) -> Option<&'static str> {
         None
+    }
+
+    /// For sources made of several named places (repositories): their names.
+    fn origins(&self) -> Vec<String> {
+        Vec::new()
     }
 }

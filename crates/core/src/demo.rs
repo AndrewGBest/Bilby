@@ -546,6 +546,59 @@ impl Http for DemoHttp {
     }
 }
 
+/// Fictional repositories for the system's package manager: a CachyOS-style layout for
+/// pacman and an Ubuntu-style one for apt. Each catalog only uses the one its platform has.
+pub fn system_repos() -> Vec<crate::source::system::Backend> {
+    use crate::model::SourceKind;
+    use crate::source::system::{Backend, SystemPackage};
+    let package = |name: &str, version: &str, summary: &str, repo: &str, arch: &str| SystemPackage {
+        name: name.to_string(),
+        version: version.to_string(),
+        summary: summary.to_string(),
+        repo: repo.to_string(),
+        arch: arch.to_string(),
+        homepage: format!("https://example.invalid/{name}"),
+        license: "GPL-3.0-or-later".to_string(),
+        size: 18 * 1024 * 1024,
+        built: "2026-11-08".to_string(),
+    };
+    vec![
+        Backend::Fixed {
+            kind: SourceKind::Pacman,
+            packages: vec![
+                package(
+                    "swiftkernel",
+                    "6.17.4-2",
+                    "Linux kernel tuned for desktop responsiveness.",
+                    "cachyos-v3",
+                    "x86_64_v3",
+                ),
+                package("pinecone", "0.61.0-1.1", "Fast fuzzy finder for the terminal.", "cachyos-v3", "x86_64_v3"),
+                package("harbor", "5.3.1-1", "Run and manage containers without a daemon.", "extra", "x86_64"),
+                package("mistral-fonts", "4.1-1", "A family of clear interface typefaces.", "extra", "any"),
+                package("coreshell", "5.3-1", "The standard command interpreter.", "core", "x86_64"),
+            ],
+            // One current, one with a newer version waiting in the repository.
+            installed: vec![("coreshell".into(), "5.3-1".into()), ("harbor".into(), "5.2.0-1".into())],
+        },
+        Backend::Fixed {
+            kind: SourceKind::Apt,
+            packages: vec![
+                package(
+                    "harbor",
+                    "5.0.3+ds1-2ubuntu1",
+                    "Run and manage containers without a daemon.",
+                    "noble-updates/universe",
+                    "amd64",
+                ),
+                package("pinecone", "0.44.1-1", "Fast fuzzy finder for the terminal.", "noble/universe", "amd64"),
+                package("fonts-mistral", "4.1-1", "A family of clear interface typefaces.", "noble/main", "all"),
+            ],
+            installed: vec![("harbor".into(), "5.0.3+ds1-2ubuntu1".into())],
+        },
+    ]
+}
+
 /// Discover-page index for the demo catalog.
 pub fn index() -> Index {
     let mut apps: Vec<IndexEntry> = APPS

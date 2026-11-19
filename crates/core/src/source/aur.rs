@@ -98,6 +98,8 @@ impl Package {
             version: Some(self.version.clone()),
             install_label: None,
             warning: self.out_of_date.map(|_| "Flagged out of date on the AUR".to_string()),
+            origin: None,
+            installed_version: None,
         }
     }
 }

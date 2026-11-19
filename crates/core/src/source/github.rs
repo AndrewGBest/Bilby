@@ -97,6 +97,8 @@ impl From<Repo> for AppSummary {
             version: None,
             install_label: None,
             warning: None,
+            origin: None,
+            installed_version: None,
         }
     }
 }

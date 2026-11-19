@@ -8,6 +8,10 @@ use crate::install::InstallPlan;
 pub enum SourceKind {
     GitHub,
     Aur,
+    /// Repositories configured for pacman on this machine (Arch, CachyOS, ...).
+    Pacman,
+    /// Repositories configured for apt on this machine (Debian, Ubuntu, PPAs, ...).
+    Apt,
 }
 
 impl SourceKind {
@@ -15,12 +19,16 @@ impl SourceKind {
         match self {
             SourceKind::GitHub => "GitHub",
             SourceKind::Aur => "AUR",
+            SourceKind::Pacman => "pacman repositories",
+            SourceKind::Apt => "apt repositories",
         }
     }
     pub fn prefix(self) -> &'static str {
         match self {
             SourceKind::GitHub => "github",
             SourceKind::Aur => "aur",
+            SourceKind::Pacman => "pacman",
+            SourceKind::Apt => "apt",
         }
     }
 }
@@ -42,6 +50,8 @@ impl AppId {
         let source = match prefix {
             "github" => SourceKind::GitHub,
             "aur" => SourceKind::Aur,
+            "pacman" => SourceKind::Pacman,
+            "apt" => SourceKind::Apt,
             _ => return None,
         };
         (!key.is_empty()).then(|| AppId::new(source, key))
@@ -86,8 +96,8 @@ pub fn valid_key(source: SourceKind, key: &str) -> bool {
     };
     match source {
         SourceKind::GitHub => matches!(key.split_once('/'), Some((owner, repo)) if ok(owner, &[]) && ok(repo, &[])),
-        // Arch package names may also contain `+` and `@`.
-        SourceKind::Aur => ok(key, &['+', '@']),
+        // Arch and Debian package names may also contain `+` and `@`.
+        SourceKind::Aur | SourceKind::Pacman | SourceKind::Apt => ok(key, &['+', '@']),
     }
 }
 
@@ -115,6 +125,11 @@ pub struct AppSummary {
     pub install_label: Option<String>,
     /// Flagged by the source (AUR "out of date").
     pub warning: Option<String>,
+    /// Where exactly it comes from, when the source has several places: the repository
+    /// name (`cachyos-v3`, `extra`, `noble-updates/main`).
+    pub origin: Option<String>,
+    /// The version the system's package manager already has installed, if any.
+    pub installed_version: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

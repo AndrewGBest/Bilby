@@ -10,6 +10,7 @@ use crate::index::{Index, Section};
 use crate::install;
 use crate::model::{AppDetails, AppId, AppSummary, HiddenAsset, InstallOption, Release, ResolvedRelease, SourceKind};
 use crate::platform::Platform;
+use crate::source::system::{Backend, SystemRepos};
 use crate::source::{aur::Aur, github::GitHub, Source};
 use std::sync::Arc;
 
@@ -79,7 +80,12 @@ impl Catalog {
         use std::time::Duration;
         let has_token = github_token.as_deref().is_some_and(|t| !t.trim().is_empty());
         let http = CachedHttp::new(NetHttp::new(github_token), cache_dir.join("http"), Duration::from_secs(30 * 60));
-        let mut catalog = Catalog::new(platform, Arc::new(http), Index::bundled());
+        let mut catalog = Catalog::new(platform.clone(), Arc::new(http), Index::bundled());
+        // The repositories this machine's own package manager is set up for come first:
+        // they are maintained, signed and kept up to date by the distribution.
+        for backend in [Backend::system_pacman(), Backend::system_apt()] {
+            catalog.sources.insert(0, Arc::new(SystemRepos::new(backend, platform.clone())));
+        }
         if has_token {
             catalog.check_limit = 20;
         }
@@ -88,7 +94,12 @@ impl Catalog {
 
     /// Self-contained catalog of fictional apps: no network, used for demos and tests.
     pub fn demo(platform: Platform) -> Catalog {
-        Catalog::new(platform, Arc::new(crate::demo::DemoHttp), crate::demo::index())
+        let mut catalog = Catalog::new(platform.clone(), Arc::new(crate::demo::DemoHttp), crate::demo::index());
+        // Fictional system repositories, so the demo never reads the real machine's.
+        for backend in crate::demo::system_repos() {
+            catalog.sources.insert(0, Arc::new(SystemRepos::new(backend, platform.clone())));
+        }
+        catalog
     }
 
     /// GitHub's remaining request allowance, once known.
@@ -104,6 +115,12 @@ impl Catalog {
         self.sources.iter().find(|s| s.kind() == kind).filter(|s| s.available_on(&self.platform)).ok_or_else(|| {
             Error::Unsupported(format!("{} is not available on {}", kind.label(), self.platform.os_name))
         })
+    }
+
+    /// The names of the system repositories being read (`cachyos-v3`, `extra`, ...).
+    /// Reads the package databases if that has not happened yet.
+    pub fn system_repositories(&self) -> Vec<String> {
+        self.sources.iter().filter(|s| s.available_on(&self.platform)).flat_map(|s| s.origins()).collect()
     }
 
     /// Sources that make sense on this machine.
@@ -213,7 +230,7 @@ impl Catalog {
         // "Not found" in a person's terms, not as the URL that was asked for.
         let named = |e: Error| match e {
             Error::NotFound(_) => {
-                let what = if id.source == SourceKind::Aur { "package" } else { "project" };
+                let what = if id.source == SourceKind::GitHub { "project" } else { "package" };
                 Error::NotFound(format!("{} has no {what} called “{}”.", id.source.label(), id.key))
             }
             other => other,

@@ -587,6 +587,59 @@ fn typing_suggests_featured_apps_without_searching() {
 }
 
 #[test]
+fn system_repositories_are_searched_first_and_installed_packages_marked() {
+    // An Arch-style machine with CachyOS repositories configured.
+    let s = start("linux-x64-arch", Shell::Desktop);
+    let facts: Vec<(String, String)> =
+        s.store().get_facts().iter().map(|f| (f.name.to_string(), f.value.to_string())).collect();
+    assert!(facts.contains(&("System repositories".into(), "cachyos-v3, extra, core".into())), "{facts:?}");
+
+    s.app.search(&s.ui, "kernel");
+    let hit = s.store().get_results().row_data(0).unwrap();
+    assert_eq!(hit.id, "pacman:swiftkernel");
+    assert_eq!(hit.source, "cachyos-v3", "the card names the repository");
+    assert_eq!(hit.badge, "Repository package");
+    assert_eq!(hit.version, "6.17.4-2");
+    assert!(!hit.installed);
+
+    s.app.open(&s.ui, "pacman:swiftkernel");
+    assert!(s.store().get_is_package());
+    let option = s.store().get_options().row_data(0).unwrap();
+    assert_eq!(option.label, "Repository package · x86_64");
+    assert_eq!(option.verb, "Install with pacman");
+    assert_eq!(option.command, "sudo pacman -S swiftkernel");
+    assert!(s.store().get_notes().contains("“cachyos-v3” repository"));
+    // The store shows the command; pacman does the installing, so nothing is recorded.
+    s.app.install(&s.ui, 0);
+    assert!(s.store().get_install_message().contains("sudo pacman -S swiftkernel"));
+    assert!(s.saved().library.is_empty());
+
+    // A package pacman already has, with a newer version in the repository.
+    s.app.search(&s.ui, "containers");
+    let harbor = s.store().get_results().row_data(0).unwrap();
+    assert_eq!((harbor.id.as_str(), harbor.installed), ("pacman:harbor", true));
+    s.app.open(&s.ui, "pacman:harbor");
+    assert_eq!(s.store().get_installed_version(), "5.2.0-1");
+    assert_eq!(s.store().get_app().version, "5.3.1-1");
+
+    // The same machine type without pacman has no such source; apt takes its place.
+    let debian = start("linux-x64-debian", Shell::Desktop);
+    debian.app.search(&debian.ui, "containers");
+    let hit = debian.store().get_results().row_data(0).unwrap();
+    assert_eq!(hit.id, "apt:harbor");
+    assert_eq!(hit.source, "noble-updates/universe");
+    debian.app.open(&debian.ui, "apt:harbor");
+    assert_eq!(debian.store().get_options().row_data(0).unwrap().command, "sudo apt install harbor");
+    debian.app.open(&debian.ui, "pacman:harbor");
+    assert!(!debian.store().get_details_error().is_empty(), "pacman packages are not offered on a Debian system");
+
+    // And nowhere else.
+    let windows = start("windows-x64", Shell::Desktop);
+    windows.app.search(&windows.ui, "containers");
+    assert_eq!(windows.store().get_results().row_count(), 0);
+}
+
+#[test]
 fn aur_results_appear_only_on_arch() {
     let arch = start("linux-x64-arch", Shell::Desktop);
     arch.app.search(&arch.ui, "lumen");
