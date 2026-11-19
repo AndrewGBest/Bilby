@@ -568,6 +568,47 @@ export component EmptyState inherits VerticalLayout {
     }
 }
 
+// A one-line nudge on Discover when the library has updates waiting.
+export component UpdatesBanner inherits Rectangle {
+    height: 44px;
+    border-radius: 12px;
+    background: ta.has-hover ? Theme.accent.with-alpha(0.2) : Theme.accent.with-alpha(0.13);
+    border-width: fs.has-focus ? 2px : 0px;
+    border-color: Theme.focus;
+    accessible-role: button;
+    accessible-label: "Show updates";
+    accessible-action-default => { Store.page = 2; }
+    fs := FocusScope {
+        focus-on-click: false;
+        key-pressed(event) => {
+            if (event.text == Key.Return || event.text == " ") {
+                Store.page = 2;
+                return accept;
+            }
+            reject
+        }
+        ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => { Store.page = 2; }
+        }
+    }
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 14px;
+        spacing: 8px;
+        Text {
+            horizontal-stretch: 1;
+            text: Store.updates-count == 1 ? "1 app in your library has an update" : Store.updates-count + " apps in your library have updates";
+            color: Theme.accent;
+            font-size: 13px;
+            font-weight: 600;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+        Text { text: "View"; color: Theme.accent; font-size: 13px; font-weight: 700; vertical-alignment: center; }
+    }
+}
+
 // Shown once, on first run: what the store does, and what it does not promise.
 export component Welcome inherits Rectangle {
     in property <bool> compact;

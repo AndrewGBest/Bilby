@@ -648,6 +648,84 @@ fn everything_fits_on_the_narrowest_phone() {
 }
 
 #[test]
+fn every_button_has_a_name_a_screen_reader_can_say() {
+    use slint::private_unstable_api::re_exports::AccessibleRole;
+    let seed = r#"{"recent_searches":["editor"],"library":[{"id":"github:kestrel-sh/kestrel","name":"Kestrel","version":"v1.20.0"}]}"#;
+    for (preset, shell) in [("linux-x64-arch", Shell::Desktop), ("android-arm64", Shell::Mobile)] {
+        let s = start_with(preset, shell, Some(seed));
+        s.app.check_updates(&s.ui, false);
+        let check = |what: &str| {
+            for role in [AccessibleRole::Button, AccessibleRole::Tab, AccessibleRole::Switch] {
+                for element in s.ui.root_element().query_descendants().match_accessible_role(role).find_all() {
+                    let label = element.accessible_label().unwrap_or_default();
+                    assert!(!label.trim().is_empty(), "{preset} {what}: a control has no accessible label");
+                }
+            }
+        };
+        check("welcome and discover");
+        for page in 1..=3 {
+            s.store().set_page(page);
+            check(&format!("page {page}"));
+        }
+        s.app.search(&s.ui, "lumen");
+        check("search results");
+        s.app.open(&s.ui, "github:tidewave/tidewave");
+        check("app page");
+        s.app.open(&s.ui, "github:nobody/nothing");
+        check("app page with an error");
+    }
+}
+
+#[test]
+fn slash_and_ctrl_k_start_a_search_from_the_keyboard() {
+    let s = start("linux-x64-debian", Shell::Desktop);
+    // "/" moves the focus to the search field; what is typed next lands in it.
+    s.press("/");
+    s.press("l");
+    s.press("u");
+    assert_eq!(s.store().get_query(), "lu");
+    assert_eq!(s.store().get_page(), 1, "typing brings up suggestions");
+    assert_eq!(s.store().get_suggestions().row_data(0).unwrap().name, "Lumen");
+    // Enter searches.
+    s.press(Key::Return);
+    assert!(s.store().get_searched());
+    assert_eq!(s.store().get_results().row_count(), 1);
+    assert_eq!(s.saved().recent_searches, ["lu"]);
+    // Escape leaves the field; Ctrl+K comes back to it and selects the text, so typing replaces it.
+    s.press(Key::Escape);
+    s.ui.window().dispatch_event(WindowEvent::KeyPressed { text: Key::Control.into() });
+    s.press("k");
+    s.ui.window().dispatch_event(WindowEvent::KeyReleased { text: Key::Control.into() });
+    s.press("t");
+    assert_eq!(s.store().get_query(), "t");
+}
+
+#[test]
+fn discover_points_at_waiting_updates() {
+    let seed = r#"{"settings":{"welcomed":true},"library":[{"id":"github:kestrel-sh/kestrel","name":"Kestrel","version":"v1.20.0"}]}"#;
+    let s = start_with("linux-x64-debian", Shell::Desktop, Some(seed));
+    assert!(!s.has("Show updates"), "nothing is claimed before a check");
+    s.app.check_updates(&s.ui, false);
+    assert!(s.has("Show updates"));
+    s.click("Show updates");
+    assert_eq!(s.store().get_page(), 2);
+}
+
+#[test]
+fn a_settings_file_that_cannot_be_written_is_reported_not_fatal() {
+    let s = start("linux-x64-debian", Shell::Desktop);
+    // Replace the config directory with a plain file: saving must now fail.
+    let config = s.state_file.parent().unwrap().to_path_buf();
+    std::fs::remove_dir_all(&config).unwrap();
+    std::fs::write(&config, "in the way").unwrap();
+    s.store().invoke_set_prereleases(true);
+    assert!(s.store().get_toast_is_error());
+    assert!(s.store().get_toast().starts_with("Couldn't save your settings"));
+    assert!(s.store().get_include_prereleases(), "the choice still applies for this session");
+    assert!(s.has("Tidewave") || s.store().get_page() == 0, "and the app carries on");
+}
+
+#[test]
 fn window_width_picks_desktop_or_mobile() {
     init_backend();
     let root = temp_root();
