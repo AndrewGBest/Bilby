@@ -4,7 +4,9 @@ Statements here are marked by how well they are supported:
 
 - **[verified]** checked in this repository (a test, a build, a screenshot) or read in the
   primary source linked next to it.
-- **[sourced]** stated by a linked source that was read, but not independently tested.
+- **[sourced]** stated by a linked source, but not independently tested. Most of these
+  were read as search-result extracts rather than full pages, so follow the link before
+  relying on one.
 - **[assumption]** the author's belief from memory. Not checked. Treat as a to-do.
 
 ## 1. What it is
@@ -112,10 +114,11 @@ Decision order, each step able to reject with a reason shown to the user:
    Fedora, pacman on Arch), then AppImage, Flatpak, AUR build, archive, bare binary; TV
    builds first on TVs.
 
-The top-ranked file becomes the Install button. **[verified]**: one fictional release of
-18 files resolves to the expected single file on all 13 presets
-(`compat::tests::each_platform_gets_its_natural_package`,
-`catalog::tests::details_offer_the_right_file_per_machine`).
+The top-ranked file becomes the Install button. **[verified]**: a made-up release of 17
+files resolves to the expected single file on all 13 presets
+(`compat::tests::each_platform_gets_its_natural_package`), and the same holds through
+the whole catalog path, from API-shaped JSON to install option, on 7 of them
+(`catalog::tests::details_offer_the_right_file_per_machine`).
 
 Known limits of name-based detection: it is a heuristic. An APK's real ABIs and whether
 it declares a TV launcher are inside the file, not its name; reading the APK manifest
