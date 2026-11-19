@@ -125,16 +125,20 @@ impl Catalog {
             if scored.iter().any(|(_, seen)| seen.id == app.id) {
                 continue;
             }
+            // Match on word starts ("ed" finds "editor", not "media" or "self-hosted"):
+            // substring matches feel random when only two letters have been typed.
             let name = app.name.to_lowercase();
             let rest =
                 format!("{} {} {}", app.author, app.summary, app.category.clone().unwrap_or_default()).to_lowercase();
-            if !words.iter().all(|w| name.contains(w.as_str()) || rest.contains(w.as_str())) {
+            let starts =
+                |text: &str, w: &str| text.split(|c: char| !c.is_alphanumeric()).any(|word| word.starts_with(w));
+            if !words.iter().all(|w| starts(&name, w) || starts(&rest, w)) {
                 continue;
             }
-            // Names that start with the query first, then names containing it, then the rest.
+            // The app's own name first, then matches in its description.
             let rank = if name.starts_with(&words[0]) {
                 0
-            } else if words.iter().any(|w| name.contains(w.as_str())) {
+            } else if words.iter().any(|w| starts(&name, w)) {
                 1
             } else {
                 2
@@ -368,6 +372,8 @@ mod tests {
         assert_eq!(names("linux-x64-debian", "editor"), ["Lumen"], "summaries are searched too");
         assert_eq!(names("linux-x64-debian", "media"), ["Tidewave", "Marquee", "Couchplay"], "and categories");
         assert_eq!(names("linux-x64-debian", "music player"), ["Tidewave"], "every word must match");
+        assert_eq!(names("linux-x64-debian", "ed"), ["Lumen"], "words match from their start: editor, not media");
+        assert_eq!(names("android-arm64", "launcher"), ["Fern Launcher"], "any word of the name counts");
         assert!(names("linux-x64-debian", "l").is_empty(), "one letter is too little");
         assert!(names("linux-x64-debian", "").is_empty());
         // Device filtering applies: a Windows-only app is not suggested on Linux.
