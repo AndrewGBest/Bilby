@@ -343,9 +343,11 @@ been run on a television.
 
 ## 8. Testing
 
-146 tests, none needing the internet. **[verified]**: all pass on Linux here. The suite
-also passed on GitHub's Linux, Windows and macOS runners at an earlier commit (CI run 3);
-see the end of the hand-over notes for the status of the final commit.
+146 tests, none needing the internet. **[verified]**: all pass on Linux here. CI runs
+the suite on Linux, Windows and macOS on every push. It passed on all three for the
+version-picker commit (run 13). The run after that failed on Windows only, because a
+test clicked a button that was below the window there; the test helper was fixed. Check
+the Actions tab for the state of the latest commit rather than trusting this paragraph.
 
 | Suite | Count | What it exercises |
 |---|---|---|

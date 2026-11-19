@@ -105,6 +105,29 @@ tests use Slint's headless backend. On Linux, six more tests run the real binary
 `xvfb-run` and are skipped if it is not installed. CI runs the suite on Linux, Windows
 and macOS. See [Testing](docs/DESIGN.md#8-testing).
 
+## Working on it
+
+```sh
+cargo fmt --all && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace
+```
+
+The app can be driven without a person, which is how the screenshots here were made and
+how `tests/binary.rs` checks the real binary:
+
+```sh
+cargo run -p untitledstore -- --demo --as android-tv --ui tv --size 1920x1080 \
+    --script "down right ok" --screenshot tv.png --report tv.txt
+```
+
+`--script` replays keys (`up down left right ok back tab`), `click:X,Y`, `text:WORD`,
+`install:N` and `wait`, one step every quarter second; `--report` writes what the
+interface ended up showing as `key=value` lines. On a machine without a display, run it
+under `xvfb-run` with `SLINT_BACKEND=winit-software`.
+
+`--as <platform>` (see `ustore --list-platforms`) makes the whole app behave as another
+device, which is the quickest way to see what a phone, a TV or a Windows-on-Arm laptop
+would be offered.
+
 ## Layout
 
 ```
