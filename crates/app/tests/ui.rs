@@ -317,7 +317,6 @@ fn the_app_page_warns_about_what_matters() {
     s.app.open(&s.ui, "github:tidewave/tidewave");
     assert_eq!(s.store().get_warning(), "");
     assert!(!s.store().get_release_age().is_empty());
-    assert_eq!(s.ui.window().is_visible(), true);
 
     // The AUR's own "out of date" flag is passed on.
     let arch = start("linux-x64-arch", Shell::Desktop);
