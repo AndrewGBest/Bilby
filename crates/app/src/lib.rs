@@ -40,6 +40,7 @@ OPTIONS:
     --script <steps>           With --screenshot: replay input first. Steps are separated by
                                spaces: up down left right ok back tab click:X,Y text:WORD
     --settle <ms>              With --screenshot: wait after the script (default 600)
+    --report <file>            With --screenshot: also write the interface's state as text
 
 ENVIRONMENT:
     GITHUB_TOKEN               Raises GitHub's API limit from 60 to 5,000 requests per hour
@@ -61,6 +62,8 @@ pub struct Options {
     pub script: Vec<String>,
     /// Milliseconds to wait after the script before the screenshot is taken.
     pub settle_ms: u64,
+    /// With a screenshot: also write what the interface is showing, as `key=value` lines.
+    pub report: Option<PathBuf>,
     /// Overrides where downloads, cache and settings go (Android passes its app directories).
     pub dirs: Option<Dirs>,
     pub state_file: Option<PathBuf>,
@@ -121,6 +124,7 @@ impl Options {
                 }
                 "--state" => o.state_file = Some(PathBuf::from(value("--state")?)),
                 "--screenshot" => o.screenshot = Some(PathBuf::from(value("--screenshot")?)),
+                "--report" => o.report = Some(PathBuf::from(value("--report")?)),
                 "--script" => o.script = value("--script")?.split(' ').map(str::to_string).collect(),
                 "--settle" => {
                     o.settle_ms = value("--settle")?.parse().map_err(|_| "--settle expects milliseconds".to_string())?
@@ -1023,7 +1027,7 @@ pub fn run(options: Options) -> Result<(), Box<dyn std::error::Error>> {
     app.check_updates(&ui, false);
 
     if let Some(path) = options.screenshot.clone() {
-        screenshot_after_script(&ui, options.script.clone(), options.settle_ms, path);
+        screenshot_after_script(&ui, options.script.clone(), options.settle_ms, path, options.report.clone());
     }
     ui.run()?;
     Ok(())
@@ -1032,7 +1036,13 @@ pub fn run(options: Options) -> Result<(), Box<dyn std::error::Error>> {
 /// Replays scripted input through the window exactly as real key presses and clicks
 /// would arrive, one step every 250 ms, then saves a frame and quits. This is how the
 /// interfaces are exercised headlessly (CI, documentation screenshots).
-fn screenshot_after_script(ui: &AppWindow, script: Vec<String>, settle_ms: u64, path: PathBuf) {
+fn screenshot_after_script(
+    ui: &AppWindow,
+    script: Vec<String>,
+    settle_ms: u64,
+    path: PathBuf,
+    report: Option<PathBuf>,
+) {
     use slint::platform::{Key, PointerEventButton, WindowEvent};
     let settle = std::time::Duration::from_millis(if settle_ms == 0 { 600 } else { settle_ms });
     let weak = ui.as_weak();
@@ -1079,6 +1089,7 @@ fn screenshot_after_script(ui: &AppWindow, script: Vec<String>, settle_ms: u64, 
                 timer_handle.stop();
                 let weak = ui.as_weak();
                 let path = path.clone();
+                let report = report.clone();
                 slint::Timer::single_shot(settle, move || {
                     let Some(ui) = weak.upgrade() else { return };
                     let result = ui.window().take_snapshot().map_err(|e| e.to_string()).and_then(|pixels| {
@@ -1093,11 +1104,51 @@ fn screenshot_after_script(ui: &AppWindow, script: Vec<String>, settle_ms: u64, 
                     if let Err(e) = result {
                         eprintln!("screenshot failed: {e}");
                     }
+                    if let Some(report) = &report {
+                        if let Err(e) = std::fs::write(report, describe(&ui)) {
+                            eprintln!("report failed: {e}");
+                        }
+                    }
                     let _ = slint::quit_event_loop();
                 });
             }
         }
     });
+}
+
+/// What the interface is showing, as `key=value` lines. Lets a script check the real,
+/// threaded application from outside.
+fn describe(ui: &AppWindow) -> String {
+    let store = ui.global::<Store>();
+    let shell = match ui.get_effective() {
+        Shell::Desktop => "desktop",
+        Shell::Mobile => "mobile",
+        Shell::Tv => "tv",
+    };
+    let first_option = store.get_options().row_data(0).map(|o| o.label.to_string()).unwrap_or_default();
+    [
+        format!("shell={shell}"),
+        format!("page={}", store.get_page()),
+        format!("details_open={}", store.get_details_open()),
+        format!("details_loading={}", store.get_details_loading()),
+        format!("details_error={}", store.get_details_error()),
+        format!("app={}", store.get_app().id),
+        format!("options={}", store.get_options().row_count()),
+        format!("first_option={first_option}"),
+        format!("hidden={}", store.get_hidden().row_count()),
+        format!("installed_version={}", store.get_installed_version()),
+        format!("install_state={}", store.get_install_state()),
+        format!("install_message={}", store.get_install_message()),
+        format!("results={}", store.get_results().row_count()),
+        format!("suggestions={}", store.get_suggestions().row_count()),
+        format!("searching={}", store.get_searching()),
+        format!("library={}", store.get_library().row_count()),
+        format!("updates={}", store.get_updates_count()),
+        format!("checking_updates={}", store.get_checking_updates()),
+        format!("toast={}", store.get_toast()),
+    ]
+    .join("\n")
+        + "\n"
 }
 
 /// Android entry point (NativeActivity / GameActivity via `android-activity`).

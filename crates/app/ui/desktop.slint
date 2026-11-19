@@ -392,7 +392,7 @@ export component DesktopShell inherits Rectangle {
                                         vertical-alignment: center;
                                     }
                                 }
-                                if !Store.searched && !Store.searching : VerticalLayout {
+                                if !Store.searched && !Store.searching && Store.suggestions.length == 0 : VerticalLayout {
                                     spacing: 14px;
                                     Text {
                                         text: "Type a name and press Enter, or paste a link to a GitHub repository. Only apps with a file for " + Store.platform-title + " are listed.";

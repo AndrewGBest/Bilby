@@ -787,9 +787,9 @@ component LibraryItem inherits Rectangle {
                 VerticalLayout {
                     alignment: center;
                     Button {
-                        text: entry.status == 3 ? "Update" : "Open";
+                        text: entry.status == 3 ? "Update" : "Details";
                         primary: entry.status == 3;
-                        accessible-label: (entry.status == 3 ? "Update " : "Open ") + entry.card.name;
+                        accessible-label: (entry.status == 3 ? "Update " : "Details of ") + entry.card.name;
                         clicked => { Store.open(entry.card.id); }
                     }
                 }
@@ -814,9 +814,9 @@ component LibraryItem inherits Rectangle {
             spacing: 8px;
             Button {
                 horizontal-stretch: 1;
-                text: entry.status == 3 ? "Update" : "Open";
+                text: entry.status == 3 ? "Update" : "Details";
                 primary: entry.status == 3;
-                accessible-label: (entry.status == 3 ? "Update " : "Open ") + entry.card.name;
+                accessible-label: (entry.status == 3 ? "Update " : "Details of ") + entry.card.name;
                 clicked => { Store.open(entry.card.id); }
             }
             Button {
