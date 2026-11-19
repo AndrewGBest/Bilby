@@ -777,10 +777,11 @@ fn assert_fits(s: &Session, what: &str) {
 fn everything_fits_on_the_narrowest_phone() {
     let seed = r#"{"settings":{"welcomed":true},"recent_searches":["editor","backup"],"library":[
         {"id":"github:tidewave/tidewave","name":"Tidewave","version":"v3.3.0","label":"APK · arm64","installed_at":1794000000},
-        {"id":"github:relay-app/relay","name":"Relay","version":"v1.16.0","label":"APK · arm64","installed_at":1790000000}]}"#;
+        {"id":"github:relay-app/relay","name":"Relay","version":"v1.15.0","label":"APK · arm64","installed_at":1790000000}]}"#;
     let s = start_with("android-arm64", Shell::Mobile, Some(seed));
     s.ui.window().set_size(slint::LogicalSize::new(320.0, 640.0));
     s.app.check_updates(&s.ui, true);
+    assert_eq!(s.store().get_updates_count(), 2, "so that Update all is on the page being measured");
     assert_fits(&s, "discover");
     for (page, name) in [(1, "search"), (2, "library"), (3, "settings")] {
         s.store().set_page(page);
