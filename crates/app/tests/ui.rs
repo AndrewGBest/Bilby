@@ -42,8 +42,6 @@ fn dirs_in(root: &std::path::Path) -> Dirs {
     }
 }
 
-/// Start the store as `preset` with the given interface. `seed` is written as the
-/// saved state first, to test start-up with an existing library.
 thread_local! {
     static BACKEND: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
@@ -55,6 +53,8 @@ fn init_backend() {
     }
 }
 
+/// Start the store as `preset` with the given interface. `seed` is written as the
+/// saved state first, to test start-up with an existing library.
 fn start_with(preset: &str, shell: Shell, seed: Option<&str>) -> Session {
     init_backend();
     ustore_core::demo::DOWNLOAD_STEP_MS.store(0, Ordering::Relaxed);
@@ -84,8 +84,9 @@ fn start_with(preset: &str, shell: Shell, seed: Option<&str>) -> Session {
     Session { ui, app, dirs, state_file }
 }
 
+/// A store that has been opened before (the first-run welcome is out of the way).
 fn start(preset: &str, shell: Shell) -> Session {
-    start_with(preset, shell, None)
+    start_with(preset, shell, Some(r#"{"settings":{"welcomed":true}}"#))
 }
 
 impl Session {
@@ -144,6 +145,30 @@ impl Session {
     fn option_labels(&self) -> Vec<String> {
         self.store().get_options().iter().map(|o| o.label.to_string()).collect()
     }
+}
+
+// ---- first run --------------------------------------------------------------------
+
+#[test]
+fn first_run_explains_the_store_once() {
+    let s = start_with("linux-x64-debian", Shell::Desktop, None);
+    assert!(s.store().get_show_welcome());
+    assert!(s.has("Welcome to untitledstore"));
+    assert!(!s.has("View Tidewave"), "the welcome takes the spotlight's place");
+    s.click("Got it");
+    assert!(!s.store().get_show_welcome());
+    assert!(!s.has("Welcome to untitledstore"));
+    assert!(s.has("View Tidewave"));
+    assert!(s.saved().settings.welcomed);
+
+    let saved = std::fs::read_to_string(&s.state_file).unwrap();
+    let again = start_with("linux-x64-debian", Shell::Desktop, Some(&saved));
+    assert!(!again.has("Welcome to untitledstore"), "it does not come back");
+
+    let phone = start_with("android-arm64", Shell::Mobile, None);
+    assert!(phone.has("Welcome to untitledstore"));
+    phone.click("Got it");
+    assert!(!phone.has("Welcome to untitledstore"));
 }
 
 // ---- discover ---------------------------------------------------------------------

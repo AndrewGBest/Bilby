@@ -7,7 +7,7 @@
 //! documentation matches production.
 
 use std::collections::HashMap;
-use std::io::{BufRead, BufReader, Read, Write};
+use std::io::{BufRead, BufReader, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -205,9 +205,52 @@ fn errors_are_told_apart() {
         other => panic!("{other:?}"),
     }
 
-    // Nothing listening at all.
+    // Nothing listening at all: a sentence a person can act on, no library internals.
     let dead = NetHttp::with_options(None, "http://127.0.0.1:1", false);
-    assert!(matches!(dead.get("http://127.0.0.1:1/x").unwrap_err(), Error::Network(_)));
+    match dead.get("http://127.0.0.1:1/x?secret=1").unwrap_err() {
+        Error::Network(message) => {
+            assert_eq!(message, "couldn't connect to 127.0.0.1:1. Check your internet connection.");
+        }
+        other => panic!("{other:?}"),
+    }
+}
+
+#[test]
+fn the_remaining_allowance_is_tracked() {
+    let limits = |remaining: &str| {
+        Reply::json("{}")
+            .with("x-ratelimit-limit", "60")
+            .with("x-ratelimit-remaining", remaining)
+            .with("x-ratelimit-reset", "1700001380")
+    };
+    let server = Server::start(vec![
+        ("/api/a", limits("59")),
+        ("/api/b", limits("58")),
+        (
+            "/api/out",
+            Reply::status(403)
+                .with("x-ratelimit-limit", "60")
+                .with("x-ratelimit-remaining", "0")
+                .with("x-ratelimit-reset", "1700001380"),
+        ),
+        ("/other", limits("1")),
+    ]);
+    let http = client(&server, None);
+    assert_eq!(http.quota(), None, "unknown until GitHub has answered once");
+    http.get(&server.url("/api/a")).unwrap();
+    http.get(&server.url("/api/b")).unwrap();
+    http.get(&server.url("/other")).unwrap();
+    let quota = http.quota().unwrap();
+    assert_eq!((quota.remaining, quota.limit), (58, 60), "other hosts do not change it");
+    assert_eq!(quota.describe(1_700_000_000), "58 of 60 GitHub requests left; refills in 23 minutes");
+    assert_eq!(quota.describe(1_800_000_000), "58 of 60 GitHub requests left; refills now");
+
+    let _ = http.get(&server.url("/api/out"));
+    assert_eq!(http.quota().unwrap().remaining, 0, "an error response updates it too");
+
+    // The cache passes it through.
+    let cached = CachedHttp::new(http, temp("quota"), Duration::from_secs(60));
+    assert_eq!(cached.quota().unwrap().remaining, 0);
 }
 
 #[test]

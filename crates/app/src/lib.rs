@@ -287,6 +287,7 @@ impl App {
             let result = work(self);
             if let Some(ui) = self.ui.upgrade() {
                 done(self, &ui, result);
+                self.refresh_quota(&ui);
             }
             return;
         }
@@ -297,6 +298,7 @@ impl App {
             let _ = slint::invoke_from_event_loop(move || {
                 if let Some(ui) = weak.upgrade() {
                     done(&app, &ui, result);
+                    app.refresh_quota(&ui);
                 }
             });
         });
@@ -470,6 +472,14 @@ impl App {
         store.set_include_prereleases(settings.include_prereleases);
         store.set_has_token(!settings.github_token.trim().is_empty());
         store.set_downloads_dir(self.dirs.downloads.display().to_string().into());
+        store.set_show_welcome(!settings.welcomed);
+        self.refresh_quota(ui);
+    }
+
+    /// Show how much of GitHub's hourly allowance is left, once GitHub has told us.
+    fn refresh_quota(&self, ui: &AppWindow) {
+        let text = self.catalog().quota().map(|q| q.describe(now_unix())).unwrap_or_default();
+        ui.global::<Store>().set_quota_text(text.into());
     }
 
     fn rebuild_catalog(&self) {
@@ -948,6 +958,10 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         if let Err(e) = install::open_url(&url) {
             app.toast(ui, &e.to_string(), true);
         }
+    });
+    on!(on_dismiss_welcome, |app, ui| {
+        app.update_state(ui, |state| state.settings.welcomed = true);
+        app.refresh_settings(ui);
     });
     on!(on_dismiss_toast, |app, ui| {
         let _ = &app;

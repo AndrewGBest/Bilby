@@ -6,6 +6,28 @@ use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
+/// How much of a source's request allowance is left, as the source last reported it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Quota {
+    pub remaining: u64,
+    pub limit: u64,
+    /// Unix time at which the allowance refills.
+    pub resets_at: u64,
+}
+
+impl Quota {
+    /// "42 of 60 GitHub requests left; refills in 23 minutes".
+    pub fn describe(&self, now_unix: u64) -> String {
+        let minutes = self.resets_at.saturating_sub(now_unix).div_ceil(60);
+        let refill = match minutes {
+            0 => "refills now".to_string(),
+            1 => "refills in 1 minute".to_string(),
+            m => format!("refills in {m} minutes"),
+        };
+        format!("{} of {} GitHub requests left; {refill}", self.remaining, self.limit)
+    }
+}
+
 pub trait Http: Send + Sync {
     /// GET a text (JSON) resource.
     fn get(&self, url: &str) -> Result<String>;
@@ -14,6 +36,11 @@ pub trait Http: Send + Sync {
     /// returns `false` to cancel; the partial file is removed and `Error::Cancelled` returned.
     /// Returns the SHA-256 of what was written, as lowercase hex.
     fn download(&self, url: &str, dest: &Path, progress: &mut dyn FnMut(u64, Option<u64>) -> bool) -> Result<String>;
+
+    /// GitHub's request allowance as of the last API response, if any was seen.
+    fn quota(&self) -> Option<Quota> {
+        None
+    }
 }
 
 pub fn url_encode(s: &str) -> String {
@@ -38,6 +65,7 @@ pub struct NetHttp {
     github_token: Option<String>,
     /// Requests to URLs starting with this get GitHub's headers and the token.
     github_api: String,
+    quota: std::sync::Mutex<Option<Quota>>,
 }
 
 pub const GITHUB_API: &str = "https://api.github.com";
@@ -62,6 +90,7 @@ impl NetHttp {
             agent,
             github_token: github_token.filter(|t| !t.trim().is_empty()),
             github_api: format!("{}/", github_api.trim_end_matches('/')),
+            quota: std::sync::Mutex::new(None),
         }
     }
 
@@ -78,10 +107,26 @@ impl NetHttp {
         req
     }
 
+    /// Remember the allowance GitHub reports with every API response.
+    fn note_quota(&self, url: &str, resp: &ureq::Response) {
+        if !url.starts_with(&self.github_api) {
+            return;
+        }
+        let number = |name: &str| resp.header(name).and_then(|v| v.trim().parse::<u64>().ok());
+        if let (Some(remaining), Some(limit)) = (number("x-ratelimit-remaining"), number("x-ratelimit-limit")) {
+            let resets_at = number("x-ratelimit-reset").unwrap_or(0);
+            *self.quota.lock().unwrap() = Some(Quota { remaining, limit, resets_at });
+        }
+    }
+
     fn call(&self, url: &str) -> Result<ureq::Response> {
         match self.request(url).call() {
-            Ok(resp) => Ok(resp),
+            Ok(resp) => {
+                self.note_quota(url, &resp);
+                Ok(resp)
+            }
             Err(ureq::Error::Status(code, resp)) => {
+                self.note_quota(url, &resp);
                 let github = url.starts_with(&self.github_api);
                 let exhausted =
                     resp.header("x-ratelimit-remaining") == Some("0") || resp.header("retry-after").is_some();
@@ -98,13 +143,36 @@ impl NetHttp {
                     Err(Error::Status { code, url: url.to_string() })
                 }
             }
-            Err(e) => Err(Error::Network(e.to_string())),
+            Err(e) => Err(Error::Network(describe_transport_error(url, &e))),
         }
+    }
+}
+
+/// A sentence a person can act on, instead of the HTTP library's internals.
+#[cfg(feature = "net")]
+fn describe_transport_error(url: &str, error: &ureq::Error) -> String {
+    let host = url.split("://").nth(1).unwrap_or(url).split(['/', '?']).next().unwrap_or(url);
+    let kind = match error {
+        ureq::Error::Transport(t) => t.kind(),
+        ureq::Error::Status(..) => return format!("{host} answered with an error"),
+    };
+    match kind {
+        ureq::ErrorKind::Dns => format!("couldn't find {host}. Check your internet connection."),
+        ureq::ErrorKind::ConnectionFailed => format!("couldn't connect to {host}. Check your internet connection."),
+        ureq::ErrorKind::Io => format!("the connection to {host} was interrupted. Try again."),
+        ureq::ErrorKind::ProxyConnect | ureq::ErrorKind::ProxyUnauthorized | ureq::ErrorKind::InvalidProxyUrl => {
+            format!("the proxy refused the connection to {host}. Check your proxy settings.")
+        }
+        _ => format!("couldn't reach {host} ({kind})."),
     }
 }
 
 #[cfg(feature = "net")]
 impl Http for NetHttp {
+    fn quota(&self) -> Option<Quota> {
+        *self.quota.lock().unwrap()
+    }
+
     fn get(&self, url: &str) -> Result<String> {
         self.call(url)?.into_string().map_err(|e| Error::Network(e.to_string()))
     }
@@ -193,9 +261,17 @@ impl<H: Http> Http for CachedHttp<H> {
     fn download(&self, url: &str, dest: &Path, progress: &mut dyn FnMut(u64, Option<u64>) -> bool) -> Result<String> {
         self.inner.download(url, dest, progress)
     }
+
+    fn quota(&self) -> Option<Quota> {
+        self.inner.quota()
+    }
 }
 
 impl<H: Http + ?Sized> Http for std::sync::Arc<H> {
+    fn quota(&self) -> Option<Quota> {
+        (**self).quota()
+    }
+
     fn get(&self, url: &str) -> Result<String> {
         (**self).get(url)
     }

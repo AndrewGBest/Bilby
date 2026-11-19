@@ -124,6 +124,10 @@ export global Store {
     in property <bool> include-prereleases;
     in property <bool> has-token;
     in property <string> downloads-dir;
+    // GitHub's remaining request allowance, in words. Empty until known.
+    in property <string> quota-text;
+    // First run: explain what this store is before anything is installed.
+    in property <bool> show-welcome;
 
     // --- feedback ---------------------------------------------------------------
     in property <string> toast;
@@ -144,4 +148,5 @@ export global Store {
     callback clear-recent();
     callback open-url(string);
     callback dismiss-toast();
+    callback dismiss-welcome();
 }

@@ -18,6 +18,8 @@ pub struct Settings {
     pub github_token: String,
     /// Offer pre-releases (betas, release candidates) as if they were stable.
     pub include_prereleases: bool,
+    /// The first-run explanation was read and dismissed.
+    pub welcomed: bool,
 }
 
 /// An app obtained through the store.

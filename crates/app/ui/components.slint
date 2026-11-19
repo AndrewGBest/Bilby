@@ -551,6 +551,43 @@ export component EmptyState inherits VerticalLayout {
     }
 }
 
+// Shown once, on first run: what the store does, and what it does not promise.
+export component Welcome inherits Rectangle {
+    in property <bool> compact;
+    border-radius: 14px;
+    background: Theme.accent.with-alpha(0.1);
+    border-width: 1px;
+    border-color: Theme.accent.with-alpha(0.35);
+    VerticalLayout {
+        padding: compact ? 14px : 20px;
+        spacing: 8px;
+        Text { text: "Welcome to untitledstore"; color: Theme.text; font-size: 17px; font-weight: 700; }
+        Text {
+            text: "•  You are seeing apps for " + Store.platform-title + ". Anything that cannot be installed on this device is hidden.";
+            color: Theme.text;
+            font-size: 13px;
+            wrap: word-wrap;
+        }
+        Text {
+            text: "•  Apps come straight from their authors' release pages. Nobody reviews them, so only install software you trust.";
+            color: Theme.text;
+            font-size: 13px;
+            wrap: word-wrap;
+        }
+        Text {
+            text: "•  There is no account and no server of ours. Your library and settings stay in a file on this device.";
+            color: Theme.text;
+            font-size: 13px;
+            wrap: word-wrap;
+        }
+        HorizontalLayout {
+            alignment: start;
+            padding-top: 4px;
+            Button { text: "Got it"; clicked => { Store.dismiss-welcome(); } }
+        }
+    }
+}
+
 // The details page body, shared by the desktop and mobile shells.
 export component DetailsBody inherits Rectangle {
     in property <bool> compact;
@@ -929,6 +966,13 @@ export component SettingsBody inherits Rectangle {
                     text: Store.has-token ? "A token is saved on this device. GitHub allows 5,000 requests an hour with it." : "Without a token GitHub allows 60 requests an hour, which a few searches can use up. A personal access token with no scopes raises that to 5,000. It is stored only on this device and sent only to api.github.com.";
                     color: Theme.text-dim;
                     font-size: 13px;
+                    wrap: word-wrap;
+                }
+                if Store.quota-text != "" : Text {
+                    text: Store.quota-text;
+                    color: Theme.text;
+                    font-size: 13px;
+                    font-weight: 600;
                     wrap: word-wrap;
                 }
                 HorizontalLayout {

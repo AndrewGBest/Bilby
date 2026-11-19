@@ -82,6 +82,11 @@ impl Catalog {
         Catalog::new(platform, Arc::new(crate::demo::DemoHttp), crate::demo::index())
     }
 
+    /// GitHub's remaining request allowance, once known.
+    pub fn quota(&self) -> Option<crate::http::Quota> {
+        self.http.quota()
+    }
+
     pub fn http(&self) -> Arc<dyn Http> {
         self.http.clone()
     }

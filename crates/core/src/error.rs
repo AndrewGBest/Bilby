@@ -32,7 +32,7 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::Network(m) => write!(f, "network error: {m}"),
+            Error::Network(m) => write!(f, "{m}"),
             Error::Status { code, url } => write!(f, "HTTP {code} from {url}"),
             Error::RateLimited { source, hint } => write!(f, "{source} rate limit reached. {hint}"),
             Error::NotFound(what) => write!(f, "not found: {what}"),
