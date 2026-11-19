@@ -1156,9 +1156,16 @@ export component SettingsBody inherits Rectangle {
                     Text { width: compact ? 110px : 170px; text: "Downloads go to"; color: Theme.text-dim; font-size: 13px; }
                     Text { horizontal-stretch: 1; text: Store.downloads-dir; color: Theme.text; font-size: 13px; wrap: char-wrap; }
                 }
-                HorizontalLayout {
+                // Side by side where there is room, stacked on a phone.
+                if !compact : HorizontalLayout {
                     spacing: 8px;
                     alignment: start;
+                    Button { text: "Open folder"; primary: false; accessible-label: "Open downloads folder"; clicked => { Store.open-downloads(); } }
+                    Button { text: "Clear cached catalog data"; primary: false; clicked => { Store.clear-cache(); } }
+                    if Store.recent.length > 0 : Button { text: "Clear search history"; primary: false; clicked => { Store.clear-recent(); } }
+                }
+                if compact : VerticalLayout {
+                    spacing: 8px;
                     Button { text: "Open folder"; primary: false; accessible-label: "Open downloads folder"; clicked => { Store.open-downloads(); } }
                     Button { text: "Clear cached catalog data"; primary: false; clicked => { Store.clear-cache(); } }
                     if Store.recent.length > 0 : Button { text: "Clear search history"; primary: false; clicked => { Store.clear-recent(); } }

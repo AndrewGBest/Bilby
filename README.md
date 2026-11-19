@@ -36,6 +36,9 @@ Screenshots show the built-in demo catalog; the apps in it are fictional.
   newer releases that fit your device. Older versions can be picked from the app page.
 - **Three interfaces** in one app: desktop (mouse and full keyboard use), mobile (touch),
   TV (remote only). Light and dark themes.
+- **Works badly-connected**: Discover and suggestions need no network; failed lookups
+  say what went wrong and can be retried; cached answers are used when GitHub's
+  allowance runs out.
 - **Honest about limits**: shows GitHub's remaining request allowance, takes an optional
   token to raise it, says plainly that nothing in the catalog is reviewed, and warns
   about pre-releases, abandoned projects and out-of-date AUR packages.
@@ -46,8 +49,8 @@ A working vertical slice. It has only ever been looked at on Linux.
 
 | | State |
 |---|---|
-| Engine, sources, library, updates, install planning | Implemented; 126 automated tests |
-| Desktop, mobile and TV interfaces | Implemented; 31 tests drive the real window headlessly, 5 more run the real binary under a virtual display |
+| Engine, sources, library, updates, install planning | Implemented; 139 automated tests in total |
+| Desktop, mobile and TV interfaces | Implemented; 40 tests drive the real window headlessly, 6 more run the real binary under a virtual display |
 | Linux | Builds, runs, all tests pass |
 | Windows, macOS | Builds and the test suite passes on GitHub's Windows and macOS runners. Those tests use a headless backend: **nobody has seen the window on either system**, and installer hand-off there is untried |
 | Android (phone, tablet, TV) | Core type-checks; entry point written; **no APK packaging**, and handing APKs to the system installer is not implemented (the UI says so) |
@@ -96,7 +99,7 @@ cargo test --workspace
 ```
 
 No internet needed. The network tests start their own server on localhost and the UI
-tests use Slint's headless backend. On Linux, five more tests run the real binary under
+tests use Slint's headless backend. On Linux, six more tests run the real binary under
 `xvfb-run` and are skipped if it is not installed. CI runs the suite on Linux, Windows
 and macOS. See [Testing](docs/DESIGN.md#8-testing).
 

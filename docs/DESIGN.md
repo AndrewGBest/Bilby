@@ -200,7 +200,11 @@ per repository. Consequences:
   shows it ("42 of 60 GitHub requests left; refills in 23 minutes"), and a rate-limit
   error says how to raise the limit. **[verified]** by test.
 - **Search checks a bounded number of hits** (8 without a token, 20 with), in parallel,
-  and reports how many matched but had nothing for this device.
+  and reports how many matched but had nothing for this device. Typing costs nothing:
+  suggestions come from the bundled index. An AUR search is a single request, because
+  its results already carry everything needed. **[verified]** by test.
+- **The start-up update check can be switched off** in Settings (one request per
+  library app).
 - **Responses are cached on disk** for 30 minutes, and a stale copy is served when
   offline or rate limited. **[verified]** by test.
 - **A personal token** lifts the limit to 5,000 per hour **[sourced]** (same page). It can
@@ -325,19 +329,19 @@ been run on a television.
 
 ## 8. Testing
 
-126 tests, none needing the internet. **[verified]**: all pass on Linux here, and the
-suite passed on GitHub's Linux, Windows and macOS runners (run 3 of the CI workflow, at
-the "Match search suggestions on word starts" commit; later commits are checked by the
-same workflow).
+139 tests, none needing the internet. **[verified]**: all pass on Linux here. The suite
+also passed on GitHub's Linux, Windows and macOS runners at an earlier commit (CI run 3);
+see the end of the hand-over notes for the status of the final commit.
 
 | Suite | Count | What it exercises |
 |---|---|---|
-| `ustore-core` unit tests | 58 | detection, classification, compatibility, versions, state file, install plans and execution, index, suggestions, catalog |
+| `ustore-core` unit tests | 60 | detection, classification, compatibility, versions, state file, install plans and execution, index, suggestions, catalog |
 | `core/tests/corpus.rs` | 4 | 169 real-world-style names; cross-OS/CPU safety property; 20,000 generated names |
-| `core/tests/http_sources.rs` | 15 | the real HTTP client and both sources against a local server: headers, token scoping, rate limits, allowance, progress, cancel, cache, documented JSON shapes, garbage responses |
-| `cli/tests/cli.rs` | 7 | the `ustore` binary end to end, including install, library and updates |
-| `app/tests/ui.rs` | 31 | the real window on Slint's headless backend: clicks by accessible label, key presses, all three interfaces |
-| `app/tests/binary.rs` | 5 | the real application (threads, event loop, software renderer) under `xvfb-run`, Linux only |
+| `core/tests/http_sources.rs` | 16 | the real HTTP client and both sources against a local server: headers, token scoping, rate limits, allowance, progress, cancel, cache, documented JSON shapes, garbage responses |
+| `cli/tests/cli.rs` | 8 | the `ustore` binary end to end, including install, library, updates and `doctor` |
+| `app/tests/ui.rs` | 34 | the real window on Slint's headless backend: clicks by accessible label, key presses, all three interfaces |
+| `app/tests/offline.rs` | 5 | the same window with a transport that goes offline or rate limited on demand, then recovers |
+| `app/tests/binary.rs` | 6 | the real application (threads, event loop, software renderer) under `xvfb-run`, Linux only |
 | `app/tests/contrast.rs` | 1 | WCAG contrast of every text/background pairing in both themes |
 | app unit tests | 5 | option parsing, release-note rendering, formatting |
 
@@ -353,6 +357,12 @@ Things the tests found while being written, all fixed:
 - 14 file-name misclassifications (section 4).
 - A test that clicked fixed coordinates broke when the layout changed; scripted runs
   now trigger actions by name instead.
+
+Found by reading the code rather than by a test, then pinned with tests: updates between
+release candidates (`rc.1` to `rc.2`) and Arch package releases (`-1` to `-2`) were never
+offered; the Windows hand-off went through `cmd.exe`, which interprets characters such
+as `&` in file names chosen by release authors (now Explorer; **not run on Windows**);
+and the page promised a checksum check for digest formats it could not check.
 
 Also checked automatically: every button, tab and switch has an accessible name; a
 state file that cannot be written or read produces a message instead of a crash.
