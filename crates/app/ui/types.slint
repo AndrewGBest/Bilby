@@ -119,6 +119,8 @@ export global Store {
     // 0 discover, 1 search, 2 library, 3 settings, 4 this device (reached from the
     // library and from settings; it has no navigation entry of its own)
     in-out property <int> page;
+    // The page the device page was opened from, which its back arrow returns to.
+    in-out property <int> system-from: 2;
     in-out property <string> query;
     in property <bool> searching;
     in property <bool> searched;
@@ -163,6 +165,8 @@ export global Store {
     in property <bool> is-favourite;
     // The store placed this app itself and can start it.
     in property <bool> can-open;
+    // The open app is in the library, so it can be removed from it.
+    in property <bool> in-library;
 
     // --- install ----------------------------------------------------------------
     // 0 idle, 1 working, 2 done, 3 failed

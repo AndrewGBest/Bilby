@@ -745,9 +745,18 @@ Developer tools are left off a TV's Home. [The address of Flathub's lists,
 return are from memory; no documentation was found and it has not run against
 Flathub. If it is wrong the rows are simply absent.]
 
-An app's page on TV has three buttons in a row (the main one, Favourite, Other files),
-the facts row, a picture and the description. Still missing on TV: choosing an older
-version and a full settings screen.
+An app's page on TV has its buttons in one row: the main one, Favourite, Other files
+and, for an app in the library, Remove, which asks for a second OK. An installed app
+that cannot be opened from here says "Install again", not "Install". The This TV page
+carries the settings that matter on a TV (ratings and reviews, checking for updates at
+start, test versions) as rows the remote switches with OK. Every screen says in its
+bottom corner what the remote does there. Still missing on TV: choosing an older
+version, reading reviews, and entering a GitHub token.
+
+**Ways back, everywhere.** An app's page and the device page both have a back arrow
+(top left on a desktop, in the header on a phone), and Escape, Alt+Left and a phone's
+Back button do the same. The device page returns to whichever of Library or Settings
+it was opened from, and that entry stays highlighted while it is open.
 
 ## 8. Testing
 

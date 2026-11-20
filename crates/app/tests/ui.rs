@@ -1739,3 +1739,78 @@ fn an_appimage_adds_itself_to_the_app_menu_and_can_be_told_not_to() {
     assert!(!plain.store().get_can_register());
     assert!(!bilby_core::install::self_entry_path(&plain.dirs).exists());
 }
+
+// ---- getting around: every page has a way back, and a remote reaches everything ----
+
+#[test]
+fn the_device_page_goes_back_to_where_it_was_opened_from() {
+    let s = start("linux-x64-arch", Shell::Desktop);
+    // From the library's system card.
+    s.store().set_page(2);
+    s.click("System details");
+    assert_eq!(s.store().get_page(), 4);
+    s.click("Back");
+    assert_eq!(s.store().get_page(), 2);
+    // From Settings, by button and by Escape.
+    s.store().set_page(3);
+    s.click("System details and updates");
+    assert_eq!(s.store().get_page(), 4);
+    s.press(Key::Escape);
+    assert_eq!(s.store().get_page(), 3);
+    // An app's page still closes with the same arrow.
+    s.app.open(&s.ui, "github:lumen-labs/lumen");
+    s.click("Back");
+    assert!(!s.store().get_details_open());
+
+    // On a phone the device page has its own arrow in the header.
+    let phone = start("linux-x64-arch", Shell::Mobile);
+    phone.store().set_page(3);
+    phone.click("System details and updates");
+    phone.click("Back");
+    assert_eq!(phone.store().get_page(), 3);
+}
+
+#[test]
+fn a_tv_remote_reaches_settings_and_can_remove_an_app() {
+    let seed = r#"{"settings":{"welcomed":true},"library":[
+        {"id":"github:tidewave/tidewave","name":"Tidewave","version":"v3.4.0"}]}"#;
+    let s = start_with("linux-tv", Shell::Tv, Some(seed));
+
+    // Settings live on the This TV page: Up, Right to the chip, OK, then Down to a setting.
+    s.press(Key::UpArrow);
+    s.press(Key::RightArrow);
+    s.press(Key::Return);
+    assert_eq!(s.store().get_page(), 4);
+    assert!(s.store().get_show_ratings());
+    s.press(Key::DownArrow);
+    s.press(Key::Return);
+    assert!(!s.store().get_show_ratings(), "OK switches the focused setting");
+    assert!(s.saved().settings.hide_ratings);
+    s.press(Key::DownArrow);
+    s.press(Key::DownArrow);
+    s.press(Key::Return);
+    assert!(s.saved().settings.include_prereleases);
+    // Up climbs back through the settings to the buttons, then to the top bar.
+    s.press(Key::UpArrow);
+    s.press(Key::UpArrow);
+    s.press(Key::UpArrow);
+    s.press(Key::UpArrow);
+    s.press(Key::LeftArrow);
+    s.press(Key::LeftArrow);
+    s.press(Key::Return);
+    assert_eq!(s.store().get_page(), 2, "Library, from the top bar");
+
+    // Open the installed app: its page offers Remove, which asks twice.
+    s.press(Key::DownArrow);
+    s.press(Key::Return);
+    assert!(s.store().get_details_open() && s.store().get_in_library());
+    assert!(s.has("Install again"), "an installed app is not offered as if it were new");
+    for _ in 0..3 {
+        s.press(Key::RightArrow);
+    }
+    s.press(Key::Return);
+    assert!(s.has("Confirm") && s.saved().library.len() == 1, "the first OK only asks");
+    s.press(Key::Return);
+    assert!(s.saved().library.is_empty());
+    assert!(!s.store().get_in_library() && !s.has("Remove"));
+}

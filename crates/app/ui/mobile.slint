@@ -70,6 +70,11 @@ export component MobileShell inherits Rectangle {
                 Store.close-details();
                 return accept;
             }
+            // And the device page, back to the page it was opened from.
+            if ((event.text == Key.Escape || event.text == Key.Back) && Store.page == 4) {
+                Store.page = Store.system-from;
+                return accept;
+            }
             reject
         }
 
@@ -104,6 +109,16 @@ export component MobileShell inherits Rectangle {
                 padding-bottom: 8px;
                 spacing: 12px;
                 HorizontalLayout {
+                    if Store.page == 4 : Rectangle {
+                        width: 40px;
+                        accessible-role: button;
+                        accessible-label: "Back";
+                        accessible-action-default => { Store.page = Store.system-from; }
+                        TouchArea {
+                            clicked => { Store.page = Store.system-from; }
+                        }
+                        Image { x: 0; source: @image-url("icons/back.svg"); colorize: Theme.text; width: 22px; height: 22px; }
+                    }
                     Text {
                         text: Store.page == 0 ? "Discover" : Store.page == 1 ? "Search" : Store.page == 2 ? "Library" : Store.page == 4 ? "This device" : "Settings";
                         color: Theme.text;
@@ -301,13 +316,13 @@ export component MobileShell inherits Rectangle {
                         label: "Library";
                         icon: @image-url("icons/library.svg");
                         badge: Store.updates-count + (Store.system-state == 3 ? 1 : 0);
-                        active: Store.page == 2 || Store.page == 4;
+                        active: Store.page == 2 || (Store.page == 4 && Store.system-from == 2);
                         clicked => { Store.page = 2; }
                     }
                     Tab {
                         label: "Settings";
                         icon: @image-url("icons/settings.svg");
-                        active: Store.page == 3;
+                        active: Store.page == 3 || (Store.page == 4 && Store.system-from == 3);
                         clicked => { Store.page = 3; }
                     }
                 }

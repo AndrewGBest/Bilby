@@ -95,6 +95,33 @@ component TvTab inherits Rectangle {
     }
 }
 
+// A setting that is on or off. OK switches it.
+component TvSetting inherits Rectangle {
+    in property <string> label;
+    in property <bool> on;
+    in property <bool> focused;
+    in property <length> u;
+    callback clicked;
+    height: 26 * u;
+    border-radius: 8 * u;
+    background: focused ? Theme.surface-2 : transparent;
+    border-width: focused ? 2 * u : 0;
+    border-color: white;
+    accessible-role: checkbox;
+    accessible-label: root.label;
+    accessible-checked: root.on;
+    TouchArea {
+        clicked => { root.clicked(); }
+    }
+    HorizontalLayout {
+        padding-left: 10 * u;
+        padding-right: 10 * u;
+        spacing: 12 * u;
+        Text { horizontal-stretch: 1; text: root.label; color: Theme.text; font-size: 12 * u; vertical-alignment: center; overflow: elide; }
+        Text { text: root.on ? "On" : "Off"; color: root.on ? Theme.ok : Theme.text-dim; font-size: 12 * u; font-weight: 700; vertical-alignment: center; }
+    }
+}
+
 // A button on the TV app page. The remote moves between them; OK presses the focused one.
 component TvButton inherits Rectangle {
     in property <string> text;
@@ -103,7 +130,7 @@ component TvButton inherits Rectangle {
     in property <length> u;
     callback clicked;
     height: 34 * u;
-    width: label.preferred-width + 36 * u;
+    width: label.preferred-width + 30 * u;
     Rectangle {
         x: focused ? -3 * u : 0;
         y: focused ? -2 * u : 0;
@@ -171,6 +198,8 @@ export component TvShell inherits Rectangle {
     property <bool> lib-has-actions: root.on-library && Store.library.length > 0;
     property <bool> lib-can-update-all: Store.updates-count > 1 && Store.updating-id == "";
     property <int> sys-act: 0;
+    // On the device page: 0 is the row of buttons, 1 to 3 the settings below them.
+    property <int> sys-row: 0;
     function enter-bar() {
         // From Home, Up lands on Search: it is what people go up there for.
         root.tab = Store.page == 2 ? 1 : Store.page == 4 ? 3 : 2;
@@ -193,6 +222,7 @@ export component TvShell inherits Rectangle {
             search.focus();
         } else {
             Store.page = 4;
+            root.sys-row = 0;
             root.sys-act = 0;
             root.zone = 0;
         }
@@ -207,9 +237,19 @@ export component TvShell inherits Rectangle {
     property <bool> busy: Store.install-state == 1;
     property <bool> is-update: Store.installed-version != "" && Store.installed-version != "installed" && Store.app.version != "" && Store.installed-version != Store.app.version;
     property <bool> open-instead: Store.can-open && !is-update && !busy;
-    property <string> main-action: busy ? "Cancel" : open-instead ? "Open" : is-update ? "Update" : Store.options.length > 0 ? Store.options[0].verb : "";
+    property <string> main-action: busy ? "Cancel" : open-instead ? "Open" : is-update ? "Update" : Store.options.length == 0 ? "" : Store.installed-version != "" && !Store.is-website ? "Install again" : Store.options[0].verb;
+    // The buttons on an app's page, left to right: the main one, Favourite, Other files
+    // (when there are any) and Remove (when the app is in the library).
+    property <bool> has-files: Store.options.length > 0 && !Store.is-website;
+    property <int> remove-idx: !Store.in-library ? -1 : has-files ? 3 : 2;
+    property <int> last-act: Store.in-library ? remove-idx : has-files ? 2 : 1;
+    // Remove asks twice: the first OK only arms it.
+    property <bool> remove-armed: false;
+    changed act => { root.remove-armed = false; }
+    changed last-act => { root.act = min(root.act, root.last-act); }
     property <string> shown-id: Store.app.id;
     changed shown-id => {
+        root.remove-armed = false;
         root.act = 0;
         root.files = false;
         root.opt = 0;
@@ -281,7 +321,24 @@ export component TvShell inherits Rectangle {
                     root.tab = 0;
                     root.activate-tab();
                 } else if (event.text == Key.UpArrow) {
-                    root.enter-bar();
+                    if (root.sys-row == 0) {
+                        root.enter-bar();
+                    } else {
+                        root.sys-row -= 1;
+                    }
+                } else if (event.text == Key.DownArrow) {
+                    root.sys-row = min(3, root.sys-row + 1);
+                } else if (root.sys-row > 0) {
+                    // A setting: OK, Left or Right switches it.
+                    if (event.text == Key.Return || event.text == " " || event.text == Key.LeftArrow || event.text == Key.RightArrow) {
+                        if (root.sys-row == 1) {
+                            Store.set-ratings(!Store.show-ratings);
+                        } else if (root.sys-row == 2) {
+                            Store.set-check-on-start(!Store.check-updates-on-start);
+                        } else {
+                            Store.set-prereleases(!Store.include-prereleases);
+                        }
+                    }
                 } else if (event.text == Key.RightArrow) {
                     root.sys-act = min(root.sys-last, root.sys-act + 1);
                 } else if (event.text == Key.LeftArrow) {
@@ -328,12 +385,19 @@ export component TvShell inherits Rectangle {
                         root.act -= 1;
                     }
                 } else if (event.text == Key.RightArrow) {
-                    root.act = min(Store.options.length > 0 && !Store.is-website ? 2 : 1, root.act + 1);
+                    root.act = min(root.last-act, root.act + 1);
                 } else if (event.text == Key.Return || event.text == " ") {
                     if (root.act == 0) {
                         root.press-main();
                     } else if (root.act == 1) {
                         Store.toggle-favourite();
+                    } else if (root.act == root.remove-idx) {
+                        if (root.remove-armed) {
+                            root.remove-armed = false;
+                            Store.remove-from-library(Store.app.id);
+                        } else {
+                            root.remove-armed = true;
+                        }
                     } else {
                         root.opt = 0;
                         root.files = true;
@@ -500,21 +564,21 @@ export component TvShell inherits Rectangle {
                         u: root.u;
                         text: "Update now";
                         primary: true;
-                        focused: root.zone == 0 && root.sys-act == 0;
+                        focused: root.zone == 0 && root.sys-row == 0 && root.sys-act == 0;
                         clicked => { Store.system-update(); }
                     }
                     if Store.system-supported && !root.sys-working : TvButton {
                         u: root.u;
                         text: "Check again";
                         primary: !root.sys-can-update;
-                        focused: root.zone == 0 && root.sys-act == (root.sys-can-update ? 1 : 0);
+                        focused: root.zone == 0 && root.sys-row == 0 && root.sys-act == (root.sys-can-update ? 1 : 0);
                         clicked => { Store.system-check(); }
                     }
                     TvButton {
                         u: root.u;
                         text: "Desktop layout";
                         primary: false;
-                        focused: root.zone == 0 && root.sys-act == root.sys-last;
+                        focused: root.zone == 0 && root.sys-row == 0 && root.sys-act == root.sys-last;
                         clicked => { Store.set-interface(1); }
                     }
                 }
@@ -547,7 +611,29 @@ export component TvShell inherits Rectangle {
                     Text { width: 130 * u; text: fact.name; color: Theme.text-dim; font-size: 12 * u; }
                     Text { horizontal-stretch: 1; text: fact.value; color: Theme.text; font-size: 12 * u; wrap: word-wrap; }
                 }
-                Text { text: "Back returns to Home."; color: Theme.text-dim; font-size: 11 * u; }
+                Rectangle { height: 6 * u; }
+                Text { text: "Settings"; color: Theme.text; font-size: 14 * u; font-weight: 700; }
+                TvSetting {
+                    u: root.u;
+                    label: "Ratings and reviews";
+                    on: Store.show-ratings;
+                    focused: root.zone == 0 && root.sys-row == 1;
+                    clicked => { Store.set-ratings(!Store.show-ratings); }
+                }
+                TvSetting {
+                    u: root.u;
+                    label: "Check for updates when Bilby opens";
+                    on: Store.check-updates-on-start;
+                    focused: root.zone == 0 && root.sys-row == 2;
+                    clicked => { Store.set-check-on-start(!Store.check-updates-on-start); }
+                }
+                TvSetting {
+                    u: root.u;
+                    label: "Offer test versions of apps";
+                    on: Store.include-prereleases;
+                    focused: root.zone == 0 && root.sys-row == 3;
+                    clicked => { Store.set-prereleases(!Store.include-prereleases); }
+                }
             }
         }
 
@@ -696,7 +782,7 @@ export component TvShell inherits Rectangle {
                 if Store.warning != "" : Text { text: Store.warning; color: Theme.warn; font-size: 12 * u; wrap: word-wrap; }
                 if !Store.details-loading : HorizontalLayout {
                     padding-top: 4 * u;
-                    spacing: 12 * u;
+                    spacing: 8 * u;
                     alignment: start;
                     if root.main-action != "" || Store.details-error != "" : TvButton {
                         u: root.u;
@@ -727,13 +813,28 @@ export component TvShell inherits Rectangle {
                             root.files = true;
                         }
                     }
+                    if Store.in-library : TvButton {
+                        u: root.u;
+                        text: root.remove-armed ? "Confirm" : "Remove";
+                        focused: root.act == root.remove-idx && !root.files;
+                        clicked => {
+                            root.act = root.remove-idx;
+                            if (root.remove-armed) {
+                                root.remove-armed = false;
+                                Store.remove-from-library(Store.app.id);
+                            } else {
+                                root.remove-armed = true;
+                            }
+                        }
+                    }
                 }
                 if !root.files && Store.notes != "" : VerticalLayout {
                     padding-top: 8 * u;
                     spacing: 4 * u;
                     Text { text: Store.is-website ? "About this website" : Store.is-package ? "About this package" : "What's new in " + Store.app.version; color: Theme.text; font-size: 13 * u; font-weight: 700; }
                     Rectangle {
-                        height: 62 * u;
+                        notes-line := Text { text: "X"; font-size: 12 * u; visible: false; }
+                        height: floor(62 * u / notes-line.preferred-height) * notes-line.preferred-height;
                         clip: true;
                         Text {
                             y: 0;
@@ -769,7 +870,8 @@ export component TvShell inherits Rectangle {
                     }
                 }
                 if Store.about != "" : Rectangle {
-                    height: Store.screenshots.length > 0 ? 150 * u : 380 * u;
+                    about-line := Text { text: "X"; font-size: 13 * u; visible: false; }
+                    height: floor((Store.screenshots.length > 0 ? 150 * u : 380 * u) / about-line.preferred-height) * about-line.preferred-height;
                     clip: true;
                     Text {
                         y: 0;
@@ -835,10 +937,19 @@ export component TvShell inherits Rectangle {
                     color: Theme.text-dim;
                     font-size: 12 * u;
                 }
-                Text { text: "Back to close this list"; color: Theme.text-dim; font-size: 12 * u; }
             }
         }
     }
+    // What the remote does here, in the corner where TV interfaces put it.
+    Text {
+        x: root.margin;
+        y: root.height - 27 * u - 12 * u;
+        text: search.has-focus ? "Type, then OK to search  ·  Down or Back to leave" : Store.details-open ? (root.files ? "OK installs the chosen file  ·  Back closes this list" : root.remove-armed ? "OK again removes " + Store.app.name + " from this TV  ·  any other button cancels" : "Left and Right choose  ·  OK selects  ·  Back returns") : root.zone == 1 ? "Left and Right choose  ·  OK opens  ·  Back goes Home" : root.on-system ? "Up and Down move  ·  OK selects or switches  ·  Back goes Home" : "Arrows move  ·  OK opens  ·  Up or Back for the menu";
+        color: Theme.text-dim;
+        font-size: 11 * u;
+        opacity: 0.8;
+    }
+
     if Store.toast != "" : Rectangle {
         x: (parent.width - self.width) / 2;
         // Clear of the bottom safe margin.

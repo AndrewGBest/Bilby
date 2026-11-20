@@ -157,6 +157,14 @@ export component DesktopShell inherits Rectangle {
     property <bool> on-app-page: Store.details-open;
     changed on-app-page => { keys.focus(); }
 
+    // One step back: out of an app's page, or from the device page to where it was opened.
+    function back() {
+        if (Store.details-open) {
+            Store.close-details();
+        } else if (Store.page == 4) {
+            Store.page = Store.system-from;
+        }
+    }
     function go(page: int) {
         Store.close-details();
         Store.page = page;
@@ -170,8 +178,8 @@ export component DesktopShell inherits Rectangle {
                 return accept;
             }
             if (event.text == Key.Escape) {
-                if (Store.details-open) {
-                    Store.close-details();
+                if (Store.details-open || Store.page == 4) {
+                    root.back();
                     return accept;
                 }
                 if (search.has-focus) {
@@ -179,8 +187,8 @@ export component DesktopShell inherits Rectangle {
                     return accept;
                 }
             }
-            if (event.modifiers.alt && event.text == Key.LeftArrow && Store.details-open) {
-                Store.close-details();
+            if (event.modifiers.alt && event.text == Key.LeftArrow && (Store.details-open || Store.page == 4)) {
+                root.back();
                 return accept;
             }
             reject
@@ -229,13 +237,13 @@ export component DesktopShell inherits Rectangle {
                         label: "Library";
                         icon: @image-url("icons/library.svg");
                         badge: Store.updates-count + (Store.system-state == 3 ? 1 : 0);
-                        active: (Store.page == 2 || Store.page == 4) && !Store.details-open;
+                        active: (Store.page == 2 || (Store.page == 4 && Store.system-from == 2)) && !Store.details-open;
                         clicked => { root.go(2); }
                     }
                     NavItem {
                         label: "Settings";
                         icon: @image-url("icons/settings.svg");
-                        active: Store.page == 3 && !Store.details-open;
+                        active: (Store.page == 3 || (Store.page == 4 && Store.system-from == 3)) && !Store.details-open;
                         clicked => { root.go(3); }
                     }
                     Rectangle { vertical-stretch: 1; }
@@ -280,7 +288,7 @@ export component DesktopShell inherits Rectangle {
                     padding-top: 18px;
                     padding-bottom: 10px;
                     spacing: 14px;
-                    if Store.details-open : Rectangle {
+                    if Store.details-open || Store.page == 4 : Rectangle {
                         width: 42px;
                         height: 42px;
                         border-radius: 21px;
@@ -289,10 +297,10 @@ export component DesktopShell inherits Rectangle {
                         border-color: Theme.stroke;
                         accessible-role: button;
                         accessible-label: "Back";
-                        accessible-action-default => { Store.close-details(); }
+                        accessible-action-default => { root.back(); }
                         back-ta := TouchArea {
                             mouse-cursor: pointer;
-                            clicked => { Store.close-details(); }
+                            clicked => { root.back(); }
                         }
                         Image { source: @image-url("icons/back.svg"); colorize: Theme.text; width: 18px; height: 18px; }
                     }

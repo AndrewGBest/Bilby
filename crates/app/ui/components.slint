@@ -1116,9 +1116,10 @@ export component DetailsBody inherits Rectangle {
                 alignment: start;
                 if Store.app.rating != "" : StatCell { value: "★ " + Store.app.rating; caption: Store.app.rating-count; }
                 if Store.app.downloads != "" : StatCell { value: Store.app.downloads; caption: Store.app.downloads-note; }
-                if Store.app.popularity != "" && !(compact && Store.app.downloads != "" && Store.app.rating != "") : StatCell { value: Store.app.popularity; caption: "on " + Store.app.source; }
+                if Store.app.popularity != "" && !(compact && Store.app.downloads != "") : StatCell { value: Store.app.popularity; caption: "on " + Store.app.source; }
                 if root.has-option && root.best.size != "" : StatCell { value: root.best.size; caption: "download"; }
-                if Store.release-age != "" : StatCell { value: Store.release-age; caption: "last updated"; }
+                // On a phone the row holds three facts; the date is under "What's new" too.
+                if Store.release-age != "" && !(compact && Store.app.rating != "" && (Store.app.downloads != "" || Store.app.popularity != "")) : StatCell { value: Store.release-age; caption: "last updated"; }
                 if Store.license != "" && !compact : StatCell { value: Store.license; caption: "licence"; }
             }
 
@@ -1169,18 +1170,20 @@ export component DetailsBody inherits Rectangle {
             if root.has-option && Store.is-package && root.best.command != "" && !root.more : CommandBox { command: root.best.command; }
 
             if Store.installed-version != "" : Rectangle {
-                height: 40px;
+                height: max(40px, banner.preferred-height + 20px);
                 border-radius: 10px;
                 background: Theme.accent.with-alpha(0.12);
-                Text {
+                banner := Text {
                     x: 14px;
                     width: parent.width - 28px;
+                    height: parent.height;
+                    wrap: word-wrap;
                     text: Store.installed-version == "installed" ? "Installed" : Store.installed-version == Store.app.version || Store.app.version == "" ? "Installed  ·  " + Store.installed-version : "Update available  ·  you have " + Store.installed-version + ", latest is " + Store.app.version;
                     color: Theme.accent;
                     font-size: 13px;
                     font-weight: 600;
                     vertical-alignment: center;
-                    overflow: elide;
+                    
                 }
             }
 
@@ -1483,11 +1486,11 @@ export component SystemCard inherits Rectangle {
             }
             if !compact : VerticalLayout {
                 alignment: center;
-                Button { text: "System details"; primary: false; clicked => { Store.page = 4; } }
+                Button { text: "System details"; primary: false; clicked => { Store.system-from = 2; Store.page = 4; } }
             }
         }
         if compact && Store.system-state == 3 : Button { text: "Update system"; clicked => { Store.system-update(); } }
-        if compact : Button { text: "System details"; primary: false; clicked => { Store.page = 4; } }
+        if compact : Button { text: "System details"; primary: false; clicked => { Store.system-from = 2; Store.page = 4; } }
     }
 }
 
@@ -1758,7 +1761,7 @@ export component SettingsBody inherits Rectangle {
                 }
                 HorizontalLayout {
                     alignment: start;
-                    Button { text: "System details and updates"; primary: false; clicked => { Store.page = 4; } }
+                    Button { text: "System details and updates"; primary: false; clicked => { Store.system-from = 3; Store.page = 4; } }
                 }
             }
 

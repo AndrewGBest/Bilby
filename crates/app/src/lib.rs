@@ -881,6 +881,7 @@ impl App {
         store.set_favourites(ModelRc::new(VecModel::from(favourites)));
         store.set_is_favourite(state.is_favourite(store.get_app().id.as_str()));
         store.set_can_open(self.launchable(store.get_app().id.as_str()).is_some());
+        store.set_in_library(state.installed(store.get_app().id.as_str()).is_some());
         let checked = self.last_checked.load(Ordering::SeqCst);
         store.set_last_checked(
             match now.saturating_sub(checked) {
@@ -1267,6 +1268,7 @@ impl App {
         let known = find_card(&store, id);
         store.set_is_favourite(self.state().is_favourite(id));
         store.set_can_open(self.launchable(id).is_some());
+        store.set_in_library(self.state.lock().unwrap().installed(id).is_some());
         store.set_details_open(true);
         store.set_details_error(SharedString::new());
         store.set_unavailable(SharedString::new());
