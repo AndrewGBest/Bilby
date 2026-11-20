@@ -111,9 +111,16 @@ pub fn fetch_reviews(http: &dyn Http, appstream_id: &str) -> Result<Vec<Review>>
         "distro": "unknown",
         "version": "unknown",
         "limit": REVIEWS_SHOWN,
+        // The service refuses a request without a 40-character id for the person asking
+        // (other stores send a hash of the user and machine). Everyone sends the same
+        // zeros here, so it identifies nobody.
+        "user_hash": ANONYMOUS,
     });
     parse_reviews(&http.post_json(ODRS_FETCH, &body.to_string())?)
 }
+
+/// Sent in place of an id for the user: the same for every copy of the store.
+const ANONYMOUS: &str = "0000000000000000000000000000000000000000";
 
 /// How long a downloaded ratings file is used before asking again.
 pub const MAX_AGE: Duration = Duration::from_secs(24 * 60 * 60);

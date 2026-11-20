@@ -371,7 +371,11 @@ fn is_supporting_package(name: &str) -> bool {
     let lower = name.to_lowercase();
     // "libreoffice" and "librewolf" are applications that happen to start with "lib".
     let library = PREFIXES.iter().any(|p| lower.starts_with(p)) && !lower.starts_with("libre");
-    library || SUFFIXES.iter().any(|s| lower.ends_with(s))
+    // Translations and plug-ins come by the dozen ("firefox-esr-l10n-af",
+    // "vlc-plugin-qt") and would bury the application they belong to.
+    const PARTS: [&str; 8] = ["l10n", "i18n", "locale", "locales", "langpack", "plugin", "plugins", "help"];
+    let part = lower.split('-').skip(1).any(|word| PARTS.contains(&word));
+    library || part || SUFFIXES.iter().any(|s| lower.ends_with(s))
 }
 
 type Fingerprint = Vec<(PathBuf, u64, Option<SystemTime>)>;
@@ -764,6 +768,13 @@ mod tests {
         assert_eq!(names.len(), 6, "supporting packages are still there, after the applications");
         // Asking for a library by its exact name still puts it first.
         assert_eq!(repos.search("libtexteditor", 10).unwrap()[0].name, "libtexteditor");
+        // Seen on a real Debian: a search for a browser listed its language packs first.
+        for part in ["firefox-esr-l10n-af", "vlc-plugin-qt", "libreoffice-help-en-gb", "thunderbird-locale-de"] {
+            assert!(is_supporting_package(part), "{part}");
+        }
+        for app in ["firefox-esr", "vlc", "plugin-manager", "help2man", "localepurge"] {
+            assert!(!is_supporting_package(app), "{app}");
+        }
     }
 
     #[test]

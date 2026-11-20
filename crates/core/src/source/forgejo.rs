@@ -132,7 +132,14 @@ impl Source for Forgejo {
             url_encode(query),
             limit.clamp(1, 50)
         );
-        let resp: SearchResponse = serde_json::from_str(&self.http.get(&url)?)?;
+        let body = match self.http.get(&url) {
+            // Codeberg turns searches away when it is busy ("high influx of requests"),
+            // which was every time it was tried. That is not something to show the person
+            // searching: its apps are still reachable from the home page and by link.
+            Err(Error::Status { code: 429, .. }) | Err(Error::RateLimited { .. }) => return Ok(Vec::new()),
+            other => other?,
+        };
+        let resp: SearchResponse = serde_json::from_str(&body)?;
         // As on GitHub: forks and archived repositories rarely carry the releases people want.
         Ok(resp.data.into_iter().filter(|r| !r.fork && !r.archived).map(AppSummary::from).collect())
     }
