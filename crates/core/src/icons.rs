@@ -21,14 +21,23 @@ const SIZE: u32 = 128;
 pub fn icon_key(id: &AppId) -> Option<String> {
     match id.source {
         SourceKind::GitHub => id.key.split('/').next().filter(|o| !o.is_empty()).map(str::to_lowercase),
+        SourceKind::Codeberg => {
+            id.key.split('/').next().filter(|o| !o.is_empty()).map(|o| format!("codeberg-{}", o.to_lowercase()))
+        }
         SourceKind::Aur | SourceKind::Pacman | SourceKind::Apt => None,
     }
 }
 
 pub fn icon_url(id: &AppId) -> Option<String> {
     let owner = id.key.split('/').next()?;
-    (id.source == SourceKind::GitHub && !owner.is_empty())
-        .then(|| format!("https://github.com/{owner}.png?size={SIZE}"))
+    if owner.is_empty() {
+        return None;
+    }
+    match id.source {
+        SourceKind::GitHub => Some(format!("https://github.com/{owner}.png?size={SIZE}")),
+        SourceKind::Codeberg => Some(format!("https://codeberg.org/{owner}.png?size={SIZE}")),
+        _ => None,
+    }
 }
 
 /// The kind of image, from its first bytes. The URL's `.png` is not to be trusted:

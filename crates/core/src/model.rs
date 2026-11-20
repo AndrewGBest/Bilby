@@ -7,6 +7,8 @@ use crate::install::InstallPlan;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SourceKind {
     GitHub,
+    /// Codeberg (a Forgejo instance).
+    Codeberg,
     Aur,
     /// Repositories configured for pacman on this machine (Arch, CachyOS, ...).
     Pacman,
@@ -15,9 +17,14 @@ pub enum SourceKind {
 }
 
 impl SourceKind {
+    /// A code host whose projects publish release files (as opposed to a package repository).
+    pub fn is_forge(self) -> bool {
+        matches!(self, SourceKind::GitHub | SourceKind::Codeberg)
+    }
     pub fn label(self) -> &'static str {
         match self {
             SourceKind::GitHub => "GitHub",
+            SourceKind::Codeberg => "Codeberg",
             SourceKind::Aur => "AUR",
             SourceKind::Pacman => "pacman repositories",
             SourceKind::Apt => "apt repositories",
@@ -26,6 +33,7 @@ impl SourceKind {
     pub fn prefix(self) -> &'static str {
         match self {
             SourceKind::GitHub => "github",
+            SourceKind::Codeberg => "codeberg",
             SourceKind::Aur => "aur",
             SourceKind::Pacman => "pacman",
             SourceKind::Apt => "apt",
@@ -49,6 +57,7 @@ impl AppId {
         let (prefix, key) = s.split_once(':')?;
         let source = match prefix {
             "github" => SourceKind::GitHub,
+            "codeberg" => SourceKind::Codeberg,
             "aur" => SourceKind::Aur,
             "pacman" => SourceKind::Pacman,
             "apt" => SourceKind::Apt,
@@ -74,6 +83,11 @@ impl AppId {
             let name = rest.split(['/', '?', '#']).next().unwrap_or("");
             return valid_key(SourceKind::Aur, name).then(|| AppId::new(SourceKind::Aur, name));
         }
+        if let Some(rest) = stripped.strip_prefix("codeberg.org/") {
+            let mut parts = rest.split(['?', '#']).next().unwrap_or("").split('/').filter(|p| !p.is_empty());
+            let key = format!("{}/{}", parts.next()?, parts.next()?.trim_end_matches(".git"));
+            return valid_key(SourceKind::Codeberg, &key).then(|| AppId::new(SourceKind::Codeberg, key));
+        }
         let path = stripped.strip_prefix("github.com/").unwrap_or(stripped);
         // Without the host, only a bare `owner/repo` counts; `a/b/c` is not a repository.
         let had_host = path.len() != stripped.len();
@@ -95,7 +109,9 @@ pub fn valid_key(source: SourceKind, key: &str) -> bool {
             && part.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.') || extra.contains(&c))
     };
     match source {
-        SourceKind::GitHub => matches!(key.split_once('/'), Some((owner, repo)) if ok(owner, &[]) && ok(repo, &[])),
+        SourceKind::GitHub | SourceKind::Codeberg => {
+            matches!(key.split_once('/'), Some((owner, repo)) if ok(owner, &[]) && ok(repo, &[]))
+        }
         // Arch and Debian package names may also contain `+` and `@`.
         SourceKind::Aur | SourceKind::Pacman | SourceKind::Apt => ok(key, &['+', '@']),
     }
@@ -279,6 +295,10 @@ mod tests {
         assert_eq!(gh("https://github.com/sharkdp/bat").as_deref(), Some("github:sharkdp/bat"));
         assert_eq!(gh("https://github.com/sharkdp/bat/releases/tag/v0.24.0").as_deref(), Some("github:sharkdp/bat"));
         assert_eq!(gh("github.com/sharkdp/bat.git").as_deref(), Some("github:sharkdp/bat"));
+        assert_eq!(gh("https://codeberg.org/forgejo/forgejo").as_deref(), Some("codeberg:forgejo/forgejo"));
+        assert_eq!(gh("codeberg.org/fern/notes/releases").as_deref(), Some("codeberg:fern/notes"));
+        assert_eq!(gh("codeberg:fern/notes").as_deref(), Some("codeberg:fern/notes"));
+        assert_eq!(gh("https://codeberg.org/fern"), None);
         assert_eq!(gh("  sharkdp/bat ").as_deref(), Some("github:sharkdp/bat"));
         assert_eq!(gh("github:sharkdp/bat").as_deref(), Some("github:sharkdp/bat"));
         assert_eq!(gh("https://aur.archlinux.org/packages/paru-bin").as_deref(), Some("aur:paru-bin"));

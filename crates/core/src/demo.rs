@@ -352,6 +352,67 @@ fn all_apps() -> impl Iterator<Item = &'static DemoApp> {
     APPS.iter().chain(UNLISTED.iter())
 }
 
+/// A fictional project hosted on Codeberg: found by search, not featured.
+const CODEBERG: &[DemoApp] = &[DemoApp {
+    owner: "fernleaf",
+    repo: "fernleaf",
+    name: "Fernleaf",
+    summary: "Plain-text notes that sync through any folder.",
+    stars: 1_840,
+    license: "GPL-3.0-or-later",
+    category: "Utilities",
+    tv: false,
+    os: &["windows", "linux", "macos", "android"],
+    releases: &[(
+        "v1.6.0",
+        "2026-10-19",
+        &[
+            "fernleaf-1.6.0-x86_64.AppImage",
+            "fernleaf_1.6.0_amd64.deb",
+            "fernleaf-1.6.0-aarch64.AppImage",
+            "fernleaf-1.6.0-windows-x64-setup.exe",
+            "fernleaf-1.6.0-macos-universal.dmg",
+            "fernleaf-1.6.0-arm64-v8a.apk",
+            "fernleaf-1.6.0-armeabi-v7a.apk",
+        ],
+    )],
+}];
+
+fn forgejo_repo_json(app: &DemoApp) -> Value {
+    json!({
+        "name": app.repo,
+        "full_name": format!("{}/{}", app.owner, app.repo),
+        "owner": { "login": app.owner },
+        "description": app.summary,
+        "html_url": format!("https://codeberg.org/{}/{}", app.owner, app.repo),
+        "stars_count": app.stars,
+        "fork": false,
+        "archived": false,
+    })
+}
+
+fn forgejo_releases_json(app: &DemoApp) -> Value {
+    Value::Array(
+        app.releases
+            .iter()
+            .map(|(tag, date, files)| {
+                json!({
+                    "tag_name": tag,
+                    "draft": false,
+                    "prerelease": false,
+                    "published_at": format!("{date}T12:00:00Z"),
+                    "body": format!("## What's new in {} {tag}\n\n- Faster sync\n- Fixes for reported crashes\n\n(Fictional release notes: this is demo data.)", app.name),
+                    "assets": files.iter().map(|f| json!({
+                        "name": f,
+                        "size": fake_size(f),
+                        "browser_download_url": format!("https://codeberg.org/{}/{}/releases/download/{tag}/{f}", app.owner, app.repo),
+                    })).collect::<Vec<_>>(),
+                })
+            })
+            .collect(),
+    )
+}
+
 struct DemoAurPackage {
     name: &'static str,
     version: &'static str,
@@ -505,6 +566,23 @@ impl Http for DemoHttp {
             return match tail {
                 None => Ok(repo_json(app).to_string()),
                 Some("releases") => Ok(releases_json(app).to_string()),
+                _ => Err(not_found()),
+            };
+        }
+        if let Some(rest) = url.strip_prefix("https://codeberg.org/api/v1/repos/search?q=") {
+            let q = url_decode(rest.split('&').next().unwrap_or(""));
+            let data: Vec<Value> =
+                CODEBERG.iter().filter(|a| matches(&q, &[a.name, a.repo, a.summary])).map(forgejo_repo_json).collect();
+            return Ok(json!({ "ok": true, "data": data }).to_string());
+        }
+        if let Some(rest) = url.strip_prefix("https://codeberg.org/api/v1/repos/") {
+            let path = rest.split('?').next().unwrap_or("");
+            let mut parts = path.split('/');
+            let (owner, repo, tail) = (parts.next(), parts.next(), parts.next());
+            let app = CODEBERG.iter().find(|a| Some(a.owner) == owner && Some(a.repo) == repo).ok_or_else(not_found)?;
+            return match tail {
+                None => Ok(forgejo_repo_json(app).to_string()),
+                Some("releases") => Ok(forgejo_releases_json(app).to_string()),
                 _ => Err(not_found()),
             };
         }

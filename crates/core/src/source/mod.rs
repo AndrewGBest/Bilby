@@ -2,6 +2,7 @@
 //! winget, ...) means implementing [`Source`]; nothing else in the app changes.
 
 pub mod aur;
+pub mod forgejo;
 pub mod github;
 pub mod system;
 

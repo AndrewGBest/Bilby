@@ -525,7 +525,7 @@ impl App {
     fn card(&self, app: &AppSummary) -> AppCard {
         let id = app.id.to_string();
         let popularity = match (app.popularity, app.id.source) {
-            (Some(n), SourceKind::GitHub) => format!("★ {}", human_count(n)),
+            (Some(n), SourceKind::GitHub | SourceKind::Codeberg) => format!("★ {}", human_count(n)),
             (Some(n), SourceKind::Aur) => format!("{} votes", human_count(n)),
             _ => String::new(),
         };
@@ -850,7 +850,7 @@ impl App {
         store.set_versions(ModelRc::new(VecModel::from(
             details.versions.iter().map(|r| SharedString::from(&r.version)).collect::<Vec<_>>(),
         )));
-        store.set_is_package(details.summary.id.source != SourceKind::GitHub);
+        store.set_is_package(!details.summary.id.source.is_forge());
         // What the system's package manager has, when the store's own library has nothing.
         if store.get_installed_version().is_empty() {
             store.set_installed_version(details.summary.installed_version.clone().unwrap_or_default().into());

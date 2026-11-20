@@ -45,6 +45,17 @@ fn describe_source_error(source: SourceKind, error: &Error) -> String {
     }
 }
 
+/// Add a failed source to what the user is told, once per distinct problem: being
+/// offline fails every source the same way, and one line says it.
+fn report(errors: &mut Vec<String>, offline: &mut bool, source: SourceKind, error: &Error) {
+    let network = matches!(error, Error::Network(_));
+    let message = describe_source_error(source, error);
+    if !(network && *offline) && !errors.contains(&message) {
+        errors.push(message);
+    }
+    *offline |= network;
+}
+
 /// Where the store itself is published. Its own releases are found, filtered and
 /// installed exactly like any other app's.
 pub const STORE_REPOSITORY: &str = "AndrewGBest/bilby";
@@ -63,7 +74,11 @@ pub enum UpdateStatus {
 
 impl Catalog {
     pub fn new(platform: Platform, http: Arc<dyn Http>, index: Index) -> Catalog {
-        let sources: Vec<Arc<dyn Source>> = vec![Arc::new(GitHub::new(http.clone())), Arc::new(Aur::new(http.clone()))];
+        let sources: Vec<Arc<dyn Source>> = vec![
+            Arc::new(GitHub::new(http.clone())),
+            Arc::new(crate::source::forgejo::Forgejo::codeberg(http.clone())),
+            Arc::new(Aur::new(http.clone())),
+        ];
         Catalog { platform, sources, index, http, check_limit: 8, include_prereleases: false }
     }
 
@@ -234,7 +249,7 @@ impl Catalog {
         // "Not found" in a person's terms, not as the URL that was asked for.
         let named = |e: Error| match e {
             Error::NotFound(_) => {
-                let what = if id.source == SourceKind::GitHub { "project" } else { "package" };
+                let what = if id.source.is_forge() { "project" } else { "package" };
                 Error::NotFound(format!("{} has no {what} called “{}”.", id.source.label(), id.key))
             }
             other => other,
@@ -297,11 +312,12 @@ impl Catalog {
             return outcome;
         }
         let mut per_source: Vec<Vec<AppSummary>> = Vec::new();
+        let mut offline = false;
         for source in self.sources.iter().filter(|s| s.available_on(&self.platform)) {
             let hits = match source.search(query, self.check_limit) {
                 Ok(hits) => hits,
                 Err(e) => {
-                    outcome.errors.push(describe_source_error(source.kind(), &e));
+                    report(&mut outcome.errors, &mut offline, source.kind(), &e);
                     continue;
                 }
             };
@@ -334,7 +350,7 @@ impl Catalog {
                 }
             }
             if let Some(e) = first_error {
-                outcome.errors.push(describe_source_error(source.kind(), &e));
+                report(&mut outcome.errors, &mut offline, source.kind(), &e);
             }
             per_source.push(kept);
         }

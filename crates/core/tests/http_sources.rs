@@ -513,3 +513,53 @@ fn garbage_from_the_server_is_an_error_not_a_crash() {
     assert!(matches!(github(&server).releases("a/c"), Err(Error::Parse(_))));
     assert!(matches!(aur(&server).summary("x"), Err(Error::Parse(_))));
 }
+
+// ---- Codeberg (Forgejo API) ----
+
+const FORGEJO_SEARCH: &str = r#"{"ok":true,"data":[
+  {"id":1,"name":"notes","full_name":"fern/notes","owner":{"id":7,"login":"fern","avatar_url":"x"},
+   "description":"Plain notes","html_url":"https://codeberg.org/fern/notes","stars_count":321,"fork":false,"archived":false,"unknown_field":[1,2]},
+  {"id":2,"name":"notes-fork","full_name":"other/notes-fork","owner":{"login":"other"},
+   "description":"","html_url":"https://codeberg.org/other/notes-fork","stars_count":2,"fork":true,"archived":false},
+  {"id":3,"name":"old-notes","full_name":"fern/old-notes","owner":{"login":"fern"},
+   "html_url":"https://codeberg.org/fern/old-notes","archived":true}]}"#;
+
+const FORGEJO_RELEASES: &str = r#"[
+  {"id":9,"tag_name":"v2.0.0-draft","draft":true,"prerelease":false,"published_at":null,"body":null,"assets":[]},
+  {"id":8,"tag_name":"v1.6.0","name":"1.6","draft":false,"prerelease":false,"published_at":"2026-10-19T08:00:00Z",
+   "body":"Faster sync","assets":[
+     {"id":1,"name":"notes_1.6.0_amd64.deb","size":1048576,"download_count":4,"browser_download_url":"https://codeberg.org/fern/notes/releases/download/v1.6.0/notes_1.6.0_amd64.deb"},
+     {"id":2,"name":"notes-1.6.0-arm64-v8a.apk","size":2097152,"browser_download_url":"https://codeberg.org/fern/notes/releases/download/v1.6.0/notes-1.6.0-arm64-v8a.apk"}]}]"#;
+
+#[test]
+fn codeberg_search_and_releases_parse_the_documented_shape() {
+    use bilby_core::source::forgejo::Forgejo;
+    let server = Server::start(vec![
+        ("/forge/v1/repos/search?q=notes&limit=5&sort=stars&order=desc", Reply::json(FORGEJO_SEARCH)),
+        (
+            "/forge/v1/repos/fern/notes",
+            Reply::json(
+                r#"{"name":"notes","full_name":"fern/notes","owner":{"login":"fern"},"description":"Plain notes","html_url":"https://codeberg.org/fern/notes","stars_count":321}"#,
+            ),
+        ),
+        ("/forge/v1/repos/fern/notes/releases?limit=6", Reply::json(FORGEJO_RELEASES)),
+    ]);
+    let source = Forgejo::with_api(Arc::new(client(&server, Some("github-token"))), &server.url("/forge/v1"));
+
+    let hits = source.search("notes", 5).unwrap();
+    assert_eq!(hits.len(), 1, "forks and archived repositories are left out");
+    assert_eq!(hits[0].id, AppId::new(SourceKind::Codeberg, "fern/notes"));
+    assert_eq!(hits[0].popularity, Some(321));
+    assert_eq!(source.summary("fern/notes").unwrap().author, "fern");
+
+    let releases = source.releases("fern/notes").unwrap();
+    assert_eq!(releases.len(), 1, "drafts are skipped");
+    assert_eq!((releases[0].version.as_str(), releases[0].published.as_str()), ("v1.6.0", "2026-10-19"));
+    assert_eq!(releases[0].assets.len(), 2);
+    assert_eq!(releases[0].assets[0].digest, None, "Forgejo publishes no checksum with a file");
+
+    assert!(matches!(source.releases("../x"), Err(Error::NotFound(_))), "keys are checked before they reach a URL");
+    for (path, headers) in server.requests() {
+        assert!(!headers.contains_key("authorization"), "the GitHub token must not go to Codeberg ({path})");
+    }
+}
