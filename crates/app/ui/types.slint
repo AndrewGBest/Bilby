@@ -74,6 +74,15 @@ export struct Fact {
     value: string,
 }
 
+// One update waiting for the operating system.
+export struct SystemUpdate {
+    name: string,
+    // "6.11.5 → 6.11.6", or just the new version when the old one is not known.
+    change: string,
+    // The package manager it comes through.
+    via: string,
+}
+
 export struct LibraryRow {
     card: AppCard,
     // "AppImage · x86_64  ·  installed 2026-11-19"
@@ -105,7 +114,8 @@ export global Store {
     in property <AppCard> spotlight;
     // Same content arranged for the TV grid: library and search results come first.
     in property <[Section]> tv-rows;
-    // 0 discover, 1 search, 2 library, 3 settings
+    // 0 discover, 1 search, 2 library, 3 settings, 4 this device (reached from the
+    // library and from settings; it has no navigation entry of its own)
     in-out property <int> page;
     in-out property <string> query;
     in property <bool> searching;
@@ -169,6 +179,28 @@ export global Store {
     // Apps marked to come back to; kept on this device like everything else.
     in property <[AppCard]> favourites;
 
+    // --- this device ------------------------------------------------------------
+    // "Ubuntu 24.04.1 LTS" and "Linux 6.8.0 · x86_64".
+    in property <string> system-name;
+    in property <string> system-tagline;
+    in property <[Fact]> system-facts;
+    // The store can check for and install this system's updates.
+    in property <bool> system-supported;
+    // Why it cannot, or what else the user should know. "" when there is nothing to say.
+    in property <string> system-note;
+    // The label of a button that opens the system's own update page, "" when none.
+    in property <string> system-handoff;
+    // 0 not checked, 1 checking, 2 up to date, 3 updates waiting, 4 installing, 5 could not check
+    in property <int> system-state;
+    // "Up to date", "6 updates available": the answer at a glance.
+    in property <string> system-headline;
+    in property <string> system-detail;
+    in property <[SystemUpdate]> system-updates;
+    // Something already installed needs a restart to take effect.
+    in property <bool> system-restart;
+    // What the updater printed the last time it ran.
+    in property <string> system-log;
+
     // --- settings ---------------------------------------------------------------
     in property <int> theme-mode;
     in property <bool> include-prereleases;
@@ -218,4 +250,7 @@ export global Store {
     callback dismiss-toast();
     callback dismiss-welcome();
     callback view-store-update();
+    callback system-check();
+    callback system-update();
+    callback system-handoff-open();
 }

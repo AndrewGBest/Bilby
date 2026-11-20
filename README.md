@@ -43,6 +43,9 @@ A source only appears on devices it applies to. A Windows user never sees the AU
 - Star ratings and written reviews where they exist, from the service the GNOME and
   KDE stores use. The number of ratings doubles as a sign of how widely an app is used.
   [What this sends, and what it does not](docs/DESIGN.md#flathub-logos-and-ratings).
+- Updates for the system itself on Linux (pacman, apt, dnf, Flatpak), from a card at
+  the top of the Library, plus a page with everything about the device.
+  [How, and what it will not do](docs/DESIGN.md#the-operating-systems-own-updates-osrs).
 - Every sign of use a source offers, each labelled with what it counts: downloads,
   stars, installs, votes, a verified developer. Apps with none are not marked down.
   [Which sources give what](docs/DESIGN.md#signs-of-how-much-an-app-is-used).
@@ -86,7 +89,7 @@ ever been run on Linux.
 
 | | State |
 |---|---|
-| Linux | Builds, runs, all 215 automated tests pass |
+| Linux | Builds, runs, all 226 automated tests pass |
 | Windows, macOS | Builds and passes the tests on GitHub's machines. Nobody has seen the window on either yet |
 | Android (phone, tablet, TV) | The engine compiles. There is no installable package and APKs cannot be installed yet |
 | iOS | Can only ever browse, not install: see [the design notes](docs/DESIGN.md#ios) |

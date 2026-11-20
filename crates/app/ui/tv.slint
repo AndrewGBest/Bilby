@@ -126,6 +126,11 @@ export component TvShell inherits Rectangle {
     // whether the list of every file is open.
     property <int> act: 0;
     property <bool> files: false;
+    // The top bar's "This TV" chip has the focus, and which button does on its page.
+    property <bool> chip: false;
+    property <int> sys-act: 0;
+    property <bool> on-system: Store.page == 4 && !Store.details-open;
+    property <bool> sys-can-update: Store.system-state == 3;
     property <bool> busy: Store.install-state == 1;
     property <bool> is-update: Store.installed-version != "" && Store.installed-version != "installed" && Store.app.version != "" && Store.installed-version != Store.app.version;
     property <bool> open-instead: Store.can-open && !is-update && !busy;
@@ -166,11 +171,46 @@ export component TvShell inherits Rectangle {
                 scope.focus();
                 return accept;
             }
+            // Right from an empty search box moves on to the "This TV" chip.
+            if (search.has-focus && search.text == "" && event.text == Key.RightArrow) {
+                root.chip = true;
+                scope.focus();
+                return accept;
+            }
             reject
         }
         key-pressed(event) => {
             if (search.has-focus) {
                 return reject;
+            }
+            if (root.chip) {
+                if (event.text == Key.Return || event.text == " ") {
+                    root.chip = false;
+                    root.sys-act = 0;
+                    Store.page = 4;
+                } else if (event.text == Key.LeftArrow) {
+                    root.chip = false;
+                    search.focus();
+                } else {
+                    root.chip = false;
+                }
+                return accept;
+            }
+            if (root.on-system) {
+                if (event.text == Key.Escape || event.text == Key.Back || event.text == Key.Backspace) {
+                    Store.page = 0;
+                } else if (event.text == Key.RightArrow) {
+                    root.sys-act = min(root.sys-can-update ? 1 : 0, root.sys-act + 1);
+                } else if (event.text == Key.LeftArrow) {
+                    root.sys-act = max(0, root.sys-act - 1);
+                } else if ((event.text == Key.Return || event.text == " ") && Store.system-supported) {
+                    if (root.sys-can-update && root.sys-act == 0) {
+                        Store.system-update();
+                    } else {
+                        Store.system-check();
+                    }
+                }
+                return accept;
             }
             if (Store.details-open) {
                 if (event.text == Key.Escape || event.text == Key.Back || event.text == Key.Backspace) {
@@ -268,7 +308,7 @@ export component TvShell inherits Rectangle {
                 }
                 if search.text == "" : Text {
                     x: 30 * u;
-                    text: search.has-focus ? "Type, then press OK" : "Search  ·  press Up";
+                    text: search.has-focus ? "Type, or Right for this TV" : "Search  ·  press Up";
                     color: Theme.text-dim;
                     font-size: 12 * u;
                     vertical-alignment: center;
@@ -290,11 +330,108 @@ export component TvShell inherits Rectangle {
                     }
                 }
             }
-            Text { text: Store.device-name; color: Theme.ok; font-size: 12 * u; font-weight: 600; vertical-alignment: center; }
+            // The device, and its updates: reached with Up, then Right.
+            Rectangle {
+                width: chip-text.preferred-width + 20 * u;
+                border-radius: 14 * u;
+                background: root.chip ? Theme.surface-2 : transparent;
+                border-width: root.chip ? 2 * u : 0;
+                border-color: white;
+                accessible-role: button;
+                accessible-label: chip-text.text;
+                chip-text := Text {
+                    width: parent.width;
+                    height: parent.height;
+                    text: Store.device-name + (Store.system-state == 3 ? "  ·  " + Store.system-headline : "");
+                    color: Store.system-state == 3 ? Theme.warn : Theme.ok;
+                    font-size: 12 * u;
+                    font-weight: 600;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        // ---- this TV: what it runs and whether it is up to date ----
+        if root.on-system : Rectangle {
+            VerticalLayout {
+                x: margin;
+                y: 70 * u;
+                width: 400 * u;
+                spacing: 12 * u;
+                alignment: start;
+                Text { text: Store.system-name; color: Theme.text; font-size: 30 * u; font-weight: 800; wrap: word-wrap; }
+                Text { text: Store.system-tagline; color: Theme.text-dim; font-size: 12 * u; overflow: elide; }
+                if Store.system-supported : Text {
+                    text: Store.system-headline;
+                    color: Store.system-state == 2 && !Store.system-restart ? Theme.ok : Store.system-state == 5 ? Theme.bad : Store.system-state == 3 || Store.system-restart ? Theme.warn : Theme.text;
+                    font-size: 20 * u;
+                    font-weight: 700;
+                    wrap: word-wrap;
+                }
+                if Store.system-detail != "" : Text { text: Store.system-detail; color: Theme.text-dim; font-size: 12 * u; wrap: word-wrap; }
+                if Store.system-restart : Text { text: "Restart this TV to finish updating."; color: Theme.warn; font-size: 12 * u; wrap: word-wrap; }
+                if Store.system-note != "" : Text { text: Store.system-note; color: Theme.text; font-size: 12 * u; wrap: word-wrap; }
+                if Store.system-state == 4 : Text {
+                    text: "You may be asked for your password. Keep the TV on until this finishes.";
+                    color: Theme.text-dim;
+                    font-size: 12 * u;
+                    wrap: word-wrap;
+                }
+                if Store.system-supported && Store.system-state != 1 && Store.system-state != 4 : HorizontalLayout {
+                    spacing: 12 * u;
+                    alignment: start;
+                    padding-top: 6 * u;
+                    if root.sys-can-update : TvButton {
+                        u: root.u;
+                        text: "Update now";
+                        primary: true;
+                        focused: root.sys-act == 0;
+                        clicked => { Store.system-update(); }
+                    }
+                    TvButton {
+                        u: root.u;
+                        text: "Check again";
+                        primary: !root.sys-can-update;
+                        focused: root.sys-act == (root.sys-can-update ? 1 : 0);
+                        clicked => { Store.system-check(); }
+                    }
+                }
+                if Store.system-updates.length > 0 : VerticalLayout {
+                    spacing: 3 * u;
+                    padding-top: 8 * u;
+                    Text { text: "Waiting to be installed"; color: Theme.text; font-size: 13 * u; font-weight: 700; }
+                    for update[i] in Store.system-updates : Text {
+                        visible: i < 6;
+                        height: i < 6 ? self.preferred-height : 0;
+                        text: update.name + "   " + update.change;
+                        color: Theme.text-dim;
+                        font-size: 12 * u;
+                        overflow: elide;
+                    }
+                    if Store.system-updates.length > 6 : Text { text: "and " + (Store.system-updates.length - 6) + " more"; color: Theme.text-dim; font-size: 12 * u; }
+                }
+            }
+            VerticalLayout {
+                x: margin + 432 * u;
+                y: 70 * u;
+                width: parent.width - 2 * margin - 432 * u;
+                spacing: 7 * u;
+                alignment: start;
+                Text { text: "Information"; color: Theme.text; font-size: 14 * u; font-weight: 700; }
+                for fact in Store.system-facts : HorizontalLayout {
+                    spacing: 12 * u;
+                    accessible-role: text;
+                    accessible-label: fact.name + ": " + fact.value;
+                    Text { width: 130 * u; text: fact.name; color: Theme.text-dim; font-size: 12 * u; }
+                    Text { horizontal-stretch: 1; text: fact.value; color: Theme.text; font-size: 12 * u; wrap: word-wrap; }
+                }
+                Text { text: "Back returns to the apps."; color: Theme.text-dim; font-size: 11 * u; }
+            }
         }
 
         // ---- home: the focused app in large type, rows of apps below ----
-        if !Store.details-open : Rectangle {
+        if !Store.details-open && !root.on-system : Rectangle {
             VerticalLayout {
                 x: margin;
                 y: 74 * u;

@@ -8,6 +8,7 @@
 //! * [`catalog`]  – glue: browse / search / details, filtered to this machine
 //! * [`icons`]    – app pictures, fetched from the source and cached
 //! * [`install`]  – what installing a given file means on this machine
+//! * [`os`]       – the operating system: what it is, and its own updates
 //! * [`state`]    – settings, library and history, stored locally
 //! * [`version`]  – is this release newer than the installed one?
 //! * [`demo`]     – fictional offline catalog for demos and tests
@@ -23,6 +24,7 @@ pub mod icons;
 pub mod index;
 pub mod install;
 pub mod model;
+pub mod os;
 pub mod platform;
 pub mod rank;
 pub mod ratings;

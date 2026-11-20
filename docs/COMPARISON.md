@@ -78,6 +78,7 @@ Status: **Yes** = in Bilby; **New** = added in the change that added this docume
 | Screenshots | GNOME Software, Discover | Yes: Flathub's for Flathub apps, and up to four found in a GitHub project's README |
 | Download counts, installs, verified developer | Komi (downloads), Flathub, Play, App Store | Yes, wherever the source publishes them; each is labelled with what it counts |
 | Rating breakdown by stars | Play, App Store, Flathub | Yes |
+| Updating the operating system | GNOME Software, Discover | Yes on pacman, apt and dnf systems, and for Flatpak. No distribution release upgrades, no updates applied during a restart |
 | Ratings | GNOME Software, Discover | Yes, from the same service they use (ODRS), for Flathub apps and distribution packages. One file a day; the service never learns which apps are viewed |
 | Written reviews | GNOME Software, Discover | Yes, read-only, for the apps that have them. Opening such an app's page tells the ratings service which app it was; no user id is sent. Writing reviews is not there |
 | Developer profile, issues and pull requests, security advisories | Komi | **By design**: the project page is one click away and does it better |

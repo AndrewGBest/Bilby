@@ -2,7 +2,7 @@
 // install button on the best option. Built for touch.
 import { Theme } from "theme.slint";
 import { Store } from "types.slint";
-import { AppRow, Busy, ChoiceChip, EmptyState, SearchField, DetailsBody, LibraryBody, SettingsBody, Toast, UpdatesBanner, Welcome } from "components.slint";
+import { AppRow, Busy, ChoiceChip, EmptyState, SearchField, DetailsBody, LibraryBody, SettingsBody, SystemBody, Toast, UpdatesBanner, Welcome } from "components.slint";
 
 component Tab inherits Rectangle {
     in property <string> label;
@@ -105,7 +105,7 @@ export component MobileShell inherits Rectangle {
                 spacing: 12px;
                 HorizontalLayout {
                     Text {
-                        text: Store.page == 0 ? "Discover" : Store.page == 1 ? "Search" : Store.page == 2 ? "Library" : "Settings";
+                        text: Store.page == 0 ? "Discover" : Store.page == 1 ? "Search" : Store.page == 2 ? "Library" : Store.page == 4 ? "This device" : "Settings";
                         color: Theme.text;
                         font-size: 26px;
                         font-weight: 700;
@@ -272,6 +272,10 @@ export component MobileShell inherits Rectangle {
                     visible: !Store.details-open && Store.page == 3;
                     SettingsBody { compact: true; }
                 }
+                Rectangle {
+                    visible: !Store.details-open && Store.page == 4;
+                    SystemBody { compact: true; }
+                }
             }
 
             // ---- bottom navigation ----
@@ -296,8 +300,8 @@ export component MobileShell inherits Rectangle {
                     Tab {
                         label: "Library";
                         icon: @image-url("icons/library.svg");
-                        badge: Store.updates-count;
-                        active: Store.page == 2;
+                        badge: Store.updates-count + (Store.system-state == 3 ? 1 : 0);
+                        active: Store.page == 2 || Store.page == 4;
                         clicked => { Store.page = 2; }
                     }
                     Tab {

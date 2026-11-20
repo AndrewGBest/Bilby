@@ -31,7 +31,7 @@ OPTIONS:
     --demo                     Built-in fictional catalog, no network
     --open <id or link>        Start on an app's page (github:owner/repo, aur:package, URL)
     --search <words>           Start with a search
-    --page <name>              Start on discover, search, library or settings
+    --page <name>              Start on discover, search, library, settings or system
     --theme <system|light|dark>  Override the saved appearance for this run
     --size <WxH>               Initial window size
     --state <file>             Use this file for settings and library instead of the default
@@ -77,6 +77,9 @@ pub struct Options {
     /// How another program is started with arguments (Longboard on an address,
     /// Flatpak to run or remove an app): the program and what to pass it.
     pub runner: Option<Runner>,
+    /// The machine whose system details and updates are shown. Defaults to this
+    /// computer; the demo and previews of other devices get a made-up one.
+    pub host: Option<Arc<dyn bilby_core::os::Host>>,
     pub catalog_factory: Option<CatalogFactory>,
     /// The app id the store looks at for its own updates. Defaults to its GitHub
     /// repository; the demo catalog has no such project, so tests name a stand-in.
@@ -121,7 +124,12 @@ impl Options {
                         "search" => 1,
                         "library" => 2,
                         "settings" => 3,
-                        other => return Err(format!("unknown page \"{other}\" (discover, search, library, settings)")),
+                        "system" => 4,
+                        other => {
+                            return Err(format!(
+                                "unknown page \"{other}\" (discover, search, library, settings, system)"
+                            ))
+                        }
                     })
                 }
                 "--theme" => {
@@ -484,6 +492,10 @@ pub struct App {
     /// Icon addresses the sources gave, by app id.
     icon_urls: Mutex<HashMap<String, String>>,
     catalog_factory: CatalogFactory,
+    /// The machine itself, what it is, and what the last look for updates found.
+    host: Arc<dyn bilby_core::os::Host>,
+    system: bilby_core::os::Report,
+    system_check: Mutex<Option<bilby_core::os::Check>>,
 }
 
 impl App {
@@ -900,6 +912,121 @@ impl App {
             Err(shared) => shared,
         };
         *self.catalog.write().unwrap() = fresh;
+    }
+
+    // ---- this device ----
+
+    /// Put the system's details and the last look for updates on screen. `state` is
+    /// what is going on right now: 0 for "as last found", 1 checking, 4 installing.
+    fn show_system(&self, ui: &AppWindow, state: i32, log: &str) {
+        let store = ui.global::<Store>();
+        let report = &self.system;
+        store.set_system_name(report.name.as_str().into());
+        store.set_system_tagline(report.tagline.as_str().into());
+        store.set_system_facts(ModelRc::new(VecModel::from(
+            report
+                .facts
+                .iter()
+                .map(|f| Fact { name: f.name.into(), value: f.value.as_str().into() })
+                .collect::<Vec<_>>(),
+        )));
+        store.set_system_supported(!report.managers.is_empty());
+        store.set_system_note(report.note.as_str().into());
+        store.set_system_handoff(report.handoff.as_ref().map(|h| h.label).unwrap_or_default().into());
+        if !log.is_empty() {
+            store.set_system_log(log.into());
+        }
+        let check = self.system_check.lock().unwrap().clone();
+        let pending = check.as_ref().map(|c| c.pending.clone()).unwrap_or_default();
+        let rows: Vec<SystemUpdate> = pending
+            .iter()
+            .map(|p| SystemUpdate {
+                name: p.name.as_str().into(),
+                change: if p.from.is_empty() { p.to.clone() } else { format!("{} → {}", p.from, p.to) }.into(),
+                via: p.manager.label().into(),
+            })
+            .collect();
+        store.set_system_updates(ModelRc::new(VecModel::from(rows)));
+        store.set_system_restart(check.as_ref().is_some_and(|c| c.restart_needed));
+        let problems = check.as_ref().map(|c| c.problems.join(" ")).unwrap_or_default();
+        let (state, headline) = match (state, &check) {
+            (1, _) => (1, "Checking for updates…".to_string()),
+            (4, _) => (4, "Installing updates…".to_string()),
+            (_, None) => (0, "Not checked yet".to_string()),
+            (_, Some(_)) if pending.len() == 1 => (3, "1 update available".to_string()),
+            (_, Some(_)) if !pending.is_empty() => (3, format!("{} updates available", pending.len())),
+            (_, Some(_)) if !problems.is_empty() => (5, "Could not check for updates".to_string()),
+            (_, Some(c)) if c.restart_needed => (2, "Restart to finish updating".to_string()),
+            (_, Some(_)) => (2, "Up to date".to_string()),
+        };
+        // Where a check relies on a list fetched earlier, say how old that list is.
+        let age =
+            check.as_ref().and_then(|c| c.lists_fetched).map(|then| match now_unix().saturating_sub(then) / 3600 {
+                0 => "The list of updates was fetched within the last hour.".to_string(),
+                hours if hours < 48 => format!("The list of updates was fetched {hours} hours ago."),
+                hours => format!("The list of updates was fetched {} days ago, so there may be more.", hours / 24),
+            });
+        let detail =
+            [problems, age.unwrap_or_default()].into_iter().filter(|t| !t.is_empty()).collect::<Vec<_>>().join(" ");
+        store.set_system_state(state);
+        store.set_system_headline(headline.into());
+        store.set_system_detail(detail.into());
+    }
+
+    /// Look for system updates. A quiet check (`asked` false) never asks for a
+    /// password. One the user asked for first fetches a fresh list of updates where the
+    /// one on disk is more than a day old (apt), which does.
+    pub fn check_system(self: &Arc<Self>, ui: &AppWindow, asked: bool) {
+        if self.system.managers.is_empty() || matches!(ui.global::<Store>().get_system_state(), 1 | 4) {
+            return;
+        }
+        self.show_system(ui, 1, "");
+        let fetched = self.system_check.lock().unwrap().as_ref().and_then(|c| c.lists_fetched);
+        let stale = asked && fetched.is_some_and(|then| now_unix().saturating_sub(then) > 86_400);
+        self.job(
+            move |app| {
+                let refreshed = match stale {
+                    true => bilby_core::os::refresh_lists(app.host.as_ref(), &app.system, &mut |_| {}),
+                    false => Ok(()),
+                };
+                (refreshed, bilby_core::os::check(app.host.as_ref(), &app.system))
+            },
+            |app, ui, (refreshed, check)| {
+                *app.system_check.lock().unwrap() = Some(check);
+                app.show_system(ui, 0, "");
+                if let Err(e) = refreshed {
+                    app.toast(ui, &e.to_string(), true);
+                }
+            },
+        );
+    }
+
+    /// Install every waiting system update, then look again.
+    pub fn update_system(self: &Arc<Self>, ui: &AppWindow) {
+        if self.system.managers.is_empty() || matches!(ui.global::<Store>().get_system_state(), 1 | 4) {
+            return;
+        }
+        self.show_system(ui, 4, "");
+        self.job(
+            |app| {
+                let mut log = Vec::new();
+                let result =
+                    bilby_core::os::update(app.host.as_ref(), &app.system, &mut |line| log.push(line.to_string()));
+                // Long output is cut from the top: the end is where a failure explains itself.
+                let from = log.len().saturating_sub(300);
+                (result, log[from..].join("\n"), bilby_core::os::check(app.host.as_ref(), &app.system))
+            },
+            |app, ui, (result, log, check)| {
+                let restart = check.restart_needed;
+                *app.system_check.lock().unwrap() = Some(check);
+                app.show_system(ui, 0, if log.is_empty() { " " } else { &log });
+                match result {
+                    Ok(()) if restart => app.toast(ui, "Updates installed. Restart this device to finish.", false),
+                    Ok(()) => app.toast(ui, "The system is up to date.", false),
+                    Err(e) => app.toast(ui, &e.to_string(), true),
+                }
+            },
+        );
     }
 
     /// Fetch star ratings in the background (at most once a day), unless turned off.
@@ -1806,6 +1933,19 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         facts.into_iter().map(|(name, value)| Fact { name: name.into(), value: value.into() }).collect::<Vec<_>>(),
     )));
 
+    // A demo or a preview of another device must never look at, let alone change, the
+    // real system: it gets a made-up one.
+    let pretend = options.demo || options.platform.is_some();
+    let host: Arc<dyn bilby_core::os::Host> = match &options.host {
+        Some(host) => host.clone(),
+        None if pretend => Arc::new(bilby_core::os::demo_host(&platform)),
+        None => Arc::new(bilby_core::os::RealHost),
+    };
+    let mut system = bilby_core::os::describe(host.as_ref(), &platform);
+    if pretend && !options.demo && options.host.is_none() {
+        system.note = format!("This is a preview of another device, so these details are made up. {}", system.note);
+    }
+
     let app = Arc::new(App {
         ui: ui.as_weak(),
         catalog: RwLock::new(catalog),
@@ -1835,7 +1975,11 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         runner: options.runner.clone().unwrap_or_else(|| Arc::new(install::launch_with)),
         icon_urls: Mutex::new(HashMap::new()),
         catalog_factory,
+        host,
+        system,
+        system_check: Mutex::new(None),
     });
+    app.show_system(&ui, 0, "");
 
     // The TV interface is designed dark; elsewhere the saved preference applies.
     let theme = options.theme.clone().unwrap_or_else(|| app.state().settings.theme);
@@ -1966,6 +2110,15 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
             app.toast(ui, &e.to_string(), true);
         }
     });
+    on!(on_system_check, |app, ui| { app.check_system(ui, true) });
+    on!(on_system_update, |app, ui| { app.update_system(ui) });
+    on!(on_system_handoff_open, |app, ui| {
+        if let Some(handoff) = &app.system.handoff {
+            if let Err(e) = (app.opener)(std::path::Path::new(handoff.target)) {
+                app.toast(ui, &e.to_string(), true);
+            }
+        }
+    });
     on!(on_dismiss_welcome, |app, ui| {
         app.update_state(ui, |state| state.settings.welcomed = true);
         app.refresh_settings(ui);
@@ -2009,6 +2162,7 @@ pub fn run(options: Options) -> Result<(), Box<dyn std::error::Error>> {
     if !app.state().settings.skip_update_check_on_start {
         app.check_updates(&ui, false);
         app.check_store_update(&ui);
+        app.check_system(&ui, false);
     }
 
     if let Some(path) = options.screenshot.clone() {
@@ -2137,6 +2291,10 @@ fn describe(ui: &AppWindow) -> String {
         format!("checking_updates={}", store.get_checking_updates()),
         format!("updating={}", store.get_updating_id()),
         format!("store_update={}", store.get_store_update()),
+        format!("system={}", store.get_system_name()),
+        format!("system_state={}", store.get_system_state()),
+        format!("system_headline={}", store.get_system_headline()),
+        format!("system_updates={}", store.get_system_updates().row_count()),
         format!("toast={}", store.get_toast()),
     ]
     .join("\n")

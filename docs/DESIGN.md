@@ -599,6 +599,59 @@ contest and Arch's pkgstats (both would mean another network request per search,
 services not built for it), and any count of how many people use Bilby itself, which
 would need telemetry and is ruled out.
 
+### The operating system's own updates (`os.rs`)
+
+KDE Discover and GNOME Software update the system as well as apps, and so does Bilby,
+on the systems where it can do so safely.
+
+**Where it lives.** Not in the navigation. The Library, which is already the place for
+"what needs updating", leads with a card for the system: its name, one line of status
+and an Update button. The card opens a page, "This device", with the status in large
+type, what is waiting, and a table of everything about the machine (system and
+version, kernel, desktop, processor, memory, storage). The same page is reachable from
+Settings on every system, including those Bilby cannot update. On a TV it is the chip
+in the top bar: Up, then Right.
+
+**How.** Through the system's own package manager, run the way a person would in a
+terminal, not through PackageKit (which Discover uses, but which Arch does not ship
+and which would be one more thing to depend on).
+
+| System | Looking for updates | Installing them |
+| --- | --- | --- |
+| pacman (Arch, CachyOS, ...) | `checkupdates` when installed, else `pacman -Qu` | `pkexec pacman -Syu --noconfirm` |
+| apt (Debian, Ubuntu, ...) | `apt-get -s upgrade` (a dry run) | `pkexec`: `apt-get update`, then `apt-get -y upgrade` keeping changed configuration files |
+| dnf (Fedora, ...) | `dnf check-update` | `pkexec dnf -y upgrade --refresh` |
+| Flatpak | `flatpak remote-ls --updates` | `flatpak update -y` |
+| Image-based (Fedora Atomic, SteamOS) | Flatpak only | Flatpak only; the page says to use the system's own updater |
+| Windows, macOS | not checked | a button opens Windows Update or Software Update |
+| Android, iOS | not checked | the page says where updates are |
+
+Rules it keeps:
+
+- **Looking never asks for a password and never changes anything.** In particular it
+  never runs `pacman -Sy`: refreshing pacman's lists without upgrading is the "partial
+  upgrade" Arch does not support
+  ([ArchWiki](https://wiki.archlinux.org/title/System_maintenance)). `checkupdates`
+  looks in a private copy instead. Without it, the answer is only as fresh as the last
+  upgrade, and the page says how old the list is.
+- **Installing asks through the desktop's own password prompt** (`pkexec`). Bilby never
+  sees the password. A closed prompt is reported as "nothing was changed".
+- **apt's lists can be stale.** Their age is shown; pressing "Check again" when they
+  are more than a day old fetches fresh ones, which asks for the password.
+- **A restart is called for** when Debian's or Ubuntu's own note says so, or when the
+  running kernel's files are gone because a newer kernel replaced them.
+- **The demo and `--as` previews use a made-up machine** and cannot touch the real one.
+
+What it does not do: move to a new release of a distribution (Ubuntu 24.04 to 24.10,
+Fedora 41 to 42), which Discover offers on some systems; apply updates during a
+restart, as Fedora's Discover does; zypper, apk and others; and it does not say
+whether a newer release of the distribution exists, only what the system itself
+reports (its version, and "supported until" where the system states it).
+
+Checked only against made-up machines: none of these commands has been run by Bilby
+on a real system yet. The command lines and exit codes (`checkupdates` 2 and `dnf
+check-update` 100) are from memory of those tools' manuals, not re-read for this work.
+
 ### TV
 
 The TV interface follows Android TV's published guidance, with tvOS's where they agree:

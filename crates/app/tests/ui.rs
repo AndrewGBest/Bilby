@@ -1492,3 +1492,77 @@ fn written_reviews_appear_only_for_apps_that_have_them() {
     s.app.open(&s.ui, "flathub:io.quillpad.Quillpad");
     assert_eq!(s.store().get_reviews().row_count(), 0);
 }
+
+// ---- the operating system's own updates ----
+
+#[test]
+fn the_system_s_updates_are_in_the_library_and_on_their_own_page() {
+    let s = start("linux-x64-arch", Shell::Desktop);
+    assert!(s.store().get_system_supported());
+    assert_eq!(s.store().get_system_name(), "Arch Linux");
+    assert_eq!((s.store().get_system_state(), s.store().get_system_headline().as_str()), (0, "Not checked yet"));
+
+    s.app.check_system(&s.ui, false);
+    assert_eq!((s.store().get_system_state(), s.store().get_system_headline().as_str()), (3, "6 updates available"));
+    let first = s.store().get_system_updates().row_data(0).unwrap();
+    assert_eq!((first.name.as_str(), first.change.as_str()), ("linux", "6.11.5.arch1-1 → 6.11.6.arch1-1"));
+
+    // The library leads with the system, even with no apps in it yet.
+    s.store().set_page(2);
+    assert!(s.has("Update system") && s.has("6 updates available"));
+    s.click("System details");
+    assert_eq!(s.store().get_page(), 4);
+    assert!(s.has("linux: 6.11.5.arch1-1 → 6.11.6.arch1-1"), "what is waiting is listed");
+    assert!(s.has("Version: Rolling release: always the newest") && s.has("Memory: 16 GB"));
+
+    // Installing them: the made-up machine has none left afterwards.
+    s.click("Update now");
+    assert_eq!((s.store().get_system_state(), s.store().get_system_headline().as_str()), (2, "Up to date"));
+    assert_eq!(s.store().get_system_updates().row_count(), 0);
+    assert_eq!(s.store().get_toast(), "The system is up to date.");
+    assert!(s.store().get_system_log().contains("Updating through pacman"));
+    assert!(!s.has("Update now"), "nothing left to press");
+    s.store().set_page(2);
+    assert!(!s.has("Update system") && s.has("Up to date"));
+}
+
+#[test]
+fn systems_that_update_themselves_get_a_way_to_their_own_updater_instead() {
+    let s = start("windows-x64", Shell::Desktop);
+    assert!(!s.store().get_system_supported());
+    s.app.check_system(&s.ui, false);
+    assert_eq!(s.store().get_system_state(), 0, "nothing is checked where nothing can be");
+    s.store().set_page(2);
+    assert!(!s.has("System details"), "no system card in the library");
+    // Still reachable from Settings, with the details and a button to Windows Update.
+    s.store().set_page(3);
+    s.click("System details and updates");
+    assert_eq!(s.store().get_page(), 4);
+    assert!(s.has("Version: 10.0.26100.2314") && !s.has("Check again"));
+    s.click("Open Windows Update");
+    assert_eq!(s.opened.lock().unwrap().last().unwrap().to_str(), Some("ms-settings:windowsupdate"));
+
+    let phone = start("android-arm64", Shell::Mobile);
+    assert!(!phone.store().get_system_supported() && phone.store().get_system_handoff().is_empty());
+    assert!(phone.store().get_system_note().contains("Settings"));
+}
+
+#[test]
+fn a_tv_remote_reaches_the_system_page_and_updates_from_it() {
+    let s = start("linux-tv", Shell::Tv);
+    s.app.check_system(&s.ui, false);
+    assert_eq!(s.store().get_system_state(), 3);
+    // Up to the search box, Right to the chip, OK.
+    s.press(Key::UpArrow);
+    s.press(Key::RightArrow);
+    s.press(Key::Return);
+    assert_eq!(s.store().get_page(), 4);
+    assert!(s.has("Update now") && s.has("Check again"));
+    // The first button is the update.
+    s.press(Key::Return);
+    assert_eq!(s.store().get_system_headline(), "Up to date");
+    assert!(!s.has("Update now"));
+    // Back returns to the apps.
+    s.press(Key::Escape);
+    assert_eq!(s.store().get_page(), 0);
+}
