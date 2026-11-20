@@ -1161,3 +1161,45 @@ fn an_app_page_says_what_the_project_is() {
     s.app.open(&s.ui, "apt:harbor");
     assert_eq!(s.store().get_about(), "");
 }
+
+#[test]
+fn an_app_can_be_installed_straight_from_a_list() {
+    let s = start("linux-x64-fedora", Shell::Desktop);
+    s.activate("Install Kestrel now");
+    assert!(s.store().get_details_open(), "its page opens so the install can be watched");
+    assert_eq!(s.store().get_app().id, "github:kestrel-sh/kestrel");
+    assert_eq!(s.store().get_install_state(), 2, "{}", s.store().get_install_message());
+    assert_eq!(s.saved().library[0].id, "github:kestrel-sh/kestrel");
+
+    // Once installed, the list offers nothing more to do for it.
+    s.store().set_details_open(false);
+    assert!(!s.has("Install Kestrel now"));
+    // Opening a page the ordinary way never installs anything by itself.
+    s.app.open(&s.ui, "github:lumen-labs/lumen");
+    assert_eq!(s.store().get_install_state(), 0);
+    assert_eq!(s.saved().library.len(), 1);
+}
+
+#[test]
+fn a_package_installed_with_a_command_is_shown_not_run() {
+    let s = start("linux-x64-arch", Shell::Desktop);
+    s.app.quick_install(&s.ui, "pacman:swiftkernel");
+    assert!(s.store().get_details_open());
+    assert_eq!(s.store().get_install_state(), 0, "the page shows the command; nothing starts by itself");
+    assert!(s.saved().library.is_empty());
+}
+
+#[test]
+fn an_app_page_shows_pictures_from_the_readme() {
+    let s = start("linux-x64-debian", Shell::Desktop);
+    s.app.open(&s.ui, "github:lumen-labs/lumen");
+    assert_eq!(s.store().get_screenshots().row_count(), 3, "the logo and the badge are not screenshots");
+    assert!(s.has("Picture 1 of Lumen"));
+    let first = s.store().get_screenshots().row_data(0).unwrap();
+    assert_eq!((first.size().width, first.size().height), (800, 500));
+    assert!(s.dirs.cache.join("screenshots").read_dir().unwrap().count() >= 3, "they are kept for next time");
+
+    // A package has no README, and the last app's pictures do not linger.
+    s.app.open(&s.ui, "apt:harbor");
+    assert_eq!(s.store().get_screenshots().row_count(), 0);
+}

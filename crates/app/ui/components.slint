@@ -315,10 +315,25 @@ export component AppTile inherits Rectangle {
         }
         HorizontalLayout {
             spacing: 6px;
-            alignment: start;
-            if app.has-update : Chip { text: "Update"; tone: Theme.accent; }
-            if app.installed && !app.has-update : Chip { text: "Installed"; tone: Theme.accent; }
-            if app.popularity != "" : Chip { text: app.popularity; }
+            VerticalLayout {
+                alignment: center;
+                HorizontalLayout {
+                    spacing: 6px;
+                    alignment: start;
+                    if app.installed && !app.has-update : Chip { text: "Installed"; tone: Theme.accent; }
+                    if app.popularity != "" : Chip { text: app.popularity; }
+                }
+            }
+            Rectangle { horizontal-stretch: 1; }
+            // As in any store: get it straight from the list.
+            if !app.installed || app.has-update : Button {
+                font-size: 12px;
+                min-width: 76px;
+                text: app.has-update ? "Update" : "Install";
+                primary: app.has-update;
+                accessible-label: (app.has-update ? "Update " : "Install ") + app.name + " now";
+                clicked => { Store.quick-install(app.id); }
+            }
         }
     }
 }
@@ -356,6 +371,17 @@ export component AppRow inherits Rectangle {
                 font-size: 11px;
                 font-weight: 600;
                 overflow: elide;
+            }
+        }
+        if !app.installed || app.has-update : VerticalLayout {
+            alignment: center;
+            Button {
+                font-size: 12px;
+                width: 72px;
+                text: app.has-update ? "Update" : "Install";
+                primary: app.has-update;
+                accessible-label: (app.has-update ? "Update " : "Install ") + app.name + " now";
+                clicked => { Store.quick-install(app.id); }
             }
         }
     }
@@ -1029,6 +1055,32 @@ export component DetailsBody inherits Rectangle {
                     wrap: word-wrap;
                 }
             }
+            // Pictures first, as in any store: they say more than the description.
+            if Store.screenshots.length > 0 : Flickable {
+                height: compact ? 180px : 240px;
+                content-width: shots.preferred-width;
+                shots := HorizontalLayout {
+                    spacing: 12px;
+                    alignment: start;
+                    for shot[i] in Store.screenshots : Rectangle {
+                        height: compact ? 180px : 240px;
+                        width: self.height * shot.width / max(1, shot.height);
+                        border-radius: 10px;
+                        clip: true;
+                        border-width: 1px;
+                        border-color: Theme.stroke;
+                        Image {
+                            source: shot;
+                            width: parent.width;
+                            height: parent.height;
+                            image-fit: cover;
+                            accessible-role: image;
+                            accessible-label: "Picture " + (i + 1) + " of " + Store.app.name;
+                        }
+                    }
+                }
+            }
+
             if root.has-option && root.best.note != "" : Text { text: root.best.note; color: Theme.warn; font-size: 12px; wrap: word-wrap; }
             // A package is installed with a command; that is the action, so it is shown.
             if root.has-option && Store.is-package && root.best.command != "" && !root.more : CommandBox { command: root.best.command; }

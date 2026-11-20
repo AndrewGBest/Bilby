@@ -105,6 +105,8 @@ export global Store {
     in property <string> notes;
     // The start of the project's README as plain text, "" when there is none.
     in property <string> about;
+    // Pictures of the app found in its README.
+    in property <[image]> screenshots;
     in property <string> warning;
     in property <string> homepage;
     // Set when nothing in the app's releases fits this machine.
@@ -172,6 +174,8 @@ export global Store {
     callback skip-update(string);
     callback toggle-favourite();
     callback launch();
+    // From a list: open the app's page and start installing what suits this device.
+    callback quick-install(string);
     // Save a file that was hidden because it does not suit this device.
     callback download-hidden(int);
     callback set-theme(int);

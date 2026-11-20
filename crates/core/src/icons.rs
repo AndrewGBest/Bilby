@@ -67,15 +67,20 @@ pub fn cached(dir: &Path, key: &str) -> Option<Option<PathBuf>> {
 /// Network trouble is an `Err` and is not remembered, so it is tried again next time.
 pub fn fetch(http: &dyn Http, dir: &Path, id: &AppId) -> Result<Option<PathBuf>> {
     let (Some(key), Some(url)) = (icon_key(id), icon_url(id)) else { return Ok(None) };
-    if let Some(known) = cached(dir, &key) {
+    fetch_picture(http, dir, &key, &url, 2 * 1024 * 1024)
+}
+
+/// Fetch any PNG or JPEG into `dir` under `key`, giving up past `max_bytes`.
+pub fn fetch_picture(http: &dyn Http, dir: &Path, key: &str, url: &str, max_bytes: u64) -> Result<Option<PathBuf>> {
+    if let Some(known) = cached(dir, key) {
         return Ok(known);
     }
     std::fs::create_dir_all(dir)?;
     let remember_missing = || std::fs::write(dir.join(format!("{key}.none")), b"").map_err(Error::from);
     let download = dir.join(format!("{key}.download"));
-    match http.download(&url, &download, &mut |done, _| done < 2 * 1024 * 1024) {
+    match http.download(url, &download, &mut |done, _| done < max_bytes) {
         Ok(_) => {}
-        // No such owner picture, or something far too large to be an avatar.
+        // No such picture, or something far too large to be one.
         Err(Error::NotFound(_)) | Err(Error::Cancelled) | Err(Error::Status { .. }) => {
             let _ = std::fs::remove_file(&download);
             remember_missing()?;

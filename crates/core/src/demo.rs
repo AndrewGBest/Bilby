@@ -543,6 +543,86 @@ fn matches(query: &str, haystacks: &[&str]) -> bool {
     q.split_whitespace().all(|word| haystacks.iter().any(|h| h.to_lowercase().contains(word)))
 }
 
+/// A PNG that looks like an app window, so the demo has something to show where a real
+/// project would have screenshots. `variant` changes the layout, `seed` the colour.
+fn mock_screenshot(seed: u32, variant: usize) -> Vec<u8> {
+    const W: usize = 800;
+    const H: usize = 500;
+    let hue = [(0x5b, 0x8d, 0xef), (0xe0, 0x6c, 0x9f), (0x3f, 0xb5, 0xa3), (0xe2, 0xa0, 0x3f), (0x9b, 0x7b, 0xe8)]
+        [seed as usize % 5];
+    let mut pixels = vec![0u8; W * H * 3];
+    let mut fill = |x0: usize, y0: usize, x1: usize, y1: usize, c: (u8, u8, u8)| {
+        for y in y0..y1.min(H) {
+            for x in x0..x1.min(W) {
+                let i = (y * W + x) * 3;
+                pixels[i..i + 3].copy_from_slice(&[c.0, c.1, c.2]);
+            }
+        }
+    };
+    fill(0, 0, W, H, (0x1b, 0x1e, 0x26));
+    fill(0, 0, W, 44, (0x25, 0x29, 0x33));
+    fill(16, 14, 136, 30, hue);
+    match variant % 3 {
+        1 => {
+            // A sidebar and a list.
+            fill(0, 44, 190, H, (0x21, 0x24, 0x2d));
+            for row in 0..6 {
+                fill(18, 70 + row * 40, 150, 86 + row * 40, if row == 1 { hue } else { (0x3a, 0x3f, 0x4c) });
+            }
+            for row in 0..7 {
+                fill(220, 74 + row * 56, 760, 114 + row * 56, (0x2a, 0x2e, 0x39));
+                fill(236, 88 + row * 56, 420 + (row * 53) % 200, 100 + row * 56, (0x58, 0x5f, 0x70));
+            }
+        }
+        2 => {
+            // A grid of cards.
+            for row in 0..2 {
+                for col in 0..3 {
+                    let (x, y) = (30 + col * 256, 74 + row * 206);
+                    fill(x, y, x + 228, y + 180, (0x2a, 0x2e, 0x39));
+                    fill(x, y, x + 228, y + 96, if (row + col) % 2 == 0 { hue } else { (0x3a, 0x3f, 0x4c) });
+                    fill(x + 14, y + 116, x + 150, y + 130, (0x58, 0x5f, 0x70));
+                }
+            }
+        }
+        _ => {
+            // A document.
+            fill(140, 74, 660, H, (0x23, 0x27, 0x30));
+            fill(180, 110, 480, 136, hue);
+            for line in 0..11 {
+                fill(180, 168 + line * 28, 620 - (line * 67) % 180, 180 + line * 28, (0x58, 0x5f, 0x70));
+            }
+        }
+    }
+    // PNG: signature, IHDR, one IDAT of zlib-compressed rows (each led by filter 0), IEND.
+    let mut raw = Vec::with_capacity((W * 3 + 1) * H);
+    for row in pixels.chunks(W * 3) {
+        raw.push(0);
+        raw.extend_from_slice(row);
+    }
+    let mut encoder = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::fast());
+    std::io::Write::write_all(&mut encoder, &raw).expect("writing to memory");
+    let data = encoder.finish().expect("writing to memory");
+    let mut png = vec![0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A];
+    let mut chunk = |kind: &[u8; 4], body: &[u8]| {
+        png.extend_from_slice(&(body.len() as u32).to_be_bytes());
+        let mut crc = flate2::Crc::new();
+        crc.update(kind);
+        crc.update(body);
+        png.extend_from_slice(kind);
+        png.extend_from_slice(body);
+        png.extend_from_slice(&crc.sum().to_be_bytes());
+    };
+    let mut header = Vec::new();
+    header.extend_from_slice(&(W as u32).to_be_bytes());
+    header.extend_from_slice(&(H as u32).to_be_bytes());
+    header.extend_from_slice(&[8, 2, 0, 0, 0]);
+    chunk(b"IHDR", &header);
+    chunk(b"IDAT", &data);
+    chunk(b"IEND", &[]);
+    png
+}
+
 /// Delay per tenth of a demo download, so progress is visible. Tests set it to 0.
 pub static DOWNLOAD_STEP_MS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(60);
 
@@ -579,7 +659,7 @@ impl Http for DemoHttp {
             let (owner, repo) = (parts.next(), parts.next());
             let app = all_apps().find(|a| Some(a.owner) == owner && Some(a.repo) == repo).ok_or_else(not_found)?;
             return Ok(format!(
-                "<p align=\"center\"><img src=\"logo.png\" width=\"120\"></p>\n\n# {name}\n\n[![build](https://example.invalid/badge.svg)](https://example.invalid)\n\n{summary}\n\n## Features\n\n- Starts in under a second\n- Works offline\n- Keyboard shortcuts for **everything**\n\n## Getting started\n\nInstall {name}, open it, and follow the short tour. See the [handbook](https://example.invalid/docs) for more.\n\n(Fictional project: this is demo data.)\n",
+                "<p align=\"center\"><img src=\"logo.png\" width=\"120\"></p>\n\n# {name}\n\n[![build](https://example.invalid/badge.svg)](https://example.invalid)\n\n{summary}\n\n![Main window](docs/screenshot-1.png)\n![Another view](docs/screenshot-2.png)\n![A third](docs/screenshot-3.png)\n\n## Features\n\n- Starts in under a second\n- Works offline\n- Keyboard shortcuts for **everything**\n\n## Getting started\n\nInstall {name}, open it, and follow the short tour. See the [handbook](https://example.invalid/docs) for more.\n\n(Fictional project: this is demo data.)\n",
                 name = app.name,
                 summary = app.summary,
             ));
@@ -621,6 +701,18 @@ impl Http for DemoHttp {
         // The fictional owners have no pictures.
         if url.ends_with(".png?size=128") {
             return Err(Error::NotFound(url.to_string()));
+        }
+        // Their READMEs do show the app: a drawn stand-in for a screenshot.
+        if let Some(at) = url.find("/docs/screenshot-") {
+            let variant = url[at..].bytes().filter(u8::is_ascii_digit).map(|d| (d - b'0') as usize).next().unwrap_or(1);
+            let seed = url.bytes().take(at).fold(7u32, |h, b| h.wrapping_mul(31).wrapping_add(b as u32));
+            if let Some(parent) = dest.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            let bytes = mock_screenshot(seed, variant);
+            progress(bytes.len() as u64, Some(bytes.len() as u64));
+            std::fs::write(dest, &bytes)?;
+            return Ok(hex(&Sha256::digest(&bytes)));
         }
         if let Some(parent) = dest.parent() {
             std::fs::create_dir_all(parent)?;

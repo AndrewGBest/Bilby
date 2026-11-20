@@ -24,6 +24,7 @@ pub mod install;
 pub mod model;
 pub mod platform;
 pub mod rank;
+pub mod screenshots;
 pub mod source;
 pub mod state;
 pub mod version;

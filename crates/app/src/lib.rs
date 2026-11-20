@@ -379,6 +379,20 @@ fn decode_picture(path: &std::path::Path) -> Option<slint::Image> {
     Some(slint::Image::from_rgba8(buffer))
 }
 
+/// Decode a cached screenshot, scaled down to what a page can use. Tiny images are
+/// not screenshots, and absurd ones are refused before they cost memory.
+fn decode_screenshot(path: &std::path::Path) -> Option<slint::SharedPixelBuffer<slint::Rgba8Pixel>> {
+    let (width, height) = image::image_dimensions(path).ok()?;
+    if width < 200 || height < 120 || width > 8000 || height > 8000 {
+        return None;
+    }
+    let decoded = image::open(path).ok()?;
+    // Shrink what is larger than a page can show; never enlarge.
+    let decoded = if width > 1280 || height > 720 { decoded.thumbnail(1280, 720) } else { decoded }.into_rgba8();
+    let (width, height) = decoded.dimensions();
+    Some(slint::SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(decoded.as_raw(), width, height))
+}
+
 fn picture_for(id: &str) -> slint::Image {
     AppId::parse(id)
         .and_then(|id| bilby_core::icons::icon_key(&id))
@@ -421,6 +435,8 @@ pub struct App {
     /// Bumped per request so a slow, superseded answer is dropped instead of shown.
     search_generation: AtomicU64,
     details_generation: AtomicU64,
+    /// An app whose install was asked for from a list, before its files were known.
+    install_when_loaded: Mutex<Option<String>>,
     toast_generation: Arc<AtomicU64>,
     cancel_install: Arc<AtomicBool>,
     /// The store's own app id, checked for updates like any other app. `None` in the
@@ -849,6 +865,14 @@ impl App {
 
     // ---- details ----
 
+    /// Install from a list. The app's page opens so what is happening can be seen and
+    /// stopped, and the file that suits this device starts downloading as soon as it is
+    /// known. Packages that are installed with a command just get their page.
+    pub fn quick_install(self: &Arc<Self>, ui: &AppWindow, id: &str) {
+        *self.install_when_loaded.lock().unwrap() = Some(id.to_string());
+        self.open(ui, id);
+    }
+
     pub fn open(self: &Arc<Self>, ui: &AppWindow, id: &str) {
         let store = ui.global::<Store>();
         let generation = self.details_generation.fetch_add(1, Ordering::SeqCst) + 1;
@@ -862,6 +886,7 @@ impl App {
         store.set_warning(SharedString::new());
         store.set_notes(SharedString::new());
         store.set_about(SharedString::new());
+        store.set_screenshots(ModelRc::default());
         store.set_release_date(SharedString::new());
         store.set_release_age(SharedString::new());
         store.set_license(SharedString::new());
@@ -897,6 +922,8 @@ impl App {
         };
         store.set_details_loading(true);
         let about_id = app_id.clone();
+        // Taken now, so it applies to this opening only and never to a later visit.
+        let auto_install = self.install_when_loaded.lock().unwrap().take();
         self.job(
             move |app| app.catalog().details(&app_id).map_err(|e| e.to_string()),
             move |app, ui, result| {
@@ -905,8 +932,20 @@ impl App {
                 }
                 match result {
                     Ok(details) => {
+                        let id = details.summary.id.to_string();
                         app.show_details(ui, details);
                         app.load_about(about_id, generation);
+                        // Asked for from a list: carry on to the install.
+                        let direct = {
+                            let current = app.current.lock().unwrap();
+                            current
+                                .release()
+                                .and_then(|r| r.options.first())
+                                .is_some_and(|o| o.plan.action != Action::ShowCommand)
+                        };
+                        if auto_install.as_deref() == Some(id.as_str()) && direct {
+                            app.install(ui, 0);
+                        }
                     }
                     Err(message) => {
                         let store = ui.global::<Store>();
@@ -923,10 +962,24 @@ impl App {
     /// About section.
     fn load_about(self: &Arc<Self>, id: AppId, generation: u64) {
         self.job(
-            move |app| app.catalog().about(&id).ok().flatten().map(|text| plain_about(&text)).unwrap_or_default(),
-            move |app, ui, about| {
+            move |app| {
+                let Some(readme) = app.catalog().about(&id).ok().flatten() else { return (String::new(), Vec::new()) };
+                // Pictures are fetched and decoded here, off the interface's thread.
+                let http = app.catalog().http();
+                let dir = app.dirs.cache.join("screenshots");
+                let pictures = bilby_core::screenshots::from_readme(&readme, &id)
+                    .iter()
+                    .filter_map(|url| bilby_core::screenshots::fetch(http.as_ref(), &dir, url).ok().flatten())
+                    .filter_map(|path| decode_screenshot(&path))
+                    .collect();
+                (plain_about(&readme), pictures)
+            },
+            move |app, ui, (about, pictures): (String, Vec<slint::SharedPixelBuffer<slint::Rgba8Pixel>>)| {
                 if app.details_generation.load(Ordering::SeqCst) == generation {
-                    ui.global::<Store>().set_about(about.into());
+                    let store = ui.global::<Store>();
+                    store.set_about(about.into());
+                    let images: Vec<slint::Image> = pictures.into_iter().map(slint::Image::from_rgba8).collect();
+                    store.set_screenshots(ModelRc::new(VecModel::from(images)));
                 }
             },
         );
@@ -1503,6 +1556,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         current: Mutex::new(Current::default()),
         search_generation: AtomicU64::new(0),
         details_generation: AtomicU64::new(0),
+        install_when_loaded: Mutex::new(None),
         toast_generation: Arc::new(AtomicU64::new(0)),
         cancel_install: Arc::new(AtomicBool::new(false)),
         store_app: match &options.store_app {
@@ -1578,6 +1632,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     on!(on_skip_update, |app, ui, id| { app.skip_update(ui, &id) });
     on!(on_toggle_favourite, |app, ui| { app.toggle_favourite(ui) });
     on!(on_launch, |app, ui| { app.launch(ui) });
+    on!(on_quick_install, |app, ui, id| { app.quick_install(ui, &id) });
     on!(on_download_hidden, |app, ui, index| { app.download_hidden(ui, index) });
     on!(on_set_theme, |app, ui, mode| {
         let name = ["system", "light", "dark"].get(mode as usize).copied().unwrap_or("system");
