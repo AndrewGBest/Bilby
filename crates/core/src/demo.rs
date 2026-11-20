@@ -837,6 +837,21 @@ impl Http for DemoHttp {
         Err(not_found())
     }
 
+    fn post_form(&self, url: &str, _body: &str) -> Result<String> {
+        // Signing in to the fictional GitHub: a code, and a yes the first time it is asked.
+        if url == crate::github_login::CODE_URL {
+            return Ok(json!({
+                "device_code": "demo-device-code", "user_code": "DEMO-1234",
+                "verification_uri": "https://github.com/login/device", "expires_in": 900, "interval": 0,
+            })
+            .to_string());
+        }
+        if url == crate::github_login::TOKEN_URL {
+            return Ok(json!({ "access_token": "demo-token", "token_type": "bearer", "scope": "" }).to_string());
+        }
+        Err(Error::NotFound(url.to_string()))
+    }
+
     fn post_json(&self, url: &str, body: &str) -> Result<String> {
         if url.starts_with("https://flathub.org/api/v2/search") {
             let query = serde_json::from_str::<Value>(body)

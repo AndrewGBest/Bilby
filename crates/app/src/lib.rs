@@ -529,6 +529,8 @@ pub struct App {
     collections: Mutex<Vec<CoreSection>>,
     /// The store's own file, when it can be put in the app menu.
     self_program: Option<PathBuf>,
+    /// Bumped when a sign-in to GitHub starts or is cancelled, so an older one stops.
+    signin_generation: AtomicU64,
 }
 
 /// The store's icon, written beside its app-menu entry.
@@ -1007,6 +1009,99 @@ impl App {
             self.refresh(ui);
         }
         self.refresh_settings(ui);
+    }
+
+    /// Sign in to GitHub with a code: show it, then wait for the person to enter it at
+    /// GitHub. The token that comes back is kept exactly like a pasted one.
+    pub fn github_signin(self: &Arc<Self>, ui: &AppWindow) {
+        use bilby_core::github_login::{self, Poll};
+        let generation = self.signin_generation.fetch_add(1, Ordering::SeqCst) + 1;
+        let store = ui.global::<Store>();
+        store.set_signin_code(SharedString::new());
+        store.set_signin_state(1);
+        self.job(
+            |app| github_login::start(app.catalog().http().as_ref()),
+            move |app, ui, started| {
+                let store = ui.global::<Store>();
+                if app.signin_generation.load(Ordering::SeqCst) != generation {
+                    return;
+                }
+                let code = match started {
+                    Ok(code) => code,
+                    Err(e) => {
+                        store.set_signin_state(0);
+                        app.toast(ui, &format!("Could not start signing in: {e}"), true);
+                        return;
+                    }
+                };
+                store.set_signin_code(code.user_code.as_str().into());
+                store.set_signin_state(2);
+                app.job(
+                    move |app| {
+                        let http = app.catalog().http();
+                        let started = std::time::Instant::now();
+                        let mut interval = code.interval;
+                        loop {
+                            // Wait in short steps, so cancelling is noticed promptly.
+                            let wait_until = std::time::Instant::now() + std::time::Duration::from_secs(interval);
+                            while std::time::Instant::now() < wait_until {
+                                if app.signin_generation.load(Ordering::SeqCst) != generation {
+                                    return Ok(None);
+                                }
+                                std::thread::sleep(std::time::Duration::from_millis(200));
+                            }
+                            if app.signin_generation.load(Ordering::SeqCst) != generation {
+                                return Ok(None);
+                            }
+                            match github_login::poll(http.as_ref(), &code)? {
+                                Poll::Done(token) => return Ok(Some(token)),
+                                Poll::Pending => {}
+                                Poll::SlowDown(seconds) => interval = seconds,
+                                Poll::Denied => {
+                                    return Err(Error::Unsupported("Signing in was declined at GitHub.".into()))
+                                }
+                                Poll::Expired => {
+                                    return Err(Error::Unsupported(
+                                        "The code ran out before it was entered. Try again.".into(),
+                                    ))
+                                }
+                            }
+                            if started.elapsed().as_secs() > code.expires_in.max(60) {
+                                return Err(Error::Unsupported(
+                                    "The code ran out before it was entered. Try again.".into(),
+                                ));
+                            }
+                        }
+                    },
+                    move |app, ui, outcome: bilby_core::Result<Option<String>>| {
+                        if app.signin_generation.load(Ordering::SeqCst) != generation {
+                            return;
+                        }
+                        let store = ui.global::<Store>();
+                        store.set_signin_state(0);
+                        store.set_signin_code(SharedString::new());
+                        match outcome {
+                            Ok(Some(token)) => {
+                                app.update_state(ui, |state| state.settings.github_token = token);
+                                app.rebuild_catalog();
+                                app.refresh_settings(ui);
+                                app.toast(ui, "Signed in to GitHub", false);
+                            }
+                            Ok(None) => {}
+                            Err(e) => app.toast(ui, &e.to_string(), true),
+                        }
+                    },
+                );
+            },
+        );
+    }
+
+    /// Stop waiting for a sign-in.
+    pub fn github_cancel(&self, ui: &AppWindow) {
+        self.signin_generation.fetch_add(1, Ordering::SeqCst);
+        let store = ui.global::<Store>();
+        store.set_signin_state(0);
+        store.set_signin_code(SharedString::new());
     }
 
     /// Keep the store's own app-menu entry in step with the setting: there, and pointing
@@ -2119,6 +2214,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         system_check: Mutex::new(None),
         collections: Mutex::new(Vec::new()),
         self_program: options.self_program.clone(),
+        signin_generation: AtomicU64::new(0),
     });
     app.apply_menu_entry(&ui);
     app.show_system(&ui, 0, "");
@@ -2221,13 +2317,15 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
             app.toast(ui, &format!("Couldn't open the downloads folder: {e}"), true);
         }
     });
+    on!(on_github_signin, |app, ui| { app.github_signin(ui) });
+    on!(on_github_cancel, |app, ui| { app.github_cancel(ui) });
     on!(on_save_token, |app, ui, token| {
         let token = token.trim().to_string();
         let cleared = token.is_empty();
         app.update_state(ui, |state| state.settings.github_token = token);
         app.rebuild_catalog();
         app.refresh_settings(ui);
-        app.toast(ui, if cleared { "Token forgotten" } else { "Token saved on this device" }, false);
+        app.toast(ui, if cleared { "Signed out of GitHub" } else { "Token saved on this device" }, false);
     });
     on!(on_clear_cache, |app, ui| {
         // Only the store's own cache folders, never a path from outside.

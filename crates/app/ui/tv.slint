@@ -99,6 +99,8 @@ component TvTab inherits Rectangle {
 component TvSetting inherits Rectangle {
     in property <string> label;
     in property <bool> on;
+    // What to show on the right instead of On or Off.
+    in property <string> value;
     in property <bool> focused;
     in property <length> u;
     callback clicked;
@@ -118,7 +120,7 @@ component TvSetting inherits Rectangle {
         padding-right: 10 * u;
         spacing: 12 * u;
         Text { horizontal-stretch: 1; text: root.label; color: Theme.text; font-size: 12 * u; vertical-alignment: center; overflow: elide; }
-        Text { text: root.on ? "On" : "Off"; color: root.on ? Theme.ok : Theme.text-dim; font-size: 12 * u; font-weight: 700; vertical-alignment: center; }
+        Text { text: root.value != "" ? root.value : root.on ? "On" : "Off"; color: root.value != "" ? Theme.accent : root.on ? Theme.ok : Theme.text-dim; font-size: 12 * u; font-weight: 700; vertical-alignment: center; }
     }
 }
 
@@ -349,7 +351,7 @@ export component TvShell inherits Rectangle {
                         root.sys-row -= 1;
                     }
                 } else if (event.text == Key.DownArrow) {
-                    root.sys-row = min(3, root.sys-row + 1);
+                    root.sys-row = min(4, root.sys-row + 1);
                 } else if (root.sys-row > 0) {
                     // A setting: OK, Left or Right switches it.
                     if (event.text == Key.Return || event.text == " " || event.text == Key.LeftArrow || event.text == Key.RightArrow) {
@@ -357,8 +359,14 @@ export component TvShell inherits Rectangle {
                             Store.set-ratings(!Store.show-ratings);
                         } else if (root.sys-row == 2) {
                             Store.set-check-on-start(!Store.check-updates-on-start);
-                        } else {
+                        } else if (root.sys-row == 3) {
                             Store.set-prereleases(!Store.include-prereleases);
+                        } else if (Store.has-token) {
+                            Store.save-token("");
+                        } else if (Store.signin-state == 0) {
+                            Store.github-signin();
+                        } else {
+                            Store.github-cancel();
                         }
                     }
                 } else if (event.text == Key.RightArrow) {
@@ -683,6 +691,27 @@ export component TvShell inherits Rectangle {
                     on: Store.include-prereleases;
                     focused: root.zone == 0 && root.sys-row == 3;
                     clicked => { Store.set-prereleases(!Store.include-prereleases); }
+                }
+                TvSetting {
+                    u: root.u;
+                    label: Store.has-token ? "Signed in to GitHub" : Store.signin-state != 0 ? "Signing in to GitHub…" : "Sign in to GitHub for more searches an hour";
+                    value: Store.has-token ? "Sign out" : Store.signin-state != 0 ? "Cancel" : "Sign in";
+                    on: Store.has-token;
+                    focused: root.zone == 0 && root.sys-row == 4;
+                }
+                // The code to enter at GitHub, on a phone or computer.
+                if Store.signin-state == 2 : VerticalLayout {
+                    padding-top: 6 * u;
+                    spacing: 4 * u;
+                    Text { text: "On your phone or computer, open github.com/login/device and enter:"; color: Theme.text; font-size: 12 * u; wrap: word-wrap; }
+                    Text {
+                        text: Store.signin-code;
+                        color: Theme.text;
+                        font-size: 30 * u;
+                        font-weight: 800;
+                        letter-spacing: 3 * u;
+                        accessible-label: "Sign-in code " + Store.signin-code;
+                    }
                 }
             }
         }

@@ -2004,9 +2004,56 @@ export component SettingsBody inherits Rectangle {
             SettingsCard {
                 title: "GitHub access";
                 Text {
-                    text: Store.has-token ? "A token is saved on this device. GitHub allows 5,000 requests an hour with it." : "Without a token GitHub allows 60 requests an hour, which a few searches can use up. A personal access token with no scopes raises that to 5,000. It is stored only on this device and sent only to api.github.com.";
+                    text: Store.has-token ? "You are signed in. GitHub allows 5,000 requests an hour." : "Everything works without signing in, but GitHub then allows only 60 requests an hour for your whole network, which a few searches can use up. Signing in raises that to 5,000. Bilby asks for no access to your account.";
                     color: Theme.text-dim;
                     font-size: 13px;
+                    wrap: word-wrap;
+                }
+                if !Store.has-token && Store.signin-state == 0 : HorizontalLayout {
+                    alignment: start;
+                    Button { text: "Sign in with GitHub"; clicked => { Store.github-signin(); } }
+                }
+                if Store.signin-state == 1 : Busy { }
+                // The code to type at GitHub, large enough to read across a room.
+                if Store.signin-state == 2 : Rectangle {
+                    border-radius: 12px;
+                    background: Theme.bg;
+                    border-width: 1px;
+                    border-color: Theme.accent.with-alpha(0.5);
+                    height: code-box.preferred-height;
+                    code-box := VerticalLayout {
+                        width: parent.width;
+                        padding: 16px;
+                        spacing: 10px;
+                        Text {
+                            text: "On this or any other device, open github.com/login/device and enter this code:";
+                            color: Theme.text;
+                            font-size: 13px;
+                            wrap: word-wrap;
+                        }
+                        Text {
+                            text: Store.signin-code;
+                            color: Theme.text;
+                            font-size: 30px;
+                            font-weight: 800;
+                            letter-spacing: 3px;
+                            accessible-role: text;
+                            accessible-label: "Sign-in code " + Store.signin-code;
+                        }
+                        Busy { }
+                        Text { text: "Waiting for you to enter it. This page updates by itself."; color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
+                        HorizontalLayout {
+                            spacing: 8px;
+                            alignment: start;
+                            Button { text: "Open that page"; clicked => { Store.open-url("https://github.com/login/device"); } }
+                            Button { text: "Cancel"; primary: false; accessible-label: "Cancel signing in"; clicked => { Store.github-cancel(); } }
+                        }
+                    }
+                }
+                Text {
+                    text: "Or paste a personal access token (one with no scopes is enough):";
+                    color: Theme.text-dim;
+                    font-size: 12px;
                     wrap: word-wrap;
                 }
                 if Store.quota-text != "" : Text {
@@ -2062,10 +2109,10 @@ export component SettingsBody inherits Rectangle {
                         }
                     }
                     if Store.has-token : Button {
-                        text: "Forget";
+                        text: "Sign out";
                         primary: false;
                         danger: true;
-                        accessible-label: "Forget token";
+                        accessible-label: "Sign out of GitHub";
                         clicked => {
                             Store.save-token("");
                             root.token-saved = false;

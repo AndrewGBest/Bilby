@@ -638,6 +638,26 @@ figures are judgement, and those pages were not re-read for this work.]
 Settings has **Reduce motion**, which makes all of it instant, as both platforms offer.
 The system's own "reduce motion" preference is not read yet.
 
+### Signing in to GitHub (`github_login.rs`)
+
+Nothing needs a GitHub account. Signing in only lifts GitHub's allowance from 60
+requests an hour (shared by everyone behind the same router) to 5,000.
+
+It uses GitHub's device flow
+([GitHub docs](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#device-flow)):
+Bilby shows a short code, the person enters it at `github.com/login/device` on any
+device, and Bilby is handed a token. That suits a TV, where typing a token with a
+remote is not realistic, and it needs no server of ours and no client secret. The
+token is asked for with no permissions, is kept in the same file as a pasted one, and
+is sent only to `api.github.com`. Sign out forgets it; it can also be revoked from
+GitHub's settings.
+
+The client id in the source is public by design. Pasting a personal access token still
+works. [Checked against the real GitHub: asking for a code with this client id returns
+one, and asking for the token before the code is entered returns "authorization
+pending". A whole sign-in through the app, ending in a token, has only been run
+against the demo's stand-in.]
+
 ### Knowing it is a TV
 
 A television is not something a computer reports, and a 4K monitor and a 4K TV look
@@ -778,8 +798,8 @@ remote buttons: arrows, OK and Back do what they do on every TV, things that mov
 sideways show an arrow on the side that has more, and a confirmation is spelled out
 in the line above the buttons. Reviews open one at a time, large, with
 Up and Down to move between them. Versions lists the files of one release; Left and
-Right move to older and newer releases. Still missing on TV: entering a GitHub
-token, which needs signing in with a code rather than typing one.
+Right move to older and newer releases. Signing in to GitHub is the last row of the
+settings there.
 
 **Ways back, everywhere.** An app's page and the device page both have a back arrow
 (top left on a desktop, in the header on a phone), and Escape, Alt+Left and a phone's

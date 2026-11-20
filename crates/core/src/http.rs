@@ -43,6 +43,12 @@ pub trait Http: Send + Sync {
         Err(Error::Unsupported(format!("cannot send a request to {url}")))
     }
 
+    /// POST a form and return the JSON answer. Never cached: used for signing in, where
+    /// the same question gets a different answer once the person has approved.
+    fn post_form(&self, url: &str, _body: &str) -> Result<String> {
+        Err(Error::Unsupported(format!("cannot send a request to {url}")))
+    }
+
     /// GitHub's request allowance as of the last API response, if any was seen.
     fn quota(&self) -> Option<Quota> {
         None
@@ -140,7 +146,7 @@ impl NetHttp {
                     let hint = if self.github_token.is_some() {
                         "Try again in a few minutes."
                     } else {
-                        "Add a GitHub token in settings to raise the limit, or try again later."
+                        "Sign in to GitHub in Settings to raise the limit, or try again later."
                     };
                     Err(Error::RateLimited { source: "GitHub", hint: hint.to_string() })
                 } else if code == 404 {
@@ -187,6 +193,19 @@ impl Http for NetHttp {
         match self.agent.post(url).set("Content-Type", "application/json").send_string(body) {
             Ok(resp) => resp.into_string().map_err(|e| Error::Network(e.to_string())),
             Err(ureq::Error::Status(404, _)) => Err(Error::NotFound(format!("Nothing was found at {url}"))),
+            Err(ureq::Error::Status(code, _)) => Err(Error::Status { code, url: url.to_string() }),
+            Err(e) => Err(Error::Network(describe_transport_error(url, &e))),
+        }
+    }
+
+    fn post_form(&self, url: &str, body: &str) -> Result<String> {
+        let request = self
+            .agent
+            .post(url)
+            .set("Content-Type", "application/x-www-form-urlencoded")
+            .set("Accept", "application/json");
+        match request.send_string(body) {
+            Ok(resp) => resp.into_string().map_err(|e| Error::Network(e.to_string())),
             Err(ureq::Error::Status(code, _)) => Err(Error::Status { code, url: url.to_string() }),
             Err(e) => Err(Error::Network(describe_transport_error(url, &e))),
         }
@@ -285,6 +304,10 @@ impl<H: Http> Http for CachedHttp<H> {
         self.cached(&format!("{url}\n{body}"), || self.inner.post_json(url, body))
     }
 
+    fn post_form(&self, url: &str, body: &str) -> Result<String> {
+        self.inner.post_form(url, body)
+    }
+
     fn download(&self, url: &str, dest: &Path, progress: &mut dyn FnMut(u64, Option<u64>) -> bool) -> Result<String> {
         self.inner.download(url, dest, progress)
     }
@@ -301,6 +324,10 @@ impl<H: Http + ?Sized> Http for std::sync::Arc<H> {
 
     fn post_json(&self, url: &str, body: &str) -> Result<String> {
         (**self).post_json(url, body)
+    }
+
+    fn post_form(&self, url: &str, body: &str) -> Result<String> {
+        (**self).post_form(url, body)
     }
 
     fn get(&self, url: &str) -> Result<String> {

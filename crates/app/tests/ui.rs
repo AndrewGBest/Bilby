@@ -721,8 +721,8 @@ fn settings_apply_immediately_and_survive_a_restart() {
         let mode = std::fs::metadata(&s.state_file).unwrap().permissions().mode() & 0o777;
         assert_eq!(mode, 0o600, "the file holding the token is private");
     }
-    assert!(s.has("Forget token"));
-    s.click("Forget token");
+    assert!(s.has("Sign out of GitHub"));
+    s.click("Sign out of GitHub");
     assert!(!s.store().get_has_token());
     assert_eq!(s.saved().settings.github_token, "");
 
@@ -1873,4 +1873,37 @@ fn motion_can_be_turned_down_and_the_choice_is_kept() {
     assert!(s.store().get_options().row_count() > 0);
     s.store().invoke_install(0);
     assert_eq!(s.store().get_install_state(), 2, "the demo download finishes at once");
+}
+
+// ---- signing in to GitHub with a code ----
+
+#[test]
+fn signing_in_to_github_shows_a_code_and_keeps_the_token_it_is_given() {
+    let s = start("linux-x64-debian", Shell::Desktop);
+    s.store().set_page(3);
+    assert!(!s.store().get_has_token());
+    // The demo's GitHub says yes the first time it is asked.
+    s.click("Sign in with GitHub");
+    assert!(s.store().get_has_token());
+    assert_eq!(s.saved().settings.github_token, "demo-token");
+    assert_eq!((s.store().get_signin_state(), s.store().get_signin_code().as_str()), (0, ""));
+    assert_eq!(s.store().get_toast(), "Signed in to GitHub");
+    assert!(!s.has("Sign in with GitHub"), "nothing to sign in to twice");
+
+    s.click("Sign out of GitHub");
+    assert!(!s.store().get_has_token() && s.saved().settings.github_token.is_empty());
+    assert!(s.has("Sign in with GitHub"));
+
+    // On a TV it is the last setting on the This TV page, reached with the remote.
+    let tv = start("linux-tv", Shell::Tv);
+    tv.press(Key::UpArrow);
+    tv.press(Key::RightArrow);
+    tv.press(Key::Return);
+    for _ in 0..4 {
+        tv.press(Key::DownArrow);
+    }
+    tv.press(Key::Return);
+    assert!(tv.store().get_has_token(), "OK on the GitHub row signs in");
+    tv.press(Key::Return);
+    assert!(!tv.store().get_has_token(), "and OK again signs out");
 }

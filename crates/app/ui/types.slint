@@ -213,6 +213,10 @@ export global Store {
     in property <bool> show-ratings;
     in property <bool> check-updates-on-start;
     in property <bool> has-token;
+    // Signing in to GitHub with a code: 0 not signing in, 1 asking GitHub for a code,
+    // 2 waiting for the person to enter `signin-code` at github.com/login/device.
+    in property <int> signin-state;
+    in property <string> signin-code;
     in property <string> downloads-dir;
     // A newer release of the store itself that has a file for this device, "" when none.
     in property <string> store-update;
@@ -257,6 +261,8 @@ export global Store {
     callback set-check-on-start(bool);
     callback open-downloads();
     callback save-token(string);
+    callback github-signin();
+    callback github-cancel();
     callback clear-cache();
     callback clear-recent();
     callback open-url(string);

@@ -107,7 +107,7 @@ and settings are one file on your device. What does leave your device:
 | Search or open an app | That app's source (GitHub, Flathub, ...) | What you searched for or opened, as with any website |
 | Have ratings switched on | The ratings service GNOME and KDE use | That *someone* downloaded the full list of ratings, once a day |
 | Open an app that has reviews | The same service | Which app's reviews were asked for. No user id is sent |
-| Add a GitHub token | GitHub | Which account is asking. Optional; it only raises GitHub's hourly limit |
+| Sign in to GitHub | GitHub | Which account is asking. Optional; it only raises GitHub's hourly limit, and Bilby asks for no access to the account |
 
 Ratings and reviews can be switched off in Settings, which stops both requests.
 
@@ -131,8 +131,8 @@ projects and out-of-date packages, but an app is only as trustworthy as its auth
 ## Good to know
 
 - **GitHub's limit.** Without signing in, GitHub allows 60 requests an hour for
-  everyone on your network. Bilby tells you when it runs out. A token in Settings
-  raises it to 5,000. Flathub and your distribution's packages have no such limit.
+  everyone on your network. Bilby tells you when it runs out. Signing in to GitHub in
+  Settings (you type a short code on GitHub's site) raises it to 5,000. Flathub and your distribution's packages have no such limit.
 - **Reduce motion.** Settings can turn animations off.
 - **From a terminal.** `bilby-cli` does everything the app does, and can export your
   library to move it to another device.

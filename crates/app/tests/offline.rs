@@ -27,7 +27,7 @@ impl Moody {
             }
             RATE_LIMITED => Err(Error::RateLimited {
                 source: "GitHub",
-                hint: "Add a GitHub token in settings to raise the limit, or try again later.".into(),
+                hint: "Sign in to GitHub in Settings to raise the limit, or try again later.".into(),
             }),
             _ => Ok(()),
         }
@@ -163,7 +163,7 @@ fn rate_limiting_says_how_to_get_out_of_it() {
     s.app.search(&s.ui, "editor");
     assert_eq!(
         s.store().get_search_error(),
-        "GitHub's request limit for this device is used up for now. Add a GitHub token in settings to raise the limit, or try again later."
+        "GitHub's request limit for this device is used up for now. Sign in to GitHub in Settings to raise the limit, or try again later."
     );
     // Settings shows the allowance GitHub last reported.
     assert!(s.store().get_quota_text().starts_with("0 of 60 GitHub requests left"), "{}", s.store().get_quota_text());

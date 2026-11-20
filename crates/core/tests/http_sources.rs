@@ -192,7 +192,7 @@ fn errors_are_told_apart() {
     match err("/api/limited") {
         Error::RateLimited { source, hint } => {
             assert_eq!(source, "GitHub");
-            assert!(hint.contains("token"), "without a token the hint says how to raise the limit: {hint}");
+            assert!(hint.contains("Sign in"), "without a token the hint says how to raise the limit: {hint}");
         }
         other => panic!("expected RateLimited, got {other:?}"),
     }
@@ -446,7 +446,7 @@ fn a_rate_limited_search_is_reported_not_swallowed() {
     assert_eq!(outcome.errors.len(), 1);
     assert_eq!(
         outcome.errors[0],
-        "GitHub's request limit for this device is used up for now. Add a GitHub token in settings to raise the limit, or try again later."
+        "GitHub's request limit for this device is used up for now. Sign in to GitHub in Settings to raise the limit, or try again later."
     );
 }
 
