@@ -289,6 +289,17 @@ pub fn open_url(url: &str) -> Result<()> {
     open_with_system(Path::new(url))
 }
 
+/// The plan for a file the store would not install here: fetch it, check it, and show
+/// where it was put. Nothing is run.
+pub fn save_only() -> InstallPlan {
+    InstallPlan {
+        action: Action::Reveal,
+        verb: "Download".to_string(),
+        steps: vec!["Download the file".to_string(), "Show it in your downloads folder".to_string()],
+        command: None,
+    }
+}
+
 /// Carry out `plan` for `asset`. `open` is how files are handed to the system
 /// ([`open_with_system`] in the app; a recorder in tests).
 pub fn execute(

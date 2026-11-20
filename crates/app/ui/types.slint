@@ -172,6 +172,8 @@ export global Store {
     callback skip-update(string);
     callback toggle-favourite();
     callback launch();
+    // Save a file that was hidden because it does not suit this device.
+    callback download-hidden(int);
     callback set-theme(int);
     callback set-prereleases(bool);
     callback set-check-on-start(bool);

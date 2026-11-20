@@ -208,7 +208,11 @@ impl Catalog {
                 let plan = install::plan(asset, &info, &self.platform);
                 options.push(InstallOption { asset: asset.clone(), info, verdict, plan });
             } else {
-                hidden.push(HiddenAsset { name: asset.name.clone(), reason: verdict.note.unwrap_or_default() });
+                hidden.push(HiddenAsset {
+                    name: asset.name.clone(),
+                    reason: verdict.note.unwrap_or_default(),
+                    asset: asset.clone(),
+                });
             }
         }
         options.sort_by(|a, b| b.verdict.score.cmp(&a.verdict.score).then_with(|| a.asset.name.cmp(&b.asset.name)));

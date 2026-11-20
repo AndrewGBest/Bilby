@@ -189,6 +189,8 @@ impl InstallOption {
 pub struct HiddenAsset {
     pub name: String,
     pub reason: String,
+    /// The file itself, so it can still be downloaded by someone who knows better.
+    pub asset: Asset,
 }
 
 #[derive(Debug, Clone)]

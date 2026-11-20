@@ -248,7 +248,7 @@ fn install_an_appimage_end_to_end() {
 
     // The page leads with the best file; the others are one press away.
     assert!(!s.has("Install AppImage · x86_64"));
-    s.click("More options and details");
+    s.click("Other versions and files");
     s.click("Install AppImage · x86_64");
     assert_eq!(s.store().get_install_state(), 2, "{}", s.store().get_install_message());
     assert!(s.store().get_install_message().starts_with("Checksum verified."));
@@ -341,8 +341,14 @@ fn app_without_a_build_for_this_machine_says_so() {
     assert!(s.store().get_unavailable().contains("Linux"));
     assert_eq!(s.store().get_options().row_count(), 0);
     assert_eq!(s.store().get_hidden().row_count(), 3);
-    s.click("More options and details");
+    s.click("Other versions and files");
     assert!(s.has("Files that won't work on this device"));
+    // They can still be had: saved to the downloads folder, not installed.
+    s.activate("Files that won't work on this device");
+    s.activate("Download anyway: WinspectSetup-0.77-x64.exe");
+    assert!(s.store().get_toast().starts_with("Checksum verified. Saved to "), "{}", s.store().get_toast());
+    assert!(s.dirs.downloads.join("WinspectSetup-0.77-x64.exe").is_file());
+    assert!(s.saved().library.is_empty(), "a file for another device is not an installed app");
 }
 
 #[test]
@@ -378,7 +384,7 @@ fn an_older_version_can_be_chosen_and_installed() {
     assert_eq!(s.store().get_options().row_count(), 2);
 
     assert!(!s.has("Version v1.20.0"), "older versions are not in the way");
-    s.click("More options and details");
+    s.click("Other versions and files");
     s.click("Version v1.20.0");
     assert_eq!(s.store().get_selected_version(), 1);
     assert_eq!(s.store().get_app().version, "v1.20.0");

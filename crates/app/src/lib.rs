@@ -175,6 +175,9 @@ fn tint_for(id: &str) -> slint::Color {
 
 /// Release notes are Markdown, often with HTML mixed in; show them as readable plain
 /// text. Links keep their words, images and tags go, list markers become bullets.
+/// `install-index` values from here up mean "the hidden file numbered index - this".
+const HIDDEN_BASE: i32 = 1000;
+
 /// The opening of a README as plain text: what the project says it is, without the
 /// title (the page already shows it), badges, pictures, tables or code samples.
 fn plain_about(markdown: &str) -> String {
@@ -1096,6 +1099,49 @@ impl App {
         );
     }
 
+    /// Fetch a file the store would not install on this device. It is checked like any
+    /// other download and shown in the downloads folder; nothing is run or recorded.
+    pub fn download_hidden(self: &Arc<Self>, ui: &AppWindow, index: i32) {
+        let store = ui.global::<Store>();
+        if store.get_install_state() == 1 {
+            return;
+        }
+        let asset = {
+            let current = self.current.lock().unwrap();
+            let Some(release) = current.release() else { return };
+            let Some(hidden) = release.hidden.get(index.max(0) as usize) else { return };
+            hidden.asset.clone()
+        };
+        // Past any real option's index, so no install button takes it for its own.
+        store.set_install_index(HIDDEN_BASE + index);
+        store.set_install_state(1);
+        store.set_install_progress(0.0);
+        self.cancel_install.store(false, Ordering::SeqCst);
+        let cancel = self.cancel_install.clone();
+        self.job(
+            move |app| {
+                let http = app.catalog().http();
+                let mut progress = |_: u64, _: Option<u64>| !cancel.load(Ordering::SeqCst);
+                install::execute(
+                    &install::save_only(),
+                    &asset,
+                    http.as_ref(),
+                    &app.dirs,
+                    app.opener.as_ref(),
+                    &mut progress,
+                )
+            },
+            |app, ui, result| {
+                ui.global::<Store>().set_install_state(0);
+                match result {
+                    Ok(outcome) => app.toast(ui, &outcome.message, false),
+                    Err(Error::Cancelled) => app.toast(ui, "Download cancelled", false),
+                    Err(e) => app.toast(ui, &format!("Download failed: {e}"), true),
+                }
+            },
+        );
+    }
+
     pub fn install(self: &Arc<Self>, ui: &AppWindow, index: i32) {
         let store = ui.global::<Store>();
         if store.get_install_state() == 1 {
@@ -1532,6 +1578,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     on!(on_skip_update, |app, ui, id| { app.skip_update(ui, &id) });
     on!(on_toggle_favourite, |app, ui| { app.toggle_favourite(ui) });
     on!(on_launch, |app, ui| { app.launch(ui) });
+    on!(on_download_hidden, |app, ui, index| { app.download_hidden(ui, index) });
     on!(on_set_theme, |app, ui, mode| {
         let name = ["system", "light", "dark"].get(mode as usize).copied().unwrap_or("system");
         app.update_state(ui, |state| state.settings.theme = name.to_string());
