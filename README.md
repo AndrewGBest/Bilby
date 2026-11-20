@@ -89,7 +89,7 @@ ever been run on Linux.
 
 | | State |
 |---|---|
-| Linux | Builds, runs, all 231 automated tests pass |
+| Linux | Builds, runs, all 233 automated tests pass |
 | Windows, macOS | Builds and passes the tests on GitHub's machines. Nobody has seen the window on either yet |
 | Android (phone, tablet, TV) | The engine compiles. There is no installable package and APKs cannot be installed yet |
 | iOS | Can only ever browse, not install: see [the design notes](docs/DESIGN.md#ios) |
@@ -111,7 +111,7 @@ that runs as it is:
 
 | System | File | How to start it |
 | --- | --- | --- |
-| Linux (x86_64) | `bilby-…-x86_64.AppImage` | Mark it executable (`chmod +x`, or the file's Properties) and open it |
+| Linux (x86_64) | `bilby-…-x86_64.AppImage` | Mark it executable (`chmod +x`, or the file's Properties) and open it. It adds itself to your app menu on that first start |
 | Windows (x64) | `bilby-…-x86_64-windows.exe` | Open it. Windows warns about an unknown publisher: More info, Run anyway |
 | macOS (Apple silicon) | `bilby-…-aarch64-macos.dmg` | Open it and drag Bilby to Applications. The first time, right-click the app and choose Open |
 

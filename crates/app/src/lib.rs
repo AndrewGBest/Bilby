@@ -82,6 +82,9 @@ pub struct Options {
     pub host: Option<Arc<dyn bilby_core::os::Host>>,
     /// Whether a game controller is attached (looked up when not given). For tests.
     pub controller: Option<bool>,
+    /// The file the store itself runs from, when that is one it can put in the app menu
+    /// (an AppImage). `run` fills this in; tests pass a stand-in.
+    pub self_program: Option<PathBuf>,
     pub catalog_factory: Option<CatalogFactory>,
     /// The app id the store looks at for its own updates. Defaults to its GitHub
     /// repository; the demo catalog has no such project, so tests name a stand-in.
@@ -524,7 +527,12 @@ pub struct App {
     /// Lists fetched from the sources (popular on Flathub, ...), shown under the
     /// hand-picked ones once they arrive.
     collections: Mutex<Vec<CoreSection>>,
+    /// The store's own file, when it can be put in the app menu.
+    self_program: Option<PathBuf>,
 }
+
+/// The store's icon, written beside its app-menu entry.
+const ICON_PNG: &[u8] = include_bytes!("../../../packaging/bilby.png");
 
 impl App {
     fn catalog(&self) -> Arc<Catalog> {
@@ -929,6 +937,8 @@ impl App {
         store.set_downloads_dir(self.dirs.downloads.display().to_string().into());
         store.set_show_welcome(!settings.welcomed);
         store.set_interface_mode(interface_mode(&settings.interface));
+        store.set_can_register(self.self_program.is_some());
+        store.set_in_menu(self.self_program.is_some() && install::self_entry_path(&self.dirs).is_file());
         self.refresh_quota(ui);
     }
 
@@ -995,6 +1005,17 @@ impl App {
             self.refresh(ui);
         }
         self.refresh_settings(ui);
+    }
+
+    /// Keep the store's own app-menu entry in step with the setting: there, and pointing
+    /// at the file it is running from, or gone.
+    fn apply_menu_entry(&self, ui: &AppWindow) {
+        let Some(program) = &self.self_program else { return };
+        if self.state().settings.hide_from_menu {
+            install::unregister_self(&self.dirs);
+        } else if let Err(e) = install::register_self(&self.dirs, program, ICON_PNG) {
+            self.toast(ui, &format!("Could not add Bilby to the app menu: {e}"), true);
+        }
     }
 
     /// Fetch the lists the sources keep (what is popular on Flathub and the like) and
@@ -2089,7 +2110,9 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         system,
         system_check: Mutex::new(None),
         collections: Mutex::new(Vec::new()),
+        self_program: options.self_program.clone(),
     });
+    app.apply_menu_entry(&ui);
     app.show_system(&ui, 0, "");
 
     // The TV interface is designed dark; elsewhere the saved preference applies.
@@ -2222,6 +2245,11 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
             app.toast(ui, &e.to_string(), true);
         }
     });
+    on!(on_set_in_menu, |app, ui, shown| {
+        app.update_state(ui, |state| state.settings.hide_from_menu = !shown);
+        app.apply_menu_entry(ui);
+        app.refresh_settings(ui);
+    });
     on!(on_set_interface, |app, ui, mode| { app.set_interface(ui, mode) });
     on!(on_answer_tv, |app, ui, yes| {
         if yes {
@@ -2296,7 +2324,13 @@ fn translate_remote_keys(ui: &AppWindow) {
     });
 }
 
-pub fn run(options: Options) -> Result<(), Box<dyn std::error::Error>> {
+pub fn run(mut options: Options) -> Result<(), Box<dyn std::error::Error>> {
+    // An AppImage says where its file is. A demo, a preview of another device or a
+    // screenshot run is not a real start and adds nothing to the app menu.
+    let real = !options.demo && options.platform.is_none() && options.screenshot.is_none();
+    if real && cfg!(target_os = "linux") && options.self_program.is_none() {
+        options.self_program = std::env::var_os("APPIMAGE").map(PathBuf::from).filter(|path| path.is_file());
+    }
     let (ui, app) = build(&options)?;
     #[cfg(not(target_os = "android"))]
     translate_remote_keys(&ui);

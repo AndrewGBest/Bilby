@@ -328,6 +328,65 @@ fn write_menu_entry(
     Ok(path)
 }
 
+/// Where the store's own app-menu entry goes.
+pub fn self_entry_path(dirs: &Dirs) -> PathBuf {
+    dirs.menu.join("bilby.desktop")
+}
+
+/// Put the store itself in the app menu, so a downloaded AppImage shows up among the
+/// system's apps (and on a TV launcher such as Plasma Bigscreen) after its first run.
+/// `program` is the file to start and `icon` its picture as a PNG. Safe to call on every
+/// start: nothing is written unless something changed, such as the file having moved.
+/// Returns whether anything was written.
+pub fn register_self(dirs: &Dirs, program: &Path, icon: &[u8]) -> Result<bool> {
+    let quoted = |text: &str| -> String {
+        let mut out = String::from("\"");
+        for c in text.chars().filter(|c| !c.is_control()) {
+            match c {
+                '"' | '`' | '$' => out.push_str(&format!("\\\\{c}")),
+                '\\' => out.push_str("\\\\\\\\"),
+                '%' => out.push_str("%%"),
+                c => out.push(c),
+            }
+        }
+        out.push('"');
+        out
+    };
+    // Beside the menu folder, where desktops look for icons; named in full in the entry
+    // so no icon cache has to notice it first.
+    let icons = dirs.menu.parent().unwrap_or(&dirs.menu).join("icons").join("hicolor").join("512x512").join("apps");
+    let icon_path = icons.join("bilby.png");
+    let entry = format!(
+        "[Desktop Entry]\nType=Application\nName=Bilby\nGenericName=App Store\n\
+         Comment=Apps from GitHub Releases, Codeberg and other repositories that run on this device\n\
+         Exec={}\nIcon={}\nTerminal=false\nCategories=System;PackageManager;\n\
+         Keywords=apps;store;install;update;software;\nStartupWMClass=bilby\nX-Bilby-Self=true\n",
+        quoted(&program.display().to_string()),
+        icon_path.display().to_string().chars().filter(|c| !c.is_control()).collect::<String>(),
+    );
+    let path = self_entry_path(dirs);
+    let mut changed = false;
+    if std::fs::read(&icon_path).ok().as_deref() != Some(icon) {
+        std::fs::create_dir_all(&icons)?;
+        std::fs::write(&icon_path, icon)?;
+        changed = true;
+    }
+    if std::fs::read_to_string(&path).ok().as_deref() != Some(entry.as_str()) {
+        std::fs::create_dir_all(&dirs.menu)?;
+        std::fs::write(&path, entry)?;
+        changed = true;
+    }
+    Ok(changed)
+}
+
+/// Take the store's own entry out of the app menu again, if it wrote one.
+pub fn unregister_self(dirs: &Dirs) {
+    let path = self_entry_path(dirs);
+    if std::fs::read_to_string(&path).is_ok_and(|text| text.contains("X-Bilby-Self=true")) {
+        let _ = std::fs::remove_file(path);
+    }
+}
+
 /// Take an app's entry out of the app menu, if the store put one there.
 pub fn remove_menu_entry(dirs: &Dirs, id: &str) {
     let path = menu_entry_path(dirs, id);
@@ -538,6 +597,31 @@ mod tests {
 
     fn asset(name: &str, digest: Option<String>) -> Asset {
         Asset { name: name.to_string(), size: 4, url: format!("https://example.invalid/{name}"), digest, info: None }
+    }
+
+    #[test]
+    fn the_store_puts_itself_in_the_app_menu_once_and_follows_its_file() {
+        let dirs = temp_dirs("self");
+        let program = Path::new("/home/someone/My Apps/bilby-v0.1.3-x86_64.AppImage");
+        assert!(register_self(&dirs, program, b"png").unwrap(), "the first run writes the entry");
+        let entry = std::fs::read_to_string(self_entry_path(&dirs)).unwrap();
+        assert!(entry.contains("\nName=Bilby\n"));
+        assert!(entry.contains("\nExec=\"/home/someone/My Apps/bilby-v0.1.3-x86_64.AppImage\"\n"), "{entry}");
+        let icon = dirs.menu.parent().unwrap().join("icons/hicolor/512x512/apps/bilby.png");
+        assert!(entry.contains(&format!("\nIcon={}\n", icon.display())));
+        assert_eq!(std::fs::read(&icon).unwrap(), b"png");
+
+        // Starting again changes nothing; starting from somewhere else updates it.
+        assert!(!register_self(&dirs, program, b"png").unwrap());
+        assert!(register_self(&dirs, Path::new("/opt/bilby.AppImage"), b"png").unwrap());
+        assert!(std::fs::read_to_string(self_entry_path(&dirs)).unwrap().contains("Exec=\"/opt/bilby.AppImage\""));
+
+        // Only its own entry is ever removed.
+        unregister_self(&dirs);
+        assert!(!self_entry_path(&dirs).exists());
+        std::fs::write(self_entry_path(&dirs), "[Desktop Entry]\nName=Someone else's\n").unwrap();
+        unregister_self(&dirs);
+        assert!(self_entry_path(&dirs).exists());
     }
 
     fn temp_dirs(tag: &str) -> Dirs {

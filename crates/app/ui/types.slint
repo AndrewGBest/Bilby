@@ -218,6 +218,9 @@ export global Store {
     in property <bool> show-welcome;
     // 0 decide for me, 1 desktop, 2 TV
     in property <int> interface-mode;
+    // The store is running from a file it can add to the app menu, and whether it has.
+    in property <bool> can-register;
+    in property <bool> in-menu;
     // A controller is attached but nothing says this is a TV: ask, once.
     in property <bool> ask-tv;
 
@@ -257,6 +260,7 @@ export global Store {
     callback dismiss-welcome();
     callback view-store-update();
     callback set-interface(int);
+    callback set-in-menu(bool);
     callback answer-tv(bool);
     callback system-check();
     callback system-update();

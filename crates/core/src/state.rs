@@ -28,6 +28,8 @@ pub struct Settings {
     pub interface: String,
     /// The "is this a TV?" question was answered or dismissed; it is asked once.
     pub asked_about_tv: bool,
+    /// Do not add the store itself to the app menu.
+    pub hide_from_menu: bool,
 }
 
 /// An app obtained through the store.

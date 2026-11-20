@@ -599,6 +599,22 @@ contest and Arch's pkgstats (both would mean another network request per search,
 services not built for it), and any count of how many people use Bilby itself, which
 would need telemetry and is ruled out.
 
+### Appearing among the device's apps
+
+A downloaded AppImage is one file; nothing puts it in the app menu, so it would have
+to be found in a file manager every time. On its first real start (not a demo or a
+preview) Bilby therefore writes its own entry and icon into the user's app-menu folder
+(`~/.local/share/applications/bilby.desktop`), pointing at the file it was started
+from, and corrects it if that file later moves. Settings has a switch that removes
+the entry and keeps it away. It cannot happen "on download": a file that has not been
+run cannot do anything. A package (AUR, .deb, Flatpak) is what registers an app at
+install time, and none exists yet.
+
+[assumption] Launchers that list installed apps read that folder, and Plasma Bigscreen
+is expected to do the same; this has not been checked on Bigscreen. Older versions of
+Bigscreen were said to show only some kinds of apps on its home rows, which was not
+verified either way.
+
 ### Knowing it is a TV
 
 A television is not something a computer reports, and a 4K monitor and a 4K TV look

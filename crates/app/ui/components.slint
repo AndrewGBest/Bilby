@@ -1745,6 +1745,28 @@ export component SettingsBody inherits Rectangle {
                 }
             }
 
+            if Store.can-register : SettingsCard {
+                title: "App menu";
+                HorizontalLayout {
+                    spacing: 12px;
+                    Text {
+                        horizontal-stretch: 1;
+                        text: "Bilby adds itself to this device's list of apps the first time it runs, so it can be started like any other app. If you move its file, start it once from the new place.";
+                        color: Theme.text-dim;
+                        font-size: 13px;
+                        wrap: word-wrap;
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle {
+                            label: "Show Bilby in the app menu";
+                            checked: Store.in-menu;
+                            toggled(on) => { Store.set-in-menu(on); }
+                        }
+                    }
+                }
+            }
+
             SettingsCard {
                 title: "Layout";
                 Text {

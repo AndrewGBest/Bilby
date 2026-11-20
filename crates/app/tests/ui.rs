@@ -1707,3 +1707,35 @@ fn the_tv_layout_has_a_way_back_that_a_remote_can_reach() {
     assert_eq!(ui.get_effective(), Shell::Desktop);
     assert_eq!(State::load(&state_file).settings.interface, "desktop");
 }
+
+#[test]
+fn an_appimage_adds_itself_to_the_app_menu_and_can_be_told_not_to() {
+    init_backend();
+    let dirs = dirs_in(&temp_root());
+    let options = Options {
+        demo: true,
+        inline: true,
+        platform: Some(Platform::preset("linux-x64-debian").unwrap()),
+        dirs: Some(dirs.clone()),
+        self_program: Some(PathBuf::from("/home/someone/bilby.AppImage")),
+        ..Default::default()
+    };
+    let (ui, _app) = build(&options).unwrap();
+    let entry = bilby_core::install::self_entry_path(&dirs);
+    assert!(std::fs::read_to_string(&entry).unwrap().contains("Exec=\"/home/someone/bilby.AppImage\""));
+    let store = ui.global::<Store>();
+    assert!(store.get_can_register() && store.get_in_menu());
+
+    // Turning it off in Settings removes the entry, and it stays off.
+    store.invoke_set_in_menu(false);
+    assert!(!entry.exists() && !store.get_in_menu());
+    let (again, _app) = build(&options).unwrap();
+    assert!(!entry.exists() && !again.global::<Store>().get_in_menu(), "the next start respects the choice");
+    again.global::<Store>().invoke_set_in_menu(true);
+    assert!(entry.exists());
+
+    // Started any other way (from source, a package), there is nothing to add and no setting.
+    let plain = start("linux-x64-debian", Shell::Desktop);
+    assert!(!plain.store().get_can_register());
+    assert!(!bilby_core::install::self_entry_path(&plain.dirs).exists());
+}
