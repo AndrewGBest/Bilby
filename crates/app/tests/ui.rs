@@ -2013,3 +2013,59 @@ fn an_app_found_at_several_sources_is_one_result_with_its_sources_by_the_button(
     s.app.open(&s.ui, "github:lumen-labs/lumen");
     assert_eq!(s.store().get_app_sources().row_count(), 0);
 }
+
+// ---- apps that are versions of one service ----
+
+#[test]
+fn a_service_with_several_apps_is_one_result_and_its_page_offers_the_versions() {
+    // A Linux TV can use YouTube's own site (in Longboard) and the desktop apps on Flathub and GitHub.
+    let s = start("linux-tv", Shell::Tv);
+    s.app.search(&s.ui, "youtube");
+    let first = s.store().get_results().row_data(0).unwrap();
+    assert_eq!(first.name, "YouTube", "the service is one tile, whatever else matched");
+    assert_eq!(first.id, "web:youtube.com", "its own site leads where that can be used");
+    assert!(first.headline.ends_with("versions"), "{}", first.headline);
+    let tiles = s.store().get_results().iter().filter(|c| c.name == "YouTube").count();
+    assert_eq!(tiles, 1);
+
+    s.app.open(&s.ui, "web:youtube.com");
+    assert_eq!(s.store().get_app_family_name(), "YouTube");
+    let versions: Vec<SourceChoice> = s.store().get_app_family().iter().collect();
+    assert!(versions.len() >= 3, "{}", versions.len());
+    assert_eq!(versions.iter().filter(|v| v.on).count(), 1);
+    assert_eq!(versions[0].label, "YouTube website  ·  Websites");
+    let vacuum = versions.iter().find(|v| v.id == "flathub:rocks.shy.VacuumTube").unwrap();
+    assert_eq!(vacuum.label, "VacuumTube  ·  Flathub  ·  unofficial", "whose it is, is always said");
+    assert!(
+        versions.iter().all(|v| !v.id.starts_with("fdroid:") && !v.id.starts_with("brew:")),
+        "only what this device can use"
+    );
+
+    // On a phone the same family offers the Android apps instead.
+    let phone = start("android-arm64", Shell::Mobile);
+    phone.app.search(&phone.ui, "YouTube");
+    let first = phone.store().get_results().row_data(0).unwrap();
+    assert_eq!(first.name, "YouTube");
+    assert!(first.id.starts_with("github:"), "{}", first.id);
+
+    // An app that belongs to no family shows no such choice.
+    s.app.open(&s.ui, "github:lumen-labs/lumen");
+    assert_eq!(s.store().get_app_family().row_count(), 0);
+}
+
+#[test]
+fn a_tv_remote_can_switch_version_from_the_versions_list() {
+    let s = start("linux-tv", Shell::Tv);
+    s.app.open(&s.ui, "web:youtube.com");
+    let choices: Vec<SourceChoice> = s.store().get_tv_choices().iter().collect();
+    assert!(choices.len() >= 2 && choices.iter().all(|c| c.label.starts_with("Switch to ")), "{}", choices.len());
+    let first = choices[0].clone();
+    // Main button, star, then Versions: OK opens the list with the choices on top.
+    s.press(Key::RightArrow);
+    s.press(Key::RightArrow);
+    s.press(Key::Return);
+    assert!(s.has(first.label.as_str()));
+    s.press(Key::Return);
+    assert_eq!(s.store().get_app().id, first.id, "OK on a version opens it");
+    assert!(s.store().get_tv_choices().iter().any(|c| c.id == "web:youtube.com"), "and the way back is offered");
+}

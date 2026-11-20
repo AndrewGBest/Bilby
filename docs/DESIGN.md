@@ -212,6 +212,46 @@ What was checked, and how:
   name rather than `arm64_...`; on the casks tried that is the Intel build, but the
   rule is a reading of the data, not something Homebrew documents here.
 
+**One press, no commands.** A package from a distribution's repository, a snap or a
+winget package is installed by the store when the button is pressed. What needs
+administrator rights runs through the desktop's own password prompt (`pkexec`), so
+the store never sees the password. Building from the AUR asks questions as it goes,
+so it opens a terminal on the build; only if no terminal can be found is the command
+shown instead. [Run for real: the unattended `dnf` and `zypper` commands, as root in
+Fedora and openSUSE containers. Not run for real: the same through the password
+prompt, `apt`, `pacman`, `snap`, `winget`, and opening a terminal.]
+
+**Fedora and openSUSE.** dnf keeps its package lists in a format of its own, so it is
+asked for them (`dnf -C repoquery`, from its cache, 67,000 packages in under a
+second); openSUSE's repository lists are read directly, as a stream. [Both run inside
+real Fedora 45 and openSUSE Tumbleweed containers.] Updating those systems from the
+Library works for dnf; zypper is not wired into system updates yet.
+
+**Switching sources off.** Settings lists every source this device has, each with a
+switch. One that is off is left out of searches and the home page. Search results
+can also be narrowed to one source with the chips under the search box.
+
+**One app, several sources** (`merge.rs`). The same app in a repository, on Flathub
+and on its release page is one result, marked with how many sources have it. Its page
+says beside the install button which source the button uses, and offers the others.
+No source says two entries are the same app, so it is judged from names: catalogs
+are trusted to have one app per name; a code-host project must share its owner's
+name with the app, be well known, or be a stated mirror. [assumption: this will
+sometimes merge two different apps with one name, or miss a renamed one. It errs
+towards not merging.]
+
+**Versions of a service** (`related.rs`, `data/related.json`). VacuumTube, FreeTube
+and NewPipe are different ways to use YouTube, and which one suits depends on the
+device. That relationship is kept by hand in one file: a family per service, its
+members in order of preference. Searching for the service shows one tile; the page
+of any member lists the versions this device can use, each marked unofficial unless
+the service's owner made it. The file starts with YouTube; every entry in it was
+checked to exist at its source.
+
+**Getting the other store's app.** A Steam game's page on a device without Steam
+offers "Install Steam", which opens Steam's own entry in Bilby (from Flathub, the
+distribution, winget or Homebrew, whichever this device has).
+
 **Other stores, handed over to.** Some things can only be installed by the store that
 sells them. For those Bilby is the front door: it finds the app, shows its price,
 pictures and how well liked it is, and then opens that store's own app on it with

@@ -346,6 +346,25 @@ impl Source for Steam {
     }
 }
 
+/// Where this device would get the Steam app itself from, among the sources it has.
+pub fn steam_itself(platform: &Platform, sources: &[SourceKind]) -> Option<AppId> {
+    use crate::platform::LinuxFamily;
+    let has = |kind: SourceKind| sources.contains(&kind);
+    let id = match platform.os {
+        Os::Windows if has(SourceKind::Winget) => AppId::new(SourceKind::Winget, "Valve.Steam"),
+        Os::MacOs if has(SourceKind::Homebrew) => AppId::new(SourceKind::Homebrew, "steam"),
+        Os::Linux if has(SourceKind::Flathub) => AppId::new(SourceKind::Flathub, "com.valvesoftware.Steam"),
+        Os::Linux if has(SourceKind::Pacman) => AppId::new(SourceKind::Pacman, "steam"),
+        Os::Linux if has(SourceKind::Apt) => AppId::new(SourceKind::Apt, "steam-installer"),
+        Os::Linux if has(SourceKind::Dnf) || has(SourceKind::Zypper) => {
+            let suse = platform.linux.as_ref().is_some_and(|l| l.family == LinuxFamily::Suse);
+            AppId::new(if suse { SourceKind::Zypper } else { SourceKind::Dnf }, "steam")
+        }
+        _ => return None,
+    };
+    Some(id)
+}
+
 /// The link that asks Steam to start something.
 pub fn run_link(id: &str) -> Option<PathBuf> {
     crate::model::valid_key(SourceKind::Steam, id).then(|| Path::new(&format!("steam://rungameid/{id}")).to_path_buf())

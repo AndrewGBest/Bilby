@@ -134,7 +134,13 @@ impl Source for GitLab {
             url_encode(query.trim()),
             limit.clamp(1, 50)
         );
-        let projects: Vec<Project> = serde_json::from_str(&self.http.get(&url)?)?;
+        // GitLab limits how often an anonymous client may ask. Being turned away is
+        // not something to show the person searching; GitLab's apps are just absent.
+        let body = match self.http.get(&url) {
+            Err(Error::Status { code: 429, .. }) | Err(Error::RateLimited { .. }) => return Ok(Vec::new()),
+            other => other?,
+        };
+        let projects: Vec<Project> = serde_json::from_str(&body)?;
         Ok(projects
             .into_iter()
             .filter(|p| p.forked_from_project.is_none() && p.archived != Some(true))
@@ -153,7 +159,12 @@ impl Source for GitLab {
     fn releases(&self, key: &str) -> Result<Vec<Release>> {
         check(key)?;
         let url = format!("{}/projects/{}/releases?per_page={RELEASES_PER_APP}", self.api, url_encode(key));
-        let releases: Vec<ApiRelease> = serde_json::from_str(&self.http.get(&url)?)?;
+        let body = match self.http.get(&url) {
+            // Turned away for asking too often: nothing to offer from here for now.
+            Err(Error::Status { code: 429, .. }) | Err(Error::RateLimited { .. }) => return Ok(Vec::new()),
+            other => other?,
+        };
+        let releases: Vec<ApiRelease> = serde_json::from_str(&body)?;
         Ok(releases
             .into_iter()
             .filter(|r| !r.upcoming_release)

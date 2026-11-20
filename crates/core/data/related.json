@@ -1,0 +1,20 @@
+{
+  "_comment": "Apps that are different ways to use the same service. Each family is shown as one app; its page lets the person pick a version that works on their device. Order matters: the first member this device can use is the one shown first. Mark anything not made by the service's owner as unofficial.",
+  "families": [
+    {
+      "name": "YouTube",
+      "members": [
+        { "id": "web:youtube.com", "label": "YouTube website", "official": true },
+        { "id": "flathub:rocks.shy.VacuumTube", "label": "VacuumTube", "note": "YouTube's TV interface as a desktop app" },
+        { "id": "github:shy1132/VacuumTube", "label": "VacuumTube", "note": "YouTube's TV interface as a desktop app" },
+        { "id": "flathub:io.freetubeapp.FreeTube", "label": "FreeTube", "note": "A private YouTube player" },
+        { "id": "brew:freetube", "label": "FreeTube", "note": "A private YouTube player" },
+        { "id": "snap:freetube", "label": "FreeTube", "note": "A private YouTube player" },
+        { "id": "github:FreeTubeApp/FreeTube", "label": "FreeTube", "note": "A private YouTube player" },
+        { "id": "github:yuliskov/SmartTube", "label": "SmartTube", "note": "A YouTube player for Android TV" },
+        { "id": "fdroid:org.schabi.newpipe", "label": "NewPipe", "note": "A lightweight YouTube player for Android" },
+        { "id": "github:TeamNewPipe/NewPipe", "label": "NewPipe", "note": "A lightweight YouTube player for Android" }
+      ]
+    }
+  ]
+}

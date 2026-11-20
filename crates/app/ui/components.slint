@@ -1099,6 +1099,37 @@ export component DetailsBody inherits Rectangle {
                     clicked => { Store.toggle-favourite(); }
                 }
             }
+            // A service with several apps: which version this is, and the others that
+            // work on this device.
+            if Store.app-family.length > 1 : VerticalLayout {
+                spacing: 6px;
+                Text {
+                    text: "Versions of " + Store.app-family-name + " for this device";
+                    color: Theme.text-dim;
+                    font-size: 12px;
+                    horizontal-alignment: compact ? center : right;
+                }
+                Flickable {
+                    height: 36px;
+                    viewport-width: family-chips.preferred-width;
+                    HorizontalLayout {
+                        alignment: compact ? start : end;
+                        family-chips := HorizontalLayout {
+                            spacing: 8px;
+                            for version in Store.app-family : ChoiceChip {
+                                text: version.label;
+                                selected: version.on;
+                                accessible-label: version.on ? "Showing " + version.label : "Switch to " + version.label;
+                                clicked => {
+                                    if (!version.on) {
+                                        Store.open(version.id);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             // Which source the button installs from, right beside it, and the others to
             // switch to. Only when there is a choice.
             if Store.app-sources.length > 1 : HorizontalLayout {
@@ -1340,6 +1371,11 @@ export component DetailsBody inherits Rectangle {
                 acted => { Store.retry-details(); }
             }
             if Store.warning != "" : Text { text: Store.warning; color: Theme.warn; font-size: 13px; wrap: word-wrap; }
+            // Something else is needed first, and this store can install it.
+            if Store.helper-id != "" : HorizontalLayout {
+                alignment: start;
+                Button { text: Store.helper-label; clicked => { Store.open(Store.helper-id); } }
+            }
 
             if Store.unavailable != "" : Rectangle {
                 height: un.preferred-height + 28px;

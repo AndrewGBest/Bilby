@@ -66,7 +66,12 @@ There is no Android package yet, and no Flatpak
 
 - Browse a short starter list of well-known apps that ships with Bilby. On Linux, also
   what is popular and trending on Flathub.
-- Search every source your device has at once. The best match comes first: the app
+- One app is one result, even when several sources have it. Its page shows which
+  source the button uses and lets you switch.
+- Different apps for the same service (YouTube has several) are gathered on one
+  page, so you can pick the version that suits your device.
+- Search every source your device has at once, or narrow to one. Sources you never
+  want can be switched off in Settings. The best match comes first: the app
   with the name you typed, then the ones most people use.
 - See what you are getting: pictures and a description, and, where the source provides
   them, download counts, star ratings, written reviews and whether the developer is
@@ -74,8 +79,8 @@ There is no Android package yet, and no Flatpak
 
 **Install it**
 
-- One button fetches the right file for your device and hands it to your system's
-  installer: an `.exe` or `.msi` on Windows, a `.dmg` or `.pkg` on macOS, a package,
+- One button installs it. Bilby never hands you a command to type. It fetches the
+  right file for your device and hands it to your system's installer: an `.exe` or `.msi` on Windows, a `.dmg` or `.pkg` on macOS, a package,
   AppImage or Flatpak on Linux.
 - Downloads are checked against the checksum the source publishes, when there is one.
 - Every other file and every older version is one press away, never hidden for good.
@@ -104,12 +109,12 @@ Each source only appears on devices it applies to. A Windows user never sees the
 |---|---|---|
 | **GitHub Releases** | Windows, macOS, Linux | Any project that publishes files with its releases |
 | **GitLab** | Windows, macOS, Linux | The same, for projects on GitLab.com |
-| **winget** | Windows | The Windows Package Manager's catalog. Bilby shows the install command |
+| **winget** | Windows | The Windows Package Manager's catalog |
 | **Homebrew** | macOS | Thousands of Mac apps. Bilby downloads each from its publisher and checks it; Homebrew itself is not needed |
 | **Flathub** | Linux with Flatpak | Its whole catalog, with ratings, reviews and install counts |
-| **Your distribution** | Arch-based (pacman) and Debian-based (apt) systems | Every package your system is already set up to install |
+| **Your distribution** | Arch (pacman), Debian and Ubuntu (apt), Fedora (dnf) and openSUSE (zypper) families | Every package your system is already set up to install |
 | **The AUR** | Arch-based systems | Community build recipes |
-| **Snap Store** | Linux with snapd | Its whole catalog. Bilby shows the install command |
+| **Snap Store** | Linux with snapd | Its whole catalog |
 | **F-Droid** | Android (when the Android app arrives) | Its catalog of free Android apps |
 | **Steam** | Windows, macOS, Linux | Games and apps with their prices. Bilby hands over to the Steam app, which installs and runs them |
 | **Mac App Store** | macOS | Its catalog with prices and ratings. Bilby hands over to the App Store app |

@@ -968,6 +968,28 @@ impl App {
                 })
                 .collect(),
         };
+        let mut cards = cards;
+        if filter.is_none() {
+            let available = self.catalog().available_sources();
+            let families = bilby_core::related::families();
+            if let Some(family) = bilby_core::related::family_named(families, &query) {
+                let here = family.here(&available);
+                if let Some(first) = here.first().and_then(|m| AppId::parse(&m.id).map(|id| (id, *m))) {
+                    // One tile for the service; its versions are chosen on its page.
+                    cards.retain(|card| !family.members.iter().any(|m| m.id.eq_ignore_ascii_case(card.id.as_str())));
+                    let mut app = AppSummary::new(first.0, family.name.clone());
+                    app.summary = match here.len() {
+                        1 => first.1.note.clone(),
+                        n => format!("{n} versions work on this device. Choose one on its page."),
+                    };
+                    let mut card = self.card(&app);
+                    card.more_sources = 0;
+                    card.headline =
+                        if here.len() > 1 { format!("{} versions", here.len()).into() } else { SharedString::new() };
+                    cards.insert(0, card);
+                }
+            }
+        }
         store.set_results(ModelRc::new(VecModel::from(cards)));
         self.show_app_sources(ui);
 
@@ -1114,6 +1136,52 @@ impl App {
             })
             .unwrap_or_default();
         store.set_app_sources(ModelRc::new(VecModel::from(choices)));
+
+        // The app as one version of a service (VacuumTube, of YouTube): the versions
+        // this device can use, to choose between.
+        let available = self.catalog().available_sources();
+        let families = bilby_core::related::families();
+        let family = bilby_core::related::family_of(families, &id);
+        let versions: Vec<SourceChoice> = family
+            .map(|family| {
+                family
+                    .here(&available)
+                    .into_iter()
+                    .map(|m| SourceChoice {
+                        id: m.id.as_str().into(),
+                        label: m.describe().into(),
+                        on: m.id.eq_ignore_ascii_case(&id),
+                        count: 0,
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        store.set_app_family_name(family.map(|f| f.name.as_str()).unwrap_or_default().into());
+        store.set_app_family(ModelRc::new(VecModel::from(versions)));
+
+        // A Steam game without Steam: offer Steam itself, from wherever this device gets it.
+        let mut helper = (String::new(), String::new());
+        if id.starts_with("steam:") {
+            use bilby_core::source::steam;
+            let platform = self.platform.read().unwrap().clone();
+            let libraries = self.steam_libraries.clone().unwrap_or_else(|| steam::default_libraries(platform.os));
+            if libraries.is_empty() {
+                if let Some(steam_app) = steam::steam_itself(&platform, &available) {
+                    helper = (steam_app.to_string(), "Install Steam".to_string());
+                }
+            }
+        }
+        // The same choices as rows for the TV, without the one already showing.
+        let mut rows: Vec<SourceChoice> = Vec::new();
+        for version in store.get_app_family().iter().filter(|v| !v.on) {
+            rows.push(SourceChoice { label: format!("Switch to {}", version.label).into(), ..version });
+        }
+        for source in store.get_app_sources().iter().filter(|c| !c.on) {
+            rows.push(SourceChoice { label: format!("Get it from {} instead", source.label).into(), ..source });
+        }
+        store.set_tv_choices(ModelRc::new(VecModel::from(rows)));
+        store.set_helper_id(helper.0.into());
+        store.set_helper_label(helper.1.into());
     }
 
     /// Sign in to GitHub with a code: show it, then wait for the person to enter it at

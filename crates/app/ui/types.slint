@@ -156,6 +156,17 @@ export global Store {
     // Every source that has this app, when more than one does. `id` is the app's id at
     // that source and `on` marks the one this page is showing.
     in property <[SourceChoice]> app-sources;
+    // Other versions of the same service that work on this device ("YouTube":
+    // VacuumTube, FreeTube, ...), when the app belongs to such a family.
+    in property <[SourceChoice]> app-family;
+    in property <string> app-family-name;
+    // An app that is needed first (Steam, for a Steam game), which this store can
+    // install: its id and what to call it. "" when nothing is missing.
+    // For the TV's Versions list: the other versions and sources as rows to choose,
+    // each labelled with what choosing it does.
+    in property <[SourceChoice]> tv-choices;
+    in property <string> helper-id;
+    in property <string> helper-label;
     in property <string> release-date;
     in property <string> release-age;
     in property <string> license;

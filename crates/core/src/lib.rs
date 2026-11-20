@@ -30,6 +30,7 @@ pub mod os;
 pub mod platform;
 pub mod rank;
 pub mod ratings;
+pub mod related;
 pub mod screenshots;
 pub mod source;
 pub mod state;

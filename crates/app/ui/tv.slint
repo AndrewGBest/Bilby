@@ -252,7 +252,10 @@ export component TvShell inherits Rectangle {
     property <string> main-action: busy ? "Cancel" : open-instead ? "Open" : is-update ? "Update" : Store.options.length == 0 ? "" : Store.installed-version != "" && !Store.is-website ? "Install again" : Store.options[0].verb;
     // The buttons on an app's page, left to right: the main one, Favourite, Other files
     // (when there are any) and Remove (when the app is in the library).
-    property <bool> has-files: Store.options.length > 0 && !Store.is-website;
+    // Other versions of the service and other sources of the app come first in the
+    // Versions list, above this release's files.
+    property <int> choices: Store.tv-choices.length;
+    property <bool> has-files: (Store.options.length > 0 && !Store.is-website) || root.choices > 0;
     property <bool> has-reviews: Store.reviews.length > 0;
     property <int> reviews-idx: !has-reviews ? -1 : has-files ? 3 : 2;
     property <int> remove-idx: !Store.in-library ? -1 : 2 + (has-files ? 1 : 0) + (has-reviews ? 1 : 0);
@@ -402,7 +405,7 @@ export component TvShell inherits Rectangle {
                             root.opt -= 1;
                         }
                     } else if (event.text == Key.DownArrow) {
-                        root.opt = max(0, min(Store.options.length - 1, root.opt + 1));
+                        root.opt = max(0, min(root.choices + Store.options.length - 1, root.opt + 1));
                     } else if (event.text == Key.RightArrow && !root.busy) {
                         // Right is an older version, Left a newer one.
                         if (Store.selected-version < Store.versions.length - 1) {
@@ -417,8 +420,10 @@ export component TvShell inherits Rectangle {
                     } else if (event.text == Key.Return || event.text == " ") {
                         if (root.busy) {
                             Store.cancel-install();
+                        } else if (root.opt < root.choices) {
+                            Store.open(Store.tv-choices[root.opt].id);
                         } else if (Store.options.length > 0) {
-                            Store.install(root.opt);
+                            Store.install(root.opt - root.choices);
                         }
                     }
                 } else if (root.reading) {
@@ -1044,9 +1049,40 @@ export component TvShell inherits Rectangle {
                     font-size: 13 * u;
                     font-weight: 700;
                 }
-                for option[i] in Store.options : Rectangle {
+                for choice[i] in Store.tv-choices : Rectangle {
                     property <bool> focused: i == root.opt;
-                    property <bool> mine: Store.install-index == i && Store.install-state != 0;
+                    height: 34 * u;
+                    accessible-role: button;
+                    accessible-label: choice.label;
+                    Rectangle {
+                        x: focused ? -3 * u : 0;
+                        width: parent.width + (focused ? 6 * u : 0);
+                        border-radius: 10 * u;
+                        background: focused ? Theme.surface-2 : Theme.surface;
+                        border-width: focused ? 2 * u : 0.5 * u;
+                        border-color: focused ? white : Theme.stroke;
+                        TouchArea {
+                            clicked => {
+                                root.opt = i;
+                                Store.open(choice.id);
+                            }
+                        }
+                        Text {
+                            x: 14 * u;
+                            width: parent.width - 28 * u;
+                            text: choice.label;
+                            color: Theme.text;
+                            font-size: 13 * u;
+                            font-weight: 600;
+                            vertical-alignment: center;
+                            overflow: elide;
+                        }
+                    }
+                }
+                for option[j] in Store.options : Rectangle {
+                    property <int> i: j + root.choices;
+                    property <bool> focused: i == root.opt;
+                    property <bool> mine: Store.install-index == j && Store.install-state != 0;
                     height: 54 * u;
                     Rectangle {
                         x: focused ? -3 * u : 0;
@@ -1059,7 +1095,7 @@ export component TvShell inherits Rectangle {
                         TouchArea {
                             clicked => {
                                 root.opt = i;
-                                Store.install(i);
+                                Store.install(j);
                             }
                         }
                         HorizontalLayout {
