@@ -60,6 +60,7 @@ fn start(root: &Path) -> Session {
     let dirs = Dirs {
         downloads: root.join("downloads"),
         applications: root.join("Applications"),
+        menu: root.join("menu"),
         cache: root.join("cache"),
         config: root.join("config"),
     };

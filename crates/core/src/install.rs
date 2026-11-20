@@ -166,6 +166,8 @@ pub struct Dirs {
     pub downloads: PathBuf,
     /// Per-user folder for AppImages.
     pub applications: PathBuf,
+    /// Where the desktop looks for app-menu entries (`~/.local/share/applications`).
+    pub menu: PathBuf,
     pub cache: PathBuf,
     /// Settings and library (`state.json`).
     pub config: PathBuf,
@@ -192,6 +194,7 @@ impl Dirs {
         Dirs {
             downloads: var("XDG_DOWNLOAD_DIR").unwrap_or_else(|| home.join("Downloads")).join("bilby"),
             applications: home.join("Applications"),
+            menu: var("XDG_DATA_HOME").unwrap_or_else(|| home.join(".local").join("share")).join("applications"),
             cache: cache.join("bilby"),
             config: config.join("bilby"),
         }
@@ -205,6 +208,54 @@ pub struct Outcome {
     pub file: Option<PathBuf>,
     /// The store placed the app itself (AppImage), so deleting `file` uninstalls it.
     pub store_managed: bool,
+}
+
+fn menu_entry_path(dirs: &Dirs, id: &str) -> PathBuf {
+    let slug: String =
+        id.chars().map(|c| if c.is_ascii_alphanumeric() { c.to_ascii_lowercase() } else { '-' }).collect();
+    dirs.menu.join(format!("bilby-{slug}.desktop"))
+}
+
+/// Put an AppImage the store placed into the desktop's app menu, so it starts like any
+/// other installed app. One entry per app: a new version replaces the entry.
+///
+/// The format is the freedesktop.org Desktop Entry Specification; values are escaped as
+/// it requires, because names and paths come from release authors.
+pub fn add_menu_entry(dirs: &Dirs, id: &str, name: &str, appimage: &Path) -> Result<PathBuf> {
+    // In a string value, a newline would start a new key.
+    let value =
+        |text: &str| -> String { text.chars().filter(|c| !c.is_control()).collect::<String>().replace('\\', "\\\\") };
+    // Exec: quote the path; inside quotes `"`, `` ` ``, `$` and `\` take a backslash,
+    // and the whole value is then escaped once more as a string (hence four).
+    let mut exec = String::from("\"");
+    for c in appimage.display().to_string().chars().filter(|c| !c.is_control()) {
+        match c {
+            '"' | '`' | '$' => exec.push_str(&format!("\\\\{c}")),
+            '\\' => exec.push_str("\\\\\\\\"),
+            '%' => exec.push_str("%%"),
+            c => exec.push(c),
+        }
+    }
+    exec.push('"');
+    let name = value(name);
+    let entry = format!(
+        "[Desktop Entry]\nType=Application\nName={}\nExec={exec} %U\nTerminal=false\nCategories=Utility;\nX-Bilby-App={}\n",
+        if name.is_empty() { "App".to_string() } else { name },
+        value(id),
+    );
+    std::fs::create_dir_all(&dirs.menu)?;
+    let path = menu_entry_path(dirs, id);
+    std::fs::write(&path, entry)?;
+    Ok(path)
+}
+
+/// Take an app's entry out of the app menu, if the store put one there.
+pub fn remove_menu_entry(dirs: &Dirs, id: &str) {
+    let path = menu_entry_path(dirs, id);
+    // Only files this store wrote: the name is ours, and so is the marker inside.
+    if std::fs::read_to_string(&path).is_ok_and(|text| text.contains("X-Bilby-App=")) {
+        let _ = std::fs::remove_file(path);
+    }
 }
 
 /// Open a file or folder with the desktop's default handler.
@@ -326,6 +377,7 @@ mod tests {
         Dirs {
             downloads: root.join("dl"),
             applications: root.join("apps"),
+            menu: root.join("menu"),
             cache: root.join("cache"),
             config: root.join("config"),
         }
@@ -473,5 +525,32 @@ mod tests {
         )
         .unwrap();
         assert_eq!(*opened.borrow(), vec![dirs.downloads.join("a_1.0_amd64.deb")]);
+    }
+
+    #[test]
+    fn an_appimage_gets_one_menu_entry_that_cannot_be_broken_out_of() {
+        let dirs = temp_dirs("menu");
+        let file = dirs.applications.join("My $HOME `app` \"x\" 100%.AppImage");
+        let path = add_menu_entry(&dirs, "github:Owner/Thing", "Thing\nExec=evil", &file).unwrap();
+        assert_eq!(path, dirs.menu.join("bilby-github-owner-thing.desktop"));
+        let text = std::fs::read_to_string(&path).unwrap();
+        assert_eq!(text.lines().filter(|l| l.starts_with("Exec=")).count(), 1, "a name cannot add keys: {text}");
+        assert!(text.contains("Name=ThingExec=evil\n"));
+        let exec = text.lines().find(|l| l.starts_with("Exec=")).unwrap();
+        assert!(exec.contains(r#"\\$HOME"#) && exec.contains(r#"\\`app\\`"#) && exec.contains(r#"\\"x\\""#), "{exec}");
+        assert!(exec.contains("100%%") && exec.ends_with("\" %U"), "{exec}");
+
+        // A new version of the same app replaces the entry instead of adding one.
+        add_menu_entry(&dirs, "github:Owner/Thing", "Thing", &dirs.applications.join("Thing-2.AppImage")).unwrap();
+        assert_eq!(std::fs::read_dir(&dirs.menu).unwrap().count(), 1);
+        assert!(std::fs::read_to_string(&path).unwrap().contains("Thing-2.AppImage"));
+
+        // Removing only ever touches entries the store wrote.
+        let foreign = menu_entry_path(&dirs, "github:someone/else");
+        std::fs::write(&foreign, "[Desktop Entry]\nName=Not ours\n").unwrap();
+        remove_menu_entry(&dirs, "github:someone/else");
+        assert!(foreign.exists());
+        remove_menu_entry(&dirs, "github:Owner/Thing");
+        assert!(!path.exists());
     }
 }

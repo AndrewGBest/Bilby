@@ -39,6 +39,7 @@ fn dirs_in(root: &std::path::Path) -> Dirs {
     Dirs {
         downloads: root.join("downloads"),
         applications: root.join("Applications"),
+        menu: root.join("menu"),
         cache: root.join("cache"),
         config: root.join("config"),
     }
@@ -256,6 +257,11 @@ fn install_an_appimage_end_to_end() {
     assert_eq!(saved.library[0].name, "Tidewave");
     assert_eq!(saved.library[0].version, "v3.4.0");
     assert!(saved.library[0].store_managed);
+    // And in the desktop's app menu, pointing at the file.
+    let entry = s.dirs.menu.join("bilby-github-tidewave-tidewave.desktop");
+    let text = std::fs::read_to_string(&entry).expect("a menu entry was written");
+    assert!(text.contains("Name=Tidewave\n") && text.contains("Tidewave-3.4.0-x86_64.AppImage"), "{text}");
+    assert!(s.store().get_install_message().ends_with("It is in your app menu."));
 
     // Back on Discover the tile now says so.
     s.click("Back");
@@ -270,6 +276,7 @@ fn install_an_appimage_end_to_end() {
     assert!(file.is_file(), "one click only asks for confirmation");
     s.click("Confirm removing Tidewave");
     assert!(!file.exists(), "the store deletes the AppImage it placed");
+    assert!(!entry.exists(), "and takes it out of the app menu");
     assert!(s.saved().library.is_empty());
     assert_eq!(s.store().get_toast(), "Tidewave uninstalled");
     assert!(s.has("Browse apps"), "the empty library offers a way forward");

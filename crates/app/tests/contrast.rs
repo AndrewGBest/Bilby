@@ -40,6 +40,7 @@ fn text_is_readable_in_both_themes() {
         dirs: Some(Dirs {
             downloads: root.join("d"),
             applications: root.join("a"),
+            menu: root.join("menu"),
             cache: root.join("c"),
             config: root.join("cfg"),
         }),

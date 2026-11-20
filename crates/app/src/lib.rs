@@ -1112,6 +1112,21 @@ impl App {
                         entry.path = outcome.file.as_ref().map(|p| p.display().to_string());
                         entry.store_managed = outcome.store_managed;
                         let id = entry.id.clone();
+                        if let (true, Some(file)) = (outcome.store_managed, outcome.file.as_ref()) {
+                            // Start it from the app menu like anything else that is installed.
+                            if install::add_menu_entry(&app.dirs, &id, &name, file).is_ok() {
+                                store
+                                    .set_install_message(format!("{} It is in your app menu.", outcome.message).into());
+                            }
+                            // The version this replaces was a different file: do not leave it behind.
+                            let previous =
+                                app.state().installed(&id).filter(|a| a.store_managed).and_then(|a| a.path.clone());
+                            if let Some(previous) = previous.map(PathBuf::from) {
+                                if previous != *file && previous.starts_with(&app.dirs.applications) {
+                                    let _ = std::fs::remove_file(previous);
+                                }
+                            }
+                        }
                         app.update_state(ui, |state| state.record_install(entry));
                         // Installing an older version on purpose leaves an update pending.
                         let newest = details.versions.first().map(|r| r.version.clone()).unwrap_or_default();
@@ -1268,6 +1283,7 @@ impl App {
             if path.starts_with(&self.dirs.applications) && std::fs::remove_file(&path).is_ok() {
                 message = format!("{} uninstalled", entry.name);
             }
+            install::remove_menu_entry(&self.dirs, id);
         }
         let store = ui.global::<Store>();
         if store.get_app().id == id {
@@ -1670,6 +1686,7 @@ fn android_main(android_app: slint::android::AndroidApp) {
     let dirs = Dirs {
         downloads: downloads.join("downloads"),
         applications: internal.join("apps"),
+        menu: internal.join("menu"),
         cache: internal.join("cache"),
         config: internal.join("config"),
     };

@@ -271,6 +271,11 @@ fn install_cmd(
             InstalledApp::new(&details.summary, &release.version, &option.label(), &option.asset.name, now_unix());
         entry.path = outcome.file.as_ref().map(|p| p.display().to_string());
         entry.store_managed = outcome.store_managed;
+        if let (true, Some(file)) = (outcome.store_managed, outcome.file.as_ref()) {
+            if install::add_menu_entry(dirs, &entry.id, &entry.name, file).is_ok() {
+                println!("Added to your app menu.");
+            }
+        }
         state.record_install(entry);
         state.save(state_path).map_err(|e| format!("installed, but the library could not be saved: {e}"))?;
     }
