@@ -24,8 +24,15 @@ pub enum Action {
     Reveal,
     /// Ask Android's package installer to install the APK.
     AndroidInstaller,
-    /// Nothing is downloaded by the store; the user runs this command.
+    /// Nothing is downloaded by the store; the user runs this command. Only a last
+    /// resort now: when there is no way to run it for them.
     ShowCommand,
+    /// The store runs the plan's command itself. One that starts with `sudo` is run
+    /// through the desktop's own password prompt instead.
+    RunCommand,
+    /// The store opens a terminal on the plan's command, for installs that ask
+    /// questions as they go (building from the AUR).
+    RunInTerminal,
     /// Put a website in the app list, to open in Longboard.
     WebApp,
     /// Have Flatpak install the app from Flathub.
@@ -129,25 +136,25 @@ pub fn plan(asset: &Asset, info: &AssetInfo, p: &Platform) -> InstallPlan {
         }
         Format::RepoPackage => {
             let name = asset.name.split_whitespace().next().unwrap_or(&asset.name).to_string();
-            let pacman = p.linux.as_ref().is_some_and(|l| l.pacman);
-            let (manager, command) = if pacman {
-                ("pacman", format!("sudo pacman -S {name}"))
+            let linux = p.linux.as_ref();
+            // Each asks no questions: the store cannot answer them.
+            let (manager, command) = if linux.is_some_and(|l| l.pacman) {
+                ("pacman", format!("sudo pacman -S --noconfirm --needed {name}"))
+            } else if linux.is_some_and(|l| l.family == crate::platform::LinuxFamily::Suse) {
+                ("zypper", format!("sudo zypper --non-interactive install {name}"))
+            } else if linux.is_some_and(|l| l.rpm) {
+                ("dnf", format!("sudo dnf install -y {name}"))
             } else {
-                ("apt", format!("sudo apt install {name}"))
+                ("apt", format!("sudo apt-get install -y {name}"))
             };
-            let mut steps = vec![
-                format!("{manager} downloads it from your configured repositories and checks its signature"),
-                "Run the command below; it asks for your password".to_string(),
-                format!("From then on {manager} keeps it up to date with the rest of the system"),
-            ];
-            if pacman {
-                // Arch-based systems do not support upgrading single packages.
-                steps.push("If it is already installed, update the whole system instead: sudo pacman -Syu".to_string());
-            }
             return InstallPlan {
-                action: Action::ShowCommand,
-                verb: format!("Install with {manager}"),
-                steps,
+                action: Action::RunCommand,
+                verb: "Install".to_string(),
+                steps: vec![
+                    format!("{manager} downloads it from your system's repositories and checks its signature"),
+                    "Your system asks for your password".to_string(),
+                    format!("From then on {manager} keeps it up to date with the rest of the system"),
+                ],
                 command: Some(command),
             };
         }
@@ -173,11 +180,11 @@ pub fn plan(asset: &Asset, info: &AssetInfo, p: &Platform) -> InstallPlan {
         Format::SnapStore => {
             let name = asset.name.split_whitespace().next().unwrap_or(&asset.name).to_string();
             return InstallPlan {
-                action: Action::ShowCommand,
-                verb: "Install with snap".to_string(),
+                action: Action::RunCommand,
+                verb: "Install".to_string(),
                 steps: vec![
                     "snapd downloads it from the Snap Store and checks its signature".to_string(),
-                    "Run the command below; it asks for your password".to_string(),
+                    "Your system asks for your password".to_string(),
                     "From then on snapd keeps it up to date by itself".to_string(),
                 ],
                 command: Some(format!("sudo snap install {name}")),
@@ -186,14 +193,15 @@ pub fn plan(asset: &Asset, info: &AssetInfo, p: &Platform) -> InstallPlan {
         Format::WingetPackage => {
             let name = asset.name.split_whitespace().next().unwrap_or(&asset.name).to_string();
             return InstallPlan {
-                action: Action::ShowCommand,
-                verb: "Install with winget".to_string(),
+                action: Action::RunCommand,
+                verb: "Install".to_string(),
                 steps: vec![
                     "winget downloads the installer from its publisher and checks it".to_string(),
-                    "Run the command below in a terminal; Windows may ask you to confirm".to_string(),
-                    "Update it later with: winget upgrade".to_string(),
+                    "Windows may ask you to confirm".to_string(),
                 ],
-                command: Some(format!("winget install --id {name} -e")),
+                command: Some(format!(
+                    "winget install --id {name} --exact --source winget --silent --accept-package-agreements --accept-source-agreements --disable-interactivity"
+                )),
             };
         }
         Format::AurBuild => {
@@ -203,10 +211,10 @@ pub fn plan(asset: &Asset, info: &AssetInfo, p: &Platform) -> InstallPlan {
                 None => format!("git clone https://aur.archlinux.org/{name}.git && cd {name} && makepkg -si"),
             };
             steps = vec![
-                "Read the PKGBUILD: AUR recipes are user-submitted and run on your machine".to_string(),
-                "Build and install with the command below".to_string(),
+                "AUR recipes are written by other users and run on your machine".to_string(),
+                "A terminal opens and builds it; it asks for your password there".to_string(),
             ];
-            (Action::ShowCommand, "Build from AUR", Some(command))
+            (Action::RunInTerminal, "Build and install", Some(command))
         }
     };
     InstallPlan { action, verb: verb.to_string(), steps, command }
@@ -248,6 +256,12 @@ pub struct Dirs {
     pub menu: PathBuf,
     /// The Flatpak program (`flatpak`, found on the PATH).
     pub flatpak: PathBuf,
+    /// The program that asks for the password and runs a command as administrator
+    /// (`pkexec`, from polkit).
+    pub elevate: PathBuf,
+    /// A terminal to open for installs that need one, and how it takes a command to
+    /// run. `None` when none was found.
+    pub terminal: Option<(PathBuf, &'static str)>,
     /// Flatpak's installations: system-wide and per-user. Installed apps are in `app/<id>`.
     pub flatpak_roots: Vec<PathBuf>,
     pub cache: PathBuf,
@@ -278,6 +292,8 @@ impl Dirs {
             applications: home.join("Applications"),
             menu: var("XDG_DATA_HOME").unwrap_or_else(|| home.join(".local").join("share")).join("applications"),
             flatpak: PathBuf::from("flatpak"),
+            elevate: PathBuf::from("pkexec"),
+            terminal: find_terminal(),
             flatpak_roots: vec![
                 PathBuf::from("/var/lib/flatpak"),
                 var("XDG_DATA_HOME").unwrap_or_else(|| home.join(".local").join("share")).join("flatpak"),
@@ -447,26 +463,66 @@ pub fn remove_menu_entry(dirs: &Dirs, id: &str) {
 /// Run Flatpak and wait for it, giving up (and stopping it) when `keep_going` says so.
 /// Flatpak reports no usable progress, so the callback is only asked whether to go on.
 pub fn run_flatpak(dirs: &Dirs, args: &[&str], keep_going: &mut dyn FnMut(u64, Option<u64>) -> bool) -> Result<()> {
+    run_program(&dirs.flatpak, args, "Flatpak", keep_going)
+}
+
+/// A terminal on this machine and the option that makes it run a command.
+pub fn find_terminal() -> Option<(PathBuf, &'static str)> {
+    const KNOWN: [(&str, &str); 9] = [
+        ("konsole", "-e"),
+        ("gnome-terminal", "--"),
+        ("kgx", "-e"),
+        ("xfce4-terminal", "-x"),
+        ("alacritty", "-e"),
+        ("kitty", "-e"),
+        ("foot", "-e"),
+        ("x-terminal-emulator", "-e"),
+        ("xterm", "-e"),
+    ];
+    let path = std::env::var_os("PATH")?;
+    KNOWN.iter().find_map(|(name, flag)| {
+        std::env::split_paths(&path).map(|dir| dir.join(name)).find(|p| p.is_file()).map(|p| (p, *flag))
+    })
+}
+
+/// Run a program and wait for it, giving up (and stopping it) when `keep_going` says
+/// so. `name` is what to call it when it fails.
+pub fn run_program(
+    program: &Path,
+    args: &[&str],
+    name: &str,
+    keep_going: &mut dyn FnMut(u64, Option<u64>) -> bool,
+) -> Result<()> {
     use std::process::{Command, Stdio};
-    let mut child = Command::new(&dirs.flatpak)
-        .args(args)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::piped())
+    let mut command = Command::new(program);
+    command.args(args).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::piped());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        // Without this a console window flashes up behind the store.
+        command.creation_flags(0x0800_0000);
+    }
+    let mut child = command
         .spawn()
-        .map_err(|e| Error::Unsupported(format!("Flatpak could not be started ({e}). Is it installed?")))?;
+        .map_err(|e| Error::Unsupported(format!("{name} could not be started ({e}). Is it installed?")))?;
     loop {
         match child.try_wait()? {
             Some(status) if status.success() => return Ok(()),
+            // The password prompt's own codes: it was closed, or permission was refused.
+            Some(status) if matches!(status.code(), Some(126 | 127)) && program.ends_with("pkexec") => {
+                return Err(Error::Unsupported(
+                    "Nothing was installed: the password prompt was closed or refused.".to_string(),
+                ));
+            }
             Some(_) => {
                 let mut said = String::new();
                 if let Some(mut stderr) = child.stderr.take() {
                     let _ = std::io::Read::read_to_string(&mut stderr, &mut said);
                 }
-                // Flatpak's own last line is the most useful thing to show.
+                // The program's own last line is the most useful thing to show.
                 let why =
                     said.lines().rev().find(|l| !l.trim().is_empty()).unwrap_or("it gave no reason").trim().to_string();
-                return Err(Error::Unsupported(format!("Flatpak could not do it: {why}")));
+                return Err(Error::Unsupported(format!("{name} could not do it: {why}")));
             }
             None => {
                 if !keep_going(0, None) {
@@ -556,6 +612,44 @@ pub fn execute(
     if plan.action == Action::ShowCommand {
         let command = plan.command.clone().unwrap_or_default();
         return Ok(Outcome { message: format!("Run in a terminal: {command}"), file: None, store_managed: false });
+    }
+    if plan.action == Action::RunCommand {
+        // The command is one this store built from a checked name: words, no quoting.
+        let command = plan.command.clone().unwrap_or_default();
+        let mut words = command.split_whitespace();
+        let (program, rest): (PathBuf, Vec<&str>) = match words.next() {
+            // "sudo" stands for "as administrator": the desktop's own prompt does that here.
+            Some("sudo") => (dirs.elevate.clone(), words.collect()),
+            Some(program) => (PathBuf::from(program), words.collect()),
+            None => return Err(Error::Unsupported("There is nothing to run.".to_string())),
+        };
+        let what = rest.first().copied().unwrap_or("it");
+        run_program(&program, &rest, if command.starts_with("sudo ") { what } else { "The installer" }, progress)?;
+        return Ok(Outcome { message: "Installed.".to_string(), file: None, store_managed: false });
+    }
+    if plan.action == Action::RunInTerminal {
+        let command = plan.command.clone().unwrap_or_default();
+        let Some((terminal, flag)) = &dirs.terminal else {
+            // No terminal to open: the command is all that can be offered.
+            return Ok(Outcome {
+                message: format!("No terminal was found. Run this in one: {command}"),
+                file: None,
+                store_managed: false,
+            });
+        };
+        // Keep the window open afterwards, so the result can be read.
+        let script = format!("{command}; echo; echo 'Done. Press Enter to close.'; read _");
+        std::process::Command::new(terminal)
+            .arg(flag)
+            .args(["sh", "-c", &script])
+            .stdin(std::process::Stdio::null())
+            .spawn()
+            .map_err(|e| Error::Unsupported(format!("The terminal could not be opened ({e}). Run: {command}")))?;
+        return Ok(Outcome {
+            message: "A terminal has opened to build it. Come back when it has finished.".to_string(),
+            file: None,
+            store_managed: false,
+        });
     }
 
     if plan.action == Action::OpenStore {
@@ -653,7 +747,12 @@ pub fn execute(
             let _ = std::fs::remove_file(&dest);
             Ok(Outcome { message: format!("{verified}Installed with Flatpak. It is in your app menu."), file: None, store_managed: false })
         }
-        Action::ShowCommand | Action::WebApp | Action::Flatpak | Action::OpenStore => unreachable!("handled above"),
+        Action::ShowCommand
+        | Action::RunCommand
+        | Action::RunInTerminal
+        | Action::WebApp
+        | Action::Flatpak
+        | Action::OpenStore => unreachable!("handled above"),
     }
 }
 
@@ -767,6 +866,8 @@ mod tests {
             applications: root.join("apps"),
             menu: root.join("menu"),
             flatpak: root.join("flatpak-program"),
+            elevate: root.join("elevate-program"),
+            terminal: None,
             flatpak_roots: vec![root.join("flatpak")],
             cache: root.join("cache"),
             config: root.join("config"),
@@ -816,16 +917,40 @@ mod tests {
         };
         let a = asset("linux-cachyos (cachyos-v3)", None);
         let arch = plan(&a, &info, &Platform::preset("linux-x64-arch").unwrap());
-        assert_eq!(arch.action, Action::ShowCommand);
-        assert_eq!(arch.command.as_deref(), Some("sudo pacman -S linux-cachyos"));
-        assert_eq!(arch.verb, "Install with pacman");
-        let debian =
-            plan(&asset("ripgrep (noble/universe)", None), &info, &Platform::preset("linux-x64-debian").unwrap());
-        assert_eq!(debian.command.as_deref(), Some("sudo apt install ripgrep"));
-        // Nothing is downloaded by the store for these.
+        assert_eq!(arch.action, Action::RunCommand);
+        assert_eq!(arch.command.as_deref(), Some("sudo pacman -S --noconfirm --needed linux-cachyos"));
+        assert_eq!(arch.verb, "Install");
+        let on = |preset: &str| {
+            plan(&asset("ripgrep (repo)", None), &info, &Platform::preset(preset).unwrap()).command.unwrap()
+        };
+        assert_eq!(on("linux-x64-debian"), "sudo apt-get install -y ripgrep");
+        assert_eq!(on("linux-x64-fedora"), "sudo dnf install -y ripgrep");
+
+        // The store runs it: "sudo" becomes the desktop's own password prompt, and
+        // nothing is downloaded by the store itself.
         let dirs = temp_dirs("repo");
-        let out = execute(&arch, &a, &Fake(b""), &dirs, &|_| unreachable!(), &mut |_, _| true).unwrap();
-        assert_eq!(out.message, "Run in a terminal: sudo pacman -S linux-cachyos");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::create_dir_all(dirs.elevate.parent().unwrap()).unwrap();
+            let log = dirs.elevate.with_extension("log");
+            let script = |code: u8| {
+                format!("#!/bin/sh\necho \"$@\" >> '{}'\necho 'it said why' >&2\nexit {code}\n", log.display())
+            };
+            std::fs::write(&dirs.elevate, script(0)).unwrap();
+            std::fs::set_permissions(&dirs.elevate, std::fs::Permissions::from_mode(0o755)).unwrap();
+            let out = execute(&arch, &a, &Fake(b""), &dirs, &|_| unreachable!(), &mut |_, _| true).unwrap();
+            assert_eq!(out.message, "Installed.");
+            assert_eq!(std::fs::read_to_string(&log).unwrap().trim(), "pacman -S --noconfirm --needed linux-cachyos");
+            // A failure passes on what the package manager said.
+            std::fs::write(&dirs.elevate, script(1)).unwrap();
+            let failed = execute(&arch, &a, &Fake(b""), &dirs, &|_| unreachable!(), &mut |_, _| true).unwrap_err();
+            assert_eq!(failed.to_string(), "pacman could not do it: it said why");
+        }
+        // Without a way to ask for the password, it says so instead of pretending.
+        let nowhere = Dirs { elevate: dirs.elevate.with_extension("missing"), ..temp_dirs("repo2") };
+        let failed = execute(&arch, &a, &Fake(b""), &nowhere, &|_| unreachable!(), &mut |_, _| true).unwrap_err();
+        assert!(failed.to_string().contains("could not be started"), "{failed}");
         assert!(!dirs.downloads.exists());
     }
 

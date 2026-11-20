@@ -43,6 +43,8 @@ fn dirs_in(root: &std::path::Path) -> Dirs {
         applications: root.join("Applications"),
         menu: root.join("menu"),
         flatpak: root.join("flatpak-program"),
+        elevate: root.join("elevate-program"),
+        terminal: None,
         flatpak_roots: vec![root.join("flatpak")],
         cache: root.join("cache"),
         config: root.join("config"),
@@ -71,6 +73,15 @@ fn start_with(preset: &str, shell: Shell, seed: Option<&str>) -> Session {
     if let Some(json) = seed {
         std::fs::create_dir_all(&dirs.config).unwrap();
         std::fs::write(&state_file, json).unwrap();
+    }
+    // A stand-in for the password prompt: it notes what it was asked to run and succeeds.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::create_dir_all(dirs.elevate.parent().unwrap()).unwrap();
+        let log = dirs.elevate.with_extension("log");
+        std::fs::write(&dirs.elevate, format!("#!/bin/sh\necho \"$@\" >> '{}'\n", log.display())).unwrap();
+        std::fs::set_permissions(&dirs.elevate, std::fs::Permissions::from_mode(0o755)).unwrap();
     }
     let opened: Arc<Mutex<Vec<PathBuf>>> = Arc::default();
     let record = opened.clone();
@@ -445,11 +456,14 @@ fn aur_packages_show_a_command_and_are_not_tracked() {
     let s = start("linux-x64-arch", Shell::Desktop);
     s.app.open(&s.ui, "aur:lumen-bin");
     let option = s.store().get_options().row_data(0).unwrap();
-    assert_eq!(option.verb, "Build from AUR");
+    assert_eq!(option.verb, "Build and install");
     assert_eq!(option.command, "paru -S lumen-bin");
     assert!(!option.verified);
+    // Building asks questions, so it happens in a terminal. This machine has none
+    // (the test says so), and then the command is what can be offered.
     s.app.install(&s.ui, 0);
     assert_eq!(s.store().get_install_state(), 2);
+    assert!(s.store().get_install_message().contains("No terminal was found"));
     assert!(s.store().get_install_message().contains("paru -S lumen-bin"));
     assert!(s.saved().library.is_empty(), "the store did not install it, so it does not claim to");
 }
@@ -648,12 +662,14 @@ fn system_repositories_are_searched_first_and_installed_packages_marked() {
     assert!(s.store().get_is_package());
     let option = s.store().get_options().row_data(0).unwrap();
     assert_eq!(option.label, "Repository package · x86_64");
-    assert_eq!(option.verb, "Install with pacman");
-    assert_eq!(option.command, "sudo pacman -S swiftkernel");
+    assert_eq!(option.verb, "Install");
+    assert_eq!(option.command, "sudo pacman -S --noconfirm --needed swiftkernel");
     assert!(s.store().get_notes().contains("“cachyos-v3” repository"));
-    // The store shows the command; pacman does the installing, so nothing is recorded.
+    // One press: pacman installs it behind the system's password prompt, and keeps
+    // track of it itself, so nothing goes in the store's library.
     s.app.install(&s.ui, 0);
-    assert!(s.store().get_install_message().contains("sudo pacman -S swiftkernel"));
+    #[cfg(unix)]
+    assert_eq!(s.store().get_install_message(), "Installed.");
     assert!(s.saved().library.is_empty());
 
     // A package pacman already has, with a newer version in the repository.
@@ -671,7 +687,7 @@ fn system_repositories_are_searched_first_and_installed_packages_marked() {
     assert_eq!(hit.id, "apt:harbor");
     assert_eq!(hit.source, "noble-updates/universe");
     debian.app.open(&debian.ui, "apt:harbor");
-    assert_eq!(debian.store().get_options().row_data(0).unwrap().command, "sudo apt install harbor");
+    assert_eq!(debian.store().get_options().row_data(0).unwrap().command, "sudo apt-get install -y harbor");
     debian.app.open(&debian.ui, "pacman:harbor");
     assert!(!debian.store().get_details_error().is_empty(), "pacman packages are not offered on a Debian system");
 
@@ -1232,12 +1248,19 @@ fn an_app_can_be_installed_straight_from_a_list() {
 }
 
 #[test]
-fn a_package_installed_with_a_command_is_shown_not_run() {
+fn a_repository_package_installs_with_one_press() {
     let s = start("linux-x64-arch", Shell::Desktop);
     s.app.quick_install(&s.ui, "pacman:swiftkernel");
     assert!(s.store().get_details_open());
-    assert_eq!(s.store().get_install_state(), 0, "the page shows the command; nothing starts by itself");
-    assert!(s.saved().library.is_empty());
+    assert!(s.saved().library.is_empty(), "pacman keeps track of it, not the store's library");
+    #[cfg(unix)]
+    {
+        assert_eq!(s.store().get_install_state(), 2, "{}", s.store().get_install_message());
+        let asked = std::fs::read_to_string(s.dirs.elevate.with_extension("log")).unwrap();
+        assert_eq!(asked.trim(), "pacman -S --noconfirm --needed swiftkernel", "run through the password prompt");
+        assert_eq!(s.store().get_installed_version(), "6.17.4-2");
+        assert_eq!(s.store().get_toast(), "swiftkernel is installed");
+    }
 }
 
 #[test]

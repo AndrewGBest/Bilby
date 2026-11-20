@@ -265,7 +265,13 @@ fn install_cmd(
     )
     .map_err(|e| e.to_string())?;
     println!("{}", outcome.message);
-    if option.plan.action != install::Action::ShowCommand {
+    if !matches!(
+        option.plan.action,
+        install::Action::ShowCommand
+            | install::Action::RunCommand
+            | install::Action::RunInTerminal
+            | install::Action::OpenStore
+    ) {
         let mut state = State::load(state_path);
         let mut entry =
             InstalledApp::new(&details.summary, &release.version, &option.label(), &option.asset.name, now_unix());

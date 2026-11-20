@@ -62,6 +62,8 @@ fn start(root: &Path) -> Session {
         applications: root.join("Applications"),
         menu: root.join("menu"),
         flatpak: root.join("flatpak-program"),
+        elevate: root.join("elevate-program"),
+        terminal: None,
         flatpak_roots: vec![root.join("flatpak")],
         cache: root.join("cache"),
         config: root.join("config"),

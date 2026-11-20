@@ -1859,7 +1859,19 @@ impl App {
                         store.set_install_message(outcome.message.as_str().into());
                         // A command to run, or another store taking over: nothing was
                         // installed by this store, so nothing goes in its library.
-                        if matches!(option.plan.action, Action::ShowCommand | Action::OpenStore) {
+                        if matches!(option.plan.action, Action::ShowCommand | Action::OpenStore | Action::RunInTerminal)
+                        {
+                            return;
+                        }
+                        // The system's package manager installed it and keeps track of
+                        // it; the page says so, and the store's own library stays as it is.
+                        if option.plan.action == Action::RunCommand {
+                            store.set_installed_version(if version.is_empty() {
+                                "installed".into()
+                            } else {
+                                version.as_str().into()
+                            });
+                            app.toast(ui, &format!("{} is installed", store.get_app().name), false);
                             return;
                         }
                         let name = store.get_app().name.to_string();
@@ -2643,6 +2655,8 @@ fn android_main(android_app: slint::android::AndroidApp) {
         applications: internal.join("apps"),
         menu: internal.join("menu"),
         flatpak: internal.join("flatpak-program"),
+        elevate: internal.join("elevate-program"),
+        terminal: None,
         flatpak_roots: vec![internal.join("flatpak")],
         cache: internal.join("cache"),
         config: internal.join("config"),

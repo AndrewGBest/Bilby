@@ -1272,8 +1272,6 @@ export component DetailsBody inherits Rectangle {
             }
 
             if root.has-option && root.best.note != "" : Text { text: root.best.note; color: Theme.warn; font-size: 12px; wrap: word-wrap; }
-            // A package is installed with a command; that is the action, so it is shown.
-            if root.has-option && Store.is-package && root.best.command != "" && !root.more : CommandBox { command: root.best.command; }
 
             if Store.installed-version != "" : Rectangle {
                 height: max(40px, banner.preferred-height + 20px);
