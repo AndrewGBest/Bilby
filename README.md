@@ -1,223 +1,151 @@
-<p align="center"><img src="crates/app/ui/icons/logo.svg" width="96" alt="Bilby logo: a long-eared bilby face"></p>
+<p align="center">
+  <img src="crates/app/ui/icons/logo.svg" width="104" alt="Bilby logo: a long-eared bilby face">
+</p>
 
-# Bilby
+<h1 align="center">Bilby</h1>
 
-An app store for GitHub Releases, Codeberg and other repositories that only shows you
-what runs on your device.
+<p align="center">
+  <b>An app store for open-source apps that only shows what runs on your device.</b><br>
+  GitHub Releases, Flathub, Codeberg and your Linux distribution, in one place.<br>
+  No account. No server of ours. No tracking.
+</p>
 
-Open-source apps usually publish a page of download files and leave you to work out
-which one is yours. Bilby works it out for you. A release with 18 files becomes one
-**Install** button, and the other 17 stay out of the way unless you ask for them.
+<p align="center">
+  <a href="#download">Download</a> ·
+  <a href="#what-you-can-do">What it does</a> ·
+  <a href="#where-apps-come-from">Sources</a> ·
+  <a href="#how-ready-is-it">Status</a> ·
+  <a href="docs/DEVELOPMENT.md">Build it</a>
+</p>
 
-There is no account, no Bilby server and no tracking. The app talks to the sources
-directly and keeps your library in one file on your device.
+![Bilby's Discover page on a desktop](docs/screenshots/desktop-discover.png)
 
-| Desktop | Mobile | TV |
-|---|---|---|
-| ![Desktop](docs/screenshots/desktop-discover.png) | ![Mobile](docs/screenshots/mobile-details.png) | ![TV](docs/screenshots/tv-home.png) |
+## The idea
 
-More screenshots are in [`docs/screenshots/`](docs/screenshots). They show the built-in
-demo catalog; the apps in it are fictional.
+Open-source apps usually hand you a page of download files and leave you to work out
+which one is yours.
 
-## Where apps come from
+**Bilby works it out for you.** It looks at your system, your processor and the kind of
+device you are on, and turns a release with 18 files into one **Install** button. The
+other 17 stay out of the way unless you ask for them.
 
-- **GitHub Releases** and **Codeberg**.
-- **Flathub**, wherever Flatpak is set up.
-- **Your Linux distribution's repositories**: everything pacman is set up for (Arch,
-  CachyOS, Chaotic-AUR, your own) or everything apt is set up for (Debian, Ubuntu,
-  PPAs).
-- **The AUR**, on Arch-based systems only.
-- **Websites**, on Linux TVs only: add a site and it opens like an app in
-  [Longboard](https://github.com/AndrewGBest/Longboard), a browser made for remotes.
+| On a desktop | On a phone | On a TV |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/desktop-details.png" alt="An app's page on a desktop"> | <img src="docs/screenshots/mobile-details.png" width="220" alt="An app's page on a phone"> | <img src="docs/screenshots/tv-home.png" alt="The home screen on a TV"> |
+| Mouse and keyboard | Touch | Remote only |
 
-A source only appears on devices it applies to. A Windows user never sees the AUR.
-
-## What it does
-
-**Finding apps**
-
-- Discover lists hand-picked apps by category and works offline.
-- Search puts the best match first: the app with the name you typed, then the apps most
-  people use. You can also paste a project link.
-- Each app's page shows its logo, pictures and a description taken from the project.
-- Star ratings and written reviews where they exist, from the service the GNOME and
-  KDE stores use. The number of ratings doubles as a sign of how widely an app is used.
-  [What this sends, and what it does not](docs/DESIGN.md#flathub-logos-and-ratings).
-- Updates for the system itself on Linux (pacman, apt, dnf, Flatpak), from a card at
-  the top of the Library, plus a page with everything about the device.
-  [How, and what it will not do](docs/DESIGN.md#the-operating-systems-own-updates-osrs).
-- Every sign of use a source offers, each labelled with what it counts: downloads,
-  stars, installs, votes, a verified developer. Apps with none are not marked down.
-  [Which sources give what](docs/DESIGN.md#signs-of-how-much-an-app-is-used).
-- Lists have an Install button on every app.
-
-**Installing**
-
-- Bilby picks the right file for your system, processor and device type.
-- Downloads are checked against the checksum the source publishes, when it publishes one.
-- It never asks for your password or runs anything as administrator. Packages are handed
-  to your system's installer; AUR and repository packages give you the command to run.
-- On Linux, AppImages are added to your app menu.
-
-**Keeping up to date**
-
-- The Library lists what you installed and tells you when something newer is out.
-- Update one app or all of them. Skip an update you do not want.
-- Older versions can still be installed from an app's page.
-- Bilby looks for its own updates the same way.
-
-**Familiar, and not in your face**
-
-An app's page is laid out like the app stores people already use: name and one button
-at the top, a row of key facts (popularity, size, last updated), what the app is, what
-is new, and an Information table at the bottom. File names, commands, other install
-options, older versions and the reason each hidden file was hidden are one press away
-under *More options and details*.
-
-**Also**
-
-- One app, three interfaces: desktop (mouse and keyboard), mobile (touch) and TV
-  (remote only). Light and dark themes.
-- Favourites: star an app to keep it in your Library without installing it.
-- `bilby-cli` does everything from a terminal, and can export your library to move it
-  to another device.
-
-## Status
-
-Bilby works, but it is early: **there is no release to download yet**, and it has only
-ever been run on Linux.
-
-| | State |
-|---|---|
-| Linux | Builds, runs, all 237 automated tests pass |
-| Windows, macOS | Builds and passes the tests on GitHub's machines. Nobody has seen the window on either yet |
-| Android (phone, tablet, TV) | The engine compiles. There is no installable package and APKs cannot be installed yet |
-| iOS | Can only ever browse, not install: see [the design notes](docs/DESIGN.md#ios) |
-| GitHub, AUR, Codeberg, Flathub, ratings | Tested against local stand-ins built from their documentation or source, never against the real services |
-| apt repositories | Read from real Ubuntu 24.04 package lists |
-| pacman repositories | Tested against databases built in the tests; never read on a real Arch or CachyOS system |
-| Fedora, openSUSE, Flathub, winget, Homebrew | Not yet |
-
-Nothing in the catalog is reviewed by anyone. Bilby warns about pre-releases, abandoned
-projects and out-of-date AUR packages, but an app is only as trustworthy as its author.
-
-[How Bilby compares with Komi Store, Obtainium, UniGetUI and others](docs/COMPARISON.md),
-and what it leaves out on purpose.
+<sub>The screenshots show the built-in demo catalog. The apps in it are made up.</sub>
 
 ## Download
 
-Each [release](https://github.com/AndrewGBest/Bilby/releases) has one file per system
-that runs as it is:
+Get the newest version from the [releases page](https://github.com/AndrewGBest/Bilby/releases/latest).
+One file per system, and each runs as it is:
 
-| System | File | How to start it |
-| --- | --- | --- |
-| Linux (x86_64) | `bilby-…-x86_64.AppImage` | Mark it executable (`chmod +x`, or the file's Properties) and open it. It adds itself to your app menu on that first start |
-| Windows (x64) | `bilby-…-x86_64-windows.exe` | Open it. Windows warns about an unknown publisher: More info, Run anyway |
-| macOS (Apple silicon) | `bilby-…-aarch64-macos.dmg` | Open it and drag Bilby to Applications. The first time, right-click the app and choose Open |
+| Your system | File to download | To start it |
+|---|---|---|
+| **Linux** (x86_64) | `bilby-…-x86_64.AppImage` | Make it executable (`chmod +x`, or tick "executable" in the file's Properties), then open it |
+| **Windows** (x64) | `bilby-…-x86_64-windows.exe` | Open it. Windows will warn about an unknown publisher: choose *More info*, then *Run anyway* |
+| **macOS** (Apple silicon) | `bilby-…-aarch64-macos.dmg` | Open it and drag Bilby to Applications. The first time, right-click the app and choose *Open* |
 
-None of them is signed by a registered developer, which is what the warnings are
-about. The `.tar.gz` and `.zip` files beside them also hold `bilby-cli`, the
-command-line tool.
+On Linux, Bilby adds itself to your app menu the first time it runs.
 
-There is no Flatpak, on purpose for now: inside Flatpak's sandbox Bilby would see the
-sandbox instead of your system, so it could not tell which distribution you run, read
-its package lists, update it, or put AppImages in your app menu.
+> [!NOTE]
+> The files are not signed by a registered developer yet, which is what the Windows and
+> macOS warnings are about.
 
-## Try it from source
+There is no Android package yet, and no Flatpak
+([why not](docs/DESIGN.md#appearing-among-the-devices-apps)).
 
-```sh
-# The store, with the offline demo catalog
-cargo run -p bilby -- --demo
+## What you can do
 
-# See what another device would be offered
-cargo run -p bilby -- --demo --as android-tv --ui tv
-cargo run -p bilby -- --demo --as windows-arm64
-cargo run -p bilby -- --demo --as android-arm64 --ui mobile --size 412x892
+**Find an app**
 
-# The same engine without a window
-cargo run -p bilby-cli -- device
-cargo run -p bilby-cli -- --demo --as linux-x64-arch search lumen
-cargo run -p bilby-cli -- --demo --as macos-arm64 show github:kestrel-sh/kestrel
-cargo run -p bilby-cli -- --demo install github:tidewave/tidewave
-cargo run -p bilby-cli -- --demo updates
-cargo run -p bilby-cli -- classify ripgrep-14.1.0-x86_64-unknown-linux-musl.tar.gz
+- Browse hand-picked apps, plus what is popular and trending on Flathub.
+- Search every source at once. The best match comes first: the app with the name you
+  typed, then the ones most people use.
+- See what you are getting: pictures, a description, star ratings and written reviews,
+  how many people have downloaded it, and whether the developer is verified.
 
-# Against the real sources: drop --demo.
-cargo run -p bilby-cli -- search ripgrep
+**Install it**
 
-# Run this first on a real connection. It checks that the sources answer as expected
-# and that every featured app has a file for this machine.
-cargo run -p bilby-cli -- doctor
-```
+- One button installs the right file for your device.
+- Downloads are checked against the checksum the source publishes, when there is one.
+- Every other file and every older version is one press away, never hidden for good.
 
-On desktop, `Ctrl+K` or `/` starts a search and `Esc` or `Alt+Left` goes back. Make the
-window narrower than 700 px and it becomes the mobile interface. TV mode uses the arrow
-keys, Enter and Escape, which is what a remote sends.
+**Keep everything up to date**
 
-Bilby reads `GITHUB_TOKEN` (or a token saved in Settings) to raise GitHub's limit from
-60 to 5,000 requests an hour, and `HTTPS_PROXY` / `ALL_PROXY` if you are behind a proxy
-(untested behind a real one).
+- The Library lists what you installed and tells you when something newer is out.
+- Update one app or all of them, or skip a version you do not want.
+- On Linux, Bilby can update the system itself too, through pacman, apt, dnf and Flatpak.
 
-To build on Linux you need a C toolchain and `fontconfig`. To run it you need
-`libxkbcommon` (and `libxkbcommon-x11` on X11).
+**Use it from the sofa**
 
-## Tests
+- The TV layout is driven with a remote: arrows, OK and Back.
+- On a Linux TV, websites can be added like apps and open in
+  [Longboard](https://github.com/AndrewGBest/Longboard), a browser made for remotes.
 
-```sh
-cargo test --workspace
-```
+## Where apps come from
 
-The tests need no internet. Network tests start their own local server, and interface
-tests drive the real window without a display. On Linux, seven more run the finished
-program under `xvfb-run` and are skipped if it is not installed. CI runs everything on
-Linux, Windows and macOS. More in [Testing](docs/DESIGN.md#8-testing).
+Each source only appears on devices it applies to. A Windows user never sees the AUR.
 
-## Working on it
+| Source | Shown on | What you get |
+|---|---|---|
+| **GitHub Releases** | Everywhere | Any project that publishes files with its releases |
+| **Flathub** | Linux with Flatpak | Its whole catalog, with ratings, reviews and install counts |
+| **Your distribution** | Arch-based (pacman) and Debian-based (apt) systems | Every package your system is already set up to install |
+| **The AUR** | Arch-based systems | Community build recipes |
+| **Codeberg** | Everywhere | Projects by link and from the home page. Codeberg is turning away searches at the moment |
+| **Websites** | Linux TVs | Sites that open like apps in Longboard |
 
-```sh
-cargo fmt --all && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace
-```
+## Your privacy
 
-The app can be driven by a script, which is how the screenshots were made:
+Bilby has no server and no account, so there is nobody for it to report to. Your library
+and settings are one file on your device. What does leave your device:
 
-```sh
-cargo run -p bilby -- --demo --as android-tv --ui tv --size 1920x1080 \
-    --script "down right ok" --screenshot tv.png --report tv.txt
-```
+| When you | Bilby contacts | It learns |
+|---|---|---|
+| Search or open an app | That app's source (GitHub, Flathub, ...) | What you searched for or opened, as with any website |
+| Have ratings switched on | The ratings service GNOME and KDE use | That *someone* downloaded the full list of ratings, once a day |
+| Open an app that has reviews | The same service | Which app's reviews were asked for. No user id is sent |
+| Add a GitHub token | GitHub | Which account is asking. Optional; it only raises GitHub's hourly limit |
 
-`--script` replays keys (`up down left right ok back tab`), `click:X,Y`, `text:WORD`,
-`install:N` and `wait`, one step every quarter second. `--report` writes what ended up
-on screen as `key=value` lines. Without a display, run it under `xvfb-run` with
-`SLINT_BACKEND=winit-software`.
+Ratings and reviews can be switched off in Settings, which stops both requests.
 
-`--as <platform>` makes the app behave as another device, which is the quickest way to
-see what a phone, a TV or a Windows-on-Arm laptop would be offered. `bilby-cli
---list-platforms` lists the choices.
+## How ready is it
 
-## Layout
+Bilby works and is being used, but it is early. Plainly:
 
-```
-crates/core   bilby-core  platform detection, asset classification, compatibility,
-                          sources, search ranking, install, library state
-crates/cli    bilby-cli   command-line front end
-crates/app    bilby       Slint app: ui/desktop.slint, ui/mobile.slint, ui/tv.slint
-docs/DESIGN.md            the design, its trade-offs, and what is still open
-docs/COMPARISON.md        Bilby next to other stores, feature by feature
-```
+| | State |
+|---|---|
+| **Linux** | Works. Tried on Debian 13: real searches on every source and a real install from Flathub |
+| **Windows, macOS** | Builds and passes its tests. Nobody has checked the window by eye yet |
+| **Android** | Not installable yet. The core compiles for it |
+| **iOS** | Could only ever browse, not install ([why](docs/DESIGN.md#ios)) |
+| **System updates** | Finds updates correctly on Debian. Installing them has not been run on a real system |
+| **Arch, Fedora** | Written from documentation and tested against stand-ins, not on real systems |
+| **TV** | Works with arrow keys, OK and Back. Not yet tried with a physical remote |
 
-## Where things are stored
+Nobody reviews the apps in the catalog. Bilby warns about test versions, abandoned
+projects and out-of-date packages, but an app is only as trustworthy as its author.
 
-| | Linux | Windows | macOS |
-|---|---|---|---|
-| Settings and library | `~/.config/bilby/state.json` | `%APPDATA%\bilby` | `~/Library/Application Support/bilby` |
-| Downloads | `~/Downloads/bilby` | same | same |
-| AppImages | `~/Applications` | | |
-| Cache | `~/.cache/bilby` | `%LOCALAPPDATA%\bilby` | `~/Library/Caches/bilby` |
+## Good to know
 
-Only the Linux column has been tried.
+- **GitHub's limit.** Without signing in, GitHub allows 60 requests an hour for
+  everyone on your network. Bilby tells you when it runs out. A token in Settings
+  raises it to 5,000. Flathub and your distribution's packages have no such limit.
+- **Reduce motion.** Settings can turn animations off.
+- **From a terminal.** `bilby-cli` does everything the app does, and can export your
+  library to move it to another device.
 
-## License
+## Learn more
 
-`GPL-3.0-only` for now. It was chosen as a starting point because the interface toolkit,
-Slint, is available under GPLv3 among other options. Read
-[the licensing note](docs/DESIGN.md#10-ui-toolkit) before changing it.
+| | |
+|---|---|
+| [How Bilby compares](docs/COMPARISON.md) | Next to Komi Store, Obtainium, GNOME Software and others, and what it leaves out on purpose |
+| [Design notes](docs/DESIGN.md) | How it decides what runs on your device, and every trade-off made along the way |
+| [Building and testing](docs/DEVELOPMENT.md) | Run it from source, try it as another device, and work on it |
+
+## Licence
+
+GPL-3.0-only for now. Read [the licensing note](docs/DESIGN.md#10-ui-toolkit) before
+relying on that: it was chosen as a starting point and may change.
