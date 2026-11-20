@@ -51,6 +51,9 @@ struct Repo {
     #[serde(default)]
     stargazers_count: u64,
     license: Option<License>,
+    /// The owner has marked the project as no longer maintained.
+    #[serde(default)]
+    archived: bool,
 }
 
 #[derive(Deserialize)]
@@ -84,6 +87,8 @@ struct ApiAsset {
     browser_download_url: String,
     /// `sha256:...`; present on assets uploaded since mid-2025.
     digest: Option<String>,
+    /// How many times the file was downloaded.
+    download_count: Option<u64>,
 }
 
 impl From<Repo> for AppSummary {
@@ -99,11 +104,14 @@ impl From<Repo> for AppSummary {
             category: None,
             version: None,
             install_label: None,
-            warning: None,
+            warning: r.archived.then(|| "Its owner has archived this project: it is no longer maintained.".to_string()),
             origin: None,
             installed_version: None,
             rating: None,
             icon_url: None,
+            downloads: None,
+            verified: false,
+            momentum: None,
         }
     }
 }
@@ -155,6 +163,7 @@ impl Source for GitHub {
                 version: r.tag_name,
                 published: r.published_at.unwrap_or_default().chars().take(10).collect(),
                 prerelease: r.prerelease,
+                downloads: super::counted(r.assets.iter().map(|a| a.download_count)),
                 notes: r.body.unwrap_or_default(),
                 assets: r
                     .assets

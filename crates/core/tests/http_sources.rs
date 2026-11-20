@@ -370,6 +370,23 @@ fn github_releases_skip_drafts_and_keep_digests() {
         Some("sha256:2151b604e3429bff440b9fbc03eb3617bc2603cda96c95b9bb05277f9ddba255")
     );
     assert_eq!(stable.assets[2].size, 0, "a missing size is tolerated");
+    // How often each release's files were fetched, added up; a file without a count adds none.
+    assert_eq!((releases[0].downloads, stable.downloads), (Some(3), Some(42)));
+}
+
+#[test]
+fn an_archived_github_project_says_so() {
+    let repo = |archived: bool| {
+        format!(
+            r#"{{"name":"old","full_name":"a/old","owner":{{"login":"a"}},"description":null,"html_url":"https://github.com/a/old","stargazers_count":9,"license":null,"archived":{archived}}}"#
+        )
+    };
+    let server = Server::start(vec![
+        ("/api/repos/a/old", Reply::json(&repo(true))),
+        ("/api/repos/a/live", Reply::json(&repo(false))),
+    ]);
+    assert!(github(&server).summary("a/old").unwrap().warning.unwrap().contains("no longer maintained"));
+    assert_eq!(github(&server).summary("a/live").unwrap().warning, None);
 }
 
 #[test]
@@ -455,6 +472,10 @@ fn aur_search_and_info_parse_the_documented_shape() {
     assert_eq!(hits[1].author, "orphaned", "a null maintainer");
     assert!(hits[1].warning.as_deref().unwrap().contains("out of date"));
     assert_eq!(hits[0].warning, None);
+    // Recent interest: the AUR's own figure, on a scale of nought to one.
+    let (paru, paru_bin) = (hits[0].momentum.unwrap(), hits[1].momentum.unwrap());
+    assert!(paru > paru_bin && paru < 1.0 && paru_bin > 0.25, "{paru} {paru_bin}");
+    assert_eq!((hits[0].downloads, hits[0].verified), (None, false), "the AUR counts no downloads");
 
     let summary = source.summary("paru").unwrap();
     assert_eq!(summary.license.as_deref(), Some("GPL-3.0-or-later"));
@@ -578,7 +599,7 @@ fn flathub_search_and_details_parse_the_shapes_its_source_code_describes() {
     let search = r#"{"hits":[
       {"app_id":"org.example.Notes","id":"org_example_Notes","name":"Notes","summary":"Write things down",
        "icon":"https://dl.flathub.org/media/org/example/Notes/icon.png","developer_name":"Example","project_license":"MIT",
-       "installs_last_month":1234,"arches":["x86_64"],"unknown":true},
+       "installs_last_month":1234,"arches":["x86_64"],"unknown":true,"verification_verified":true,"trending":3.5},
       {"app_id":"../../etc","name":"bad"}],
       "query":"notes","totalHits":2}"#;
     let appstream = r#"{"type":"desktop-application","id":"org.example.Notes","name":"Notes","summary":"Write things down",
@@ -588,10 +609,15 @@ fn flathub_search_and_details_parse_the_shapes_its_source_code_describes() {
       "screenshots":[{"sizes":[{"width":"224","src":"https://dl.flathub.org/media/a-small.png"},{"width":752,"src":"https://dl.flathub.org/media/a.png"}]},
                      {"sizes":[{"width":"1504","src":"https://dl.flathub.org/media/b.webp"}]},
                      {"sizes":[{"width":"752","src":"https://elsewhere.example/c.png"}]}],
-      "urls":{"homepage":"https://example.org/notes","vcs_browser":"https://github.com/example/notes"}}"#;
+      "urls":{"homepage":"https://example.org/notes","vcs_browser":"https://github.com/example/notes"},
+      "metadata":{"flathub::verification::verified":"true","flathub::verification::method":"website"}}"#;
     let server = Server::start(vec![
         ("/fh/search?locale=en", Reply::json(search)),
         ("/fh/appstream/org.example.Notes", Reply::json(appstream)),
+        (
+            "/fh/stats/org.example.Notes",
+            Reply::json(r#"{"installs_total":98765,"installs_last_month":1234,"installs_per_day":{}}"#),
+        ),
         (
             "/fh/summary/org.example.Notes",
             Reply::json(r#"{"arches":["x86_64"],"download_size":4096,"installed_size":9000}"#),
@@ -605,6 +631,8 @@ fn flathub_search_and_details_parse_the_shapes_its_source_code_describes() {
     assert_eq!(hits.len(), 1, "an id that could not be a real app is dropped");
     assert_eq!(hits[0].id, AppId::new(SourceKind::Flathub, "org.example.Notes"));
     assert_eq!(hits[0].popularity, Some(1234));
+    assert!(hits[0].verified, "Flathub has confirmed the developer");
+    assert_eq!(hits[0].momentum, Some(0.75), "being installed more than before");
     assert_eq!(hits[0].icon_url.as_deref(), Some("https://dl.flathub.org/media/org/example/Notes/icon.png"));
     assert_eq!(hits[0].installed_version.as_deref(), Some("installed"), "found in Flatpak's own folder");
     let sent = &server.requests()[0].1;
@@ -614,6 +642,7 @@ fn flathub_search_and_details_parse_the_shapes_its_source_code_describes() {
 
     let summary = source.summary("org.example.Notes").unwrap();
     assert_eq!(summary.homepage, "https://example.org/notes");
+    assert_eq!((summary.popularity, summary.downloads, summary.verified), (Some(1234), Some(98765), true));
     assert_eq!(summary.icon_url, None, "an icon served from somewhere else is not fetched");
 
     let releases = source.releases("org.example.Notes").unwrap();

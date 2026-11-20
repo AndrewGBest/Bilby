@@ -22,6 +22,16 @@ export struct AppCard {
     // "4.6" and "931 ratings", when a ratings service knows the app; else "".
     rating: string,
     rating-count: string,
+    // The share of ratings at five stars, four, three, two and one. Empty when unknown.
+    rating-spread: [float],
+    // "48k downloads", where the host counts them; else "". The note says what was
+    // counted: "of recent versions" or "in total".
+    downloads: string,
+    downloads-note: string,
+    // The one figure a tile has room for: downloads where known, else `popularity`.
+    headline: string,
+    // The source has confirmed who the developer is.
+    verified: bool,
     has-update: bool,
 }
 

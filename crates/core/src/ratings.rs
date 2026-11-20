@@ -156,7 +156,7 @@ impl Ratings {
                 continue;
             }
             let weighted: u32 = counts.iter().enumerate().map(|(i, n)| (i as u32 + 1) * n).sum();
-            let rating = Rating { stars: weighted as f32 / count as f32, count };
+            let rating = Rating { stars: weighted as f32 / count as f32, count, spread: counts };
             // An app can be listed under both spellings of its id; keep the busier one.
             let slot = by_id.entry(normal(&id)).or_insert(rating);
             if rating.count > slot.count {

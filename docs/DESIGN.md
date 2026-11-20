@@ -538,6 +538,67 @@ The number of ratings is shown beside the score and counts towards search order,
 stars do for GitHub projects: it is the nearest thing these apps have to a measure of
 how widely they are used.
 
+### Signs of how much an app is used
+
+A store that mixes sources has no single number. A GitHub project has stars, a
+Flathub app has installs, an AUR package has votes, and a distribution package has
+nothing at all. The rule is: use everything a source gives away for free, say plainly
+what each figure counts, and never show a blank or a zero as if it were a verdict.
+
+| Source | Shown to the user | Also counts towards search order | Offered by the source, left out on purpose |
+| --- | --- | --- | --- |
+| GitHub | Stars; downloads of the listed releases' files; "archived" warning | Both, and the warning | Forks, watchers, open issues: they measure developer activity, not use |
+| Codeberg | Stars; downloads of the listed releases' files | Both | Forks, watchers |
+| Flathub | Installs in the last month; installs in total; verified developer | Installs, verification, whether its trend is rising | Favourites count (needs a Flathub account to give, so it is tiny beside installs) |
+| AUR | Votes; "out of date" and "nobody maintains this" warnings | Votes, the AUR's time-weighted popularity, the warnings | |
+| pacman, apt | Nothing (the package lists carry no such figure) | Nothing; such apps score a neutral half | |
+| Ratings service (ODRS) | Average, number of ratings, share at each star, written reviews | Average, trusted in proportion to the number of ratings | |
+
+How they are displayed:
+
+- **One figure on a tile.** In order: the rating with its count, else downloads, else
+  the source's own count (installs, stars, votes). An app with none shows its author
+  instead, not an empty badge.
+- **Every figure on the app's page**, each with a caption saying what it is: "194k
+  downloads, of recent versions", "13k stars, on GitHub", "1.3M downloads, in total".
+  They are repeated in the Information table.
+- **The rating as a breakdown**, the way the App Store and Google Play draw it: the
+  average, the number of ratings, and a bar for each number of stars.
+- **A count of zero is not shown.** Zero stars usually means "new", not "bad".
+- **Verified** is a small tick beside the developer's name, only on the app's page.
+
+Why this way, and how sure each part is:
+
+- The breakdown and the count beside the average follow Baymard Institute's testing
+  of shop pages: people rely on the number of ratings and on how they are spread more
+  than on the average, and distrust a high average from a handful of ratings
+  ([distribution summary](https://baymard.com/blog/user-ratings-distribution-summary),
+  [perception of ratings](https://baymard.com/blog/user-perception-of-product-ratings)).
+  Those studies are of online shops, not app stores; applying them here is a judgement.
+- Downloads are preferred to stars on tiles because a star costs nothing to give and
+  can be bought: a 2024 study found millions of suspected fake stars on GitHub
+  ([He et al.](https://arxiv.org/abs/2412.13459)). That downloads are *harder* to fake
+  is an assumption; nothing checked here measures it. A star count with almost no
+  downloads lowers an app's score a little for the same reason.
+- GitHub documents `download_count` on every release file
+  ([GitHub docs](https://docs.github.com/enterprise/2.3/user/articles/getting-the-download-count-for-your-releases)).
+  Only the six newest releases are read, hence the caption "of recent versions": it
+  undercounts old projects and is not a lifetime total.
+- The AUR's popularity is every vote weighted by 0.98 for each day since it was cast
+  ([aurweb patch](https://mailman.archlinux.org/pipermail/aur-dev/2015-June/003320.html)),
+  so it tells an app people are choosing now from one they chose years ago.
+- **Not confirmed against documentation:** Flathub's field names
+  (`verification_verified`, `trending`, and the `/stats/{id}` document with
+  `installs_total`) are written from memory of Flathub's source code. Each is optional:
+  if a name is wrong the figure is simply missing. The scale of `trending` is unknown,
+  so only whether it is above zero is used.
+- The weights given to each signal in the search order are choices, not measurements.
+
+Not available without a server of our own or a new service: Debian's popularity
+contest and Arch's pkgstats (both would mean another network request per search, to
+services not built for it), and any count of how many people use Bilby itself, which
+would need telemetry and is ruled out.
+
 ### TV
 
 The TV interface follows Android TV's published guidance, with tvOS's where they agree:

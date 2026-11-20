@@ -55,6 +55,13 @@ fn describe_source_error(source: SourceKind, error: &Error) -> String {
     }
 }
 
+/// How many times the files of an app's recent releases were downloaded, when its host
+/// counts. `None` when it does not, which is different from nobody having downloaded it.
+fn downloads_of(releases: &[Release]) -> Option<u64> {
+    let counted: Vec<u64> = releases.iter().filter_map(|r| r.downloads).collect();
+    (!counted.is_empty()).then(|| counted.iter().sum())
+}
+
 /// Add a failed source to what the user is told, once per distinct problem: being
 /// offline fails every source the same way, and one line says it.
 fn report(errors: &mut Vec<String>, offline: &mut bool, source: SourceKind, error: &Error) {
@@ -374,6 +381,8 @@ impl Catalog {
             summary.version = Some(r.version.clone());
             summary.install_label = r.options.first().map(|o| o.label());
         }
+        summary.downloads = downloads_of(&releases).or(summary.downloads);
+        summary.rating = summary.rating.or_else(|| self.rating_for(&summary.id));
         let versions: Vec<ResolvedRelease> =
             releases.iter().map(|r| self.resolve_release(r)).filter(|r| !r.options.is_empty()).collect();
         Ok(AppDetails { summary, release, unavailable_reason, versions })
@@ -410,6 +419,7 @@ impl Catalog {
         let (release, reason) = self.pick_release(&releases);
         match (release, reason) {
             (Some(r), None) => {
+                app.downloads = downloads_of(&releases).or(app.downloads);
                 app.version = Some(r.version.clone());
                 app.install_label = r.options.first().map(|o| o.label());
                 Ok(Some(app))
@@ -556,6 +566,7 @@ mod tests {
             version: "v0.2.0".into(),
             published: String::new(),
             prerelease: false,
+            downloads: None,
             notes: String::new(),
             assets: names
                 .iter()
@@ -649,6 +660,7 @@ mod tests {
             version: version.to_string(),
             published: String::new(),
             prerelease,
+            downloads: None,
             notes: String::new(),
             assets: vec![Asset {
                 name: "app-x86_64.AppImage".into(),

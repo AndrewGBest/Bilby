@@ -63,6 +63,9 @@ fn summary_of(host: &str) -> AppSummary {
         installed_version: None,
         rating: None,
         icon_url: None,
+        downloads: None,
+        verified: false,
+        momentum: None,
     }
 }
 
@@ -115,6 +118,7 @@ impl Source for Websites {
             version: "web".to_string(),
             published: String::new(),
             prerelease: false,
+            downloads: None,
             notes: format!(
                 "This is a website, not a program. Adding it puts {} in this TV's app list; it opens in Longboard, a browser made for remotes. Nothing is downloaded, and the site can be removed again from your library.",
                 site.name

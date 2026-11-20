@@ -80,6 +80,7 @@ struct ApiAsset {
     #[serde(default)]
     size: u64,
     browser_download_url: String,
+    download_count: Option<u64>,
 }
 
 impl From<Repo> for AppSummary {
@@ -100,6 +101,9 @@ impl From<Repo> for AppSummary {
             installed_version: None,
             rating: None,
             icon_url: None,
+            downloads: None,
+            verified: false,
+            momentum: None,
         }
     }
 }
@@ -150,6 +154,7 @@ impl Source for Forgejo {
                 version: r.tag_name,
                 published: r.published_at.unwrap_or_default().chars().take(10).collect(),
                 prerelease: r.prerelease,
+                downloads: super::counted(r.assets.iter().map(|a| a.download_count)),
                 notes: r.body.unwrap_or_default(),
                 assets: r
                     .assets

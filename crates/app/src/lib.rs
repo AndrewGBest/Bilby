@@ -182,6 +182,17 @@ fn tint_for(id: &str) -> slint::Color {
 /// `install-index` values from here up mean "the hidden file numbered index - this".
 const HIDDEN_BASE: i32 = 1000;
 
+/// The share of an app's ratings at five stars, then four, down to one. Empty when the
+/// breakdown is not known.
+fn spread_shares(rating: bilby_core::model::Rating) -> ModelRc<f32> {
+    let total: u32 = rating.spread.iter().sum();
+    if total == 0 {
+        return ModelRc::default();
+    }
+    let shares: Vec<f32> = rating.spread.iter().rev().map(|n| *n as f32 / total as f32).collect();
+    ModelRc::new(VecModel::from(shares))
+}
+
 /// "821 ratings", "12k ratings": how many people rated an app.
 fn ratings_text(count: u32) -> String {
     if count == 1 {
@@ -651,11 +662,20 @@ impl App {
     fn card(&self, app: &AppSummary) -> AppCard {
         let id = app.id.to_string();
         let popularity = match (app.popularity, app.id.source) {
+            // A count of nothing is left out: it reads as a verdict, and is usually just
+            // an app nobody has got round to starring.
+            (Some(0), _) | (None, _) => String::new(),
             (Some(n), SourceKind::GitHub | SourceKind::Codeberg) => format!("{} stars", human_count(n)),
             (Some(n), SourceKind::Flathub) => format!("{} installs a month", human_count(n)),
             (Some(n), SourceKind::Aur) => format!("{} votes", human_count(n)),
             _ => String::new(),
         };
+        let downloads = match app.downloads {
+            Some(n) if n > 0 => format!("{} downloads", human_count(n)),
+            _ => String::new(),
+        };
+        // Downloads say "people use this" in words everyone knows; stars need explaining.
+        let headline = if downloads.is_empty() { popularity.clone() } else { downloads.clone() };
         if let Some(url) = &app.icon_url {
             self.icon_urls.lock().unwrap().insert(id.clone(), url.clone());
         }
@@ -679,6 +699,12 @@ impl App {
             installed,
             rating: rating.map(bilby_core::ratings::stars_text).unwrap_or_default().into(),
             rating_count: rating.map(|r| ratings_text(r.count)).unwrap_or_default().into(),
+            rating_spread: rating.map(spread_shares).unwrap_or_default(),
+            // A forge counts the files of the releases it listed; Flathub counts every install.
+            downloads_note: if app.id.source == SourceKind::Flathub { "in total" } else { "of recent versions" }.into(),
+            downloads: downloads.into(),
+            headline: headline.into(),
+            verified: app.verified,
             has_update: installed && has_update,
         }
     }
@@ -708,6 +734,11 @@ impl App {
             installed: true,
             rating: SharedString::new(),
             rating_count: SharedString::new(),
+            rating_spread: ModelRc::default(),
+            downloads: SharedString::new(),
+            downloads_note: SharedString::new(),
+            headline: SharedString::new(),
+            verified: false,
             has_update,
         }
     }
@@ -730,6 +761,11 @@ impl App {
             installed: installed.is_some(),
             rating: SharedString::new(),
             rating_count: SharedString::new(),
+            rating_spread: ModelRc::default(),
+            downloads: SharedString::new(),
+            downloads_note: SharedString::new(),
+            headline: SharedString::new(),
+            verified: false,
             has_update: false,
         }
     }
@@ -883,6 +919,7 @@ impl App {
                         let mut card = store.get_app();
                         card.rating = rating.map(bilby_core::ratings::stars_text).unwrap_or_default().into();
                         card.rating_count = rating.map(|r| ratings_text(r.count)).unwrap_or_default().into();
+                        card.rating_spread = rating.map(spread_shares).unwrap_or_default();
                         store.set_app(card);
                     }
                 }
@@ -1172,6 +1209,14 @@ impl App {
         if shown.id == card.id && !shown.name.is_empty() && !shown.author.is_empty() {
             card.name = shown.name;
             card.initials = shown.initials;
+            // What the list already knew is kept when the app's own page does not repeat it.
+            if card.popularity.is_empty() {
+                card.popularity = shown.popularity;
+            }
+            if card.headline.is_empty() {
+                card.headline = shown.headline;
+            }
+            card.verified |= shown.verified;
         }
         store.set_app(card);
         store.set_license(details.summary.license.clone().unwrap_or_default().into());

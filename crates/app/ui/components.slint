@@ -323,7 +323,7 @@ export component AppTile inherits Rectangle {
                     if app.installed && !app.has-update : Chip { text: "Installed"; tone: Theme.accent; }
                     // The score, and how many people gave one: the second is the popularity.
                     if app.rating != "" : Chip { text: "★ " + app.rating + "  ·  " + app.rating-count; }
-                    if app.rating == "" && app.popularity != "" : Chip { text: app.popularity; }
+                    if app.rating == "" && app.headline != "" : Chip { text: app.headline; }
                 }
             }
             Rectangle { horizontal-stretch: 1; }
@@ -368,7 +368,7 @@ export component AppRow inherits Rectangle {
             Text { text: app.name; color: Theme.text; font-size: 16px; font-weight: 600; overflow: elide; }
             Text { text: app.summary; color: Theme.text-dim; font-size: 13px; overflow: elide; }
             Text {
-                text: (app.has-update ? "Update available · " : app.installed ? "Installed · " : "") + (app.rating != "" ? "★ " + app.rating + " (" + app.rating-count + ") · " : app.popularity != "" ? app.popularity + " · " : "") + (app.author != "" ? app.author : app.source);
+                text: (app.has-update ? "Update available · " : app.installed ? "Installed · " : "") + (app.rating != "" ? "★ " + app.rating + " (" + app.rating-count + ") · " : app.headline != "" ? app.headline + " · " : "") + (app.author != "" ? app.author : app.source);
                 color: app.has-update || app.installed ? Theme.accent : Theme.text-dim;
                 font-size: 11px;
                 font-weight: 600;
@@ -700,6 +700,40 @@ component StatCell inherits VerticalLayout {
     Text { text: root.caption; color: Theme.text-dim; font-size: 11px; overflow: elide; }
 }
 
+// The average, how many people gave it, and a bar for each number of stars.
+component RatingSummary inherits HorizontalLayout {
+    spacing: 20px;
+    alignment: start;
+    accessible-role: text;
+    accessible-label: Store.app.rating + " out of 5, from " + Store.app.rating-count;
+    VerticalLayout {
+        alignment: center;
+        spacing: 2px;
+        Text { text: Store.app.rating; color: Theme.text; font-size: 40px; font-weight: 700; horizontal-alignment: center; }
+        Text { text: "out of 5"; color: Theme.text-dim; font-size: 11px; horizontal-alignment: center; }
+        Text { text: Store.app.rating-count; color: Theme.text-dim; font-size: 11px; horizontal-alignment: center; }
+    }
+    VerticalLayout {
+        alignment: center;
+        spacing: 4px;
+        for share[i] in Store.app.rating-spread : HorizontalLayout {
+            spacing: 8px;
+            Text { width: 26px; text: (5 - i) + " ★"; color: Theme.text-dim; font-size: 11px; vertical-alignment: center; horizontal-alignment: right; }
+            VerticalLayout {
+                alignment: center;
+                Rectangle {
+                    width: 180px;
+                    height: 6px;
+                    border-radius: 3px;
+                    background: Theme.stroke;
+                    Rectangle { x: 0; width: parent.width * share; height: parent.height; border-radius: 3px; background: Theme.warn; }
+                }
+            }
+            Text { width: 34px; text: round(share * 100) + "%"; color: Theme.text-dim; font-size: 11px; vertical-alignment: center; }
+        }
+    }
+}
+
 // A line of the Information table.
 component InfoRow inherits Rectangle {
     in property <string> name;
@@ -850,7 +884,7 @@ export component DetailsBody inherits Rectangle {
                     spacing: 4px;
                     horizontal-stretch: 1;
                     Text { text: Store.app.name; color: Theme.text; font-size: compact ? 24px : 30px; font-weight: 700; overflow: elide; }
-                    Text { text: Store.app.author; color: Theme.text-dim; font-size: 14px; overflow: elide; }
+                    Text { text: Store.app.author + (Store.app.verified ? "  ✓ verified" : ""); color: Theme.text-dim; font-size: 14px; overflow: elide; }
                 }
                 if !compact : VerticalLayout {
                     alignment: center;
@@ -1033,11 +1067,12 @@ export component DetailsBody inherits Rectangle {
             }
 
             // The facts people look for first, as the big stores show them.
-            if root.has-option || Store.app.popularity != "" || Store.app.rating != "" : HorizontalLayout {
+            if root.has-option || Store.app.popularity != "" || Store.app.rating != "" || Store.app.downloads != "" : HorizontalLayout {
                 spacing: compact ? 16px : 36px;
                 alignment: start;
                 if Store.app.rating != "" : StatCell { value: "★ " + Store.app.rating; caption: Store.app.rating-count; }
-                if Store.app.popularity != "" : StatCell { value: Store.app.popularity; caption: "on " + Store.app.source; }
+                if Store.app.downloads != "" : StatCell { value: Store.app.downloads; caption: Store.app.downloads-note; }
+                if Store.app.popularity != "" && !(compact && Store.app.downloads != "" && Store.app.rating != "") : StatCell { value: Store.app.popularity; caption: "on " + Store.app.source; }
                 if root.has-option && root.best.size != "" : StatCell { value: root.best.size; caption: "download"; }
                 if Store.release-age != "" : StatCell { value: Store.release-age; caption: "last updated"; }
                 if Store.license != "" && !compact : StatCell { value: Store.license; caption: "licence"; }
@@ -1148,17 +1183,16 @@ export component DetailsBody inherits Rectangle {
             if Store.notes != "" && Store.installed-version == "" : WhatsNew { }
 
             // What people who use it wrote. Only apps a ratings service knows have any.
-            if Store.reviews.length > 0 : VerticalLayout {
+            if Store.reviews.length > 0 || Store.app.rating-spread.length > 0 : VerticalLayout {
                 spacing: 10px;
-                HorizontalLayout {
-                    spacing: 10px;
-                    Text { horizontal-stretch: 1; text: "Reviews"; color: Theme.text; font-size: 17px; font-weight: 700; }
-                    if Store.app.rating != "" : Text {
-                        text: "★ " + Store.app.rating + "  ·  " + Store.app.rating-count;
-                        color: Theme.text-dim;
-                        font-size: 12px;
-                        vertical-alignment: center;
-                    }
+                Text { text: Store.reviews.length > 0 ? "Ratings and reviews" : "Ratings"; color: Theme.text; font-size: 17px; font-weight: 700; }
+                // The score with how the stars are spread, as the big stores show it: an
+                // average says little until you see how many people it is an average of.
+                if Store.app.rating-spread.length > 0 : RatingSummary { }
+                if Store.app.rating-spread.length == 0 && Store.app.rating != "" : Text {
+                    text: "★ " + Store.app.rating + "  ·  " + Store.app.rating-count;
+                    color: Theme.text-dim;
+                    font-size: 12px;
                 }
                 for review[i] in Store.reviews : Rectangle {
                     border-radius: 12px;
@@ -1190,7 +1224,7 @@ export component DetailsBody inherits Rectangle {
                     }
                 }
                 Text {
-                    text: "Reviews are written by other people and come from the ratings service the GNOME and KDE app stores use.";
+                    text: Store.reviews.length > 0 ? "Reviews are written by other people and come from the ratings service the GNOME and KDE app stores use." : "Ratings come from the ratings service the GNOME and KDE app stores use.";
                     color: Theme.text-dim;
                     font-size: 11px;
                     wrap: word-wrap;
@@ -1203,7 +1237,9 @@ export component DetailsBody inherits Rectangle {
                 Text { text: "Information"; color: Theme.text; font-size: 17px; font-weight: 700; }
                 Rectangle { height: 6px; }
                 if Store.app.source != "" : InfoRow { name: "From"; value: Store.app.source; }
-                if Store.app.author != "" && Store.app.author != Store.app.source : InfoRow { name: "Made by"; value: Store.app.author; }
+                if Store.app.author != "" && Store.app.author != Store.app.source : InfoRow { name: "Made by"; value: Store.app.author + (Store.app.verified ? " (confirmed by " + Store.app.source + ")" : ""); }
+                if Store.app.downloads != "" : InfoRow { name: "Downloads"; value: Store.app.downloads + " " + Store.app.downloads-note; }
+                if Store.app.popularity != "" : InfoRow { name: "Popularity"; value: Store.app.popularity + " on " + Store.app.source; }
                 if Store.app.version != "" : InfoRow { name: "Version"; value: Store.app.version; }
                 if Store.release-date != "" : InfoRow { name: "Released"; value: Store.release-date; }
                 if Store.license != "" : InfoRow { name: "Licence"; value: Store.license; }

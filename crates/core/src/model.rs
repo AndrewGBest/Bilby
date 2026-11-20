@@ -180,6 +180,13 @@ pub struct AppSummary {
     pub rating: Option<Rating>,
     /// Address of the app's own icon, when the source gives one.
     pub icon_url: Option<String>,
+    /// How many times its recent releases' files were downloaded, where the host counts.
+    pub downloads: Option<u64>,
+    /// The source has confirmed that the app is published by its own developer.
+    pub verified: bool,
+    /// Recent interest on a 0..1 scale, where the source measures it (the AUR's
+    /// "popularity", which fades when people stop voting).
+    pub momentum: Option<f32>,
 }
 
 /// An average star rating and how many people gave one.
@@ -188,6 +195,8 @@ pub struct Rating {
     /// 0.0 to 5.0.
     pub stars: f32,
     pub count: u32,
+    /// How many gave one star, two, ... five.
+    pub spread: [u32; 5],
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -207,6 +216,8 @@ pub struct Release {
     pub version: String,
     pub published: String,
     pub prerelease: bool,
+    /// How many times this release's files were downloaded, where the host counts.
+    pub downloads: Option<u64>,
     pub notes: String,
     pub assets: Vec<Asset>,
 }

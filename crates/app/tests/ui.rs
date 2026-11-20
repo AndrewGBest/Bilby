@@ -1420,6 +1420,44 @@ fn star_ratings_are_shown_where_known_and_can_be_turned_off() {
 }
 
 #[test]
+fn each_app_shows_the_signs_of_use_its_source_has_and_no_others() {
+    let s = start("linux-x64-debian", Shell::Desktop);
+    s.app.load_ratings(&s.ui);
+
+    // Flathub: a score with its breakdown, installs in total and a month, a confirmed developer.
+    s.app.open(&s.ui, "flathub:io.quillpad.Quillpad");
+    let app = s.store().get_app();
+    let spread: Vec<f32> = app.rating_spread.iter().collect();
+    assert_eq!(spread.len(), 5, "five stars first, one star last");
+    assert!((spread.iter().sum::<f32>() - 1.0).abs() < 0.001 && spread[0] > spread[4], "{spread:?}");
+    assert!(app.verified);
+    assert_eq!((app.downloads.as_str(), app.downloads_note.as_str()), ("1.3M downloads", "in total"));
+    assert_eq!(app.popularity, "41k installs a month");
+    assert!(s.has("4.6 out of 5, from 821 ratings") && s.has("Quillpad contributors  ✓ verified"));
+
+    // GitHub: stars and how often its recent files were downloaded; no rating, nobody confirmed.
+    s.app.open(&s.ui, "github:lumen-labs/lumen");
+    let app = s.store().get_app();
+    assert!(
+        app.popularity.ends_with("stars") && app.downloads.ends_with("downloads"),
+        "{} {}",
+        app.popularity,
+        app.downloads
+    );
+    assert_eq!(app.downloads_note, "of recent versions");
+    assert_eq!((app.rating.as_str(), app.rating_spread.row_count(), app.verified), ("", 0, false));
+    assert!(!s.has("4.6 out of 5, from 821 ratings") && s.has("lumen-labs"));
+
+    // A tile has room for one figure: the rating where there is one, else downloads or stars.
+    s.app.search(&s.ui, "notes");
+    let results = s.store().get_results();
+    assert!(
+        results.iter().all(|c| !c.rating.is_empty() || !c.headline.is_empty()),
+        "every demo app has some sign of use"
+    );
+}
+
+#[test]
 fn with_ratings_turned_off_nothing_is_fetched() {
     let s =
         start_with("linux-x64-debian", Shell::Desktop, Some(r#"{"settings":{"welcomed":true,"hide_ratings":true}}"#));
@@ -1442,12 +1480,12 @@ fn written_reviews_appear_only_for_apps_that_have_them() {
     assert_eq!((first.stars.as_str(), first.title.as_str()), ("★★★★★", "Exactly what I wanted"));
     assert_eq!(first.meta, "Marta  ·  2026-11-01  ·  version 4.2.0");
     assert_eq!(reviews.row_data(2).unwrap().stars, "★★☆☆☆");
-    assert!(s.has("Reviews"));
+    assert!(s.has("Ratings and reviews"));
 
     // An app it does not know: no section, and the last app's reviews do not linger.
     s.app.open(&s.ui, "github:lumen-labs/lumen");
     assert_eq!(s.store().get_reviews().row_count(), 0);
-    assert!(!s.has("Reviews"));
+    assert!(!s.has("Ratings and reviews"));
 
     // With ratings and reviews turned off, nothing is asked for and nothing is shown.
     s.store().invoke_set_ratings(false);

@@ -74,6 +74,9 @@ struct Package {
     url: Option<String>,
     #[serde(default)]
     num_votes: u64,
+    /// Votes weighted by how recent they are: each vote fades a little every day.
+    #[serde(default)]
+    popularity: f32,
     maintainer: Option<String>,
     out_of_date: Option<i64>,
     #[serde(default)]
@@ -97,11 +100,19 @@ impl Package {
             category: None,
             version: Some(self.version.clone()),
             install_label: None,
-            warning: self.out_of_date.map(|_| "Flagged out of date on the AUR".to_string()),
+            warning: match (self.out_of_date, &self.maintainer) {
+                (Some(_), _) => Some("Flagged out of date on the AUR".to_string()),
+                (None, None) => Some("Nobody maintains this AUR package at the moment.".to_string()),
+                _ => None,
+            },
             origin: None,
             installed_version: None,
             rating: None,
             icon_url: None,
+            downloads: None,
+            verified: false,
+            // The best-known packages sit at a few dozen; most are under one.
+            momentum: Some(((self.popularity.max(0.0) + 1.0).ln() / 31.0_f32.ln()).clamp(0.0, 1.0)),
         }
     }
 }
@@ -168,6 +179,7 @@ impl Source for Aur {
             version: pkg.version.clone(),
             published: date_from_unix(pkg.last_modified),
             prerelease: false,
+            downloads: None,
             notes,
             assets: vec![Asset {
                 name: format!("{base} (PKGBUILD)"),

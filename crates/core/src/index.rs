@@ -110,6 +110,9 @@ impl Index {
                         installed_version: None,
                         rating: None,
                         icon_url: None,
+                        downloads: None,
+                        verified: false,
+                        momentum: None,
                     },
                 ))
             })

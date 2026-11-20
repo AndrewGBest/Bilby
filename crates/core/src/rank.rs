@@ -131,6 +131,17 @@ fn has_usage(app: &AppSummary) -> bool {
 
 /// How many people use it, on the source's own scale.
 fn usage(app: &AppSummary) -> f32 {
+    let liked = liked(app);
+    // Downloads say more about use than stars do (starring costs nothing), so where the
+    // host counts them they carry half of this.
+    match app.downloads {
+        Some(n) => (liked + ((n as f32 + 1.0).ln() / 500_001.0_f32.ln()).clamp(0.0, 1.0)) / 2.0,
+        None => liked,
+    }
+}
+
+/// Stars, votes or installs, each on a scale that suits where it was counted.
+fn liked(app: &AppSummary) -> f32 {
     let a_lot = match app.id.source {
         SourceKind::GitHub => 50_000.0_f32,
         SourceKind::Codeberg => 3_000.0,
@@ -164,6 +175,14 @@ fn nudges(app: &AppSummary, featured: bool) -> f32 {
     if app.warning.is_some() {
         value -= 0.4;
     }
+    // Its developer is confirmed by the source.
+    if app.verified {
+        value += 0.1;
+    }
+    // People are turning to it right now, where the source measures that.
+    if let Some(momentum) = app.momentum {
+        value += 0.2 * (momentum - 0.25);
+    }
     value.clamp(0.0, 1.0)
 }
 
@@ -189,6 +208,9 @@ mod tests {
             installed_version: None,
             rating: None,
             icon_url: None,
+            downloads: None,
+            verified: false,
+            momentum: None,
         }
     }
 
@@ -249,7 +271,7 @@ mod tests {
         let plain = app("apt:calc", "calc", "", None);
         let rated = |stars: f32, count: u32| {
             let mut a = plain.clone();
-            a.rating = Some(Rating { stars, count });
+            a.rating = Some(Rating { stars, count, spread: [0; 5] });
             popularity(&a)
         };
         assert!(rated(4.7, 900) > popularity(&plain), "well loved beats unknown");
@@ -260,8 +282,27 @@ mod tests {
         // With stars on GitHub as well, both count.
         let mut both = app("github:a/b", "b", "", Some(40_000));
         let stars_only = popularity(&both);
-        both.rating = Some(Rating { stars: 2.0, count: 500 });
+        both.rating = Some(Rating { stars: 2.0, count: 500, spread: [0; 5] });
         assert!(popularity(&both) < stars_only);
+    }
+
+    #[test]
+    fn downloads_verification_and_recent_interest_all_count() {
+        let base = app("github:a/tool", "tool", "", Some(2_000));
+        let score_of = |a: &AppSummary| score("tool", a, Context::default());
+        let mut downloaded = base.clone();
+        downloaded.downloads = Some(300_000);
+        assert!(score_of(&downloaded) > score_of(&base), "widely downloaded beats merely starred");
+        let mut barely = base.clone();
+        barely.downloads = Some(12);
+        assert!(score_of(&barely) < score_of(&base), "starred but hardly ever downloaded is a weaker sign");
+        let mut verified = base.clone();
+        verified.verified = true;
+        assert!(score_of(&verified) > score_of(&base));
+        let (mut rising, mut fading) = (app("aur:tool", "tool", "", Some(300)), app("aur:tool", "tool", "", Some(300)));
+        rising.momentum = Some(0.9);
+        fading.momentum = Some(0.0);
+        assert!(score_of(&rising) > score_of(&fading), "the same votes, but one is being voted for now");
     }
 
     #[test]

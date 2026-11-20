@@ -49,3 +49,10 @@ pub trait Source: Send + Sync {
         Vec::new()
     }
 }
+
+/// Add up per-file download counts. `None` when no file has one, which is "not
+/// counted here" and must not be read as "never downloaded".
+pub(crate) fn counted(counts: impl Iterator<Item = Option<u64>>) -> Option<u64> {
+    let known: Vec<u64> = counts.flatten().collect();
+    (!known.is_empty()).then(|| known.iter().sum())
+}

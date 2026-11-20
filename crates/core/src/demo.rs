@@ -504,6 +504,8 @@ fn releases_json(app: &DemoApp) -> Value {
                         "size": fake_size(f),
                         "browser_download_url": format!("https://github.com/{}/{}/releases/download/{tag}/{f}", app.owner, app.repo),
                         "digest": digest,
+                        // Roughly what a project with this many stars sees per file.
+                        "download_count": app.stars * 3 + fake_size(f) % 977,
                     })).collect::<Vec<_>>(),
                 })
             })
@@ -718,6 +720,7 @@ fn flatpak_appstream(app: &DemoFlatpak) -> Value {
             { "sizes": [{ "width": "752", "src": format!("{media}/docs/screenshot-2.png") }] },
         ],
         "urls": { "homepage": format!("https://example.invalid/{}", app.name.to_lowercase()) },
+        "metadata": { "flathub::verification::verified": if app.installs > 10_000 { "true" } else { "false" } },
     })
 }
 
@@ -768,6 +771,10 @@ impl Http for DemoHttp {
                 .find(|a| a.id == id)
                 .map(|a| flatpak_appstream(a).to_string())
                 .ok_or_else(not_found);
+        }
+        if let Some(id) = url.strip_prefix("https://flathub.org/api/v2/stats/") {
+            let app = FLATPAKS.iter().find(|a| a.id == id).ok_or_else(|| Error::NotFound(url.to_string()))?;
+            return Ok(json!({ "installs_total": app.installs * 31, "installs_last_month": app.installs }).to_string());
         }
         if let Some(id) = url.strip_prefix("https://flathub.org/api/v2/summary/") {
             let app = FLATPAKS.iter().find(|a| a.id == id).ok_or_else(not_found)?;
@@ -824,6 +831,7 @@ impl Http for DemoHttp {
                         "icon": format!("https://dl.flathub.org/media/{}/icon.png", a.id),
                         "developer_name": a.developer, "project_license": a.license,
                         "installs_last_month": a.installs, "arches": ["x86_64", "aarch64"],
+                        "verification_verified": a.installs > 10_000, "trending": a.installs as f64 / 1000.0 - 15.0,
                     })
                 })
                 .collect();

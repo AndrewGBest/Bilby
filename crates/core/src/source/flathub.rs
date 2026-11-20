@@ -6,6 +6,7 @@
 //! * `POST /api/v2/search?locale=en` with `{"query": ..., "hits_per_page": N}`
 //! * `GET /api/v2/appstream/{app_id}`
 //! * `GET /api/v2/summary/{app_id}`
+//! * `GET /api/v2/stats/{app_id}`: installs in total and in the last month
 //!
 //! Flathub apps arrive with what release pages lack: a proper icon, screenshots, and
 //! an id that ratings services know.
@@ -65,6 +66,12 @@ struct Hit {
     developer_name: Option<String>,
     project_license: Option<String>,
     installs_last_month: Option<u64>,
+    /// The developer has proved to Flathub that the app is theirs.
+    #[serde(default)]
+    verification_verified: bool,
+    /// Flathub's own trend score. Its scale is not documented, so only its sign is used:
+    /// above zero means the app is being installed more than it was.
+    trending: Option<f64>,
 }
 
 #[derive(Deserialize)]
@@ -84,6 +91,21 @@ struct Appstream {
     #[serde(default)]
     screenshots: Vec<Screenshot>,
     urls: Option<Urls>,
+    /// Extra facts Flathub adds, among them whether the developer is verified.
+    metadata: Option<serde_json::Value>,
+}
+
+impl Appstream {
+    fn verified(&self) -> bool {
+        let value = self.metadata.as_ref().map(|m| &m["flathub::verification::verified"]);
+        value.is_some_and(|v| v.as_bool() == Some(true) || v.as_str() == Some("true"))
+    }
+}
+
+#[derive(Deserialize)]
+struct Stats {
+    installs_total: Option<u64>,
+    installs_last_month: Option<u64>,
 }
 
 #[derive(Deserialize)]
@@ -149,6 +171,9 @@ impl Flathub {
             installed_version: self.installed(&id).then(|| "installed".to_string()),
             rating: None,
             icon_url: None,
+            downloads: None,
+            verified: false,
+            momentum: None,
             id: AppId::new(SourceKind::Flathub, id),
         }
     }
@@ -205,6 +230,8 @@ impl Source for Flathub {
                 app.popularity = h.installs_last_month;
                 app.license = h.project_license;
                 app.icon_url = own_media(h.icon);
+                app.verified = h.verification_verified;
+                app.momentum = h.trending.map(|t| if t > 0.0 { 0.75 } else { 0.25 });
                 app
             })
             .collect())
@@ -212,7 +239,16 @@ impl Source for Flathub {
 
     fn summary(&self, key: &str) -> Result<AppSummary> {
         let a = self.appstream(key)?;
+        let verified = a.verified();
         let mut app = self.summary_from(a.id, a.name, a.summary, a.developer_name);
+        app.verified = verified;
+        // How much it is installed comes from a separate small document. Without it the
+        // page simply has no such figures.
+        let stats = self.http.get(&format!("{}/stats/{key}", self.api)).ok();
+        if let Some(stats) = stats.and_then(|text| serde_json::from_str::<Stats>(&text).ok()) {
+            app.popularity = stats.installs_last_month;
+            app.downloads = stats.installs_total;
+        }
         app.license = a.project_license;
         app.icon_url = own_media(a.icon);
         if let Some(homepage) = a.urls.and_then(|u| u.homepage).filter(|u| u.starts_with("https://")) {
@@ -244,6 +280,7 @@ impl Source for Flathub {
             version: latest.and_then(|r| r.version.clone()).unwrap_or_else(|| "latest".to_string()),
             published,
             prerelease: false,
+            downloads: None,
             notes,
             assets: vec![Asset {
                 name: key.to_string(),

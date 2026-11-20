@@ -444,6 +444,9 @@ impl SystemRepos {
             installed_version: None,
             rating: None,
             icon_url: None,
+            downloads: None,
+            verified: false,
+            momentum: None,
         }
     }
 }
@@ -530,6 +533,7 @@ impl Source for SystemRepos {
             version: package.version.clone(),
             published: package.built.clone(),
             prerelease: false,
+            downloads: None,
             notes,
             assets: vec![Asset {
                 name: format!("{} ({})", package.name, package.repo),
