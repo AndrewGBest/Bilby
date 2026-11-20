@@ -4,6 +4,7 @@
 //! * `GET /search/repositories?q=...`
 //! * `GET /repos/{owner}/{repo}`
 //! * `GET /repos/{owner}/{repo}/releases?per_page=N`
+//! * `GET /repos/{owner}/{repo}/readme` (for its `download_url`)
 
 use super::Source;
 use crate::error::{Error, Result};
@@ -16,6 +17,8 @@ use std::sync::Arc;
 /// How many releases to look back through for one that has a file for this machine.
 /// Some projects publish each platform as its own release.
 const RELEASES_PER_APP: usize = 6;
+
+const RAW_HOST: &str = "https://raw.githubusercontent.com/";
 
 pub struct GitHub {
     http: Arc<dyn Http>,
@@ -103,6 +106,11 @@ impl From<Repo> for AppSummary {
     }
 }
 
+#[derive(Deserialize)]
+struct Readme {
+    download_url: Option<String>,
+}
+
 fn valid_key(key: &str) -> bool {
     crate::model::valid_key(SourceKind::GitHub, key)
 }
@@ -159,6 +167,24 @@ impl Source for GitHub {
                     .collect(),
             })
             .collect())
+    }
+
+    fn about(&self, key: &str) -> Result<Option<String>> {
+        if !valid_key(key) {
+            return Ok(None);
+        }
+        let readme: Readme = match self.http.get(&format!("{}/repos/{key}/readme", self.api)) {
+            Ok(body) => serde_json::from_str(&body)?,
+            // Plenty of projects have no README; that is not a failure.
+            Err(Error::NotFound(_)) => return Ok(None),
+            Err(e) => return Err(e),
+        };
+        // The file itself comes from GitHub's raw host and nowhere else, whatever the
+        // response says.
+        match readme.download_url.filter(|u| u.starts_with(RAW_HOST)) {
+            Some(url) => Ok(Some(self.http.get(&url)?)),
+            None => Ok(None),
+        }
     }
 }
 

@@ -244,6 +244,11 @@ impl Catalog {
         (Some(newest), Some(reason))
     }
 
+    /// The project's README as Markdown, or `None` when there is none to show.
+    pub fn about(&self, id: &AppId) -> Result<Option<String>> {
+        self.source(id.source)?.about(&id.key)
+    }
+
     pub fn details(&self, id: &AppId) -> Result<AppDetails> {
         let source = self.source(id.source)?;
         // "Not found" in a person's terms, not as the URL that was asked for.

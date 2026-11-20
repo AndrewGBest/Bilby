@@ -1124,3 +1124,17 @@ fn an_update_can_be_skipped_until_the_next_one() {
     s.app.check_updates(&s.ui, false);
     assert_eq!(s.store().get_updates_count(), 0);
 }
+
+#[test]
+fn an_app_page_says_what_the_project_is() {
+    let s = start_with("linux-x64-debian", Shell::Desktop, Some(r#"{"settings":{"welcomed":true}}"#));
+    s.app.open(&s.ui, "github:lumen-labs/lumen");
+    let about = s.store().get_about().to_string();
+    assert!(about.starts_with("Fast, keyboard-driven text editor"), "{about}");
+    assert!(about.contains("•  Works offline") && !about.contains("badge") && !about.contains('<'), "{about}");
+    assert!(s.has("About"));
+    // A package from a repository has no README to show, and the page says nothing rather
+    // than keeping the previous app's text.
+    s.app.open(&s.ui, "apt:harbor");
+    assert_eq!(s.store().get_about(), "");
+}

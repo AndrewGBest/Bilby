@@ -828,6 +828,12 @@ export component DetailsBody inherits Rectangle {
                 }
             }
 
+            if Store.about != "" : VerticalLayout {
+                spacing: 8px;
+                Text { text: "About"; color: Theme.text-dim; font-size: 12px; font-weight: 700; }
+                Text { text: Store.about; color: Theme.text; font-size: 14px; wrap: word-wrap; }
+            }
+
             if Store.notes != "" : VerticalLayout {
                 spacing: 8px;
                 Text {

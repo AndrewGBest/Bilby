@@ -2,7 +2,7 @@
 
 # Bilby
 
-An app store for **GitHub Releases**, the **AUR** and **your distribution's own
+An app store for **GitHub Releases**, **Codeberg**, the **AUR** and **your distribution's own
 repositories** (Arch, CachyOS, Debian, Ubuntu and whatever else your package manager is
 set up for), written in Rust, that only shows you what actually runs on the machine in
 front of you.
@@ -38,13 +38,20 @@ Screenshots show the built-in demo catalog; the apps in it are fictional.
   and shows exactly what `pacman -S` or `apt install` can install. Packages already
   installed are marked, with the version you have.
 - **Discover, search, or paste a link**: typing suggests featured apps instantly;
-  Enter searches the sources; a GitHub URL or `owner/repo` opens that project directly.
+  Enter searches the sources; a GitHub or Codeberg URL, or `owner/repo`, opens that
+  project directly. App pages show what the project says about itself (the start of
+  its README) and the release notes.
 - **Installs**: downloads, verifies the SHA-256 GitHub publishes, then places AppImages
   itself or hands packages to the system installer. Shows the steps first; downloads can
-  be cancelled. AUR packages get the exact command to run, not a silent build.
+  be cancelled. AUR packages get the exact command to run, not a silent build. An
+  AppImage is added to your app menu, and removed from it when you uninstall.
 - **Library and updates**: remembers what you installed, checks the sources for newer
   releases that fit your device, and updates one app or all of them with one click from the Library.
-  Older versions can be picked from the app page.
+  Older versions can be picked from the app page, and an update you do not want can be
+  skipped until the next one.
+- **Favourites**: star an app to keep it on the Library page without installing it.
+- **Moves with you**: `bilby-cli export` writes your library and favourites to a file
+  and `import` adds them on another device. Settings and tokens stay behind.
 - **Updates itself the same way**: the store checks its own GitHub repository for a
   newer release with a file for your device and says so in Settings. The update is an
   ordinary app page, so it gets the same filtering and checksum check as everything else.
@@ -55,6 +62,7 @@ Screenshots show the built-in demo catalog; the apps in it are fictional.
 - **Copes with a bad connection**: Discover and suggestions need no network; failed lookups
   say what went wrong and can be retried; cached answers are used when GitHub's
   allowance runs out.
+- **Proxy**: reads `HTTPS_PROXY` and `ALL_PROXY` (untested behind a real proxy).
 - **Honest about limits**: shows GitHub's remaining request allowance, takes an optional
   token to raise it, says plainly that nothing in the catalog is reviewed, and warns
   about pre-releases, abandoned projects and out-of-date AUR packages.
@@ -65,8 +73,8 @@ A working vertical slice. It has only ever been looked at on Linux.
 
 | | State |
 |---|---|
-| Engine, sources, library, updates, install planning | Implemented; 168 automated tests in total |
-| Desktop, mobile and TV interfaces | Implemented; 47 tests drive the real window headlessly, 7 more run the real binary under a virtual display |
+| Engine, sources, library, updates, install planning | Implemented; 178 automated tests in total |
+| Desktop, mobile and TV interfaces | Implemented; 50 tests drive the real window headlessly, 7 more run the real binary under a virtual display |
 | apt repositories | Read from real Ubuntu 24.04 package lists on the build machine |
 | pacman repositories (Arch, CachyOS, ...) | Tested against databases built in the tests from the documented format; **never read from a real Arch or CachyOS system** |
 | Fedora (dnf), openSUSE (zypper), Flathub, winget, Homebrew | Not yet |
@@ -74,7 +82,11 @@ A working vertical slice. It has only ever been looked at on Linux.
 | Windows, macOS | Builds and the test suite passes on GitHub's Windows and macOS runners. Those tests use a headless backend: **nobody has seen the window on either system**, and installer hand-off there is untried |
 | Android (phone, tablet, TV) | Core type-checks; entry point written; **no APK packaging**, and handing APKs to the system installer is not implemented (the UI says so) |
 | iOS | Can only ever be a catalog: see [the design notes](docs/DESIGN.md#ios) |
+| Codeberg | Tested against a local server speaking the Forgejo API shapes as I understand them; **never run against codeberg.org** |
 | Live GitHub / AUR requests | Tested over real HTTP against a local server speaking the documented API shapes; **never run against the real services** (blocked where this was built) |
+
+How this compares with Komi Store, Obtainium, UniGetUI and others, feature by feature,
+and what is deliberately left out: [docs/COMPARISON.md](docs/COMPARISON.md).
 
 ## Try it
 

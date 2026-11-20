@@ -571,6 +571,10 @@ licensed separately.
    instead of relying on the store's own record.
 7. Screenshots and a project's own icon from its repository; Markdown release notes.
 8. More repositories: dnf and zypper metadata, Flatpak remotes (Flathub), winget,
-   Homebrew, F-Droid; more release hosts: Codeberg / Forgejo, GitLab. Try the pacman
-   reader on a real Arch or CachyOS system first.
+   Homebrew, F-Droid; more release hosts: self-hosted Forgejo / Gitea, GitLab
+   (Codeberg is in, untested against the live site). Try the pacman reader on a real
+   Arch or CachyOS system first.
 9. Translations; a Settings page for TV.
+
+[COMPARISON.md](COMPARISON.md) sets Bilby against Komi Store, Obtainium, UniGetUI and
+others feature by feature and orders the remaining gaps.

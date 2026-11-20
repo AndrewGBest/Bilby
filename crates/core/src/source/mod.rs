@@ -31,6 +31,12 @@ pub trait Source: Send + Sync {
         None
     }
 
+    /// The project's own description of itself (its README), as Markdown, when the
+    /// source has one. Costs a request, so it is asked for separately from details.
+    fn about(&self, _key: &str) -> Result<Option<String>> {
+        Ok(None)
+    }
+
     /// For sources made of several named places (repositories): their names.
     fn origins(&self) -> Vec<String> {
         Vec::new()

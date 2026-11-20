@@ -566,8 +566,23 @@ impl Http for DemoHttp {
             return match tail {
                 None => Ok(repo_json(app).to_string()),
                 Some("releases") => Ok(releases_json(app).to_string()),
+                Some("readme") => Ok(json!({
+                    "name": "README.md",
+                    "download_url": format!("https://raw.githubusercontent.com/{}/{}/main/README.md", app.owner, app.repo),
+                })
+                .to_string()),
                 _ => Err(not_found()),
             };
+        }
+        if let Some(rest) = url.strip_prefix("https://raw.githubusercontent.com/") {
+            let mut parts = rest.split('/');
+            let (owner, repo) = (parts.next(), parts.next());
+            let app = all_apps().find(|a| Some(a.owner) == owner && Some(a.repo) == repo).ok_or_else(not_found)?;
+            return Ok(format!(
+                "<p align=\"center\"><img src=\"logo.png\" width=\"120\"></p>\n\n# {name}\n\n[![build](https://example.invalid/badge.svg)](https://example.invalid)\n\n{summary}\n\n## Features\n\n- Starts in under a second\n- Works offline\n- Keyboard shortcuts for **everything**\n\n## Getting started\n\nInstall {name}, open it, and follow the short tour. See the [handbook](https://example.invalid/docs) for more.\n\n(Fictional project: this is demo data.)\n",
+                name = app.name,
+                summary = app.summary,
+            ));
         }
         if let Some(rest) = url.strip_prefix("https://codeberg.org/api/v1/repos/search?q=") {
             let q = url_decode(rest.split('&').next().unwrap_or(""));

