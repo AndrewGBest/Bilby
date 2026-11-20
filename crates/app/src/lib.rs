@@ -72,6 +72,8 @@ pub struct Options {
     /// How downloaded files are handed to the system. Defaults to the desktop's own
     /// handler; tests record the call instead of launching installers.
     pub opener: Option<Opener>,
+    /// How an installed app is started ([`install::launch`] unless a test says otherwise).
+    pub launcher: Option<Opener>,
     pub catalog_factory: Option<CatalogFactory>,
     /// The app id the store looks at for its own updates. Defaults to its GitHub
     /// repository; the demo catalog has no such project, so tests name a stand-in.
@@ -426,6 +428,7 @@ pub struct App {
     /// Owners whose picture has been asked for in this session (found or not).
     pictures_requested: Mutex<HashSet<String>>,
     opener: Opener,
+    launcher: Opener,
     catalog_factory: CatalogFactory,
 }
 
@@ -702,6 +705,7 @@ impl App {
         let favourites: Vec<AppCard> = state.favourites.iter().map(|f| self.favourite_card(f)).collect();
         store.set_favourites(ModelRc::new(VecModel::from(favourites)));
         store.set_is_favourite(state.is_favourite(store.get_app().id.as_str()));
+        store.set_can_open(self.launchable(store.get_app().id.as_str()).is_some());
         let checked = self.last_checked.load(Ordering::SeqCst);
         store.set_last_checked(
             match now.saturating_sub(checked) {
@@ -826,13 +830,13 @@ impl App {
         let mut note = if outcome.apps.is_empty() {
             String::new()
         } else {
-            format!("{} for “{query}” on {}.", plural(outcome.apps.len(), "app"), self.platform.title())
+            format!("{} for “{query}”.", plural(outcome.apps.len(), "app"))
         };
         if outcome.hidden > 0 {
             if !note.is_empty() {
                 note.push(' ');
             }
-            note.push_str(&format!("{} more matched but have no file for this device.", outcome.hidden));
+            note.push_str(&format!("{} more matched but do not work on this device.", outcome.hidden));
         }
         store.set_search_note(note.into());
         store.set_search_error(outcome.errors.join("\n").into());
@@ -848,6 +852,7 @@ impl App {
         // Show what the list already knew while the releases load.
         let known = find_card(&store, id);
         store.set_is_favourite(self.state().is_favourite(id));
+        store.set_can_open(self.launchable(id).is_some());
         store.set_details_open(true);
         store.set_details_error(SharedString::new());
         store.set_unavailable(SharedString::new());
@@ -1314,6 +1319,24 @@ impl App {
         self.toast(ui, &format!("Skipping {name} {version}. You'll hear about the next one."), false);
     }
 
+    /// The file to run for an app the store placed itself, if it is still there.
+    fn launchable(&self, id: &str) -> Option<PathBuf> {
+        let state = self.state.lock().unwrap();
+        let app = state.installed(id).filter(|a| a.store_managed)?;
+        let path = PathBuf::from(app.path.as_deref()?);
+        (path.starts_with(&self.dirs.applications) && path.is_file()).then_some(path)
+    }
+
+    /// Start the open app, when the store installed it as a file it can run.
+    pub fn launch(&self, ui: &AppWindow) {
+        let store = ui.global::<Store>();
+        let Some(path) = self.launchable(store.get_app().id.as_str()) else { return };
+        match (self.launcher)(&path) {
+            Ok(()) => self.toast(ui, &format!("Opening {}…", store.get_app().name), false),
+            Err(e) => self.toast(ui, &format!("Couldn't open it: {e}"), true),
+        }
+    }
+
     /// Add the open app to the favourites, or take it out.
     pub fn toggle_favourite(&self, ui: &AppWindow) {
         let card = ui.global::<Store>().get_app();
@@ -1412,6 +1435,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     store.set_demo(options.demo);
     store.set_app_version(env!("CARGO_PKG_VERSION").into());
     store.set_platform_title(platform.title().into());
+    store.set_device_name(platform.friendly().into());
     let mut facts = platform.facts();
     let sources: Vec<_> = catalog.active_sources().iter().map(|s| s.label()).collect();
     facts.push(("Sources".to_string(), sources.join(", ")));
@@ -1443,6 +1467,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         update_queue: Mutex::new(std::collections::VecDeque::new()),
         pictures_requested: Mutex::new(HashSet::new()),
         opener: options.opener.clone().unwrap_or_else(|| Arc::new(install::open_with_system)),
+        launcher: options.launcher.clone().unwrap_or_else(|| Arc::new(install::launch)),
         catalog_factory,
     });
 
@@ -1506,6 +1531,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     on!(on_remove_from_library, |app, ui, id| { app.remove_from_library(ui, &id) });
     on!(on_skip_update, |app, ui, id| { app.skip_update(ui, &id) });
     on!(on_toggle_favourite, |app, ui| { app.toggle_favourite(ui) });
+    on!(on_launch, |app, ui| { app.launch(ui) });
     on!(on_set_theme, |app, ui, mode| {
         let name = ["system", "light", "dark"].get(mode as usize).copied().unwrap_or("system");
         app.update_state(ui, |state| state.settings.theme = name.to_string());

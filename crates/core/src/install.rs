@@ -258,6 +258,13 @@ pub fn remove_menu_entry(dirs: &Dirs, id: &str) {
     }
 }
 
+/// Start a program the store placed (an AppImage), without waiting for it.
+pub fn launch(path: &Path) -> Result<()> {
+    use std::process::{Command, Stdio};
+    Command::new(path).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn()?;
+    Ok(())
+}
+
 /// Open a file or folder with the desktop's default handler.
 pub fn open_with_system(path: &Path) -> Result<()> {
     let mut cmd = if cfg!(target_os = "windows") {

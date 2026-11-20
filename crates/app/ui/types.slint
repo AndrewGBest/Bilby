@@ -68,6 +68,8 @@ export global Store {
     // Desktop and mobile swap automatically with the window width; TV is explicit.
     in property <bool> adaptive: true;
     in property <string> platform-title;
+    // The same in everyday words: "This Linux computer".
+    in property <string> device-name;
     in property <[Fact]> facts;
     in property <bool> demo;
     in property <string> app-version;
@@ -118,6 +120,8 @@ export global Store {
     in property <int> selected-version;
     // The open app is in the user's favourites.
     in property <bool> is-favourite;
+    // The store placed this app itself and can start it.
+    in property <bool> can-open;
 
     // --- install ----------------------------------------------------------------
     // 0 idle, 1 working, 2 done, 3 failed
@@ -167,6 +171,7 @@ export global Store {
     callback remove-from-library(string);
     callback skip-update(string);
     callback toggle-favourite();
+    callback launch();
     callback set-theme(int);
     callback set-prereleases(bool);
     callback set-check-on-start(bool);

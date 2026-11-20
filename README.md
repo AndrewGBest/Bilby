@@ -53,12 +53,13 @@ A source only appears on devices it applies to. A Windows user never sees the AU
 - Older versions can still be installed from an app's page.
 - Bilby looks for its own updates the same way.
 
-**Details when you want them**
+**Familiar, and not in your face**
 
-Screens show only what you need to decide: what the app is, whether it works here, and
-one button. File names, sizes, other install options, older versions, the licence and
-the reason each hidden file was hidden are one press away under *More options and
-details*.
+An app's page is laid out like the app stores people already use: name and one button
+at the top, a row of key facts (popularity, size, last updated), what the app is, what
+is new, and an Information table at the bottom. File names, commands, other install
+options, older versions and the reason each hidden file was hidden are one press away
+under *More options and details*.
 
 **Also**
 

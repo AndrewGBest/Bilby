@@ -114,7 +114,7 @@ export component MobileShell inherits Rectangle {
                     }
                     VerticalLayout {
                         alignment: center;
-                        Text { text: Store.platform-title; color: Theme.ok; font-size: 12px; font-weight: 600; }
+                        Text { text: Store.device-name; color: Theme.ok; font-size: 12px; font-weight: 600; }
                     }
                 }
                 if Store.page == 1 : SearchField {
@@ -212,7 +212,7 @@ export component MobileShell inherits Rectangle {
                                 padding-top: 8px;
                                 padding-bottom: 8px;
                                 Text {
-                                    text: Store.searching ? "Searching…" : Store.search-note != "" ? Store.search-note : "Only apps with a file for " + Store.platform-title + " are listed.";
+                                    text: Store.searching ? "Searching…" : Store.search-note != "" ? Store.search-note : "Only apps that work on this device are listed.";
                                     color: Theme.text-dim;
                                     font-size: 13px;
                                     wrap: word-wrap;
@@ -258,7 +258,7 @@ export component MobileShell inherits Rectangle {
                             }
                             if Store.searched && !Store.searching && Store.results.length == 0 && Store.search-error == "" : EmptyState {
                                 title: "No apps for this device";
-                                body: "Try a different name. Projects without a file for " + Store.platform-title + " are left out.";
+                                body: "Try a different name. Apps that do not work on this device are left out.";
                             }
                         }
                     }

@@ -142,6 +142,18 @@ pub const PRESETS: &[&str] = &[
 
 impl Platform {
     /// Short title, e.g. `Linux · x86_64`.
+    /// The device in everyday words, for people who do not know what x86_64 is.
+    pub fn friendly(&self) -> &'static str {
+        match (self.os, self.form_factor) {
+            (_, FormFactor::Tv) => "This TV",
+            (Os::Windows, _) => "This Windows PC",
+            (Os::Linux, _) => "This Linux computer",
+            (Os::MacOs, _) => "This Mac",
+            (Os::Android, _) => "This Android device",
+            (Os::Ios, _) => "This iPhone or iPad",
+        }
+    }
+
     pub fn title(&self) -> String {
         let os = match (self.os, self.form_factor) {
             (Os::Android, FormFactor::Tv) => "Android TV",

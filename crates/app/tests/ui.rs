@@ -70,6 +70,7 @@ fn start_with(preset: &str, shell: Shell, seed: Option<&str>) -> Session {
     }
     let opened: Arc<Mutex<Vec<PathBuf>>> = Arc::default();
     let record = opened.clone();
+    let launched = opened.clone();
     let options = Options {
         demo: true,
         inline: true,
@@ -78,6 +79,10 @@ fn start_with(preset: &str, shell: Shell, seed: Option<&str>) -> Session {
         dirs: Some(dirs.clone()),
         opener: Some(Arc::new(move |path: &std::path::Path| {
             record.lock().unwrap().push(path.to_path_buf());
+            Ok(())
+        })),
+        launcher: Some(Arc::new(move |path: &std::path::Path| {
+            launched.lock().unwrap().push(path.to_path_buf());
             Ok(())
         })),
         ..Default::default()
@@ -265,6 +270,12 @@ fn install_an_appimage_end_to_end() {
     let text = std::fs::read_to_string(&entry).expect("a menu entry was written");
     assert!(text.contains("Name=Tidewave\n") && text.contains("Tidewave-3.4.0-x86_64.AppImage"), "{text}");
     assert!(s.store().get_install_message().ends_with("It is in your app menu."));
+
+    // The button that installed it now opens it, as in any store.
+    assert!(s.store().get_can_open());
+    s.click("Open Tidewave");
+    assert_eq!(s.opened.lock().unwrap().last(), Some(&file), "the AppImage itself is started");
+    assert_eq!(s.store().get_toast(), "Opening Tidewave…");
 
     // Back on Discover the tile now says so.
     s.click("Back");
@@ -539,7 +550,7 @@ fn search_lists_only_installable_apps_and_says_what_it_left_out() {
     assert!(mac.store().get_searched() && !mac.store().get_searching());
     let names: Vec<String> = mac.store().get_results().iter().map(|a| a.id.to_string()).collect();
     assert_eq!(names, ["github:barley/barley"]);
-    assert!(mac.store().get_search_note().contains("1 more matched but have no file for this device"));
+    assert!(mac.store().get_search_note().contains("1 more matched but do not work on this device"));
     assert_eq!(mac.store().get_results().row_data(0).unwrap().badge, "Disk image (.dmg)");
 
     let phone = start("android-arm64", Shell::Mobile);

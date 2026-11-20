@@ -110,7 +110,7 @@ component Spotlight inherits Rectangle {
             alignment: center;
             spacing: 5px;
             horizontal-stretch: 1;
-            Text { text: "Featured for " + Store.platform-title; color: white.with-alpha(0.75); font-size: 12px; font-weight: 700; }
+            Text { text: "Featured"; color: white.with-alpha(0.75); font-size: 12px; font-weight: 700; }
             Text { text: app.name; color: white; font-size: 28px; font-weight: 800; overflow: elide; }
             Text { text: app.summary; color: white.with-alpha(0.9); font-size: 14px; overflow: elide; }
         }
@@ -264,7 +264,7 @@ export component DesktopShell inherits Rectangle {
                             alignment: center;
                             spacing: 3px;
                             Text { text: "Showing apps for"; color: Theme.text-dim; font-size: 11px; }
-                            Text { text: Store.platform-title; color: Theme.ok; font-size: 13px; font-weight: 600; overflow: elide; }
+                            Text { text: Store.device-name; color: Theme.ok; font-size: 13px; font-weight: 600; overflow: elide; }
                         }
                     }
                 }
@@ -394,7 +394,7 @@ export component DesktopShell inherits Rectangle {
                                 if !Store.searched && !Store.searching && Store.suggestions.length == 0 : VerticalLayout {
                                     spacing: 14px;
                                     Text {
-                                        text: "Type a name and press Enter, or paste a link to a GitHub repository. Only apps with a file for " + Store.platform-title + " are listed.";
+                                        text: "Type a name and press Enter, or paste a link to a project. Only apps that work on this device are listed.";
                                         color: Theme.text-dim;
                                         font-size: 14px;
                                         wrap: word-wrap;

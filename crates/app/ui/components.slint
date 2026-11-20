@@ -319,7 +319,6 @@ export component AppTile inherits Rectangle {
             if app.has-update : Chip { text: "Update"; tone: Theme.accent; }
             if app.installed && !app.has-update : Chip { text: "Installed"; tone: Theme.accent; }
             if app.popularity != "" : Chip { text: app.popularity; }
-            if app.popularity == "" : Chip { text: app.source; }
         }
     }
 }
@@ -662,10 +661,127 @@ export component Welcome inherits Rectangle {
 }
 
 // The details page body, shared by the desktop and mobile shells.
+// One fact in the row under an app's name: a value and what it is.
+component StatCell inherits VerticalLayout {
+    in property <string> value;
+    in property <string> caption;
+    spacing: 2px;
+    accessible-role: text;
+    accessible-label: root.value + " " + root.caption;
+    Text { text: root.value; color: Theme.text; font-size: 15px; font-weight: 700; overflow: elide; }
+    Text { text: root.caption; color: Theme.text-dim; font-size: 11px; overflow: elide; }
+}
+
+// A line of the Information table.
+component InfoRow inherits Rectangle {
+    in property <string> name;
+    in property <string> value;
+    height: max(34px, v.preferred-height + 14px);
+    accessible-role: text;
+    accessible-label: root.name + ": " + root.value;
+    Rectangle { y: parent.height - 1px; height: 1px; background: Theme.stroke; }
+    Text { x: 0; width: 130px; text: root.name; color: Theme.text-dim; font-size: 13px; vertical-alignment: center; }
+    v := Text {
+        x: 140px;
+        width: parent.width - 140px;
+        text: root.value;
+        color: Theme.text;
+        font-size: 13px;
+        wrap: word-wrap;
+        horizontal-alignment: right;
+        vertical-alignment: center;
+    }
+}
+
+// Long text shown as its first few lines, with the rest one press away.
+component Clamped inherits VerticalLayout {
+    in property <string> text;
+    in property <length> limit: 104px;
+    in property <string> what;
+    // Changes when the page shows something else, which folds the text again.
+    in property <string> key;
+    property <bool> open: false;
+    changed key => { root.open = false; }
+    spacing: 4px;
+    Rectangle {
+        clip: true;
+        height: root.open ? t.preferred-height : min(t.preferred-height, root.limit);
+        t := Text {
+            x: 0;
+            y: 0;
+            width: parent.width;
+            text: root.text;
+            color: Theme.text;
+            font-size: 14px;
+            wrap: word-wrap;
+            vertical-alignment: top;
+        }
+        // Fade the last line out, so a cut reads as "there is more" on any font.
+        if !root.open && t.preferred-height > root.limit : Rectangle {
+            y: parent.height - 26px;
+            height: 26px;
+            background: @linear-gradient(180deg, Theme.bg.with-alpha(0) 0%, Theme.bg 100%);
+        }
+    }
+    // Always there (zero-high when not needed), so the layout's width never depends on
+    // how tall the text turned out to be.
+    Rectangle {
+        property <bool> needed: t.preferred-height > root.limit;
+        height: self.needed ? 28px : 0px;
+        visible: self.needed;
+        accessible-role: button;
+        accessible-label: (root.open ? "Show less of " : "Show all of ") + root.what;
+        accessible-expandable: true;
+        accessible-expanded: root.open;
+        accessible-action-default => { root.open = !root.open; }
+        TouchArea {
+            mouse-cursor: pointer;
+            clicked => { root.open = !root.open; }
+        }
+        Text {
+            x: 0;
+            text: root.open ? "Show less" : "Read more";
+            color: Theme.accent;
+            font-size: 13px;
+            font-weight: 600;
+            vertical-alignment: center;
+        }
+    }
+}
+
+// What changed in the release being shown.
+component WhatsNew inherits Rectangle {
+    height: body.preferred-height;
+    body := VerticalLayout {
+        width: parent.width;
+        spacing: 8px;
+        HorizontalLayout {
+            spacing: 10px;
+            Text {
+                horizontal-stretch: 1;
+                text: Store.is-package ? "About this package" : "What's new";
+                color: Theme.text;
+                font-size: 17px;
+                font-weight: 700;
+            }
+            Text {
+                text: Store.app.version != "" && !Store.is-package ? Store.app.version + (Store.release-age != "" ? "  ·  " + Store.release-age : "") : Store.release-age;
+                color: Theme.text-dim;
+                font-size: 12px;
+                vertical-alignment: center;
+            }
+        }
+        Clamped { text: Store.notes; limit: 70px; what: "what is new"; key: Store.app.id + Store.app.version; }
+    }
+}
+
+// An app's page. Laid out the way the big stores do it, because that is what people
+// already know: name and one button at the top, a row of key facts, what it is, what is
+// new, and a table of everything else at the bottom.
 export component DetailsBody inherits Rectangle {
     in property <bool> compact;
     property <bool> show-hidden: false;
-    // Other versions, other files, file names, commands, licence: one press away.
+    // Every file, older versions, commands and steps: one press away.
     property <bool> more: false;
     property <string> shown-id: Store.app.id;
     changed shown-id => {
@@ -673,6 +789,22 @@ export component DetailsBody inherits Rectangle {
         root.show-hidden = false;
     }
     property <length> pad: compact ? 16px : 32px;
+    property <bool> has-option: Store.options.length > 0;
+    property <OptionRow> best: Store.options[0];
+    property <bool> busy: Store.install-state == 1;
+    property <bool> mine: Store.install-index == 0 && Store.install-state != 0;
+    property <bool> is-update: Store.installed-version != "" && Store.app.version != "" && Store.installed-version != Store.app.version;
+    property <bool> open-instead: Store.can-open && !is-update && !(mine && busy);
+    property <string> action: mine && busy ? "Cancel" : open-instead ? "Open" : is-update ? "Update" : Store.installed-version != "" && best.verb == "Install" ? "Reinstall" : best.verb;
+    function act() {
+        if (mine && busy) {
+            Store.cancel-install();
+        } else if (open-instead) {
+            Store.launch();
+        } else {
+            Store.install(0);
+        }
+    }
     Flickable {
         VerticalLayout {
             padding: pad;
@@ -688,35 +820,69 @@ export component DetailsBody inherits Rectangle {
                     spacing: 4px;
                     horizontal-stretch: 1;
                     Text { text: Store.app.name; color: Theme.text; font-size: compact ? 24px : 30px; font-weight: 700; overflow: elide; }
-                    Text { text: Store.app.author; color: Theme.text-dim; font-size: 14px; }
-                    HorizontalLayout {
-                        spacing: 6px;
-                        alignment: start;
-                        if Store.app.popularity != "" : Chip { text: Store.app.popularity; }
-                        if Store.app.source != "" : Chip { text: Store.app.source; }
-                    }
+                    Text { text: Store.app.author; color: Theme.text-dim; font-size: 14px; overflow: elide; }
                 }
                 if !compact : VerticalLayout {
-                    alignment: start;
-                    spacing: 8px;
-                    if Store.homepage != "" : Button {
-                        text: "Project page";
-                        primary: false;
-                        clicked => { Store.open-url(Store.homepage); }
-                    }
-                    Button {
-                        text: Store.is-favourite ? "★ Favourite" : "☆ Favourite";
-                        primary: false;
-                        accessible-label: Store.is-favourite ? "Remove from favourites" : "Add to favourites";
-                        clicked => { Store.toggle-favourite(); }
+                    alignment: center;
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Button {
+                            width: 44px;
+                            text: Store.is-favourite ? "★" : "☆";
+                            primary: false;
+                            accessible-label: Store.is-favourite ? "Remove from favourites" : "Add to favourites";
+                            clicked => { Store.toggle-favourite(); }
+                        }
+                        if root.has-option : Button {
+                            min-width: 150px;
+                            font-size: 15px;
+                            text: root.action;
+                            primary: !(root.mine && root.busy);
+                            enabled: !root.busy || root.mine;
+                            accessible-label: (root.mine && root.busy ? "Cancel" : root.open-instead ? "Open" : root.best.verb) + " " + (root.open-instead ? Store.app.name : root.best.label);
+                            clicked => { root.act(); }
+                        }
                     }
                 }
             }
-            if compact : Button {
-                text: Store.is-favourite ? "★ In your favourites" : "☆ Add to favourites";
-                primary: false;
-                accessible-label: Store.is-favourite ? "Remove from favourites" : "Add to favourites";
-                clicked => { Store.toggle-favourite(); }
+            if compact : HorizontalLayout {
+                spacing: 8px;
+                if root.has-option : Button {
+                    horizontal-stretch: 1;
+                    font-size: 15px;
+                    text: root.action;
+                    primary: !(root.mine && root.busy);
+                    enabled: !root.busy || root.mine;
+                    accessible-label: (root.mine && root.busy ? "Cancel" : root.open-instead ? "Open" : root.best.verb) + " " + (root.open-instead ? Store.app.name : root.best.label);
+                    clicked => { root.act(); }
+                }
+                Button {
+                    width: root.has-option ? 48px : self.preferred-width;
+                    horizontal-stretch: root.has-option ? 0 : 1;
+                    text: root.has-option ? (Store.is-favourite ? "★" : "☆") : (Store.is-favourite ? "★ In your favourites" : "☆ Add to favourites");
+                    primary: false;
+                    accessible-label: Store.is-favourite ? "Remove from favourites" : "Add to favourites";
+                    clicked => { Store.toggle-favourite(); }
+                }
+            }
+            if root.mine && root.busy : Rectangle {
+                height: 4px;
+                border-radius: 2px;
+                background: Theme.surface-2;
+                Rectangle {
+                    x: 0;
+                    width: parent.width * clamp(Store.install-progress, 0.02, 1.0);
+                    border-radius: 2px;
+                    background: Theme.accent;
+                    animate width { duration: 120ms; }
+                }
+            }
+            if root.mine && !root.busy && !root.more : Text {
+                text: Store.install-message;
+                color: Store.install-state == 3 ? Theme.bad : Theme.ok;
+                font-size: 13px;
+                wrap: word-wrap;
+                accessible-role: text;
             }
 
             if Store.app.summary != "" : Text {
@@ -725,6 +891,36 @@ export component DetailsBody inherits Rectangle {
                 font-size: 15px;
                 wrap: word-wrap;
             }
+
+            // The facts people look for first, as the big stores show them.
+            if root.has-option || Store.app.popularity != "" : HorizontalLayout {
+                spacing: compact ? 16px : 36px;
+                alignment: start;
+                if Store.app.popularity != "" : StatCell { value: Store.app.popularity; caption: "on " + Store.app.source; }
+                if root.has-option && root.best.size != "" : StatCell { value: root.best.size; caption: "download"; }
+                if Store.release-age != "" : StatCell { value: Store.release-age; caption: "last updated"; }
+                if Store.license != "" && !compact : StatCell { value: Store.license; caption: "licence"; }
+            }
+
+            if root.has-option : HorizontalLayout {
+                spacing: 6px;
+                alignment: start;
+                VerticalLayout {
+                    alignment: center;
+                    Image { source: @image-url("icons/shield.svg"); colorize: Theme.ok; width: 14px; height: 14px; }
+                }
+                Text {
+                    text: (root.best.native ? "Made for this device" : "Works on this device") + (root.best.verified ? "  ·  the download is checked before it is installed" : "");
+                    color: Theme.ok;
+                    font-size: 12px;
+                    font-weight: 600;
+                    vertical-alignment: center;
+                    wrap: word-wrap;
+                }
+            }
+            if root.has-option && root.best.note != "" : Text { text: root.best.note; color: Theme.warn; font-size: 12px; wrap: word-wrap; }
+            // A package is installed with a command; that is the action, so it is shown.
+            if root.has-option && Store.is-package && root.best.command != "" && !root.more : CommandBox { command: root.best.command; }
 
             if Store.installed-version != "" : Rectangle {
                 height: 40px;
@@ -771,41 +967,61 @@ export component DetailsBody inherits Rectangle {
                 }
             }
 
-            // At a glance: the one file that suits this device, and its button.
-            if Store.options.length > 0 : OptionCard {
-                option: Store.options[0];
-                index: 0;
-                recommended: true;
-                compact: root.compact;
-                plain: !root.more;
+
+            // Someone who already has the app wants to know what changed, as in any store.
+            if Store.notes != "" && Store.installed-version != "" : WhatsNew { }
+
+            if Store.about != "" : VerticalLayout {
+                spacing: 8px;
+                Text { text: "About"; color: Theme.text; font-size: 17px; font-weight: 700; }
+                Clamped { text: Store.about; what: "the description"; key: Store.app.id; }
             }
 
-            if Store.options.length > 1 || Store.hidden.length > 0 || Store.versions.length > 1 || Store.options.length > 0 : Rectangle {
-                height: 32px;
-                accessible-role: button;
-                accessible-label: "More options and details";
-                accessible-expandable: true;
-                accessible-expanded: root.more;
-                accessible-action-default => { root.more = !root.more; }
-                TouchArea {
-                    mouse-cursor: pointer;
+            // Someone who has not installed it reads what it is first.
+            if Store.notes != "" && Store.installed-version == "" : WhatsNew { }
+
+            // Everything else, where the stores put it: a plain table at the bottom.
+            if root.has-option || Store.license != "" || Store.app.source != "" : VerticalLayout {
+                spacing: 0px;
+                Text { text: "Information"; color: Theme.text; font-size: 17px; font-weight: 700; }
+                Rectangle { height: 6px; }
+                if Store.app.source != "" : InfoRow { name: "From"; value: Store.app.source; }
+                if Store.app.author != "" && Store.app.author != Store.app.source : InfoRow { name: "Made by"; value: Store.app.author; }
+                if Store.app.version != "" : InfoRow { name: "Version"; value: Store.app.version; }
+                if Store.release-date != "" : InfoRow { name: "Released"; value: Store.release-date; }
+                if Store.license != "" : InfoRow { name: "Licence"; value: Store.license; }
+                if root.has-option : InfoRow { name: "Works on"; value: Store.platform-title; }
+                if root.has-option : InfoRow { name: "Kind of file"; value: root.best.label; }
+                if root.has-option && root.best.size != "" : InfoRow { name: "Download size"; value: root.best.size; }
+            }
+
+            if !compact : HorizontalLayout {
+                spacing: 10px;
+                alignment: start;
+                if Store.homepage != "" : Button {
+                    text: "Project page";
+                    primary: false;
+                    clicked => { Store.open-url(Store.homepage); }
+                }
+                if root.has-option || Store.hidden.length > 0 || Store.versions.length > 1 : Button {
+                    text: root.more ? "Fewer details" : "More options and details";
+                    primary: false;
+                    accessible-label: "More options and details";
                     clicked => { root.more = !root.more; }
                 }
-                Text {
-                    x: 0;
-                    text: root.more ? "Fewer details" : Store.options.length > 1 ? "More options and details" : "More details";
-                    color: Theme.accent;
-                    font-size: 13px;
-                    font-weight: 600;
-                    vertical-alignment: center;
-                }
             }
 
-            if root.more : Text {
-                text: (Store.app.version != "" ? "Version " + Store.app.version : "") + (Store.license != "" ? "  ·  " + Store.license + " licence" : "") + (Store.app.source != "" ? "  ·  from " + Store.app.source : "") + "  ·  for " + Store.platform-title;
-                color: Theme.text-dim;
-                font-size: 12px;
-                wrap: word-wrap;
+            // Side by side they are wider than a small phone.
+            if compact && Store.homepage != "" : Button {
+                text: "Project page";
+                primary: false;
+                clicked => { Store.open-url(Store.homepage); }
+            }
+            if compact && (root.has-option || Store.hidden.length > 0 || Store.versions.length > 1) : Button {
+                text: root.more ? "Fewer details" : "More options and details";
+                primary: false;
+                accessible-label: "More options and details";
+                clicked => { root.more = !root.more; }
             }
 
             if root.more && Store.versions.length > 1 : Flickable {
@@ -827,16 +1043,15 @@ export component DetailsBody inherits Rectangle {
             }
 
 
-            if root.more && Store.options.length > 1 : VerticalLayout {
+
+            if root.more && root.has-option : VerticalLayout {
                 spacing: 10px;
-                Text { text: "Other ways to install"; color: Theme.text-dim; font-size: 12px; font-weight: 700; }
-                for option[i] in Store.options : VerticalLayout {
-                    if i > 0 : OptionCard {
-                        option: option;
-                        index: i;
-                        recommended: false;
-                        compact: root.compact;
-                    }
+                Text { text: "Every way to install on " + Store.platform-title; color: Theme.text-dim; font-size: 12px; font-weight: 700; }
+                for option[i] in Store.options : OptionCard {
+                    option: option;
+                    index: i;
+                    recommended: i == 0;
+                    compact: root.compact;
                 }
             }
 
@@ -872,28 +1087,6 @@ export component DetailsBody inherits Rectangle {
                 }
             }
 
-            if Store.about != "" : VerticalLayout {
-                spacing: 8px;
-                Text { text: "About"; color: Theme.text-dim; font-size: 12px; font-weight: 700; }
-                Text { text: Store.about; color: Theme.text; font-size: 14px; wrap: word-wrap; }
-            }
-
-            if Store.notes != "" : VerticalLayout {
-                spacing: 8px;
-                Text {
-                    text: (Store.is-package ? "About this package" : "What's new") + (Store.release-date != "" ? "  ·  " + (Store.is-package ? "updated " : "") + Store.release-date + (Store.release-age != "" ? "  ·  " + Store.release-age : "") : "");
-                    color: Theme.text-dim;
-                    font-size: 12px;
-                    font-weight: 700;
-                }
-                Text { text: Store.notes; color: Theme.text; font-size: 14px; wrap: word-wrap; }
-            }
-
-            if Store.homepage != "" && compact : Button {
-                text: "Project page";
-                primary: false;
-                clicked => { Store.open-url(Store.homepage); }
-            }
         }
     }
 }

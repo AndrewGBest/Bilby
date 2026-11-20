@@ -445,13 +445,35 @@ weights are a first guess and have not been tuned against real searches.]
 
 ### What is shown, and what is one press away
 
-The screens are meant to work for someone who does not know what a `.deb` is. At a
-glance an app page shows the name, a sentence, a star count, any warning, and one card
-with one button, titled "Made for this device". Everything else is still there under
-*More options and details*: the kind of file and its name, the command, the steps,
-other files, older versions, the licence, and the files that were hidden with the
-reason for each. Tiles and rows show the name, the summary, popularity and whether the
-app is installed, and nothing about packaging.
+The screens are meant to work for someone who does not know what a `.deb` is, and to
+look like the stores that person already uses. Hiding secondary options until they are
+asked for is the usual advice for this
+([Nielsen Norman Group on progressive disclosure](https://www.nngroup.com/articles/progressive-disclosure/)).
+
+An app's page follows the order Apple and Google use. [sourced where linked; the rest is
+from memory of both stores, not checked against them while writing]
+
+| Part of the page | App Store / Google Play | Bilby |
+|---|---|---|
+| Top | Icon, name, developer, one button | The same. The button says Install, Update, or Open once an AppImage is installed |
+| Key facts row | Rating, size, age rating, chart position | Stars or votes, download size, last updated, licence |
+| Reassurance | "Works on this iPhone"; Play's data-safety section | "Made for this device", and that the download is checked when it is |
+| Short description | Apple's subtitle (up to 30 characters); Play's short description (80) ([Apple](https://developer.apple.com/app-store/product-page/), [Google](https://support.google.com/googleplay/android-developer/answer/13393723)) | The project's one-line description |
+| Screenshots | Up to ten ([Apple](https://developer.apple.com/app-store/product-page/)) | **None.** Release pages have none; pulling pictures out of READMEs is the obvious next step |
+| Description | First lines, then "more" | The start of the README, folded to a few lines with "Read more" |
+| What's New | Shown on the page and in Updates ([Apple](https://developer.apple.com/app-store/product-page/)) | Release notes, folded; shown above the description once the app is installed |
+| Ratings and reviews | Yes | **None, by design**: they need a server and accounts. Stars stand in |
+| Information | A plain table at the bottom: provider, size, compatibility, ... | The same: from, made by, version, released, licence, works on, kind of file, size |
+| Everything technical | Not shown at all | Under *More options and details*: every file with its name, command and steps, older versions, and the hidden files with the reason for each |
+
+Lists (tiles, rows) show the icon, name, one line and popularity, plus whether the app
+is installed or has an update. They say nothing about packaging. The device is named in
+everyday words ("This Linux computer"); the exact system and processor are in Settings
+and in each app's Information table.
+
+Known differences that are still gaps: no screenshots; no install button directly on
+list rows (both stores have one); no "top charts"; and the TV interface has not had this
+pass.
 
 ## 8. Testing
 
