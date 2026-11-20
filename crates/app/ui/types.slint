@@ -117,6 +117,8 @@ export global Store {
     in property <string> installed-version;
     // The app is a package (AUR or a system repository) rather than a project's release.
     in property <bool> is-package;
+    // The app is a website that opens in Longboard (Linux TVs).
+    in property <bool> is-website;
     // Releases that have a file for this machine, newest first, and the one shown.
     in property <[string]> versions;
     in property <int> selected-version;

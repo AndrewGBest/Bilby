@@ -78,6 +78,7 @@ impl Catalog {
             Arc::new(GitHub::new(http.clone())),
             Arc::new(crate::source::forgejo::Forgejo::codeberg(http.clone())),
             Arc::new(Aur::new(http.clone())),
+            Arc::new(crate::source::web::Websites),
         ];
         Catalog { platform, sources, index, http, check_limit: 8, include_prereleases: false }
     }
@@ -155,6 +156,10 @@ impl Catalog {
             s.apps.retain(|a| active.contains(&a.id.source));
         }
         sections.retain(|s| !s.apps.is_empty());
+        // On a Linux TV, websites sit beside the apps.
+        if active.contains(&SourceKind::Web) {
+            sections.push(Section { title: "Websites".to_string(), apps: crate::source::web::featured() });
+        }
         sections
     }
 

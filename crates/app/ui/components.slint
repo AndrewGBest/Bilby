@@ -785,7 +785,7 @@ component WhatsNew inherits Rectangle {
             spacing: 10px;
             Text {
                 horizontal-stretch: 1;
-                text: Store.is-package ? "About this package" : "What's new";
+                text: Store.is-website ? "About this website" : Store.is-package ? "About this package" : "What's new";
                 color: Theme.text;
                 font-size: 17px;
                 font-weight: 700;

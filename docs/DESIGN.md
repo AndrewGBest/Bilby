@@ -112,7 +112,7 @@ Rules that keep it honest:
   thread in the app and inline under test, so the UI tests exercise the real handlers.
 - **`Platform` is a value, not ambient state.** Every decision takes a `&Platform`, so
   "what would an Android TV be offered?" is a function call (`--as android-tv`), and the
-  whole engine is testable on one machine. **[verified]** 13 presets, all exercised in tests.
+  whole engine is testable on one machine. **[verified]** 14 presets, all exercised in tests.
 - **The network is behind one trait.** `DemoHttp` serves a fictional catalog in the real
   GitHub and AUR JSON shapes, so demo mode runs the production parsing and filtering
   code.
@@ -154,7 +154,7 @@ Decision order, each step able to reject with a reason shown to the user:
    builds first on TVs.
 
 The top-ranked file becomes the Install button. **[verified]**: a made-up release of 17
-files resolves to the expected single file on all 13 presets
+files resolves to the expected single file on all 14 presets
 (`compat::tests::each_platform_gets_its_natural_package`), and the same holds through
 the whole catalog path, from API-shaped JSON to install option, on 7 of them
 (`catalog::tests::details_offer_the_right_file_per_machine`).
@@ -492,6 +492,20 @@ The TV interface follows Android TV's published guidance, with tvOS's where they
 | Text readable from 3 m; body text 12sp and up in the TV type scale | [Design for TV](https://developer.android.com/design/ui/tv/guides/foundations/design-for-tv), [type scale](https://github.com/androidx/androidx/blob/androidx-main/tv/tv-material/src/main/java/androidx/tv/material3/tokens/TypeScaleTokens.kt) | Nothing below 11dp; body 12 to 14dp |
 | Four cards fill a row at 196dp each with 20dp between | [Cards](https://developer.android.com/design/ui/tv/guides/components/cards) | Four tiles a row, 20dp apart |
 | tvOS: safe area 60pt top/bottom, 80pt sides; text 23pt minimum at 1080p | [Apple layout](https://developer.apple.com/design/human-interface-guidelines/layout), [typography](https://developer.apple.com/design/human-interface-guidelines/typography) | Sides are inside Apple's too (96px vs 80pt); smallest text is 22px at 1080p, a point under Apple's minimum |
+
+**Websites as apps (Linux TVs only).** A TV cannot use a website without help, and the
+sister project [Longboard](https://github.com/AndrewGBest/Longboard) is a browser driven
+by a remote. So on Linux with the TV interface, a *Websites* source appears
+(`source/web.rs`): a short hand-written list of free sites, plus any site whose address
+is typed into search. Adding one writes an entry to the TV's app list that starts
+Longboard with `--url=<address>`; the app page's button then becomes Open, and removing
+it from the library deletes the entry. Nothing is downloaded. Longboard itself is
+featured under *Made for TV* and installed like any other app; without it, a website's
+page says so and adding fails with the same advice.
+[verified in tests with a stand-in for Longboard; never run against the real one.
+Longboard keeps its own list of web apps with a Home tile and optional separate
+sign-ins, and has no command to add to it, so a site added here opens in Longboard but
+is not on Longboard's Home. A `--add-app=` option in Longboard would close that gap.]
 
 An app's page on TV has three buttons in a row (the main one, Favourite, Other files),
 the facts row, a picture and the description. Still missing on TV: choosing an older

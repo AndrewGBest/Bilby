@@ -23,6 +23,8 @@ struct Session {
     state_file: PathBuf,
     /// Files the store handed to "the system installer" (recorded, never launched).
     opened: Arc<Mutex<Vec<PathBuf>>>,
+    /// Websites the store asked Longboard to open: the program and the address.
+    web_opened: Arc<Mutex<Vec<(PathBuf, String)>>>,
 }
 
 static COUNTER: AtomicU32 = AtomicU32::new(0);
@@ -71,6 +73,8 @@ fn start_with(preset: &str, shell: Shell, seed: Option<&str>) -> Session {
     let opened: Arc<Mutex<Vec<PathBuf>>> = Arc::default();
     let record = opened.clone();
     let launched = opened.clone();
+    let web_opened: Arc<Mutex<Vec<(PathBuf, String)>>> = Arc::default();
+    let web_record = web_opened.clone();
     let options = Options {
         demo: true,
         inline: true,
@@ -85,6 +89,10 @@ fn start_with(preset: &str, shell: Shell, seed: Option<&str>) -> Session {
             launched.lock().unwrap().push(path.to_path_buf());
             Ok(())
         })),
+        web_launcher: Some(Arc::new(move |longboard: &std::path::Path, url: &str| {
+            web_record.lock().unwrap().push((longboard.to_path_buf(), url.to_string()));
+            Ok(())
+        })),
         ..Default::default()
     };
     let (ui, app) = build(&options).unwrap();
@@ -97,7 +105,7 @@ fn start_with(preset: &str, shell: Shell, seed: Option<&str>) -> Session {
     };
     ui.window().set_size(slint::LogicalSize::new(w, h));
     ui.show().unwrap();
-    Session { ui, app, dirs, state_file, opened }
+    Session { ui, app, dirs, state_file, opened, web_opened }
 }
 
 /// A store that has been opened before (the first-run welcome is out of the way).
@@ -774,7 +782,7 @@ fn start_as_store(preset: &str, store_app: &str) -> Session {
     ui.window().set_size(slint::LogicalSize::new(1280.0, 2400.0));
     ui.show().unwrap();
     let state_file = dirs.config.join("demo-state.json");
-    Session { ui, app, dirs, state_file, opened: Arc::default() }
+    Session { ui, app, dirs, state_file, opened: Arc::default(), web_opened: Arc::default() }
 }
 
 #[test]
@@ -1239,4 +1247,57 @@ fn the_tv_app_page_has_one_main_button_and_the_rest_a_step_away() {
     assert_ne!(s.store().get_app().id, id);
     s.press(Key::Return);
     assert_eq!(s.store().get_install_index(), 0);
+}
+
+#[test]
+fn on_a_linux_tv_a_website_is_added_and_opened_like_an_app() {
+    let s = start("linux-tv", Shell::Tv);
+    let rows = s.store().get_tv_rows();
+    let websites = rows.iter().find(|r| r.title == "Websites").expect("a Websites row on a Linux TV");
+    assert!(websites.apps.iter().any(|a| a.id == "web:lichess.org"));
+
+    // Without Longboard the page says what is needed, and adding fails with the same advice.
+    s.app.open(&s.ui, "web:lichess.org");
+    assert_eq!(s.store().get_app().name, "Lichess");
+    assert!(s.store().get_warning().contains("Longboard"), "{}", s.store().get_warning());
+    s.press(Key::Return);
+    assert_eq!(s.store().get_install_state(), 3);
+    assert!(s.store().get_install_message().contains("Install Longboard"));
+    assert!(s.saved().library.is_empty());
+
+    // With Longboard on the device (here: a stand-in file where the store puts AppImages).
+    std::fs::create_dir_all(&s.dirs.applications).unwrap();
+    let longboard = s.dirs.applications.join("Longboard-x86_64.AppImage");
+    std::fs::write(&longboard, b"stand-in").unwrap();
+    s.app.open(&s.ui, "web:lichess.org");
+    assert_eq!(s.store().get_warning(), "");
+    s.press(Key::Return);
+    assert_eq!(s.store().get_install_state(), 2, "{}", s.store().get_install_message());
+    assert_eq!(s.saved().library[0].id, "web:lichess.org");
+    let entry = std::fs::read_to_string(s.dirs.menu.join("bilby-web-lichess-org.desktop")).unwrap();
+    assert!(entry.contains("Name=Lichess\n"), "{entry}");
+    assert!(entry.contains("Longboard-x86_64.AppImage\" \"--url=https://lichess.org/\"\n"), "{entry}");
+
+    // The same button now opens it: Longboard is started on the site's address.
+    assert!(s.store().get_can_open());
+    s.press(Key::Return);
+    assert_eq!(s.web_opened.lock().unwrap().as_slice(), [(longboard.clone(), "https://lichess.org/".to_string())]);
+
+    // Removing it takes the entry out of the TV's app list.
+    s.app.remove_from_library(&s.ui, "web:lichess.org");
+    assert!(!s.dirs.menu.join("bilby-web-lichess-org.desktop").exists());
+    assert_eq!(s.store().get_toast(), "Lichess removed from this TV's app list");
+}
+
+#[test]
+fn websites_are_not_offered_away_from_a_linux_tv() {
+    for (preset, shell) in
+        [("linux-x64-debian", Shell::Desktop), ("android-tv", Shell::Tv), ("windows-x64", Shell::Desktop)]
+    {
+        let s = start(preset, shell);
+        assert!(!s.store().get_tv_rows().iter().any(|r| r.title == "Websites"), "{preset}");
+        assert!(!s.store().get_sections().iter().any(|r| r.title == "Websites"), "{preset}");
+        s.app.open(&s.ui, "web:lichess.org");
+        assert!(!s.store().get_details_error().is_empty(), "{preset}: a website cannot be added here");
+    }
 }

@@ -26,6 +26,8 @@ pub enum Action {
     AndroidInstaller,
     /// Nothing is downloaded by the store; the user runs this command.
     ShowCommand,
+    /// Put a website in the app list, to open in Longboard.
+    WebApp,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -93,6 +95,18 @@ pub fn plan(asset: &Asset, info: &AssetInfo, p: &Platform) -> InstallPlan {
         Format::Archive | Format::Binary | Format::ApkBundle => {
             steps.push("Show it in your downloads folder; unpack and run it from there".to_string());
             (Action::Reveal, "Download", None)
+        }
+        Format::WebApp => {
+            return InstallPlan {
+                action: Action::WebApp,
+                verb: "Add to this TV".to_string(),
+                steps: vec![
+                    format!("Put {} in this TV's app list", asset.name),
+                    "It opens in Longboard, a browser made for remotes".to_string(),
+                    "Nothing is downloaded; remove it from your library at any time".to_string(),
+                ],
+                command: None,
+            };
         }
         Format::RepoPackage => {
             let name = asset.name.split_whitespace().next().unwrap_or(&asset.name).to_string();
@@ -222,6 +236,31 @@ fn menu_entry_path(dirs: &Dirs, id: &str) -> PathBuf {
 /// The format is the freedesktop.org Desktop Entry Specification; values are escaped as
 /// it requires, because names and paths come from release authors.
 pub fn add_menu_entry(dirs: &Dirs, id: &str, name: &str, appimage: &Path) -> Result<PathBuf> {
+    write_menu_entry(dirs, id, name, appimage, &[], "Utility;")
+}
+
+/// Longboard, when it is on this device: the copy the store placed, or one on the PATH.
+pub fn find_longboard(dirs: &Dirs) -> Option<PathBuf> {
+    let placed =
+        std::fs::read_dir(&dirs.applications).ok().into_iter().flatten().flatten().map(|e| e.path()).find(|p| {
+            let name = p.file_name().unwrap_or_default().to_string_lossy().to_lowercase();
+            name.starts_with("longboard") && name.ends_with(".appimage")
+        });
+    placed.or_else(|| {
+        let path = std::env::var_os("PATH")?;
+        std::env::split_paths(&path).map(|dir| dir.join("longboard")).find(|p| p.is_file())
+    })
+}
+
+/// An app-menu entry that starts `program` with `args`.
+fn write_menu_entry(
+    dirs: &Dirs,
+    id: &str,
+    name: &str,
+    appimage: &Path,
+    args: &[String],
+    categories: &str,
+) -> Result<PathBuf> {
     // In a string value, a newline would start a new key.
     let value =
         |text: &str| -> String { text.chars().filter(|c| !c.is_control()).collect::<String>().replace('\\', "\\\\") };
@@ -237,10 +276,25 @@ pub fn add_menu_entry(dirs: &Dirs, id: &str, name: &str, appimage: &Path) -> Res
         }
     }
     exec.push('"');
+    for arg in args {
+        // Arguments here are addresses the store built; quoted the same way regardless.
+        exec.push_str(" \"");
+        for c in arg.chars().filter(|c| !c.is_control()) {
+            match c {
+                '"' | '`' | '$' => exec.push_str(&format!("\\\\{c}")),
+                '\\' => exec.push_str("\\\\\\\\"),
+                '%' => exec.push_str("%%"),
+                c => exec.push(c),
+            }
+        }
+        exec.push('"');
+    }
     let name = value(name);
     let entry = format!(
-        "[Desktop Entry]\nType=Application\nName={}\nExec={exec} %U\nTerminal=false\nCategories=Utility;\nX-Bilby-App={}\n",
+        "[Desktop Entry]\nType=Application\nName={}\nExec={exec}{}\nTerminal=false\nCategories={categories}\nX-Bilby-App={}\n",
         if name.is_empty() { "App".to_string() } else { name },
+        // A program takes files to open; a website launcher takes nothing.
+        if args.is_empty() { " %U" } else { "" },
         value(id),
     );
     std::fs::create_dir_all(&dirs.menu)?;
@@ -260,8 +314,13 @@ pub fn remove_menu_entry(dirs: &Dirs, id: &str) {
 
 /// Start a program the store placed (an AppImage), without waiting for it.
 pub fn launch(path: &Path) -> Result<()> {
+    launch_with(path, &[])
+}
+
+/// Start a program with arguments, without waiting for it.
+pub fn launch_with(path: &Path, args: &[String]) -> Result<()> {
     use std::process::{Command, Stdio};
-    Command::new(path).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn()?;
+    Command::new(path).args(args).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn()?;
     Ok(())
 }
 
@@ -315,6 +374,22 @@ pub fn execute(
         return Ok(Outcome { message: format!("Run in a terminal: {command}"), file: None, store_managed: false });
     }
 
+    if plan.action == Action::WebApp {
+        let host = asset.url.trim_start_matches("https://").trim_end_matches('/');
+        let longboard = find_longboard(dirs).ok_or_else(|| {
+            Error::Unsupported(
+                "Web apps open in Longboard, a browser for TVs, and it is not installed yet. Install Longboard from this store, then add this again.".to_string(),
+            )
+        })?;
+        let args = [format!("--url={}", asset.url)];
+        let entry = write_menu_entry(dirs, &format!("web:{host}"), &asset.name, &longboard, &args, "Network;")?;
+        return Ok(Outcome {
+            message: format!("{} is in this TV's app list. It opens in Longboard.", asset.name),
+            file: Some(entry),
+            store_managed: false,
+        });
+    }
+
     let dest = dirs.downloads.join(safe_file_name(&asset.name));
     let actual = http.download(&asset.url, &dest, progress)?;
     let expected = checkable_digest(asset);
@@ -360,7 +435,7 @@ pub fn execute(
             "{verified}Saved to {}. Handing APKs to Android's installer is not implemented in this build yet; open the file to install it.",
             dest.display()
         ))),
-        Action::ShowCommand => unreachable!("handled above"),
+        Action::ShowCommand | Action::WebApp => unreachable!("handled above"),
     }
 }
 

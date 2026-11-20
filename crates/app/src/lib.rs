@@ -74,6 +74,8 @@ pub struct Options {
     pub opener: Option<Opener>,
     /// How an installed app is started ([`install::launch`] unless a test says otherwise).
     pub launcher: Option<Opener>,
+    /// How a website is opened in Longboard: the program and the address.
+    pub web_launcher: Option<WebLauncher>,
     pub catalog_factory: Option<CatalogFactory>,
     /// The app id the store looks at for its own updates. Defaults to its GitHub
     /// repository; the demo catalog has no such project, so tests name a stand-in.
@@ -81,6 +83,7 @@ pub struct Options {
 }
 
 pub type Opener = Arc<dyn Fn(&std::path::Path) -> bilby_core::Result<()> + Send + Sync>;
+pub type WebLauncher = Arc<dyn Fn(&std::path::Path, &str) -> bilby_core::Result<()> + Send + Sync>;
 
 /// Builds the catalog for a platform and the current settings. The default talks to the
 /// real sources (or the demo); tests substitute one that can go offline on demand.
@@ -448,6 +451,7 @@ pub struct App {
     pictures_requested: Mutex<HashSet<String>>,
     opener: Opener,
     launcher: Opener,
+    web_launcher: WebLauncher,
     catalog_factory: CatalogFactory,
 }
 
@@ -1003,6 +1007,7 @@ impl App {
             details.versions.iter().map(|r| SharedString::from(&r.version)).collect::<Vec<_>>(),
         )));
         store.set_is_package(!details.summary.id.source.is_forge());
+        store.set_is_website(details.summary.id.source == SourceKind::Web);
         // What the system's package manager has, when the store's own library has nothing.
         if store.get_installed_version().is_empty() {
             store.set_installed_version(details.summary.installed_version.clone().unwrap_or_default().into());
@@ -1045,6 +1050,9 @@ impl App {
         // Things worth knowing before installing, most important first.
         let age = age_label(&date, now_unix());
         let mut warnings: Vec<String> = details.summary.warning.clone().into_iter().collect();
+        if details.summary.id.source == SourceKind::Web && install::find_longboard(&self.dirs).is_none() {
+            warnings.push("Websites open in Longboard, a browser for TVs, which is not installed yet. Install Longboard first: it is under Made for TV.".to_string());
+        }
         let newest = details.versions.first().map(|r| r.version.as_str());
         let is_newest = release.map(|r| r.version.as_str()) == newest;
         if let (false, Some(newest)) = (is_newest, newest) {
@@ -1421,6 +1429,11 @@ impl App {
     /// The file to run for an app the store placed itself, if it is still there.
     fn launchable(&self, id: &str) -> Option<PathBuf> {
         let state = self.state.lock().unwrap();
+        // A web app is opened by starting Longboard on its address.
+        if id.starts_with("web:") {
+            state.installed(id)?;
+            return install::find_longboard(&self.dirs);
+        }
         let app = state.installed(id).filter(|a| a.store_managed)?;
         let path = PathBuf::from(app.path.as_deref()?);
         (path.starts_with(&self.dirs.applications) && path.is_file()).then_some(path)
@@ -1429,8 +1442,13 @@ impl App {
     /// Start the open app, when the store installed it as a file it can run.
     pub fn launch(&self, ui: &AppWindow) {
         let store = ui.global::<Store>();
-        let Some(path) = self.launchable(store.get_app().id.as_str()) else { return };
-        match (self.launcher)(&path) {
+        let id = store.get_app().id.to_string();
+        let Some(path) = self.launchable(&id) else { return };
+        let started = match id.strip_prefix("web:") {
+            Some(host) => (self.web_launcher)(&path, &format!("https://{host}/")),
+            None => (self.launcher)(&path),
+        };
+        match started {
             Ok(()) => self.toast(ui, &format!("Opening {}…", store.get_app().name), false),
             Err(e) => self.toast(ui, &format!("Couldn't open it: {e}"), true),
         }
@@ -1467,7 +1485,11 @@ impl App {
             if path.starts_with(&self.dirs.applications) && std::fs::remove_file(&path).is_ok() {
                 message = format!("{} uninstalled", entry.name);
             }
-            install::remove_menu_entry(&self.dirs, id);
+        }
+        // Whatever the store put in the app menu for it goes too (an AppImage, a web app).
+        install::remove_menu_entry(&self.dirs, id);
+        if id.starts_with("web:") {
+            message = format!("{} removed from this TV's app list", entry.name);
         }
         let store = ui.global::<Store>();
         if store.get_app().id == id {
@@ -1568,6 +1590,10 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         pictures_requested: Mutex::new(HashSet::new()),
         opener: options.opener.clone().unwrap_or_else(|| Arc::new(install::open_with_system)),
         launcher: options.launcher.clone().unwrap_or_else(|| Arc::new(install::launch)),
+        web_launcher: options
+            .web_launcher
+            .clone()
+            .unwrap_or_else(|| Arc::new(|longboard, url| install::launch_with(longboard, &[format!("--url={url}")]))),
         catalog_factory,
     });
 

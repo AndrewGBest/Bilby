@@ -137,6 +137,7 @@ pub const PRESETS: &[&str] = &[
     "android-arm64",
     "android-arm32",
     "android-tv",
+    "linux-tv",
     "ios",
 ];
 
@@ -276,6 +277,10 @@ impl Platform {
             "android-arm64" => p(Os::Android, Aarch64, &[Arm32], None, Mobile, "Android"),
             "android-arm32" => p(Os::Android, Arm32, &[], None, Mobile, "Android"),
             "android-tv" => p(Os::Android, Aarch64, &[Arm32], None, Tv, "Android TV"),
+            // A small computer or set-top box running Linux, used from the sofa.
+            "linux-tv" => {
+                p(Os::Linux, X86_64, &[], linux("Debian GNU/Linux 12", LinuxFamily::Debian, Libc::Gnu), Tv, "")
+            }
             "ios" => p(Os::Ios, Aarch64, &[], None, Mobile, "iOS"),
             _ => return None,
         })

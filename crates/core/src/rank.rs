@@ -108,7 +108,7 @@ fn popularity(app: &AppSummary) -> f32 {
         SourceKind::Codeberg => 3_000.0,
         SourceKind::Aur => 1_500.0,
         // Distribution repositories publish no such number.
-        SourceKind::Pacman | SourceKind::Apt => return UNKNOWN_POPULARITY,
+        SourceKind::Pacman | SourceKind::Apt | SourceKind::Web => return UNKNOWN_POPULARITY,
     };
     match app.popularity {
         // Logarithmic: the step from 10 to 100 matters as much as from 1,000 to 10,000.

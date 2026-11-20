@@ -5,6 +5,7 @@ pub mod aur;
 pub mod forgejo;
 pub mod github;
 pub mod system;
+pub mod web;
 
 use crate::error::Result;
 use crate::model::{AppSummary, Release, SourceKind};

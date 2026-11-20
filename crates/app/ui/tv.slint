@@ -203,7 +203,7 @@ export component TvShell inherits Rectangle {
                         root.act -= 1;
                     }
                 } else if (event.text == Key.RightArrow) {
-                    root.act = min(Store.options.length > 0 ? 2 : 1, root.act + 1);
+                    root.act = min(Store.options.length > 0 && !Store.is-website ? 2 : 1, root.act + 1);
                 } else if (event.text == Key.Return || event.text == " ") {
                     if (root.act == 0) {
                         root.press-main();
@@ -404,7 +404,7 @@ export component TvShell inherits Rectangle {
                     if Store.release-age != "" : TvStat { u: root.u; value: Store.release-age; caption: "last updated"; }
                 }
                 Text {
-                    text: Store.details-loading ? "Checking what works on this TV…" : Store.details-error != "" ? Store.details-error + "  Press OK to try again." : Store.unavailable != "" ? Store.unavailable : Store.install-state == 1 ? "Downloading…  " + round(Store.install-progress * 100) + "%" : Store.install-state >= 2 ? Store.install-message : root.is-update ? "Update available: you have " + Store.installed-version : Store.installed-version != "" ? "Installed  ·  " + Store.installed-version : Store.options.length > 0 ? (Store.options[0].native ? "Made for this TV" : "Works on this TV") + (Store.options[0].verified ? "  ·  the download is checked" : "") : "";
+                    text: Store.details-loading ? "Checking what works on this TV…" : Store.details-error != "" ? Store.details-error + "  Press OK to try again." : Store.unavailable != "" ? Store.unavailable : Store.install-state == 1 ? "Downloading…  " + round(Store.install-progress * 100) + "%" : Store.install-state >= 2 ? Store.install-message : root.is-update ? "Update available: you have " + Store.installed-version : Store.installed-version != "" ? "Installed  ·  " + Store.installed-version : Store.is-website ? "Opens in Longboard, driven with your remote" : Store.options.length > 0 ? (Store.options[0].native ? "Made for this TV" : "Works on this TV") + (Store.options[0].verified ? "  ·  the download is checked" : "") : "";
                     color: Store.details-error != "" || Store.install-state == 3 ? Theme.bad : Store.unavailable != "" ? Theme.warn : Store.install-state == 1 ? Theme.accent : Theme.ok;
                     font-size: 12 * u;
                     font-weight: 700;
@@ -434,7 +434,7 @@ export component TvShell inherits Rectangle {
                             Store.toggle-favourite();
                         }
                     }
-                    if Store.options.length > 0 : TvButton {
+                    if Store.options.length > 0 && !Store.is-website : TvButton {
                         u: root.u;
                         text: "Other files";
                         focused: root.act == 2 && !root.files;
@@ -448,7 +448,7 @@ export component TvShell inherits Rectangle {
                 if !root.files && Store.notes != "" : VerticalLayout {
                     padding-top: 8 * u;
                     spacing: 4 * u;
-                    Text { text: Store.is-package ? "About this package" : "What's new in " + Store.app.version; color: Theme.text; font-size: 13 * u; font-weight: 700; }
+                    Text { text: Store.is-website ? "About this website" : Store.is-package ? "About this package" : "What's new in " + Store.app.version; color: Theme.text; font-size: 13 * u; font-weight: 700; }
                     Rectangle {
                         height: 62 * u;
                         clip: true;

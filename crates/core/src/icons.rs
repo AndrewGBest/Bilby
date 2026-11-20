@@ -24,7 +24,7 @@ pub fn icon_key(id: &AppId) -> Option<String> {
         SourceKind::Codeberg => {
             id.key.split('/').next().filter(|o| !o.is_empty()).map(|o| format!("codeberg-{}", o.to_lowercase()))
         }
-        SourceKind::Aur | SourceKind::Pacman | SourceKind::Apt => None,
+        SourceKind::Aur | SourceKind::Pacman | SourceKind::Apt | SourceKind::Web => None,
     }
 }
 

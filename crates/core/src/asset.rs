@@ -32,6 +32,8 @@ pub enum Format {
     AurBuild,
     /// A package in a repository the system's package manager is configured for.
     RepoPackage,
+    /// A website opened like an app (in Longboard, on a Linux TV). Not a file at all.
+    WebApp,
 }
 
 impl Format {
@@ -55,6 +57,7 @@ impl Format {
             Format::Binary => "Standalone binary",
             Format::AurBuild => "AUR package",
             Format::RepoPackage => "Repository package",
+            Format::WebApp => "Web app",
         }
     }
 
@@ -70,7 +73,8 @@ impl Format {
             | Format::Snap
             | Format::PacmanPkg
             | Format::AurBuild
-            | Format::RepoPackage => Os::Linux,
+            | Format::RepoPackage
+            | Format::WebApp => Os::Linux,
             Format::Dmg | Format::MacPkg => Os::MacOs,
             Format::Ipa => Os::Ios,
             Format::Archive | Format::Binary => return None,
@@ -116,7 +120,8 @@ impl AssetInfo {
     pub fn label(&self) -> String {
         let mut label = self.format.label().to_string();
         let arch = self.arch_label();
-        if !arch.is_empty() {
+        // A website has no processor to be built for.
+        if !arch.is_empty() && self.format != Format::WebApp {
             label.push_str(" · ");
             label.push_str(&arch);
         }

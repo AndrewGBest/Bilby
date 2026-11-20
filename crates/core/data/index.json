@@ -1,5 +1,6 @@
 {
   "apps": [
+    {"id": "github:AndrewGBest/Longboard", "name": "Longboard", "author": "AndrewGBest", "summary": "A web browser for the TV, driven with a remote. Websites added from this store open in it.", "category": "Utilities", "os": ["linux"], "tv": true},
     {"id": "github:localsend/localsend", "name": "LocalSend", "author": "localsend", "summary": "Share files with nearby devices over the local network.", "category": "Utilities", "os": ["windows", "linux", "macos", "android"]},
     {"id": "github:rustdesk/rustdesk", "name": "RustDesk", "author": "rustdesk", "summary": "Open-source remote desktop.", "category": "Utilities", "os": ["windows", "linux", "macos", "android"]},
     {"id": "github:syncthing/syncthing", "name": "Syncthing", "author": "syncthing", "summary": "Continuous file synchronization between your devices.", "category": "Utilities", "os": ["windows", "linux", "macos"]},

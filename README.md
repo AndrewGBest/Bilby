@@ -26,6 +26,8 @@ demo catalog; the apps in it are fictional.
   CachyOS, Chaotic-AUR, your own) or everything apt is set up for (Debian, Ubuntu,
   PPAs).
 - **The AUR**, on Arch-based systems only.
+- **Websites**, on Linux TVs only: add a site and it opens like an app in
+  [Longboard](https://github.com/AndrewGBest/Longboard), a browser made for remotes.
 
 A source only appears on devices it applies to. A Windows user never sees the AUR.
 
@@ -77,7 +79,7 @@ ever been run on Linux.
 
 | | State |
 |---|---|
-| Linux | Builds, runs, all 191 automated tests pass |
+| Linux | Builds, runs, all 196 automated tests pass |
 | Windows, macOS | Builds and passes the tests on GitHub's machines. Nobody has seen the window on either yet |
 | Android (phone, tablet, TV) | The engine compiles. There is no installable package and APKs cannot be installed yet |
 | iOS | Can only ever browse, not install: see [the design notes](docs/DESIGN.md#ios) |

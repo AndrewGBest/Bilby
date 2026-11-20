@@ -62,7 +62,7 @@ fn help_and_bad_usage() {
     let bad = run_in(&home(), &["--as", "amiga", "device"]);
     assert_eq!(bad.status.code(), Some(2));
     assert!(String::from_utf8_lossy(&bad.stderr).contains("unknown platform"));
-    assert_eq!(out(&["--list-platforms"]).lines().count(), 13);
+    assert_eq!(out(&["--list-platforms"]).lines().count(), 14);
 }
 
 #[test]

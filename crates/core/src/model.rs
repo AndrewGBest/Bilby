@@ -14,6 +14,8 @@ pub enum SourceKind {
     Pacman,
     /// Repositories configured for apt on this machine (Debian, Ubuntu, PPAs, ...).
     Apt,
+    /// Websites opened like apps on a Linux TV.
+    Web,
 }
 
 impl SourceKind {
@@ -28,6 +30,7 @@ impl SourceKind {
             SourceKind::Aur => "AUR",
             SourceKind::Pacman => "pacman repositories",
             SourceKind::Apt => "apt repositories",
+            SourceKind::Web => "Websites",
         }
     }
     pub fn prefix(self) -> &'static str {
@@ -37,6 +40,7 @@ impl SourceKind {
             SourceKind::Aur => "aur",
             SourceKind::Pacman => "pacman",
             SourceKind::Apt => "apt",
+            SourceKind::Web => "web",
         }
     }
 }
@@ -61,6 +65,7 @@ impl AppId {
             "aur" => SourceKind::Aur,
             "pacman" => SourceKind::Pacman,
             "apt" => SourceKind::Apt,
+            "web" => SourceKind::Web,
             _ => return None,
         };
         (!key.is_empty()).then(|| AppId::new(source, key))
@@ -114,6 +119,17 @@ pub fn valid_key(source: SourceKind, key: &str) -> bool {
         }
         // Arch and Debian package names may also contain `+` and `@`.
         SourceKind::Aur | SourceKind::Pacman | SourceKind::Apt => ok(key, &['+', '@']),
+        // A host name: labels of letters, digits and hyphens, with at least one dot.
+        SourceKind::Web => {
+            key.len() <= 253
+                && key.contains('.')
+                && key.split('.').all(|label| {
+                    !label.is_empty()
+                        && !label.starts_with('-')
+                        && !label.ends_with('-')
+                        && label.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+                })
+        }
     }
 }
 
