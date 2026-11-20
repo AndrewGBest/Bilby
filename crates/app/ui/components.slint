@@ -304,14 +304,31 @@ export component AppTile inherits Rectangle {
                 Text { text: app.author; color: Theme.text-dim; font-size: 12px; overflow: elide; }
             }
         }
-        Text {
+        // The description takes whatever room is left and is cut to fit it: a long one
+        // must not push the button out of the tile.
+        Rectangle {
             vertical-stretch: 1;
-            text: app.summary;
-            color: Theme.text-dim;
-            font-size: 13px;
-            wrap: word-wrap;
-            overflow: elide;
-            vertical-alignment: top;
+            min-height: 0px;
+            preferred-height: 0px;
+            // One line's height, to show whole lines only.
+            line := Text { text: "X"; font-size: 13px; visible: false; }
+            Rectangle {
+                x: 0;
+                y: 0;
+                width: parent.width;
+                height: max(1, floor(parent.height / line.preferred-height)) * line.preferred-height;
+                clip: true;
+                Text {
+                    x: 0;
+                    y: 0;
+                    width: parent.width;
+                    text: app.summary;
+                    color: Theme.text-dim;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                    vertical-alignment: top;
+                }
+            }
         }
         HorizontalLayout {
             spacing: 6px;

@@ -68,7 +68,7 @@ component CardGrid inherits Rectangle {
     property <length> gap: 14px;
     property <int> cols: max(1, floor((self.width + gap) / (264px + gap)));
     property <length> tile-w: (self.width - (cols - 1) * gap) / cols;
-    property <length> tile-h: 156px;
+    property <length> tile-h: 176px;
     property <int> rows: ceil(apps.length / cols);
     height: max(0px, rows * (tile-h + gap) - gap);
     for app[i] in apps : AppTile {

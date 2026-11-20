@@ -296,10 +296,9 @@ impl Source for Flathub {
             .and_then(|r| number(&r.timestamp))
             .map(|secs| crate::source::aur::date_from_unix(secs as i64))
             .unwrap_or_default();
-        let mut notes = strip_html(latest.and_then(|r| r.description.as_deref()).unwrap_or(""));
-        if notes.is_empty() {
-            notes = strip_html(&app.description);
-        }
+        // Many releases say nothing about what changed. Then there is no "What's new":
+        // repeating the app's description under that heading would be untrue.
+        let notes = strip_html(latest.and_then(|r| r.description.as_deref()).unwrap_or(""));
         Ok(vec![Release {
             version: latest.and_then(|r| r.version.clone()).unwrap_or_else(|| "latest".to_string()),
             published,

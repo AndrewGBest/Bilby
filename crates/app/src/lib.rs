@@ -1393,6 +1393,11 @@ impl App {
                     }
                 }
                 // What people wrote, for apps the ratings service knows; none otherwise.
+                // Which apps it knows comes from the ratings file, so that is read first
+                // (a page opened right at start-up would otherwise find none).
+                if !app.state().settings.hide_ratings {
+                    catalog.load_ratings(&app.dirs.cache);
+                }
                 let reviews = catalog.reviews(&id);
                 (plain_about(&readme), pictures, logo, reviews)
             },
