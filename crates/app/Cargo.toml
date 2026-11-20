@@ -1,6 +1,6 @@
 [package]
 name = "bilby"
-description = "App store for GitHub Releases and the AUR that only shows what runs on your machine"
+description = "App store for GitHub Releases, Codeberg and other repositories that only shows what runs on your device"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

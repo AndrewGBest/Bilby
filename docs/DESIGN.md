@@ -433,6 +433,26 @@ Return, and Back to a Back key **[verified]** by reading
 handles exactly those keys, so the same code serves a remote and a keyboard. It has not
 been run on a television.
 
+### Search order
+
+Results from all sources go into one list, best match first (`rank.rs`). Most of the
+score is how close the app's name is to what was typed; a quarter is how many people use
+it (stars or votes, on a scale that suits each source); the rest is small nudges: on the
+hand-picked list, already installed, flagged out of date, and where its own source
+placed it. A source that publishes no numbers (a distribution's repository) gets a
+middle value for that part, so missing data never sinks a result. [assumption: the
+weights are a first guess and have not been tuned against real searches.]
+
+### What is shown, and what is one press away
+
+The screens are meant to work for someone who does not know what a `.deb` is. At a
+glance an app page shows the name, a sentence, a star count, any warning, and one card
+with one button, titled "Made for this device". Everything else is still there under
+*More options and details*: the kind of file and its name, the command, the steps,
+other files, older versions, the licence, and the files that were hidden with the
+reason for each. Tiles and rows show the name, the summary, popularity and whether the
+app is installed, and nothing about packaging.
+
 ## 8. Testing
 
 168 tests, none needing the internet. **[verified]**: all pass on Linux here. CI runs

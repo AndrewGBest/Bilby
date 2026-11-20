@@ -359,15 +359,18 @@ impl Catalog {
             }
             per_source.push(kept);
         }
-        // Interleave so no source buries the other; each list is already ranked by its source.
-        let longest = per_source.iter().map(Vec::len).max().unwrap_or(0);
-        for i in 0..longest {
-            for list in &per_source {
-                if let Some(app) = list.get(i) {
-                    outcome.apps.push(app.clone());
-                }
+        // One list, best match first: how close the name is, how many people use it,
+        // and what else is known. See `rank`.
+        let featured: Vec<AppId> = self.featured().into_iter().flat_map(|s| s.apps).map(|a| a.id).collect();
+        let mut hits = Vec::new();
+        for list in per_source {
+            let of = list.len();
+            for (position, app) in list.into_iter().enumerate() {
+                let context = crate::rank::Context { position, of, featured: featured.contains(&app.id) };
+                hits.push((app, context));
             }
         }
+        outcome.apps = crate::rank::sort(query, hits);
         outcome
     }
 }

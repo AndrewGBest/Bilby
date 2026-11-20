@@ -318,9 +318,8 @@ export component AppTile inherits Rectangle {
             alignment: start;
             if app.has-update : Chip { text: "Update"; tone: Theme.accent; }
             if app.installed && !app.has-update : Chip { text: "Installed"; tone: Theme.accent; }
-            if app.badge != "" : Chip { text: app.badge; tone: Theme.ok; }
-            if app.badge == "" : Chip { text: app.source; }
-            if app.version != "" : Chip { text: app.version; }
+            if app.popularity != "" : Chip { text: app.popularity; }
+            if app.popularity == "" : Chip { text: app.source; }
         }
     }
 }
@@ -353,8 +352,8 @@ export component AppRow inherits Rectangle {
             Text { text: app.name; color: Theme.text; font-size: 16px; font-weight: 600; overflow: elide; }
             Text { text: app.summary; color: Theme.text-dim; font-size: 13px; overflow: elide; }
             Text {
-                text: (app.has-update ? "Update available · " : app.installed ? "Installed · " : "") + (app.badge != "" ? app.source + " · " + app.badge : app.source + " · " + app.author);
-                color: app.has-update || app.installed ? Theme.accent : app.badge != "" ? Theme.ok : Theme.text-dim;
+                text: (app.has-update ? "Update available · " : app.installed ? "Installed · " : "") + (app.popularity != "" ? app.popularity + " · " : "") + (app.author != "" ? app.author : app.source);
+                color: app.has-update || app.installed ? Theme.accent : Theme.text-dim;
                 font-size: 11px;
                 font-weight: 600;
                 overflow: elide;
@@ -420,6 +419,9 @@ export component OptionCard inherits Rectangle {
     in property <int> index;
     in property <bool> recommended;
     in property <bool> compact;
+    // Only the essentials: what it is, that it is checked, and the button. File name,
+    // size, command and steps appear when the page's details are opened.
+    in property <bool> plain;
     property <bool> busy: Store.install-state == 1;
     property <bool> mine: Store.install-index == index && Store.install-state != 0;
     property <bool> show-steps: false;
@@ -440,17 +442,20 @@ export component OptionCard inherits Rectangle {
                     spacing: 8px;
                     alignment: start;
                     Text {
-                        text: option.label;
+                        // What kind of file it is matters to some people; that it fits
+                        // this device matters to everyone.
+                        text: plain ? (option.native ? "Made for this device" : "Works on this device") : option.label;
                         color: Theme.text;
                         font-size: 15px;
                         font-weight: 600;
                         vertical-alignment: center;
                         overflow: elide;
                     }
-                    if recommended && !compact : Chip { text: "Best for this device"; tone: Theme.accent; }
-                    if !option.native && !compact : Chip { text: "Compatible"; tone: Theme.warn; }
+                    if recommended && !compact && !plain : Chip { text: "Best for this device"; tone: Theme.accent; }
+                    if !option.native && !compact && !plain : Chip { text: "Compatible"; tone: Theme.warn; }
                 }
-                Text {
+                if plain && option.size != "" : Text { text: option.size + " download"; color: Theme.text-dim; font-size: 12px; overflow: elide; }
+                if !plain : Text {
                     text: option.size != "" ? option.file + "  ·  " + option.size : option.file;
                     color: Theme.text-dim;
                     font-size: 12px;
@@ -474,12 +479,12 @@ export component OptionCard inherits Rectangle {
                 }
             }
         }
-        if recommended && compact : HorizontalLayout {
+        if recommended && compact && !plain : HorizontalLayout {
             alignment: start;
             Chip { text: "Best for this device"; tone: Theme.accent; }
         }
         if option.note != "" : Text { text: option.note; color: Theme.warn; font-size: 12px; wrap: word-wrap; }
-        if option.command != "" : CommandBox { command: option.command; }
+        if option.command != "" && (!plain || Store.is-package) : CommandBox { command: option.command; }
         if option.verified : HorizontalLayout {
             spacing: 5px;
             alignment: start;
@@ -488,7 +493,7 @@ export component OptionCard inherits Rectangle {
                 Image { source: @image-url("icons/shield.svg"); colorize: Theme.ok; width: 13px; height: 13px; }
             }
             Text {
-                text: "Checksum is checked after download";
+                text: plain ? "The download is checked before it is installed" : "Checksum is checked after download";
                 color: Theme.ok;
                 font-size: 11px;
                 font-weight: 600;
@@ -496,7 +501,7 @@ export component OptionCard inherits Rectangle {
                 overflow: elide;
             }
         }
-        HorizontalLayout {
+        if !plain : HorizontalLayout {
             alignment: start;
             Rectangle {
                 height: 18px;
@@ -519,7 +524,7 @@ export component OptionCard inherits Rectangle {
                 }
             }
         }
-        if root.show-steps : VerticalLayout {
+        if root.show-steps && !plain : VerticalLayout {
             spacing: 3px;
             for step[n] in option.steps : Text {
                 text: (n + 1) + ".  " + step;
@@ -660,6 +665,13 @@ export component Welcome inherits Rectangle {
 export component DetailsBody inherits Rectangle {
     in property <bool> compact;
     property <bool> show-hidden: false;
+    // Other versions, other files, file names, commands, licence: one press away.
+    property <bool> more: false;
+    property <string> shown-id: Store.app.id;
+    changed shown-id => {
+        root.more = false;
+        root.show-hidden = false;
+    }
     property <length> pad: compact ? 16px : 32px;
     Flickable {
         VerticalLayout {
@@ -680,10 +692,8 @@ export component DetailsBody inherits Rectangle {
                     HorizontalLayout {
                         spacing: 6px;
                         alignment: start;
-                        if Store.app.source != "" : Chip { text: Store.app.source; }
-                        if Store.app.version != "" : Chip { text: Store.app.version; }
                         if Store.app.popularity != "" : Chip { text: Store.app.popularity; }
-                        if Store.license != "" && !compact : Chip { text: Store.license; }
+                        if Store.app.source != "" : Chip { text: Store.app.source; }
                     }
                 }
                 if !compact : VerticalLayout {
@@ -761,8 +771,44 @@ export component DetailsBody inherits Rectangle {
                 }
             }
 
-            // Scrolls sideways when a project has more releases than fit.
-            if Store.versions.length > 1 : Flickable {
+            // At a glance: the one file that suits this device, and its button.
+            if Store.options.length > 0 : OptionCard {
+                option: Store.options[0];
+                index: 0;
+                recommended: true;
+                compact: root.compact;
+                plain: !root.more;
+            }
+
+            if Store.options.length > 1 || Store.hidden.length > 0 || Store.versions.length > 1 || Store.options.length > 0 : Rectangle {
+                height: 32px;
+                accessible-role: button;
+                accessible-label: "More options and details";
+                accessible-expandable: true;
+                accessible-expanded: root.more;
+                accessible-action-default => { root.more = !root.more; }
+                TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => { root.more = !root.more; }
+                }
+                Text {
+                    x: 0;
+                    text: root.more ? "Fewer details" : Store.options.length > 1 ? "More options and details" : "More details";
+                    color: Theme.accent;
+                    font-size: 13px;
+                    font-weight: 600;
+                    vertical-alignment: center;
+                }
+            }
+
+            if root.more : Text {
+                text: (Store.app.version != "" ? "Version " + Store.app.version : "") + (Store.license != "" ? "  ·  " + Store.license + " licence" : "") + (Store.app.source != "" ? "  ·  from " + Store.app.source : "") + "  ·  for " + Store.platform-title;
+                color: Theme.text-dim;
+                font-size: 12px;
+                wrap: word-wrap;
+            }
+
+            if root.more && Store.versions.length > 1 : Flickable {
                 height: 32px;
                 HorizontalLayout {
                     spacing: 8px;
@@ -780,23 +826,21 @@ export component DetailsBody inherits Rectangle {
                 }
             }
 
-            if Store.options.length > 0 : VerticalLayout {
+
+            if root.more && Store.options.length > 1 : VerticalLayout {
                 spacing: 10px;
-                Text {
-                    text: "Works on " + Store.platform-title;
-                    color: Theme.text-dim;
-                    font-size: 12px;
-                    font-weight: 700;
-                }
-                for option[i] in Store.options : OptionCard {
-                    option: option;
-                    index: i;
-                    recommended: i == 0;
-                    compact: root.compact;
+                Text { text: "Other ways to install"; color: Theme.text-dim; font-size: 12px; font-weight: 700; }
+                for option[i] in Store.options : VerticalLayout {
+                    if i > 0 : OptionCard {
+                        option: option;
+                        index: i;
+                        recommended: false;
+                        compact: root.compact;
+                    }
                 }
             }
 
-            if Store.hidden.length > 0 : VerticalLayout {
+            if root.more && Store.hidden.length > 0 : VerticalLayout {
                 spacing: 8px;
                 Rectangle {
                     height: 32px;
@@ -837,7 +881,7 @@ export component DetailsBody inherits Rectangle {
             if Store.notes != "" : VerticalLayout {
                 spacing: 8px;
                 Text {
-                    text: (Store.is-package ? "About this package" : "Release notes") + (Store.release-date != "" ? "  ·  " + (Store.is-package ? "updated " : "") + Store.release-date + (Store.release-age != "" ? "  ·  " + Store.release-age : "") : "");
+                    text: (Store.is-package ? "About this package" : "What's new") + (Store.release-date != "" ? "  ·  " + (Store.is-package ? "updated " : "") + Store.release-date + (Store.release-age != "" ? "  ·  " + Store.release-age : "") : "");
                     color: Theme.text-dim;
                     font-size: 12px;
                     font-weight: 700;

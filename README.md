@@ -2,91 +2,93 @@
 
 # Bilby
 
-An app store for **GitHub Releases**, **Codeberg**, the **AUR** and **your distribution's own
-repositories** (Arch, CachyOS, Debian, Ubuntu and whatever else your package manager is
-set up for), written in Rust, that only shows you what actually runs on the machine in
-front of you.
+An app store for GitHub Releases, Codeberg and other repositories that only shows you
+what runs on your device.
 
-A release with 18 files becomes one **Install** button: the `.deb` on Ubuntu, the `.rpm`
-on Fedora, the pacman package on Arch, the arm64 installer on a Windows-on-Arm laptop,
-the right-ABI APK on a phone, the TV build on a TV. Everything else is hidden, and the
-store will tell you why if you ask.
+Open-source apps usually publish a page of download files and leave you to work out
+which one is yours. Bilby works it out for you. A release with 18 files becomes one
+**Install** button, and the other 17 stay out of the way unless you ask for them.
 
-It is entirely client-side: no account, no server of ours, no telemetry. The app talks
-to GitHub and the AUR directly and keeps your library and settings in one file on your
-device.
+There is no account, no Bilby server and no tracking. The app talks to the sources
+directly and keeps your library in one file on your device.
 
 | Desktop | Mobile | TV |
 |---|---|---|
 | ![Desktop](docs/screenshots/desktop-discover.png) | ![Mobile](docs/screenshots/mobile-details.png) | ![TV](docs/screenshots/tv-home.png) |
 
-More in [`docs/screenshots/`](docs/screenshots): [app page](docs/screenshots/desktop-details.png),
-[update](docs/screenshots/desktop-update.png), [older versions](docs/screenshots/desktop-versions.png), [library](docs/screenshots/desktop-library.png),
-[settings](docs/screenshots/desktop-settings.png), [light theme](docs/screenshots/desktop-light.png),
-[first run](docs/screenshots/desktop-welcome.png), [AUR results on Arch](docs/screenshots/desktop-search-arch.png),
-[Windows on Arm](docs/screenshots/desktop-windows-arm.png), [TV app page](docs/screenshots/tv-details.png).
-Screenshots show the built-in demo catalog; the apps in it are fictional.
+More screenshots are in [`docs/screenshots/`](docs/screenshots). They show the built-in
+demo catalog; the apps in it are fictional.
+
+## Where apps come from
+
+- **GitHub Releases** and **Codeberg**.
+- **Your Linux distribution's repositories**: everything pacman is set up for (Arch,
+  CachyOS, Chaotic-AUR, your own) or everything apt is set up for (Debian, Ubuntu,
+  PPAs).
+- **The AUR**, on Arch-based systems only.
+
+A source only appears on devices it applies to. A Windows user never sees the AUR.
 
 ## What it does
 
-- **Filters by device**: OS, CPU (including what can be emulated), Linux package format,
-  libc, and phone vs TV. Hidden files are listed with the reason on request.
-- **Your system's repositories**: on a pacman system it lists every repository in
-  `pacman.conf` (`core`, `extra`, CachyOS's `cachyos` and `cachyos-v3`, Chaotic-AUR, a
-  personal repo, ...); on an apt system every configured archive and PPA. It reads the
-  databases the package manager already keeps on disk, so it costs no network requests
-  and shows exactly what `pacman -S` or `apt install` can install. Packages already
-  installed are marked, with the version you have.
-- **Discover, search, or paste a link**: typing suggests featured apps instantly;
-  Enter searches the sources; a GitHub or Codeberg URL, or `owner/repo`, opens that
-  project directly. App pages show what the project says about itself (the start of
-  its README) and the release notes.
-- **Installs**: downloads, verifies the SHA-256 GitHub publishes, then places AppImages
-  itself or hands packages to the system installer. Shows the steps first; downloads can
-  be cancelled. AUR packages get the exact command to run, not a silent build. An
-  AppImage is added to your app menu, and removed from it when you uninstall.
-- **Library and updates**: remembers what you installed, checks the sources for newer
-  releases that fit your device, and updates one app or all of them with one click from the Library.
-  Older versions can be picked from the app page, and an update you do not want can be
-  skipped until the next one.
-- **Favourites**: star an app to keep it on the Library page without installing it.
-- **Moves with you**: `bilby-cli export` writes your library and favourites to a file
-  and `import` adds them on another device. Settings and tokens stay behind.
-- **Updates itself the same way**: the store checks its own GitHub repository for a
-  newer release with a file for your device and says so in Settings. The update is an
-  ordinary app page, so it gets the same filtering and checksum check as everything else.
-- **App pictures**: the owner's avatar, fetched straight from GitHub and cached on the
-  device; initials on a colour until it arrives, or if there is none.
-- **Three interfaces** in one app: desktop (mouse and full keyboard use), mobile (touch),
-  TV (remote only). Light and dark themes.
-- **Copes with a bad connection**: Discover and suggestions need no network; failed lookups
-  say what went wrong and can be retried; cached answers are used when GitHub's
-  allowance runs out.
-- **Proxy**: reads `HTTPS_PROXY` and `ALL_PROXY` (untested behind a real proxy).
-- **Honest about limits**: shows GitHub's remaining request allowance, takes an optional
-  token to raise it, says plainly that nothing in the catalog is reviewed, and warns
-  about pre-releases, abandoned projects and out-of-date AUR packages.
+**Finding apps**
+
+- Discover lists hand-picked apps by category and works offline.
+- Search puts the best match first: the app with the name you typed, then the apps most
+  people use. You can also paste a project link.
+- Each app's page says what the project is, in the project's own words.
+
+**Installing**
+
+- Bilby picks the right file for your system, processor and device type.
+- Downloads are checked against the checksum the source publishes, when it publishes one.
+- It never asks for your password or runs anything as administrator. Packages are handed
+  to your system's installer; AUR and repository packages give you the command to run.
+- On Linux, AppImages are added to your app menu.
+
+**Keeping up to date**
+
+- The Library lists what you installed and tells you when something newer is out.
+- Update one app or all of them. Skip an update you do not want.
+- Older versions can still be installed from an app's page.
+- Bilby looks for its own updates the same way.
+
+**Details when you want them**
+
+Screens show only what you need to decide: what the app is, whether it works here, and
+one button. File names, sizes, other install options, older versions, the licence and
+the reason each hidden file was hidden are one press away under *More options and
+details*.
+
+**Also**
+
+- One app, three interfaces: desktop (mouse and keyboard), mobile (touch) and TV
+  (remote only). Light and dark themes.
+- Favourites: star an app to keep it in your Library without installing it.
+- `bilby-cli` does everything from a terminal, and can export your library to move it
+  to another device.
 
 ## Status
 
-A working vertical slice. It has only ever been looked at on Linux.
+Bilby works, but it is early: **there is no release to download yet**, and it has only
+ever been run on Linux.
 
 | | State |
 |---|---|
-| Engine, sources, library, updates, install planning | Implemented; 178 automated tests in total |
-| Desktop, mobile and TV interfaces | Implemented; 50 tests drive the real window headlessly, 7 more run the real binary under a virtual display |
-| apt repositories | Read from real Ubuntu 24.04 package lists on the build machine |
-| pacman repositories (Arch, CachyOS, ...) | Tested against databases built in the tests from the documented format; **never read from a real Arch or CachyOS system** |
-| Fedora (dnf), openSUSE (zypper), Flathub, winget, Homebrew | Not yet |
-| Linux | Builds (debug and release), runs, all tests pass |
-| Windows, macOS | Builds and the test suite passes on GitHub's Windows and macOS runners. Those tests use a headless backend: **nobody has seen the window on either system**, and installer hand-off there is untried |
-| Android (phone, tablet, TV) | Core type-checks; entry point written; **no APK packaging**, and handing APKs to the system installer is not implemented (the UI says so) |
-| iOS | Can only ever be a catalog: see [the design notes](docs/DESIGN.md#ios) |
-| Codeberg | Tested against a local server speaking the Forgejo API shapes as I understand them; **never run against codeberg.org** |
-| Live GitHub / AUR requests | Tested over real HTTP against a local server speaking the documented API shapes; **never run against the real services** (blocked where this was built) |
+| Linux | Builds, runs, all 184 automated tests pass |
+| Windows, macOS | Builds and passes the tests on GitHub's machines. Nobody has seen the window on either yet |
+| Android (phone, tablet, TV) | The engine compiles. There is no installable package and APKs cannot be installed yet |
+| iOS | Can only ever browse, not install: see [the design notes](docs/DESIGN.md#ios) |
+| GitHub, AUR, Codeberg | Tested against local stand-ins built from their documentation, never against the real services |
+| apt repositories | Read from real Ubuntu 24.04 package lists |
+| pacman repositories | Tested against databases built in the tests; never read on a real Arch or CachyOS system |
+| Fedora, openSUSE, Flathub, winget, Homebrew | Not yet |
 
-How this compares with Komi Store, Obtainium, UniGetUI and others, feature by feature,
-and what is deliberately left out: [docs/COMPARISON.md](docs/COMPARISON.md).
+Nothing in the catalog is reviewed by anyone. Bilby warns about pre-releases, abandoned
+projects and out-of-date AUR packages, but an app is only as trustworthy as its author.
+
+[How Bilby compares with Komi Store, Obtainium, UniGetUI and others](docs/COMPARISON.md),
+and what it leaves out on purpose.
 
 ## Try it
 
@@ -107,21 +109,24 @@ cargo run -p bilby-cli -- --demo install github:tidewave/tidewave
 cargo run -p bilby-cli -- --demo updates
 cargo run -p bilby-cli -- classify ripgrep-14.1.0-x86_64-unknown-linux-musl.tar.gz
 
-# Against the real GitHub and AUR: drop --demo.
+# Against the real sources: drop --demo.
 cargo run -p bilby-cli -- search ripgrep
 
-# First thing to run on a real connection: checks that GitHub and the AUR answer the way
-# the code expects, and that every featured app really has a file for this machine.
+# Run this first on a real connection. It checks that the sources answer as expected
+# and that every featured app has a file for this machine.
 cargo run -p bilby-cli -- doctor
 ```
 
-Keyboard on desktop: `Ctrl+K` or `/` search, `Esc` or `Alt+Left` back, `Tab` and
-`Enter` for everything else. Narrow the window below 700 px and it becomes the mobile
-interface. TV mode uses the arrow keys, Enter and Escape, which is what a remote's
-D-pad, OK and Back buttons send.
+On desktop, `Ctrl+K` or `/` starts a search and `Esc` or `Alt+Left` goes back. Make the
+window narrower than 700 px and it becomes the mobile interface. TV mode uses the arrow
+keys, Enter and Escape, which is what a remote sends.
 
-Linux build requirements: a C toolchain and `fontconfig`; at runtime `libxkbcommon`
-(plus `libxkbcommon-x11` on X11).
+Bilby reads `GITHUB_TOKEN` (or a token saved in Settings) to raise GitHub's limit from
+60 to 5,000 requests an hour, and `HTTPS_PROXY` / `ALL_PROXY` if you are behind a proxy
+(untested behind a real one).
+
+To build on Linux you need a C toolchain and `fontconfig`. To run it you need
+`libxkbcommon` (and `libxkbcommon-x11` on X11).
 
 ## Tests
 
@@ -129,10 +134,10 @@ Linux build requirements: a C toolchain and `fontconfig`; at runtime `libxkbcomm
 cargo test --workspace
 ```
 
-No internet needed. The network tests start their own server on localhost and the UI
-tests use Slint's headless backend. On Linux, seven more tests run the real binary under
-`xvfb-run` and are skipped if it is not installed. CI runs the suite on Linux, Windows
-and macOS. See [Testing](docs/DESIGN.md#8-testing).
+The tests need no internet. Network tests start their own local server, and interface
+tests drive the real window without a display. On Linux, seven more run the finished
+program under `xvfb-run` and are skipped if it is not installed. CI runs everything on
+Linux, Windows and macOS. More in [Testing](docs/DESIGN.md#8-testing).
 
 ## Working on it
 
@@ -140,8 +145,7 @@ and macOS. See [Testing](docs/DESIGN.md#8-testing).
 cargo fmt --all && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace
 ```
 
-The app can be driven without a person, which is how the screenshots here were made and
-how `tests/binary.rs` checks the real binary:
+The app can be driven by a script, which is how the screenshots were made:
 
 ```sh
 cargo run -p bilby -- --demo --as android-tv --ui tv --size 1920x1080 \
@@ -149,22 +153,23 @@ cargo run -p bilby -- --demo --as android-tv --ui tv --size 1920x1080 \
 ```
 
 `--script` replays keys (`up down left right ok back tab`), `click:X,Y`, `text:WORD`,
-`install:N` and `wait`, one step every quarter second; `--report` writes what the
-interface ended up showing as `key=value` lines. On a machine without a display, run it
-under `xvfb-run` with `SLINT_BACKEND=winit-software`.
+`install:N` and `wait`, one step every quarter second. `--report` writes what ended up
+on screen as `key=value` lines. Without a display, run it under `xvfb-run` with
+`SLINT_BACKEND=winit-software`.
 
-`--as <platform>` (see `bilby-cli --list-platforms`) makes the whole app behave as another
-device, which is the quickest way to see what a phone, a TV or a Windows-on-Arm laptop
-would be offered.
+`--as <platform>` makes the app behave as another device, which is the quickest way to
+see what a phone, a TV or a Windows-on-Arm laptop would be offered. `bilby-cli
+--list-platforms` lists the choices.
 
 ## Layout
 
 ```
 crates/core   bilby-core  platform detection, asset classification, compatibility,
-                             sources (GitHub, AUR), index, install, library state
+                          sources, search ranking, install, library state
 crates/cli    bilby-cli   command-line front end
 crates/app    bilby       Slint app: ui/desktop.slint, ui/mobile.slint, ui/tv.slint
-docs/DESIGN.md               the design, its trade-offs, and what is still open
+docs/DESIGN.md            the design, its trade-offs, and what is still open
+docs/COMPARISON.md        Bilby next to other stores, feature by feature
 ```
 
 ## Where things are stored
@@ -176,10 +181,10 @@ docs/DESIGN.md               the design, its trade-offs, and what is still open
 | AppImages | `~/Applications` | | |
 | Cache | `~/.cache/bilby` | `%LOCALAPPDATA%\bilby` | `~/Library/Caches/bilby` |
 
-Only the Linux column has been exercised.
+Only the Linux column has been tried.
 
 ## License
 
-`GPL-3.0-only` is declared in `Cargo.toml` as a starting point because the UI toolkit,
-Slint, is available under GPLv3 (among other options). See
+`GPL-3.0-only` for now. It was chosen as a starting point because the interface toolkit,
+Slint, is available under GPLv3 among other options. Read
 [the licensing note](docs/DESIGN.md#10-ui-toolkit) before changing it.

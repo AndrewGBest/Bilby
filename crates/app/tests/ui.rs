@@ -241,6 +241,9 @@ fn install_an_appimage_end_to_end() {
     assert_eq!(s.store().get_hidden().row_count(), 13);
     assert_eq!(s.store().get_installed_version(), "");
 
+    // The page leads with the best file; the others are one press away.
+    assert!(!s.has("Install AppImage · x86_64"));
+    s.click("More options and details");
     s.click("Install AppImage · x86_64");
     assert_eq!(s.store().get_install_state(), 2, "{}", s.store().get_install_message());
     assert!(s.store().get_install_message().starts_with("Checksum verified."));
@@ -327,6 +330,7 @@ fn app_without_a_build_for_this_machine_says_so() {
     assert!(s.store().get_unavailable().contains("Linux"));
     assert_eq!(s.store().get_options().row_count(), 0);
     assert_eq!(s.store().get_hidden().row_count(), 3);
+    s.click("More options and details");
     assert!(s.has("Files that won't work on this device"));
 }
 
@@ -362,6 +366,8 @@ fn an_older_version_can_be_chosen_and_installed() {
     assert_eq!(s.store().get_app().version, "v1.21.0");
     assert_eq!(s.store().get_options().row_count(), 2);
 
+    assert!(!s.has("Version v1.20.0"), "older versions are not in the way");
+    s.click("More options and details");
     s.click("Version v1.20.0");
     assert_eq!(s.store().get_selected_version(), 1);
     assert_eq!(s.store().get_app().version, "v1.20.0");

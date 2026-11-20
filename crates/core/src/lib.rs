@@ -23,6 +23,7 @@ pub mod index;
 pub mod install;
 pub mod model;
 pub mod platform;
+pub mod rank;
 pub mod source;
 pub mod state;
 pub mod version;

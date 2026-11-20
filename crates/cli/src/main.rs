@@ -11,7 +11,7 @@ use std::path::Path;
 use std::process::ExitCode;
 
 const USAGE: &str = "\
-bilby-cli - app store for GitHub Releases and the AUR, filtered to your machine
+bilby-cli - app store for GitHub Releases, Codeberg and other repositories, filtered to your device
 
 USAGE:
     bilby-cli [OPTIONS] <COMMAND>

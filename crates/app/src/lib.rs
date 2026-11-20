@@ -22,7 +22,7 @@ use std::sync::{Arc, Mutex, RwLock};
 slint::include_modules!();
 
 const USAGE: &str = "\
-Bilby - app store for GitHub Releases and the AUR, filtered to your machine
+Bilby - app store for GitHub Releases, Codeberg and other repositories, filtered to your device
 
 OPTIONS:
     --ui <desktop|mobile|tv>   Force an interface (default: detected; desktop and mobile
@@ -671,10 +671,8 @@ impl App {
                 // Entries that came from a backup or an older file have no install time.
                 let date =
                     if app.installed_at == 0 { String::new() } else { age_label(&unix_date(app.installed_at), now) };
+                // The kind of file is on the app's page; here the version and age are enough.
                 let mut detail = app.version.clone();
-                if !app.label.is_empty() {
-                    detail.push_str(&format!("  ·  {}", app.label));
-                }
                 if !date.is_empty() {
                     detail.push_str(&format!("  ·  installed {date}"));
                 }
