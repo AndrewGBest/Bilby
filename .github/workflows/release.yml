@@ -4,6 +4,11 @@ name: Release
 # files to a GitHub release. The file names follow the convention the store's own
 # classifier understands, which is how an installed copy finds its update.
 #
+# What is published, per system:
+#   Linux    an AppImage (one file, runs as it is) and a .tar.gz with the command-line tool
+#   Windows  bilby.exe on its own (runs as it is) and a .zip with the command-line tool
+#   macOS    a .dmg holding Bilby.app and a .tar.gz with the command-line tool
+#
 # It can also be started by hand from the Actions page with the version to release;
 # the release then creates the tag, on the commit the workflow ran from.
 on:
@@ -27,7 +32,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          # An older Ubuntu on purpose: what is built here runs on anything newer.
+          - os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             archive: tar.gz
           - os: windows-latest
@@ -62,10 +68,50 @@ jobs:
             cp "target/${{ matrix.target }}/release/bilby" "target/${{ matrix.target }}/release/bilby-cli" "$name/"
             tar -czf "$name.tar.gz" "$name"
           fi
+          rm -rf "$name"
+      - name: AppImage
+        if: runner.os == 'Linux'
+        run: |
+          curl -fL --retry 3 -o appimagetool \
+            https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool
+          sh packaging/linux/build-appimage.sh "target/${{ matrix.target }}/release/bilby" "$PWD/appimagetool" \
+            "$PWD/bilby-${VERSION}-x86_64.AppImage"
+          rm appimagetool
+      - name: Windows program
+        if: runner.os == 'Windows'
+        shell: bash
+        run: cp "target/${{ matrix.target }}/release/bilby.exe" "bilby-${VERSION}-x86_64-windows.exe"
+      - name: macOS app
+        if: runner.os == 'macOS'
+        run: |
+          app="dmg/Bilby.app"
+          mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+          cp "target/${{ matrix.target }}/release/bilby" "$app/Contents/MacOS/bilby"
+          sed "s/__VERSION__/${VERSION#v}/g" packaging/macos/Info.plist > "$app/Contents/Info.plist"
+          # The icon in the sizes macOS asks for. An app without one still runs.
+          mkdir bilby.iconset
+          for size in 16 32 128 256; do
+            sips -z $size $size packaging/bilby.png --out "bilby.iconset/icon_${size}x${size}.png"
+            sips -z $((size * 2)) $((size * 2)) packaging/bilby.png --out "bilby.iconset/icon_${size}x${size}@2x.png"
+          done
+          cp packaging/bilby.png bilby.iconset/icon_512x512.png
+          iconutil -c icns bilby.iconset -o "$app/Contents/Resources/bilby.icns" || echo "no icon"
+          # Not signed by a registered developer; this marks it as whole, which Apple
+          # silicon requires before it will start anything.
+          codesign --force --deep -s - "$app"
+          ln -s /Applications dmg/Applications
+          hdiutil create -volname Bilby -srcfolder dmg -ov -format UDZO "bilby-${VERSION}-aarch64-macos.dmg"
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}
-          path: bilby-*.${{ matrix.archive }}
+          path: |
+            bilby-v*.AppImage
+            bilby-v*.exe
+            bilby-v*.dmg
+            bilby-v*.zip
+            bilby-v*.tar.gz
+          if-no-files-found: error
 
   publish:
     needs: build

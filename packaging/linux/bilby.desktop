@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Bilby
+GenericName=App Store
+Comment=Apps from GitHub Releases, Codeberg and other repositories that run on this device
+Exec=bilby
+Icon=bilby
+Terminal=false
+Categories=System;PackageManager;
+Keywords=apps;store;install;update;software;
+StartupWMClass=bilby

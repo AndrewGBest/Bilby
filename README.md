@@ -104,7 +104,26 @@ projects and out-of-date AUR packages, but an app is only as trustworthy as its 
 [How Bilby compares with Komi Store, Obtainium, UniGetUI and others](docs/COMPARISON.md),
 and what it leaves out on purpose.
 
-## Try it
+## Download
+
+Each [release](https://github.com/AndrewGBest/Bilby/releases) has one file per system
+that runs as it is:
+
+| System | File | How to start it |
+| --- | --- | --- |
+| Linux (x86_64) | `bilby-…-x86_64.AppImage` | Mark it executable (`chmod +x`, or the file's Properties) and open it |
+| Windows (x64) | `bilby-…-x86_64-windows.exe` | Open it. Windows warns about an unknown publisher: More info, Run anyway |
+| macOS (Apple silicon) | `bilby-…-aarch64-macos.dmg` | Open it and drag Bilby to Applications. The first time, right-click the app and choose Open |
+
+None of them is signed by a registered developer, which is what the warnings are
+about. The `.tar.gz` and `.zip` files beside them also hold `bilby-cli`, the
+command-line tool.
+
+There is no Flatpak, on purpose for now: inside Flatpak's sandbox Bilby would see the
+sandbox instead of your system, so it could not tell which distribution you run, read
+its package lists, update it, or put AppImages in your app menu.
+
+## Try it from source
 
 ```sh
 # The store, with the offline demo catalog
