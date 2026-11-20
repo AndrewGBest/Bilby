@@ -5,7 +5,7 @@
 <h1 align="center">Bilby</h1>
 
 <p align="center">
-  <b>An app store for open-source apps that only shows what runs on your device.</b><br>
+  <b>An app store that only shows what runs on your device.</b><br>
   GitHub Releases, Flathub, Codeberg and your Linux distribution, in one place.<br>
   No account. No server of ours. No tracking.
 </p>
@@ -22,8 +22,8 @@
 
 ## The idea
 
-Open-source apps usually hand you a page of download files and leave you to work out
-which one is yours.
+Outside the big app stores, getting an app usually means a page of download files and
+working out which one is yours.
 
 **Bilby works it out for you.** It looks at your system, your processor and the kind of
 device you are on, and turns a release with 18 files into one **Install** button. The
