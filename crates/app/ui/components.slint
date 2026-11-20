@@ -945,13 +945,6 @@ component LibraryItem inherits Rectangle {
                 accessible-label: (entry.status != 3 ? "Details of " : updating ? "Cancel updating " : "Update ") + entry.card.name;
                 clicked => { root.act(); }
             }
-            if entry.status == 3 && !updating : Button {
-                horizontal-stretch: 1;
-                text: "Skip";
-                primary: false;
-                accessible-label: "Skip this update of " + entry.card.name;
-                clicked => { Store.skip-update(entry.card.id); }
-            }
             Button {
                 horizontal-stretch: 1;
                 text: root.confirm ? "Really remove?" : "Remove";
@@ -965,6 +958,13 @@ component LibraryItem inherits Rectangle {
                     root.confirm = !root.confirm;
                 }
             }
+        }
+        // Three buttons do not fit side by side on a narrow phone.
+        if compact && entry.status == 3 && !updating : Button {
+            text: "Skip this version";
+            primary: false;
+            accessible-label: "Skip this update of " + entry.card.name;
+            clicked => { Store.skip-update(entry.card.id); }
         }
         if updating : Rectangle {
             height: 4px;
