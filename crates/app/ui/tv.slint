@@ -4,44 +4,105 @@
 // surface and a 1080p or 4K desktop window.
 import { Theme } from "theme.slint";
 import { AppCard, Section, Store } from "types.slint";
-import { AppIcon, Chip } from "components.slint";
+import { AppIcon } from "components.slint";
 
+// Sizes follow Android TV's guidance: content stays inside a 48dp side and 27dp
+// top/bottom margin, body text is 12dp or larger, and the focused item grows a little
+// as well as gaining a border, so it is obvious from across a room.
 component TvTile inherits Rectangle {
     in property <AppCard> app;
     in property <bool> focused;
     in property <length> u;
     callback clicked;
-    border-radius: 9 * u;
-    background: focused ? Theme.surface-2 : Theme.surface;
-    border-width: focused ? 2 * u : 0.5 * u;
-    border-color: focused ? white : Theme.stroke;
-    opacity: focused ? 1 : 0.8;
-    animate border-width, opacity, background { duration: 120ms; }
-    TouchArea {
-        clicked => { root.clicked(); }
-    }
-    VerticalLayout {
-        padding: 9 * u;
-        spacing: 5 * u;
-        HorizontalLayout {
-            spacing: 7 * u;
-            AppIcon { initials: app.initials; tint: app.tint; icon: app.icon; size: 26 * u; }
-            VerticalLayout {
-                alignment: center;
-                spacing: 1 * u;
-                Text { text: app.name; color: Theme.text; font-size: 11 * u; font-weight: 700; overflow: elide; }
-                Text { text: app.author; color: Theme.text-dim; font-size: 8 * u; overflow: elide; }
+    Rectangle {
+        // The focused tile is drawn slightly larger, about 1.05x.
+        x: focused ? -5 * u : 0;
+        y: focused ? -3 * u : 0;
+        width: parent.width + (focused ? 10 * u : 0);
+        height: parent.height + (focused ? 6 * u : 0);
+        border-radius: 10 * u;
+        background: focused ? Theme.surface-2 : Theme.surface;
+        border-width: focused ? 2 * u : 0.5 * u;
+        border-color: focused ? white : Theme.stroke;
+        opacity: focused ? 1 : 0.82;
+        animate x, y, width, height, border-width, opacity, background { duration: 130ms; easing: ease-out; }
+        TouchArea {
+            clicked => { root.clicked(); }
+        }
+        VerticalLayout {
+            padding: 11 * u;
+            spacing: 6 * u;
+            HorizontalLayout {
+                spacing: 9 * u;
+                AppIcon { initials: app.initials; tint: app.tint; icon: app.icon; size: 32 * u; }
+                VerticalLayout {
+                    alignment: center;
+                    spacing: 1 * u;
+                    Text { text: app.name; color: Theme.text; font-size: 14 * u; font-weight: 700; overflow: elide; }
+                    Text {
+                        text: app.has-update ? "Update available" : app.installed ? "Installed" : app.popularity != "" ? app.popularity : app.author;
+                        color: app.has-update || app.installed ? Theme.accent : Theme.text-dim;
+                        font-size: 11 * u;
+                        font-weight: app.has-update || app.installed ? 700 : 400;
+                        overflow: elide;
+                    }
+                }
+            }
+            Text {
+                vertical-stretch: 1;
+                text: app.summary;
+                color: Theme.text-dim;
+                font-size: 11.5 * u;
+                wrap: word-wrap;
+                overflow: elide;
             }
         }
-        Text {
-            vertical-stretch: 1;
-            text: app.summary;
-            color: Theme.text-dim;
-            font-size: 8.5 * u;
-            wrap: word-wrap;
-            overflow: elide;
+    }
+}
+
+// A button on the TV app page. The remote moves between them; OK presses the focused one.
+component TvButton inherits Rectangle {
+    in property <string> text;
+    in property <bool> focused;
+    in property <bool> primary;
+    in property <length> u;
+    callback clicked;
+    height: 34 * u;
+    width: label.preferred-width + 36 * u;
+    Rectangle {
+        x: focused ? -3 * u : 0;
+        y: focused ? -2 * u : 0;
+        width: parent.width + (focused ? 6 * u : 0);
+        height: parent.height + (focused ? 4 * u : 0);
+        border-radius: 17 * u;
+        background: primary ? Theme.accent : Theme.surface-2;
+        border-width: focused ? 2 * u : 0;
+        border-color: white;
+        opacity: focused ? 1 : 0.75;
+        animate x, y, width, height, border-width, opacity { duration: 120ms; easing: ease-out; }
+        TouchArea {
+            clicked => { root.clicked(); }
+        }
+        label := Text {
+            width: parent.width;
+            height: parent.height;
+            text: root.text;
+            color: primary ? #0e1014 : Theme.text;
+            font-size: 13 * u;
+            font-weight: 700;
+            horizontal-alignment: center;
+            vertical-alignment: center;
         }
     }
+}
+
+component TvStat inherits VerticalLayout {
+    in property <string> value;
+    in property <string> caption;
+    in property <length> u;
+    spacing: 1 * u;
+    Text { text: root.value; color: Theme.text; font-size: 14 * u; font-weight: 700; }
+    Text { text: root.caption; color: Theme.text-dim; font-size: 11 * u; }
 }
 
 export component TvShell inherits Rectangle {
@@ -52,11 +113,40 @@ export component TvShell inherits Rectangle {
     // Focused option on the details screen.
     property <int> opt: 0;
     property <AppCard> current: rows[cur-row].apps[cur-col];
-    property <length> tile-w: 150 * u;
-    property <length> tile-h: 84 * u;
-    property <length> tile-gap: 9 * u;
-    property <length> row-h: 112 * u;
-    property <length> margin: 32 * u;
+    // Four tiles fill a row inside the safe area (Android TV's four-card width).
+    property <length> tile-w: 201 * u;
+    property <length> tile-h: 104 * u;
+    property <length> tile-gap: 20 * u;
+    property <length> row-h: 146 * u;
+    // Android TV's overscan-safe margins.
+    property <length> margin: 48 * u;
+    property <length> top: 27 * u;
+
+    // The app page: which button has focus (0 main, 1 favourite, 2 other files), and
+    // whether the list of every file is open.
+    property <int> act: 0;
+    property <bool> files: false;
+    property <bool> busy: Store.install-state == 1;
+    property <bool> is-update: Store.installed-version != "" && Store.app.version != "" && Store.installed-version != Store.app.version;
+    property <bool> open-instead: Store.can-open && !is-update && !busy;
+    property <string> main-action: busy ? "Cancel" : open-instead ? "Open" : is-update ? "Update" : Store.options.length > 0 ? Store.options[0].verb : "";
+    property <string> shown-id: Store.app.id;
+    changed shown-id => {
+        root.act = 0;
+        root.files = false;
+        root.opt = 0;
+    }
+    function press-main() {
+        if (Store.details-error != "") {
+            Store.retry-details();
+        } else if (root.busy) {
+            Store.cancel-install();
+        } else if (root.open-instead) {
+            Store.launch();
+        } else if (Store.options.length > 0) {
+            Store.install(0);
+        }
+    }
 
     background: @linear-gradient(180deg, #151a26 0%, #0b0d12 70%);
 
@@ -83,19 +173,45 @@ export component TvShell inherits Rectangle {
                 return reject;
             }
             if (Store.details-open) {
-                if (event.text == Key.Escape || event.text == Key.Back || event.text == Key.Backspace || event.text == Key.LeftArrow) {
-                    Store.close-details();
-                } else if (event.text == Key.UpArrow) {
-                    root.opt = max(0, root.opt - 1);
-                } else if (event.text == Key.DownArrow) {
-                    root.opt = max(0, min(Store.options.length - 1, root.opt + 1));
+                if (event.text == Key.Escape || event.text == Key.Back || event.text == Key.Backspace) {
+                    // Back closes the list of files first, then the page.
+                    if (root.files) {
+                        root.files = false;
+                    } else {
+                        Store.close-details();
+                    }
+                } else if (root.files) {
+                    if (event.text == Key.UpArrow) {
+                        if (root.opt == 0) {
+                            root.files = false;
+                        } else {
+                            root.opt -= 1;
+                        }
+                    } else if (event.text == Key.DownArrow) {
+                        root.opt = max(0, min(Store.options.length - 1, root.opt + 1));
+                    } else if (event.text == Key.Return || event.text == " ") {
+                        if (root.busy) {
+                            Store.cancel-install();
+                        } else if (Store.options.length > 0) {
+                            Store.install(root.opt);
+                        }
+                    }
+                } else if (event.text == Key.LeftArrow) {
+                    if (root.act == 0) {
+                        Store.close-details();
+                    } else {
+                        root.act -= 1;
+                    }
+                } else if (event.text == Key.RightArrow) {
+                    root.act = min(Store.options.length > 0 ? 2 : 1, root.act + 1);
                 } else if (event.text == Key.Return || event.text == " ") {
-                    if (Store.details-error != "") {
-                        Store.retry-details();
-                    } else if (Store.install-state == 1) {
-                        Store.cancel-install();
-                    } else if (Store.options.length > 0) {
-                        Store.install(root.opt);
+                    if (root.act == 0) {
+                        root.press-main();
+                    } else if (root.act == 1) {
+                        Store.toggle-favourite();
+                    } else {
+                        root.opt = 0;
+                        root.files = true;
                     }
                 }
                 return accept;
@@ -118,7 +234,6 @@ export component TvShell inherits Rectangle {
                 }
             } else if (event.text == Key.Return || event.text == " ") {
                 if (current.id != "") {
-                    root.opt = 0;
                     Store.open(current.id);
                 }
             } else {
@@ -131,40 +246,40 @@ export component TvShell inherits Rectangle {
         // ---- top bar ----
         HorizontalLayout {
             x: margin;
-            y: 18 * u;
+            y: top;
             width: parent.width - 2 * margin;
-            height: 24 * u;
+            height: 28 * u;
             spacing: 10 * u;
-            Image { width: 16 * u; height: 16 * u; y: 4 * u; source: @image-url("icons/logo.svg"); accessible-role: none; }
-            Text { text: "Bilby"; color: Theme.text; font-size: 11 * u; font-weight: 700; vertical-alignment: center; }
+            Image { width: 20 * u; height: 20 * u; y: 4 * u; source: @image-url("icons/logo.svg"); accessible-role: none; }
+            Text { text: "Bilby"; color: Theme.text; font-size: 14 * u; font-weight: 700; vertical-alignment: center; }
             Rectangle { horizontal-stretch: 1; }
             Rectangle {
-                width: 190 * u;
-                border-radius: 12 * u;
+                width: 230 * u;
+                border-radius: 14 * u;
                 background: Theme.surface;
                 border-width: search.has-focus ? 2 * u : 0.5 * u;
                 border-color: search.has-focus ? white : Theme.stroke;
                 Image {
-                    x: 9 * u;
+                    x: 11 * u;
                     source: @image-url("icons/search.svg");
                     colorize: Theme.text-dim;
-                    width: 10 * u;
-                    height: 10 * u;
+                    width: 12 * u;
+                    height: 12 * u;
                 }
                 if search.text == "" : Text {
-                    x: 25 * u;
-                    text: search.has-focus ? "Type, then press OK" : "Search  (press Up)";
+                    x: 30 * u;
+                    text: search.has-focus ? "Type, then press OK" : "Search  ·  press Up";
                     color: Theme.text-dim;
-                    font-size: 9 * u;
+                    font-size: 12 * u;
                     vertical-alignment: center;
                 }
                 search := TextInput {
-                    x: 25 * u;
-                    width: parent.width - 34 * u;
+                    x: 30 * u;
+                    width: parent.width - 40 * u;
                     height: 100%;
                     text <=> Store.query;
                     color: Theme.text;
-                    font-size: 9 * u;
+                    font-size: 12 * u;
                     single-line: true;
                     vertical-alignment: center;
                     accepted => {
@@ -175,56 +290,46 @@ export component TvShell inherits Rectangle {
                     }
                 }
             }
-            Text { text: Store.platform-title; color: Theme.ok; font-size: 9 * u; font-weight: 600; vertical-alignment: center; }
+            Text { text: Store.device-name; color: Theme.ok; font-size: 12 * u; font-weight: 600; vertical-alignment: center; }
         }
 
-        // ---- home: hero for the focused app, rows below ----
+        // ---- home: the focused app in large type, rows of apps below ----
         if !Store.details-open : Rectangle {
             VerticalLayout {
                 x: margin;
-                y: 62 * u;
-                width: 420 * u;
-                height: 150 * u;
+                y: 74 * u;
+                width: 520 * u;
+                height: 140 * u;
                 spacing: 6 * u;
                 alignment: start;
-                Text { text: current.name; color: Theme.text; font-size: 34 * u; font-weight: 800; overflow: elide; }
+                Text { text: current.name; color: Theme.text; font-size: 36 * u; font-weight: 800; overflow: elide; }
+                Text { text: current.summary; color: Theme.text; font-size: 14 * u; wrap: word-wrap; }
                 Text {
-                    text: current.id == "" ? "" : current.author + "  ·  " + current.source;
-                    color: Theme.text-dim;
-                    font-size: 10 * u;
-                }
-                Text { text: current.summary; color: Theme.text; font-size: 12 * u; wrap: word-wrap; }
-                HorizontalLayout {
-                    padding-top: 4 * u;
-                    spacing: 5 * u;
-                    alignment: start;
-                    if current.badge != "" : Chip { text: current.badge; tone: Theme.ok; font-size: 8 * u; }
-                    if current.version != "" : Chip { text: current.version; font-size: 8 * u; }
-                    if current.has-update : Chip { text: "Update available"; tone: Theme.accent; font-size: 8 * u; }
-                    if current.installed && !current.has-update : Chip { text: "Installed"; tone: Theme.accent; font-size: 8 * u; }
-                    if current.id != "" : Chip { text: "OK  ·  Details"; tone: Theme.accent; font-size: 8 * u; }
+                    text: current.id == "" ? "" : (current.has-update ? "Update available  ·  " : current.installed ? "Installed  ·  " : "") + (current.popularity != "" ? current.popularity + "  ·  " : "") + current.author;
+                    color: current.has-update || current.installed ? Theme.accent : Theme.text-dim;
+                    font-size: 12 * u;
                 }
                 if rows.length == 0 : Text {
-                    text: Store.searching ? "Searching…" : "Nothing for this device yet. Press Up to search.";
+                    text: Store.searching ? "Searching…" : "Nothing for this TV yet. Press Up to search.";
                     color: Theme.text-dim;
-                    font-size: 12 * u;
+                    font-size: 14 * u;
                 }
             }
             if Store.search-note != "" : Text {
                 x: margin;
-                y: 214 * u;
+                y: 212 * u;
                 width: parent.width - 2 * margin;
                 text: Store.search-note;
                 color: Theme.text-dim;
-                font-size: 8.5 * u;
+                font-size: 12 * u;
                 overflow: elide;
             }
             Rectangle {
-                y: 232 * u;
+                y: 236 * u;
                 height: parent.height - self.y;
                 clip: true;
                 Rectangle {
-                    y: -root.cur-row * row-h;
+                    y: 4 * u - root.cur-row * row-h;
                     height: rows.length * row-h;
                     animate y { duration: 220ms; easing: ease-out; }
                     for section[r] in rows : Rectangle {
@@ -238,16 +343,16 @@ export component TvShell inherits Rectangle {
                         Text {
                             x: margin;
                             y: 0;
-                            height: 18 * u;
+                            height: 20 * u;
                             text: section.title;
                             color: r == root.cur-row ? Theme.text : Theme.text-dim;
-                            font-size: 10 * u;
+                            font-size: 13 * u;
                             font-weight: 700;
                             vertical-alignment: center;
                         }
                         Rectangle {
                             x: margin - shift * (tile-w + tile-gap);
-                            y: 22 * u;
+                            y: 28 * u;
                             height: tile-h;
                             width: n * (tile-w + tile-gap);
                             animate x { duration: 200ms; easing: ease-out; }
@@ -261,7 +366,6 @@ export component TvShell inherits Rectangle {
                                 clicked => {
                                     root.cur-row = r;
                                     root.cur-col = c;
-                                    root.opt = 0;
                                     scope.focus();
                                     Store.open(app.id);
                                 }
@@ -272,101 +376,198 @@ export component TvShell inherits Rectangle {
             }
         }
 
-        // ---- details: app on the left, installable files on the right ----
+        // ---- app page: what it is and one button on the left, pictures on the right ----
         if Store.details-open : Rectangle {
             VerticalLayout {
                 x: margin;
                 y: 70 * u;
-                width: 250 * u;
-                spacing: 8 * u;
+                width: 400 * u;
+                spacing: 9 * u;
                 alignment: start;
-                AppIcon { initials: Store.app.initials; tint: Store.app.tint; icon: Store.app.icon; size: 56 * u; }
-                Text { text: Store.app.name; color: Theme.text; font-size: 28 * u; font-weight: 800; wrap: word-wrap; }
-                Text { text: Store.app.author + "  ·  " + Store.app.source; color: Theme.text-dim; font-size: 10 * u; }
-                Text { text: Store.app.summary; color: Theme.text; font-size: 11 * u; wrap: word-wrap; }
                 HorizontalLayout {
-                    spacing: 5 * u;
+                    spacing: 14 * u;
                     alignment: start;
-                    if Store.app.version != "" : Chip { text: Store.app.version; font-size: 8 * u; }
-                    if Store.app.popularity != "" : Chip { text: Store.app.popularity; font-size: 8 * u; }
-                    if Store.release-date != "" : Chip { text: Store.release-date; font-size: 8 * u; }
+                    AppIcon { initials: Store.app.initials; tint: Store.app.tint; icon: Store.app.icon; size: 60 * u; }
+                    VerticalLayout {
+                        alignment: center;
+                        spacing: 2 * u;
+                        Text { text: Store.app.name; color: Theme.text; font-size: 28 * u; font-weight: 800; overflow: elide; }
+                        Text { text: Store.app.author; color: Theme.text-dim; font-size: 12 * u; overflow: elide; }
+                    }
                 }
-                if Store.warning != "" : Text { text: Store.warning; color: Theme.warn; font-size: 9 * u; wrap: word-wrap; }
-                Text { text: "Back  ·  Return to browsing"; color: Theme.text-dim; font-size: 8.5 * u; }
-            }
-            VerticalLayout {
-                x: 320 * u;
-                y: 70 * u;
-                width: parent.width - self.x - margin;
-                spacing: 7 * u;
-                alignment: start;
+                Text { text: Store.app.summary; color: Theme.text; font-size: 14 * u; wrap: word-wrap; }
+                HorizontalLayout {
+                    spacing: 24 * u;
+                    alignment: start;
+                    if Store.app.popularity != "" : TvStat { u: root.u; value: Store.app.popularity; caption: "on " + Store.app.source; }
+                    if Store.options.length > 0 && Store.options[0].size != "" : TvStat { u: root.u; value: Store.options[0].size; caption: "download"; }
+                    if Store.release-age != "" : TvStat { u: root.u; value: Store.release-age; caption: "last updated"; }
+                }
                 Text {
-                    text: Store.details-loading ? "Checking releases against this device…" : Store.details-error != "" ? Store.details-error + "  Press OK to try again." : Store.unavailable != "" ? Store.unavailable : Store.installed-version != "" && Store.installed-version != Store.app.version ? "Update available: you have " + Store.installed-version : "Works on " + Store.platform-title;
-                    color: Store.details-error != "" ? Theme.bad : Store.unavailable != "" ? Theme.warn : Theme.text-dim;
-                    font-size: 10 * u;
+                    text: Store.details-loading ? "Checking what works on this TV…" : Store.details-error != "" ? Store.details-error + "  Press OK to try again." : Store.unavailable != "" ? Store.unavailable : Store.install-state == 1 ? "Downloading…  " + round(Store.install-progress * 100) + "%" : Store.install-state >= 2 ? Store.install-message : root.is-update ? "Update available: you have " + Store.installed-version : Store.installed-version != "" ? "Installed  ·  " + Store.installed-version : Store.options.length > 0 ? (Store.options[0].native ? "Made for this TV" : "Works on this TV") + (Store.options[0].verified ? "  ·  the download is checked" : "") : "";
+                    color: Store.details-error != "" || Store.install-state == 3 ? Theme.bad : Store.unavailable != "" ? Theme.warn : Store.install-state == 1 ? Theme.accent : Theme.ok;
+                    font-size: 12 * u;
                     font-weight: 700;
                     wrap: word-wrap;
                 }
+                if Store.warning != "" : Text { text: Store.warning; color: Theme.warn; font-size: 12 * u; wrap: word-wrap; }
+                if !Store.details-loading : HorizontalLayout {
+                    padding-top: 4 * u;
+                    spacing: 12 * u;
+                    alignment: start;
+                    if root.main-action != "" || Store.details-error != "" : TvButton {
+                        u: root.u;
+                        text: Store.details-error != "" ? "Try again" : root.main-action;
+                        primary: true;
+                        focused: root.act == 0 && !root.files;
+                        clicked => {
+                            root.act = 0;
+                            root.press-main();
+                        }
+                    }
+                    TvButton {
+                        u: root.u;
+                        text: Store.is-favourite ? "★  Favourite" : "☆  Favourite";
+                        focused: (root.act == 1 || (root.act == 0 && root.main-action == "" && Store.details-error == "")) && !root.files;
+                        clicked => {
+                            root.act = 1;
+                            Store.toggle-favourite();
+                        }
+                    }
+                    if Store.options.length > 0 : TvButton {
+                        u: root.u;
+                        text: "Other files";
+                        focused: root.act == 2 && !root.files;
+                        clicked => {
+                            root.act = 2;
+                            root.opt = 0;
+                            root.files = true;
+                        }
+                    }
+                }
+                if !root.files && Store.notes != "" : VerticalLayout {
+                    padding-top: 8 * u;
+                    spacing: 4 * u;
+                    Text { text: Store.is-package ? "About this package" : "What's new in " + Store.app.version; color: Theme.text; font-size: 13 * u; font-weight: 700; }
+                    Rectangle {
+                        height: 62 * u;
+                        clip: true;
+                        Text {
+                            y: 0;
+                            width: parent.width;
+                            text: Store.notes;
+                            color: Theme.text-dim;
+                            font-size: 12 * u;
+                            wrap: word-wrap;
+                            vertical-alignment: TextVerticalAlignment.top;
+                        }
+                    }
+                }
+            }
+
+            // Right: pictures and the description, or every file when asked for.
+            if !root.files : VerticalLayout {
+                x: 480 * u;
+                y: 70 * u;
+                width: parent.width - self.x - margin;
+                spacing: 12 * u;
+                alignment: start;
+                if Store.screenshots.length > 0 : Rectangle {
+                    height: 236 * u;
+                    border-radius: 10 * u;
+                    clip: true;
+                    border-width: 0.5 * u;
+                    border-color: Theme.stroke;
+                    Image {
+                        width: parent.width;
+                        height: parent.height;
+                        source: Store.screenshots[0];
+                        image-fit: cover;
+                    }
+                }
+                if Store.about != "" : Rectangle {
+                    height: Store.screenshots.length > 0 ? 150 * u : 380 * u;
+                    clip: true;
+                    Text {
+                        y: 0;
+                        width: parent.width;
+                        text: Store.about;
+                        color: Theme.text;
+                        font-size: 13 * u;
+                        wrap: word-wrap;
+                        vertical-alignment: TextVerticalAlignment.top;
+                    }
+                }
+            }
+            if root.files : VerticalLayout {
+                x: 480 * u;
+                y: 70 * u;
+                width: parent.width - self.x - margin;
+                spacing: 8 * u;
+                alignment: start;
+                Text { text: "Every file that works on this TV"; color: Theme.text; font-size: 13 * u; font-weight: 700; }
                 for option[i] in Store.options : Rectangle {
                     property <bool> focused: i == root.opt;
                     property <bool> mine: Store.install-index == i && Store.install-state != 0;
-                    height: 50 * u;
-                    border-radius: 9 * u;
-                    background: focused ? Theme.surface-2 : Theme.surface;
-                    border-width: focused ? 2 * u : 0.5 * u;
-                    border-color: focused ? white : Theme.stroke;
-                    animate border-width { duration: 100ms; }
-                    TouchArea {
-                        clicked => {
-                            root.opt = i;
-                            Store.install(i);
-                        }
-                    }
-                    HorizontalLayout {
-                        padding-left: 12 * u;
-                        padding-right: 12 * u;
-                        spacing: 10 * u;
-                        VerticalLayout {
-                            alignment: center;
-                            spacing: 2 * u;
-                            horizontal-stretch: 1;
-                            Text { text: option.label; color: Theme.text; font-size: 12 * u; font-weight: 700; overflow: elide; }
-                            Text {
-                                text: mine ? (Store.install-state == 1 ? "Downloading…  " + round(Store.install-progress * 100) + "%" : Store.install-message) : option.note != "" ? option.note : option.size != "" ? option.file + "  ·  " + option.size : option.file;
-                                color: mine && Store.install-state == 3 ? Theme.bad : mine && Store.install-state == 2 ? Theme.ok : option.note != "" && !mine ? Theme.warn : Theme.text-dim;
-                                font-size: 8.5 * u;
-                                overflow: elide;
+                    height: 54 * u;
+                    Rectangle {
+                        x: focused ? -3 * u : 0;
+                        width: parent.width + (focused ? 6 * u : 0);
+                        border-radius: 10 * u;
+                        background: focused ? Theme.surface-2 : Theme.surface;
+                        border-width: focused ? 2 * u : 0.5 * u;
+                        border-color: focused ? white : Theme.stroke;
+                        animate x, width, border-width { duration: 110ms; }
+                        TouchArea {
+                            clicked => {
+                                root.opt = i;
+                                Store.install(i);
                             }
                         }
-                        VerticalLayout {
-                            alignment: center;
-                            if i == 0 : Chip { text: "Best for this TV"; tone: Theme.accent; font-size: 8 * u; }
-                        }
-                        VerticalLayout {
-                            alignment: center;
-                            if focused : Chip { text: mine && Store.install-state == 1 ? "OK  ·  Cancel" : "OK  ·  " + option.verb; tone: Theme.ok; font-size: 8 * u; }
+                        HorizontalLayout {
+                            padding-left: 14 * u;
+                            padding-right: 14 * u;
+                            spacing: 10 * u;
+                            VerticalLayout {
+                                alignment: center;
+                                spacing: 2 * u;
+                                horizontal-stretch: 1;
+                                Text { text: option.label + (i == 0 ? "  ·  best for this TV" : ""); color: Theme.text; font-size: 13 * u; font-weight: 700; overflow: elide; }
+                                Text {
+                                    text: mine ? (Store.install-state == 1 ? "Downloading…  " + round(Store.install-progress * 100) + "%" : Store.install-message) : option.note != "" ? option.note : option.size != "" ? option.file + "  ·  " + option.size : option.file;
+                                    color: mine && Store.install-state == 3 ? Theme.bad : mine && Store.install-state == 2 ? Theme.ok : option.note != "" && !mine ? Theme.warn : Theme.text-dim;
+                                    font-size: 11.5 * u;
+                                    overflow: elide;
+                                }
+                            }
+                            VerticalLayout {
+                                alignment: center;
+                                if focused : Text { text: mine && Store.install-state == 1 ? "OK to cancel" : "OK to " + (option.verb == "Download" ? "download" : "install"); color: Theme.ok; font-size: 12 * u; font-weight: 700; }
+                            }
                         }
                     }
                 }
-                if Store.hidden.length > 0 && !Store.details-loading : Text {
-                    text: Store.hidden.length + (Store.hidden.length == 1 ? " other file was" : " other files were") + " hidden because they don't work on this device.";
+                if Store.hidden.length > 0 : Text {
+                    text: Store.hidden.length + (Store.hidden.length == 1 ? " file for other devices is" : " files for other devices are") + " not listed.";
                     color: Theme.text-dim;
-                    font-size: 8.5 * u;
+                    font-size: 12 * u;
                 }
+                Text { text: "Back to close this list"; color: Theme.text-dim; font-size: 12 * u; }
             }
         }
     }
     if Store.toast != "" : Rectangle {
         x: (parent.width - self.width) / 2;
-        y: parent.height - 44 * u;
-        width: toast-label.preferred-width + 28 * u;
-        height: 24 * u;
-        border-radius: 12 * u;
+        // Clear of the bottom safe margin.
+        y: parent.height - top - 34 * u;
+        width: toast-label.preferred-width + 36 * u;
+        height: 30 * u;
+        border-radius: 15 * u;
         background: #eceef3;
         toast-label := Text {
             text: Store.toast;
             color: Store.toast-is-error ? #b3261e : #0e1014;
-            font-size: 10 * u;
+            font-size: 12 * u;
             font-weight: 700;
             horizontal-alignment: center;
             vertical-alignment: center;

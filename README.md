@@ -36,7 +36,8 @@ A source only appears on devices it applies to. A Windows user never sees the AU
 - Discover lists hand-picked apps by category and works offline.
 - Search puts the best match first: the app with the name you typed, then the apps most
   people use. You can also paste a project link.
-- Each app's page says what the project is, in the project's own words.
+- Each app's page shows pictures and a description taken from the project itself.
+- Lists have an Install button on every app.
 
 **Installing**
 
@@ -76,7 +77,7 @@ ever been run on Linux.
 
 | | State |
 |---|---|
-| Linux | Builds, runs, all 184 automated tests pass |
+| Linux | Builds, runs, all 191 automated tests pass |
 | Windows, macOS | Builds and passes the tests on GitHub's machines. Nobody has seen the window on either yet |
 | Android (phone, tablet, TV) | The engine compiles. There is no installable package and APKs cannot be installed yet |
 | iOS | Can only ever browse, not install: see [the design notes](docs/DESIGN.md#ios) |

@@ -459,7 +459,7 @@ from memory of both stores, not checked against them while writing]
 | Key facts row | Rating, size, age rating, chart position | Stars or votes, download size, last updated, licence |
 | Reassurance | "Works on this iPhone"; Play's data-safety section | "Made for this device", and that the download is checked when it is |
 | Short description | Apple's subtitle (up to 30 characters); Play's short description (80) ([Apple](https://developer.apple.com/app-store/product-page/), [Google](https://support.google.com/googleplay/android-developer/answer/13393723)) | The project's one-line description |
-| Screenshots | Up to ten ([Apple](https://developer.apple.com/app-store/product-page/)) | **None.** Release pages have none; pulling pictures out of READMEs is the obvious next step |
+| Screenshots | Up to ten ([Apple](https://developer.apple.com/app-store/product-page/)) | Up to four, found in the project's README (`screenshots.rs`). Badges, logos, icons, small images, GIFs and SVGs are left out, and pictures are only fetched from GitHub's own hosts so that no third party learns who looked. Packages from repositories have none yet |
 | Description | First lines, then "more" | The start of the README, folded to a few lines with "Read more" |
 | What's New | Shown on the page and in Updates ([Apple](https://developer.apple.com/app-store/product-page/)) | Release notes, folded; shown above the description once the app is installed |
 | Ratings and reviews | Yes | **None, by design**: they need a server and accounts. Stars stand in |
@@ -471,9 +471,31 @@ is installed or has an update. They say nothing about packaging. The device is n
 everyday words ("This Linux computer"); the exact system and processor are in Settings
 and in each app's Information table.
 
-Known differences that are still gaps: no screenshots; no install button directly on
-list rows (both stores have one); no "top charts"; and the TV interface has not had this
-pass.
+Lists have an Install or Update button on each tile and row, as both stores do. It
+opens the app's page and starts the file that suits the device, so the install can be
+watched and stopped. *Other versions and files* sits directly under the main button:
+the version picker, every way to install here, and the files for other devices, which
+can be downloaded anyway (checked, saved, never run).
+
+Known differences that are still gaps: no ratings or reviews, no "top charts", and
+Open only works for AppImages.
+
+### TV
+
+The TV interface follows Android TV's published guidance, with tvOS's where they agree:
+
+| Rule | Source | Bilby |
+|---|---|---|
+| Keep content inside the overscan-safe area: 48dp at the sides, 27dp top and bottom | [Android TV layouts](https://developer.android.com/design/ui/tv/guides/styles/layouts) | Margins are exactly these; backgrounds run to the edge |
+| Everything reachable with the D-pad; Back goes to the previous place | [TV app quality](https://developer.android.com/docs/quality-guidelines/tv-app-quality), [navigation](https://developer.android.com/design/ui/tv/guides/foundations/navigation-on-tv) | Arrows, OK and Back do everything; Back closes the file list, then the page, then leaves it to the system |
+| Exactly one focused element, shown by scale, border or glow; scale 1.025 to 1.1 | [Focus system](https://developer.android.com/design/ui/tv/guides/styles/focus-system) | A white border and about 1.05x growth |
+| Text readable from 3 m; body text 12sp and up in the TV type scale | [Design for TV](https://developer.android.com/design/ui/tv/guides/foundations/design-for-tv), [type scale](https://github.com/androidx/androidx/blob/androidx-main/tv/tv-material/src/main/java/androidx/tv/material3/tokens/TypeScaleTokens.kt) | Nothing below 11dp; body 12 to 14dp |
+| Four cards fill a row at 196dp each with 20dp between | [Cards](https://developer.android.com/design/ui/tv/guides/components/cards) | Four tiles a row, 20dp apart |
+| tvOS: safe area 60pt top/bottom, 80pt sides; text 23pt minimum at 1080p | [Apple layout](https://developer.apple.com/design/human-interface-guidelines/layout), [typography](https://developer.apple.com/design/human-interface-guidelines/typography) | Sides are inside Apple's too (96px vs 80pt); smallest text is 22px at 1080p, a point under Apple's minimum |
+
+An app's page on TV has three buttons in a row (the main one, Favourite, Other files),
+the facts row, a picture and the description. Still missing on TV: choosing an older
+version, a settings screen, and "update all".
 
 ## 8. Testing
 

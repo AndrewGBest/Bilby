@@ -1203,3 +1203,40 @@ fn an_app_page_shows_pictures_from_the_readme() {
     s.app.open(&s.ui, "apt:harbor");
     assert_eq!(s.store().get_screenshots().row_count(), 0);
 }
+
+#[test]
+fn the_tv_app_page_has_one_main_button_and_the_rest_a_step_away() {
+    let s = start("android-tv", Shell::Tv);
+    s.press(Key::RightArrow);
+    s.press(Key::Return);
+    let id = s.store().get_app().id.to_string();
+    assert_eq!(id, "github:marquee-tv/marquee");
+    assert_eq!(s.store().get_screenshots().row_count(), 3, "the page has pictures to show");
+
+    // Right moves to Favourite; OK stars the app without leaving the page.
+    s.press(Key::RightArrow);
+    s.press(Key::Return);
+    assert!(s.store().get_is_favourite());
+    assert!(s.store().get_details_open());
+    assert_eq!(s.store().get_install_state(), 0, "nothing was installed by starring");
+
+    // Right again is Other files; OK opens the list, Down picks the second file, OK takes it.
+    s.press(Key::RightArrow);
+    s.press(Key::Return);
+    s.press(Key::DownArrow);
+    s.press(Key::Return);
+    assert_eq!(s.store().get_install_index(), 1, "the second file, not the recommended one");
+
+    // Back closes the list first, and only then the page.
+    s.press(Key::Escape);
+    assert!(s.store().get_details_open());
+    s.press(Key::Escape);
+    assert!(!s.store().get_details_open());
+
+    // Opening another app starts on its main button again: OK goes straight to installing.
+    s.press(Key::LeftArrow);
+    s.press(Key::Return);
+    assert_ne!(s.store().get_app().id, id);
+    s.press(Key::Return);
+    assert_eq!(s.store().get_install_index(), 0);
+}
