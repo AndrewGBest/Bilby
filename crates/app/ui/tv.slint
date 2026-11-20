@@ -131,6 +131,11 @@ export component TvShell inherits Rectangle {
     property <int> sys-act: 0;
     property <bool> on-system: Store.page == 4 && !Store.details-open;
     property <bool> sys-can-update: Store.system-state == 3;
+    // Buttons on that page: Update (when there is one), Check again (where updates are
+    // handled), and always last, the way out of the TV layout.
+    property <bool> sys-working: Store.system-state == 1 || Store.system-state == 4;
+    property <int> sys-last: !Store.system-supported || sys-working ? 0 : sys-can-update ? 2 : 1;
+    changed sys-last => { root.sys-act = min(root.sys-act, root.sys-last); }
     property <bool> busy: Store.install-state == 1;
     property <bool> is-update: Store.installed-version != "" && Store.installed-version != "installed" && Store.app.version != "" && Store.installed-version != Store.app.version;
     property <bool> open-instead: Store.can-open && !is-update && !busy;
@@ -200,11 +205,13 @@ export component TvShell inherits Rectangle {
                 if (event.text == Key.Escape || event.text == Key.Back || event.text == Key.Backspace) {
                     Store.page = 0;
                 } else if (event.text == Key.RightArrow) {
-                    root.sys-act = min(root.sys-can-update ? 1 : 0, root.sys-act + 1);
+                    root.sys-act = min(root.sys-last, root.sys-act + 1);
                 } else if (event.text == Key.LeftArrow) {
                     root.sys-act = max(0, root.sys-act - 1);
-                } else if ((event.text == Key.Return || event.text == " ") && Store.system-supported) {
-                    if (root.sys-can-update && root.sys-act == 0) {
+                } else if (event.text == Key.Return || event.text == " ") {
+                    if (root.sys-act == root.sys-last) {
+                        Store.set-interface(1);
+                    } else if (root.sys-can-update && root.sys-act == 0) {
                         Store.system-update();
                     } else {
                         Store.system-check();
@@ -378,23 +385,30 @@ export component TvShell inherits Rectangle {
                     font-size: 12 * u;
                     wrap: word-wrap;
                 }
-                if Store.system-supported && Store.system-state != 1 && Store.system-state != 4 : HorizontalLayout {
+                HorizontalLayout {
                     spacing: 12 * u;
                     alignment: start;
                     padding-top: 6 * u;
-                    if root.sys-can-update : TvButton {
+                    if root.sys-can-update && !root.sys-working : TvButton {
                         u: root.u;
                         text: "Update now";
                         primary: true;
                         focused: root.sys-act == 0;
                         clicked => { Store.system-update(); }
                     }
-                    TvButton {
+                    if Store.system-supported && !root.sys-working : TvButton {
                         u: root.u;
                         text: "Check again";
                         primary: !root.sys-can-update;
                         focused: root.sys-act == (root.sys-can-update ? 1 : 0);
                         clicked => { Store.system-check(); }
+                    }
+                    TvButton {
+                        u: root.u;
+                        text: "Desktop layout";
+                        primary: false;
+                        focused: root.sys-act == root.sys-last;
+                        clicked => { Store.set-interface(1); }
                     }
                 }
                 if Store.system-updates.length > 0 : VerticalLayout {

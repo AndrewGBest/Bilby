@@ -599,6 +599,34 @@ contest and Arch's pkgstats (both would mean another network request per search,
 services not built for it), and any count of how many people use Bilby itself, which
 would need telemetry and is ruled out.
 
+### Knowing it is a TV
+
+A television is not something a computer reports, and a 4K monitor and a 4K TV look
+the same to the system. So the TV layout is chosen in three steps, the first that
+applies:
+
+1. **The command line**: `--ui tv` or `--ui desktop`.
+2. **The choice in Settings** (Layout: Automatic, Desktop, TV). It is remembered and
+   switches at once, without a restart. From the TV layout, the way back is the last
+   button on the "This TV" page, so a remote can reach it.
+3. **What the device looks like.** Android: the system says it is a TV. Linux and the
+   rest: one of the sessions people run on a TV is in use, namely Plasma Bigscreen (its
+   name in the session variables, or its shell among the running programs), Steam's
+   big-screen session (gamescope), or Kodi.
+
+An ordinary desktop shown on a television matches none of these. For that case, if a
+game controller is attached and nothing else has decided, the store asks once: "Are
+you using this on a TV?". The answer is remembered and the question is not repeated.
+
+Choosing the TV layout is more than appearance: TV builds of apps are preferred, and
+on Linux the Websites source appears.
+
+[assumption] The names looked for (`bigscreen` in `XDG_CURRENT_DESKTOP`,
+`XDG_SESSION_DESKTOP` or `DESKTOP_SESSION`; `org.kde.plasma.bigscreen` among running
+programs; `gamescope`, `GAMESCOPE_WAYLAND_DISPLAY`, `SteamTenfoot`; `kodi`) are from
+memory. No documentation was found that states what Plasma Bigscreen sets, and none
+has been checked on a real install. The Settings switch is what makes this dependable.
+
 ### The operating system's own updates (`os.rs`)
 
 KDE Discover and GNOME Software update the system as well as apps, and so does Bilby,

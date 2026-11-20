@@ -688,6 +688,33 @@ export component Welcome inherits Rectangle {
     }
 }
 
+// Asked once, when a controller is attached but nothing says this is a TV.
+export component TvQuestion inherits Rectangle {
+    in property <bool> compact;
+    border-radius: 14px;
+    background: Theme.surface;
+    border-width: 1px;
+    border-color: Theme.stroke;
+    VerticalLayout {
+        padding: compact ? 14px : 20px;
+        spacing: 8px;
+        Text { text: "Are you using this on a TV?"; color: Theme.text; font-size: 17px; font-weight: 700; wrap: word-wrap; }
+        Text {
+            text: "A game controller is connected. Bilby has a layout with large text for the sofa, driven with the arrow keys of a remote or keyboard. You can change this later in Settings.";
+            color: Theme.text;
+            font-size: 13px;
+            wrap: word-wrap;
+        }
+        HorizontalLayout {
+            alignment: start;
+            spacing: 8px;
+            padding-top: 4px;
+            Button { text: "Use the TV layout"; clicked => { Store.answer-tv(true); } }
+            Button { text: "Keep this layout"; primary: false; clicked => { Store.answer-tv(false); } }
+        }
+    }
+}
+
 // The details page body, shared by the desktop and mobile shells.
 // One fact in the row under an app's name: a value and what it is.
 component StatCell inherits VerticalLayout {
@@ -1715,6 +1742,23 @@ export component SettingsBody inherits Rectangle {
                 HorizontalLayout {
                     alignment: start;
                     Button { text: "System details and updates"; primary: false; clicked => { Store.page = 4; } }
+                }
+            }
+
+            SettingsCard {
+                title: "Layout";
+                Text {
+                    text: "The TV layout has large text and is driven with the arrow keys of a remote or keyboard. To come back from it, open This TV at the top of its screen.";
+                    color: Theme.text-dim;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+                    ChoiceChip { text: "Automatic"; selected: Store.interface-mode == 0; clicked => { Store.set-interface(0); } }
+                    ChoiceChip { text: "Desktop"; selected: Store.interface-mode == 1; clicked => { Store.set-interface(1); } }
+                    ChoiceChip { text: "TV"; selected: Store.interface-mode == 2; clicked => { Store.set-interface(2); } }
                 }
             }
 

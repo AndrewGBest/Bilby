@@ -80,6 +80,8 @@ pub struct Options {
     /// The machine whose system details and updates are shown. Defaults to this
     /// computer; the demo and previews of other devices get a made-up one.
     pub host: Option<Arc<dyn bilby_core::os::Host>>,
+    /// Whether a game controller is attached (looked up when not given). For tests.
+    pub controller: Option<bool>,
     pub catalog_factory: Option<CatalogFactory>,
     /// The app id the store looks at for its own updates. Defaults to its GitHub
     /// repository; the demo catalog has no such project, so tests name a stand-in.
@@ -369,6 +371,25 @@ fn theme_mode(name: &str) -> i32 {
     }
 }
 
+/// 0 decide for me, 1 desktop, 2 TV: the saved layout choice as the interface shows it.
+fn interface_mode(saved: &str) -> i32 {
+    match saved {
+        "desktop" => 1,
+        "tv" => 2,
+        _ => 0,
+    }
+}
+
+/// The shape to behave as, given the saved layout choice and what was detected.
+fn form_for(saved: &str, detected: FormFactor) -> FormFactor {
+    match saved {
+        "tv" => FormFactor::Tv,
+        // "Desktop" on a phone still means the phone's own layout.
+        "desktop" if detected == FormFactor::Tv => FormFactor::Desktop,
+        _ => detected,
+    }
+}
+
 fn shell_for(form_factor: FormFactor) -> Shell {
     match form_factor {
         FormFactor::Desktop => Shell::Desktop,
@@ -463,7 +484,11 @@ impl Current {
 pub struct App {
     ui: slint::Weak<AppWindow>,
     catalog: RwLock<Arc<Catalog>>,
-    platform: Platform,
+    platform: RwLock<Platform>,
+    /// What the device was found to be, before any choice of layout was applied.
+    detected: FormFactor,
+    /// A theme given on the command line, which outranks the saved one.
+    theme_override: Option<String>,
     inline: bool,
     dirs: Dirs,
     state_path: PathBuf,
@@ -889,6 +914,7 @@ impl App {
         store.set_has_token(!settings.github_token.trim().is_empty());
         store.set_downloads_dir(self.dirs.downloads.display().to_string().into());
         store.set_show_welcome(!settings.welcomed);
+        store.set_interface_mode(interface_mode(&settings.interface));
         self.refresh_quota(ui);
     }
 
@@ -900,7 +926,7 @@ impl App {
 
     fn rebuild_catalog(&self) {
         let settings = self.state().settings;
-        let fresh = (self.catalog_factory)(&self.platform, &settings, &self.dirs);
+        let fresh = (self.catalog_factory)(&self.platform.read().unwrap(), &settings, &self.dirs);
         // Ratings fetched earlier stay; the factory hands back a shared catalog, so the
         // old one's are passed on only where that is possible.
         let old = self.catalog();
@@ -912,6 +938,43 @@ impl App {
             Err(shared) => shared,
         };
         *self.catalog.write().unwrap() = fresh;
+    }
+
+    /// Use the desktop or the TV layout, now and from the next start on. `mode` is 0 to
+    /// let the store decide, 1 for desktop, 2 for TV.
+    pub fn set_interface(self: &Arc<Self>, ui: &AppWindow, mode: i32) {
+        let name = ["", "desktop", "tv"].get(mode as usize).copied().unwrap_or("");
+        self.update_state(ui, |state| {
+            state.settings.interface = name.to_string();
+            // Having chosen is an answer to the question, too.
+            state.settings.asked_about_tv = true;
+        });
+        let form = form_for(name, self.detected);
+        let changed = {
+            let mut platform = self.platform.write().unwrap();
+            let changed = platform.form_factor != form;
+            platform.form_factor = form;
+            changed
+        };
+        let store = ui.global::<Store>();
+        store.set_ask_tv(false);
+        store.set_shell(shell_for(form));
+        store.set_adaptive(form != FormFactor::Tv);
+        // The TV layout is designed dark; elsewhere the chosen theme applies.
+        let theme = self.theme_override.clone().unwrap_or_else(|| self.state().settings.theme);
+        ui.global::<Theme>().set_mode(if form == FormFactor::Tv { 2 } else { theme_mode(&theme) });
+        store.set_page(0);
+        store.set_details_open(false);
+        if changed {
+            // What suits a TV differs (TV builds first, websites on Linux), so the lists
+            // are fetched again for the new shape.
+            self.rebuild_catalog();
+            let platform = self.platform.read().unwrap().clone();
+            store.set_platform_title(platform.title().into());
+            store.set_device_name(platform.friendly().into());
+            self.refresh(ui);
+        }
+        self.refresh_settings(ui);
     }
 
     // ---- this device ----
@@ -1895,12 +1958,7 @@ fn find_card(store: &Store, id: &str) -> Option<AppCard> {
 /// Create the window and wire it to the catalog, without starting the event loop.
 pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::error::Error>> {
     let mut platform = options.platform.clone().unwrap_or_else(Platform::detect);
-    // Forcing the TV interface also means "prefer TV builds", and vice versa.
-    match options.shell {
-        Some(Shell::Tv) => platform.form_factor = FormFactor::Tv,
-        Some(_) if platform.form_factor == FormFactor::Tv => platform.form_factor = FormFactor::Desktop,
-        _ => {}
-    }
+    let detected = platform.form_factor;
     let dirs = options.dirs.clone().unwrap_or_else(Dirs::for_current_user);
     // The demo catalog gets its own library so fictional apps never mix with real ones.
     let state_path = options
@@ -1908,6 +1966,22 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         .clone()
         .unwrap_or_else(|| dirs.config.join(if options.demo { "demo-state.json" } else { "state.json" }));
     let state = State::load(&state_path);
+    // Which layout: the command line first, then the choice saved in Settings, then
+    // what the device looks like. The TV layout also means "prefer TV builds".
+    match options.shell {
+        Some(Shell::Tv) => platform.form_factor = FormFactor::Tv,
+        Some(_) if platform.form_factor == FormFactor::Tv => platform.form_factor = FormFactor::Desktop,
+        Some(_) => {}
+        None => platform.form_factor = form_for(&state.settings.interface, detected),
+    }
+    // A controller with nothing else pointing at a TV: worth one question.
+    let ask_tv = options.shell.is_none()
+        && platform.form_factor == FormFactor::Desktop
+        && state.settings.interface.is_empty()
+        && !state.settings.asked_about_tv
+        && options
+            .controller
+            .unwrap_or_else(|| options.platform.is_none() && bilby_core::platform::controller_attached());
     let demo = options.demo;
     let catalog_factory: CatalogFactory = options.catalog_factory.clone().unwrap_or_else(|| {
         Arc::new(move |platform: &Platform, settings: &Settings, dirs: &Dirs| {
@@ -1921,7 +1995,8 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     let shell = options.shell.unwrap_or_else(|| shell_for(platform.form_factor));
     store.set_shell(shell);
     // A forced interface stays put; otherwise desktop and mobile follow the window width.
-    store.set_adaptive(options.shell.is_none());
+    store.set_adaptive(options.shell.is_none() && shell != Shell::Tv);
+    store.set_ask_tv(ask_tv);
     store.set_demo(options.demo);
     store.set_app_version(env!("CARGO_PKG_VERSION").into());
     store.set_platform_title(platform.title().into());
@@ -1949,7 +2024,9 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     let app = Arc::new(App {
         ui: ui.as_weak(),
         catalog: RwLock::new(catalog),
-        platform,
+        platform: RwLock::new(platform),
+        detected,
+        theme_override: options.theme.clone(),
         inline: options.inline,
         dirs,
         state_path,
@@ -2108,6 +2185,15 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     on!(on_open_url, |app, ui, url| {
         if let Err(e) = install::open_url(&url) {
             app.toast(ui, &e.to_string(), true);
+        }
+    });
+    on!(on_set_interface, |app, ui, mode| { app.set_interface(ui, mode) });
+    on!(on_answer_tv, |app, ui, yes| {
+        if yes {
+            app.set_interface(ui, 2);
+        } else {
+            app.update_state(ui, |state| state.settings.asked_about_tv = true);
+            ui.global::<Store>().set_ask_tv(false);
         }
     });
     on!(on_system_check, |app, ui| { app.check_system(ui, true) });

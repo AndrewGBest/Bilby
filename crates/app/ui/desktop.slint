@@ -3,7 +3,7 @@
 // Ctrl+K or Ctrl+F jumps to search, Escape goes back, Tab walks through everything.
 import { Theme } from "theme.slint";
 import { AppCard, Section, Store } from "types.slint";
-import { AppIcon, AppTile, Button, Busy, Chip, ChoiceChip, EmptyState, SearchField, DetailsBody, LibraryBody, SettingsBody, SystemBody, Toast, UpdatesBanner, Welcome } from "components.slint";
+import { AppIcon, AppTile, Button, Busy, Chip, ChoiceChip, EmptyState, SearchField, DetailsBody, LibraryBody, SettingsBody, SystemBody, Toast, TvQuestion, UpdatesBanner, Welcome } from "components.slint";
 
 component NavItem inherits Rectangle {
     in property <string> label;
@@ -323,6 +323,7 @@ export component DesktopShell inherits Rectangle {
                                 spacing: 18px;
                                 alignment: start;
                                 if Store.show-welcome : Welcome { compact: false; }
+                                if Store.ask-tv && !Store.show-welcome : TvQuestion { compact: false; }
                                 if Store.updates-count > 0 : UpdatesBanner { }
                                 if Store.spotlight.id != "" && Store.category == "" && !Store.show-welcome : Spotlight { app: Store.spotlight; }
                                 if Store.categories.length > 1 : Flickable {

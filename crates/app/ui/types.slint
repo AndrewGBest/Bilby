@@ -214,6 +214,10 @@ export global Store {
     in property <string> quota-text;
     // First run: explain what this store is before anything is installed.
     in property <bool> show-welcome;
+    // 0 decide for me, 1 desktop, 2 TV
+    in property <int> interface-mode;
+    // A controller is attached but nothing says this is a TV: ask, once.
+    in property <bool> ask-tv;
 
     // --- feedback ---------------------------------------------------------------
     in property <string> toast;
@@ -250,6 +254,8 @@ export global Store {
     callback dismiss-toast();
     callback dismiss-welcome();
     callback view-store-update();
+    callback set-interface(int);
+    callback answer-tv(bool);
     callback system-check();
     callback system-update();
     callback system-handoff-open();

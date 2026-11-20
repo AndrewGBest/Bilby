@@ -370,15 +370,55 @@ fn detect_form_factor(os: Os) -> FormFactor {
         }
         Os::Ios => FormFactor::Mobile,
         _ => {
-            // Steam Deck / HTPC sessions running gamescope are couch setups.
-            let desktop = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default().to_lowercase();
-            if desktop.contains("gamescope") {
-                FormFactor::Tv
-            } else {
-                FormFactor::Desktop
+            let env = |name: &str| std::env::var(name).ok();
+            match couch_session(&env, &running_commands()) {
+                Some(_) => FormFactor::Tv,
+                None => FormFactor::Desktop,
             }
         }
     }
+}
+
+/// The command lines of running programs (Linux only; empty elsewhere).
+fn running_commands() -> Vec<String> {
+    let Ok(entries) = std::fs::read_dir("/proc") else { return vec![] };
+    entries
+        .flatten()
+        .filter(|e| e.file_name().to_string_lossy().bytes().all(|b| b.is_ascii_digit()))
+        .filter_map(|e| std::fs::read(e.path().join("cmdline")).ok())
+        .map(|bytes| String::from_utf8_lossy(&bytes).replace('\0', " "))
+        .filter(|line| !line.is_empty())
+        .collect()
+}
+
+/// Is this desktop system set up to be used from the sofa? Returns what gave it away.
+///
+/// A TV is not something a computer reports, so this looks for the sessions people run
+/// on one: Plasma Bigscreen, Steam's big-screen session (gamescope), Kodi. An ordinary
+/// desktop shown on a television is not detected; Settings has a switch for that.
+pub fn couch_session(env: &dyn Fn(&str) -> Option<String>, commands: &[String]) -> Option<&'static str> {
+    let session: String = ["XDG_CURRENT_DESKTOP", "XDG_SESSION_DESKTOP", "DESKTOP_SESSION"]
+        .iter()
+        .filter_map(|name| env(name))
+        .collect::<Vec<_>>()
+        .join(" ")
+        .to_lowercase();
+    let set = |name: &str| env(name).is_some_and(|v| !v.is_empty() && v != "0");
+    let running = |what: &str| commands.iter().any(|c| c.to_lowercase().contains(what));
+    if session.contains("bigscreen") || running("plasma.bigscreen") || running("plasma-bigscreen") {
+        Some("Plasma Bigscreen")
+    } else if session.contains("gamescope") || set("GAMESCOPE_WAYLAND_DISPLAY") || set("SteamTenfoot") {
+        Some("Steam's big-screen mode")
+    } else if session.contains("kodi") {
+        Some("Kodi")
+    } else {
+        None
+    }
+}
+
+/// A game controller is plugged in or paired: a hint, not proof, that this is a TV.
+pub fn controller_attached() -> bool {
+    cfg!(target_os = "linux") && (0..4).any(|n| std::path::Path::new(&format!("/dev/input/js{n}")).exists())
 }
 
 /// Parse the contents of `/etc/os-release` into (pretty name, family).
@@ -507,6 +547,35 @@ mod tests {
             assert!(Platform::preset(name).is_some(), "{name}");
         }
         assert!(Platform::preset("amiga").is_none());
+    }
+
+    #[test]
+    fn sofa_sessions_are_recognised_and_ordinary_desktops_are_not() {
+        let with = |pairs: &'static [(&'static str, &'static str)]| {
+            move |name: &str| pairs.iter().find(|(k, _)| *k == name).map(|(_, v)| v.to_string())
+        };
+        let none: &[String] = &[];
+        assert_eq!(couch_session(&with(&[("XDG_CURRENT_DESKTOP", "KDE:Bigscreen")]), none), Some("Plasma Bigscreen"));
+        assert_eq!(
+            couch_session(&with(&[("DESKTOP_SESSION", "plasma-bigscreen-wayland")]), none),
+            Some("Plasma Bigscreen")
+        );
+        assert_eq!(
+            couch_session(&with(&[("XDG_CURRENT_DESKTOP", "gamescope")]), none),
+            Some("Steam's big-screen mode")
+        );
+        assert_eq!(couch_session(&with(&[("SteamTenfoot", "1")]), none), Some("Steam's big-screen mode"));
+        assert_eq!(couch_session(&with(&[("XDG_SESSION_DESKTOP", "kodi")]), none), Some("Kodi"));
+        // Bigscreen reporting itself as plain KDE is still found by its running shell.
+        let shell = ["/usr/bin/plasmashell -p org.kde.plasma.bigscreen".to_string()];
+        assert_eq!(couch_session(&with(&[("XDG_CURRENT_DESKTOP", "KDE")]), &shell), Some("Plasma Bigscreen"));
+        // Ordinary desktops, and switches that are present but off.
+        assert_eq!(
+            couch_session(&with(&[("XDG_CURRENT_DESKTOP", "KDE")]), &["/usr/bin/plasmashell".to_string()]),
+            None
+        );
+        assert_eq!(couch_session(&with(&[("XDG_CURRENT_DESKTOP", "GNOME"), ("SteamTenfoot", "0")]), none), None);
+        assert_eq!(couch_session(&with(&[]), none), None);
     }
 
     #[test]

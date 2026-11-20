@@ -24,6 +24,10 @@ pub struct Settings {
     pub skip_update_check_on_start: bool,
     /// Do not fetch or show star ratings.
     pub hide_ratings: bool,
+    /// Which interface to use: `desktop`, `tv`, or anything else for "decide for me".
+    pub interface: String,
+    /// The "is this a TV?" question was answered or dismissed; it is asked once.
+    pub asked_about_tv: bool,
 }
 
 /// An app obtained through the store.

@@ -1566,3 +1566,103 @@ fn a_tv_remote_reaches_the_system_page_and_updates_from_it() {
     s.press(Key::Escape);
     assert_eq!(s.store().get_page(), 0);
 }
+
+// ---- which layout: detected, chosen in Settings, or asked once ----
+
+/// Start without forcing a layout, as a person would: the saved choice and the device
+/// decide. `controller` is whether a game controller is attached.
+fn start_unforced(preset: &str, seed: &str, controller: bool) -> (AppWindow, Arc<App>, PathBuf) {
+    init_backend();
+    let dirs = dirs_in(&temp_root());
+    let state_file = dirs.config.join("demo-state.json");
+    std::fs::create_dir_all(&dirs.config).unwrap();
+    std::fs::write(&state_file, seed).unwrap();
+    let options = Options {
+        demo: true,
+        inline: true,
+        platform: Some(Platform::preset(preset).unwrap()),
+        dirs: Some(dirs),
+        controller: Some(controller),
+        ..Default::default()
+    };
+    let (ui, app) = build(&options).unwrap();
+    ui.window().set_size(slint::LogicalSize::new(1280.0, 900.0));
+    ui.show().unwrap();
+    (ui, app, state_file)
+}
+
+#[test]
+fn the_layout_chosen_in_settings_is_remembered_and_switches_at_once() {
+    // A desktop computer on which the TV layout was chosen earlier starts in it.
+    let seed = r#"{"settings":{"welcomed":true,"interface":"tv"}}"#;
+    let (ui, app, state_file) = start_unforced("linux-x64-debian", seed, false);
+    let store = ui.global::<Store>();
+    assert_eq!(ui.get_effective(), Shell::Tv);
+    assert_eq!((store.get_interface_mode(), store.get_device_name().as_str()), (2, "This TV"));
+    let websites = |store: &Store| store.get_tv_rows().iter().any(|row| row.title == "Websites");
+    assert!(websites(&store), "being a Linux TV brings the websites with it");
+
+    // Back to the desktop layout: at once, and saved.
+    app.set_interface(&ui, 1);
+    assert_eq!(ui.get_effective(), Shell::Desktop);
+    assert_eq!(store.get_device_name(), "This Linux computer");
+    assert_eq!(State::load(&state_file).settings.interface, "desktop");
+    assert!(!websites(&store));
+
+    // "Automatic" on a device that is a TV is the TV layout; "Desktop" there is honoured.
+    let (tv, tv_app, _) = start_unforced("android-tv", r#"{"settings":{"welcomed":true}}"#, false);
+    assert_eq!(tv.get_effective(), Shell::Tv);
+    tv_app.set_interface(&tv, 1);
+    assert_eq!(tv.get_effective(), Shell::Desktop);
+    tv_app.set_interface(&tv, 0);
+    assert_eq!(tv.get_effective(), Shell::Tv);
+}
+
+#[test]
+fn a_controller_on_an_ordinary_desktop_gets_one_question() {
+    let seed = r#"{"settings":{"welcomed":true}}"#;
+    let (ui, _app, state_file) = start_unforced("linux-x64-arch", seed, true);
+    let store = ui.global::<Store>();
+    assert!(store.get_ask_tv());
+    assert_eq!(ui.get_effective(), Shell::Desktop, "nothing changes until it is answered");
+    store.invoke_answer_tv(false);
+    assert!(!store.get_ask_tv());
+    let saved = State::load(&state_file).settings;
+    assert!(saved.asked_about_tv && saved.interface.is_empty());
+
+    // It is not asked again, with or without the controller.
+    let again = std::fs::read_to_string(&state_file).unwrap();
+    let (later, _, _) = start_unforced("linux-x64-arch", &again, true);
+    assert!(!later.global::<Store>().get_ask_tv());
+
+    // Saying yes switches to the TV layout and remembers it.
+    let (yes, _app, yes_file) = start_unforced("linux-x64-arch", seed, true);
+    yes.global::<Store>().invoke_answer_tv(true);
+    assert_eq!(yes.get_effective(), Shell::Tv);
+    assert_eq!(State::load(&yes_file).settings.interface, "tv");
+
+    // No controller, or a device already known to be a TV: no question.
+    assert!(!start_unforced("linux-x64-arch", seed, false).0.global::<Store>().get_ask_tv());
+    assert!(!start_unforced("android-tv", seed, true).0.global::<Store>().get_ask_tv());
+}
+
+#[test]
+fn the_tv_layout_has_a_way_back_that_a_remote_can_reach() {
+    let (ui, _app, state_file) =
+        start_unforced("linux-x64-debian", r#"{"settings":{"welcomed":true,"interface":"tv"}}"#, false);
+    let press = |key: slint::platform::Key| {
+        let text: SharedString = key.into();
+        ui.window().dispatch_event(WindowEvent::KeyPressed { text: text.clone() });
+        ui.window().dispatch_event(WindowEvent::KeyReleased { text });
+    };
+    // Up to search, Right to the "This TV" chip, OK; then right to the last button.
+    press(Key::UpArrow);
+    press(Key::RightArrow);
+    press(Key::Return);
+    assert_eq!(ui.global::<Store>().get_page(), 4);
+    press(Key::RightArrow);
+    press(Key::RightArrow);
+    press(Key::Return);
+    assert_eq!(ui.get_effective(), Shell::Desktop);
+    assert_eq!(State::load(&state_file).settings.interface, "desktop");
+}
