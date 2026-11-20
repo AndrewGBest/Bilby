@@ -194,6 +194,8 @@ and appears only on the systems it applies to:
 | AUR | | | Arch family | | Shows the command |
 | Snap Store | | | with snapd | | Shows the `snap install` command |
 | F-Droid | | | | ✓ | Bilby fetches the APK |
+| Steam | ✓ | ✓ | ✓ | | Hands over to the Steam app |
+| Mac App Store | | ✓ | | | Hands over to the App Store app |
 | Websites | | | TV only | | Adds a launcher that opens Longboard |
 
 What was checked, and how:
@@ -209,6 +211,31 @@ What was checked, and how:
 - **Homebrew on Intel Macs** takes the first download listed under a macOS version
   name rather than `arm64_...`; on the casks tried that is the Intel build, but the
   rule is a reading of the data, not something Homebrew documents here.
+
+**Other stores, handed over to.** Some things can only be installed by the store that
+sells them. For those Bilby is the front door: it finds the app, shows its price,
+pictures and how well liked it is, and then opens that store's own app on it with
+the store's own link (`steam://install/620`,
+`macappstore://apps.apple.com/app/id...`). Signing in, paying, downloading and
+updating stay with that store, and Bilby learns nothing about the account. Nothing
+goes in Bilby's library, because Bilby installed nothing. For Steam it reads the files
+Steam keeps beside its library to know what is installed, and then offers Open, which
+asks Steam to start it (`steam://rungameid/620`). On Linux a Windows-only game is
+still offered, with a note that Steam runs it through Proton. Without Steam on the
+machine, the button opens the game's page on Steam's website instead.
+
+Only links Bilby built itself from a checked number are ever opened, and they are
+checked again at the moment of opening.
+
+Checked against the live Steam and Apple services for searching and details. Not
+checked: the hand-over itself, since the test machine has neither Steam nor a Mac;
+whether `steam://install` on a game the person does not own shows its store page (the
+second button, "Its page in Steam", is there in case it does not); and prices, which
+are the United States stores' and may differ elsewhere.
+
+The **Microsoft Store** answers for an app whose id is known but returned nothing
+for searches, so it is not a source yet; `winget search --source msstore` on Windows
+is the likely way in. **GOG** returned no results and **itch.io** refused requests.
 
 Looked at and left out for now: **Chocolatey** (its packages need its own tool and
 administrator rights, and winget covers the same ground), **Scoop** (no search service

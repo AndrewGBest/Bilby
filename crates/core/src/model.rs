@@ -28,6 +28,10 @@ pub enum SourceKind {
     Snap,
     /// F-Droid, the catalog of free Android apps.
     FDroid,
+    /// Steam. The store hands over to the Steam app, which installs and runs things.
+    Steam,
+    /// The Mac App Store, handed over to in the same way.
+    MacAppStore,
 }
 
 impl SourceKind {
@@ -49,6 +53,8 @@ impl SourceKind {
             SourceKind::Winget => "winget",
             SourceKind::Snap => "Snap Store",
             SourceKind::FDroid => "F-Droid",
+            SourceKind::Steam => "Steam",
+            SourceKind::MacAppStore => "Mac App Store",
         }
     }
     pub fn prefix(self) -> &'static str {
@@ -65,6 +71,8 @@ impl SourceKind {
             SourceKind::Winget => "winget",
             SourceKind::Snap => "snap",
             SourceKind::FDroid => "fdroid",
+            SourceKind::Steam => "steam",
+            SourceKind::MacAppStore => "mas",
         }
     }
 }
@@ -96,6 +104,8 @@ impl AppId {
             "winget" => SourceKind::Winget,
             "snap" => SourceKind::Snap,
             "fdroid" => SourceKind::FDroid,
+            "steam" => SourceKind::Steam,
+            "mas" => SourceKind::MacAppStore,
             _ => return None,
         };
         (!key.is_empty()).then(|| AppId::new(source, key))
@@ -132,6 +142,16 @@ impl AppId {
         let last = |rest: &str| -> String {
             rest.split(['?', '#']).next().unwrap_or("").split('/').rfind(|p| !p.is_empty()).unwrap_or("").to_string()
         };
+        if let Some(rest) = stripped.strip_prefix("store.steampowered.com/app/") {
+            let id = rest.split(['/', '?', '#']).next().unwrap_or("");
+            return valid_key(SourceKind::Steam, id).then(|| AppId::new(SourceKind::Steam, id));
+        }
+        if let Some(rest) = stripped.strip_prefix("apps.apple.com/") {
+            // apps.apple.com/us/app/some-name/id123456789
+            let id =
+                rest.split(['?', '#']).next().unwrap_or("").rsplit('/').next().unwrap_or("").trim_start_matches("id");
+            return valid_key(SourceKind::MacAppStore, id).then(|| AppId::new(SourceKind::MacAppStore, id));
+        }
         if let Some(rest) = stripped.strip_prefix("f-droid.org/") {
             let name = last(rest);
             return valid_key(SourceKind::FDroid, &name).then(|| AppId::new(SourceKind::FDroid, name));
@@ -181,6 +201,10 @@ pub fn valid_key(source: SourceKind, key: &str) -> bool {
         // Arch and Debian package names may also contain `+` and `@`; so may cask names.
         SourceKind::Aur | SourceKind::Pacman | SourceKind::Apt | SourceKind::Homebrew => ok(key, &['+', '@']),
         SourceKind::Snap => key.len() <= 40 && ok(key, &[]),
+        // A number the store gave the app.
+        SourceKind::Steam | SourceKind::MacAppStore => {
+            (1..=12).contains(&key.len()) && key.chars().all(|c| c.is_ascii_digit())
+        }
         // Publisher.Package, as winget writes them.
         SourceKind::Winget => key.len() <= 128 && key.contains('.') && ok(key, &['+']),
         // An Android package name: at least two dotted parts.
@@ -233,6 +257,7 @@ impl AppSummary {
             downloads: None,
             verified: false,
             momentum: None,
+            price: None,
         }
     }
 }
@@ -271,6 +296,9 @@ pub struct AppSummary {
     /// Recent interest on a 0..1 scale, where the source measures it (the AUR's
     /// "popularity", which fades when people stop voting).
     pub momentum: Option<f32>,
+    /// What it costs where it is sold, as that store words it: "Free", "$9.99". `None`
+    /// for sources where everything is free of charge.
+    pub price: Option<String>,
 }
 
 /// An average star rating and how many people gave one.

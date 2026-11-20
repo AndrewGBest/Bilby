@@ -848,6 +848,7 @@ export component TvShell inherits Rectangle {
                     spacing: 24 * u;
                     alignment: start;
                     if Store.app.rating != "" : TvStat { u: root.u; value: "★ " + Store.app.rating; caption: Store.app.rating-count; }
+                    if Store.app.price != "" : TvStat { u: root.u; value: Store.app.price; caption: "on " + Store.app.source; }
                     if Store.app.downloads != "" : TvStat { u: root.u; value: Store.app.downloads; caption: Store.app.downloads-note; }
                     // The row has room for four: with a rating and downloads, the source's own count waits.
                     if Store.app.popularity != "" && !(Store.app.rating != "" && Store.app.downloads != "") : TvStat { u: root.u; value: Store.app.popularity; caption: "on " + Store.app.source; }

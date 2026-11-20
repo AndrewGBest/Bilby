@@ -1,6 +1,7 @@
 //! Where apps come from. Adding a store (GitLab, Codeberg/Forgejo, F-Droid, Flathub,
 //! winget, ...) means implementing [`Source`]; nothing else in the app changes.
 
+pub mod appstore;
 pub mod aur;
 pub mod fdroid;
 pub mod flathub;
@@ -9,6 +10,7 @@ pub mod github;
 pub mod gitlab;
 pub mod homebrew;
 pub mod snap;
+pub mod steam;
 pub mod system;
 pub mod web;
 pub mod winget;

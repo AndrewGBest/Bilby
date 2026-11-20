@@ -100,7 +100,8 @@ pub fn evaluate(info: &AssetInfo, p: &Platform) -> Verdict {
                     | Format::RepoPackage
                     | Format::FlathubApp
                     | Format::SnapStore
-                    | Format::WingetPackage,
+                    | Format::WingetPackage
+                    | Format::StoreApp,
                 ) => None,
                 // macOS downloads without an arch are universal or Intel; both run.
                 (Os::MacOs, _) if p.can_run(Arch::X86_64) => None,

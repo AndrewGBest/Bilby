@@ -159,6 +159,10 @@ impl Catalog {
         catalog.sources.push(Arc::new(crate::source::snap::SnapStore::new(shared.clone())));
         catalog.sources.push(Arc::new(crate::source::fdroid::FDroid::new(shared)));
         catalog.sources.push(Arc::new(crate::source::winget::Winget::new()));
+        // Other stores, handed over to: they install and run what they sell.
+        let shared = catalog.http.clone();
+        catalog.sources.push(Arc::new(crate::source::steam::Steam::new(shared.clone(), &platform)));
+        catalog.sources.push(Arc::new(crate::source::appstore::MacAppStore::new(shared)));
         if has_token {
             catalog.check_limit = 20;
         }
@@ -376,7 +380,9 @@ impl Catalog {
             | SourceKind::Homebrew
             | SourceKind::Winget
             | SourceKind::Snap
-            | SourceKind::FDroid => return None,
+            | SourceKind::FDroid
+            | SourceKind::Steam
+            | SourceKind::MacAppStore => return None,
         };
         Some((appstream_id.to_string(), rated.ratings.get(appstream_id)?))
     }

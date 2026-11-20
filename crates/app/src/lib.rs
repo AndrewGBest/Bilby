@@ -82,6 +82,8 @@ pub struct Options {
     pub host: Option<Arc<dyn bilby_core::os::Host>>,
     /// Whether a game controller is attached (looked up when not given). For tests.
     pub controller: Option<bool>,
+    /// Steam's library folders, instead of the usual places. For tests.
+    pub steam_libraries: Option<Vec<PathBuf>>,
     /// The file the store itself runs from, when that is one it can put in the app menu
     /// (an AppImage). `run` fills this in; tests pass a stand-in.
     pub self_program: Option<PathBuf>,
@@ -531,6 +533,8 @@ pub struct App {
     self_program: Option<PathBuf>,
     /// Bumped when a sign-in to GitHub starts or is cancelled, so an older one stops.
     signin_generation: AtomicU64,
+    /// Where Steam's library is, when a test says; otherwise the usual places.
+    steam_libraries: Option<Vec<PathBuf>>,
 }
 
 /// The store's icon, written beside its app-menu entry.
@@ -720,6 +724,7 @@ impl App {
             }
             (Some(n), SourceKind::Flathub | SourceKind::Homebrew) => format!("{} installs a month", human_count(n)),
             (Some(n), SourceKind::Aur) => format!("{} votes", human_count(n)),
+            (Some(n), SourceKind::Steam) => format!("{} recommendations", human_count(n)),
             _ => String::new(),
         };
         let downloads = match app.downloads {
@@ -755,6 +760,7 @@ impl App {
             // A forge counts the files of the releases it listed; Flathub counts every install.
             downloads_note: if app.id.source == SourceKind::Flathub { "in total" } else { "of recent versions" }.into(),
             downloads: downloads.into(),
+            price: app.price.clone().unwrap_or_default().into(),
             headline: headline.into(),
             verified: app.verified,
             has_update: installed && has_update,
@@ -789,6 +795,7 @@ impl App {
             rating_spread: ModelRc::default(),
             downloads: SharedString::new(),
             downloads_note: SharedString::new(),
+            price: SharedString::new(),
             headline: SharedString::new(),
             verified: false,
             has_update,
@@ -816,6 +823,7 @@ impl App {
             rating_spread: ModelRc::default(),
             downloads: SharedString::new(),
             downloads_note: SharedString::new(),
+            price: SharedString::new(),
             headline: SharedString::new(),
             verified: false,
             has_update: false,
@@ -1849,7 +1857,9 @@ impl App {
                     Ok(outcome) => {
                         store.set_install_state(2);
                         store.set_install_message(outcome.message.as_str().into());
-                        if option.plan.action == Action::ShowCommand {
+                        // A command to run, or another store taking over: nothing was
+                        // installed by this store, so nothing goes in its library.
+                        if matches!(option.plan.action, Action::ShowCommand | Action::OpenStore) {
                             return;
                         }
                         let name = store.get_app().name.to_string();
@@ -2017,6 +2027,13 @@ impl App {
             return bilby_core::source::flathub::is_installed(&self.dirs.flatpak_roots, app_id)
                 .then(|| self.dirs.flatpak.clone());
         }
+        // Something Steam has installed is started by asking Steam.
+        if let Some(number) = id.strip_prefix("steam:") {
+            use bilby_core::source::steam;
+            let os = self.platform.read().unwrap().os;
+            let libraries = self.steam_libraries.clone().unwrap_or_else(|| steam::default_libraries(os));
+            return steam::is_installed(&libraries, number).then(|| steam::run_link(number)).flatten();
+        }
         let app = state.installed(id).filter(|a| a.store_managed)?;
         let path = PathBuf::from(app.path.as_deref()?);
         (path.starts_with(&self.dirs.applications) && path.is_file()).then_some(path)
@@ -2031,6 +2048,9 @@ impl App {
             (self.runner)(&path, &[format!("--url=https://{host}/")])
         } else if let Some(app_id) = id.strip_prefix("flathub:") {
             (self.runner)(&path, &["run".to_string(), app_id.to_string()])
+        } else if id.starts_with("steam:") {
+            // A link, handed to the system, which passes it to Steam.
+            (self.opener)(&path)
         } else {
             (self.launcher)(&path)
         };
@@ -2222,6 +2242,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         collections: Mutex::new(Vec::new()),
         self_program: options.self_program.clone(),
         signin_generation: AtomicU64::new(0),
+        steam_libraries: options.steam_libraries.clone(),
     });
     app.apply_menu_entry(&ui);
     app.show_system(&ui, 0, "");

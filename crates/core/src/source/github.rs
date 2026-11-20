@@ -112,6 +112,7 @@ impl From<Repo> for AppSummary {
             downloads: None,
             verified: false,
             momentum: None,
+            price: None,
         }
     }
 }

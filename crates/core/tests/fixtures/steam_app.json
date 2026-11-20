@@ -1,0 +1,52 @@
+{
+ "620": {
+  "success": true,
+  "data": {
+   "type": "game",
+   "name": "Portal 2",
+   "steam_appid": 620,
+   "is_free": false,
+   "short_description": "The &quot;Perpetual Testing Initiative&quot; has been expanded to allow you to design co-op puzzles for you and your friends!",
+   "developers": [
+    "Valve"
+   ],
+   "publishers": [
+    "Valve"
+   ],
+   "platforms": {
+    "windows": true,
+    "mac": false,
+    "linux": true
+   },
+   "price_overview": {
+    "currency": "USD",
+    "initial": 999,
+    "final": 999,
+    "discount_percent": 0,
+    "initial_formatted": "",
+    "final_formatted": "$9.99"
+   },
+   "release_date": {
+    "coming_soon": false,
+    "date": "Apr 18, 2011"
+   },
+   "header_image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/620/faffc0f560786e2f05104a8d2fac837c6969bf13/header.jpg?t=1790187113",
+   "recommendations": {
+    "total": 393264
+   },
+   "website": "http://www.thinkwithportals.com/",
+   "screenshots": [
+    {
+     "id": 0,
+     "path_thumbnail": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/620/ss_f3f6787d74739d3b2ec8a484b5c994b3d31ef325.600x338.jpg?t=1790187113",
+     "path_full": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/620/ss_f3f6787d74739d3b2ec8a484b5c994b3d31ef325.1920x1080.jpg?t=1790187113"
+    },
+    {
+     "id": 1,
+     "path_thumbnail": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/620/ss_6a4f5afdaa98402de9cf0b59fed27bab3256a6f4.600x338.jpg?t=1790187113",
+     "path_full": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/620/ss_6a4f5afdaa98402de9cf0b59fed27bab3256a6f4.1920x1080.jpg?t=1790187113"
+    }
+   ]
+  }
+ }
+}

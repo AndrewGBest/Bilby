@@ -66,6 +66,7 @@ fn summary_of(host: &str) -> AppSummary {
         downloads: None,
         verified: false,
         momentum: None,
+        price: None,
     }
 }
 

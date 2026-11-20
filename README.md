@@ -79,6 +79,9 @@ There is no Android package yet, and no Flatpak
   AppImage or Flatpak on Linux.
 - Downloads are checked against the checksum the source publishes, when there is one.
 - Every other file and every older version is one press away, never hidden for good.
+- For things only another store can install (Steam, the Mac App Store), Bilby opens
+  that store on the right page and lets it take over. Paying and signing in happen
+  there, not in Bilby.
 
 **Keep everything up to date**
 
@@ -108,6 +111,8 @@ Each source only appears on devices it applies to. A Windows user never sees the
 | **The AUR** | Arch-based systems | Community build recipes |
 | **Snap Store** | Linux with snapd | Its whole catalog. Bilby shows the install command |
 | **F-Droid** | Android (when the Android app arrives) | Its catalog of free Android apps |
+| **Steam** | Windows, macOS, Linux | Games and apps with their prices. Bilby hands over to the Steam app, which installs and runs them |
+| **Mac App Store** | macOS | Its catalog with prices and ratings. Bilby hands over to the App Store app |
 | **Codeberg** | Windows, macOS, Linux | Projects by link and from the home page. Codeberg is turning away searches at the moment |
 | **Websites** | Linux TVs | Sites that open like apps in Longboard |
 

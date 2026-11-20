@@ -451,6 +451,7 @@ impl SystemRepos {
             downloads: None,
             verified: false,
             momentum: None,
+            price: None,
         }
     }
 }

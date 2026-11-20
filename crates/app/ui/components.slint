@@ -440,6 +440,7 @@ export component AppTile inherits Rectangle {
                     // The score, and how many people gave one: the second is the popularity.
                     if app.rating != "" : Chip { text: "★ " + app.rating + "  ·  " + app.rating-count; }
                     if app.rating == "" && app.headline != "" : Chip { text: app.headline; }
+                    if app.rating == "" && app.headline == "" && app.price != "" : Chip { text: app.price; }
                 }
             }
             Rectangle { horizontal-stretch: 1; }
@@ -1219,6 +1220,7 @@ export component DetailsBody inherits Rectangle {
                 spacing: compact ? 16px : 36px;
                 alignment: start;
                 if Store.app.rating != "" : StatCell { value: "★ " + Store.app.rating; caption: Store.app.rating-count; }
+                if Store.app.price != "" : StatCell { value: Store.app.price; caption: "on " + Store.app.source; }
                 if Store.app.downloads != "" : StatCell { value: Store.app.downloads; caption: Store.app.downloads-note; }
                 if Store.app.popularity != "" && !(compact && Store.app.downloads != "") : StatCell { value: Store.app.popularity; caption: "on " + Store.app.source; }
                 if root.has-option && root.best.size != "" : StatCell { value: root.best.size; caption: "download"; }
@@ -1389,6 +1391,7 @@ export component DetailsBody inherits Rectangle {
                 Rectangle { height: 6px; }
                 if Store.app.source != "" : InfoRow { name: "From"; value: Store.app.source; }
                 if Store.app.author != "" && Store.app.author != Store.app.source : InfoRow { name: "Made by"; value: Store.app.author + (Store.app.verified ? " (confirmed by " + Store.app.source + ")" : ""); }
+                if Store.app.price != "" : InfoRow { name: "Price"; value: Store.app.price + " on " + Store.app.source; }
                 if Store.app.downloads != "" : InfoRow { name: "Downloads"; value: Store.app.downloads + " " + Store.app.downloads-note; }
                 if Store.app.popularity != "" : InfoRow { name: "Popularity"; value: Store.app.popularity + " on " + Store.app.source; }
                 if Store.app.version != "" : InfoRow { name: "Version"; value: Store.app.version; }

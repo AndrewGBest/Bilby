@@ -756,3 +756,77 @@ fn f_droid_apps_are_found_and_each_version_is_one_apk() {
     assert!(releases[0].assets[0].url.ends_with("/repo/org.schabi.newpipe_1017.apk"));
     assert_eq!(releases.len(), 2, "the same version listed twice is offered once");
 }
+
+// ---- other stores, handed over to ----
+
+#[test]
+fn steam_apps_are_found_and_handed_to_steam() {
+    use bilby_core::source::steam::Steam;
+    let server = Server::start(vec![
+        ("/st/storesearch/?term=portal&l=english&cc=US", Reply::json(&fixture("steam_search.json"))),
+        ("/st/appdetails?appids=620&l=english&cc=US", Reply::json(&fixture("steam_app.json"))),
+    ]);
+    let http = || Arc::new(client(&server, Some("github-token")));
+    let linux = Platform::preset("linux-x64-debian").unwrap();
+    let mac = Platform::preset("macos-arm64").unwrap();
+    let with_steam = Steam::with_api(http(), &server.url("/st"), &linux, vec![], true);
+
+    // On Linux, Windows-only games are offered too (Steam runs them through Proton).
+    let hits = with_steam.search("portal", 10).unwrap();
+    assert_eq!(hits.iter().map(|h| h.name.as_str()).collect::<Vec<_>>()[..3], ["Portal 2", "Portal", "Portal Knights"]);
+    assert_eq!(hits[0].id, AppId::new(SourceKind::Steam, "620"));
+    assert_eq!(hits[0].price.as_deref(), Some("$9.99"));
+    // On a Mac, only what Steam has for the Mac.
+    let on_mac = Steam::with_api(http(), &server.url("/st"), &mac, vec![], true).search("portal", 10).unwrap();
+    assert!(
+        on_mac.iter().all(|h| h.name.starts_with("Bridge Constructor")),
+        "{:?}",
+        on_mac.iter().map(|h| &h.name).collect::<Vec<_>>()
+    );
+
+    let app = with_steam.summary("620").unwrap();
+    assert_eq!((app.name.as_str(), app.author.as_str(), app.price.as_deref()), ("Portal 2", "Valve", Some("$9.99")));
+    assert!(app.popularity.unwrap() > 100_000 && !app.summary.contains("&quot;"), "{}", app.summary);
+    let release = &with_steam.releases("620").unwrap()[0];
+    let links: Vec<&str> = release.assets.iter().map(|a| a.url.as_str()).collect();
+    assert_eq!(links, ["steam://install/620", "steam://store/620"], "install first, its store page second");
+    assert_eq!(app.warning, None, "Portal 2 has a Linux build and Steam is here: nothing to warn about");
+    assert_eq!(with_steam.pictures("620").len(), 2);
+
+    // Without Steam on the machine there is nothing to hand over to: the web page says how to get it.
+    let without = Steam::with_api(http(), &server.url("/st"), &linux, vec![], false);
+    let release = &without.releases("620").unwrap()[0];
+    assert_eq!(release.assets[0].url, "https://store.steampowered.com/app/620");
+    assert!(without.summary("620").unwrap().warning.unwrap().contains("Steam is not installed"));
+
+    assert!(!with_steam.available_on(&Platform::preset("android-arm64").unwrap()));
+    assert!(matches!(with_steam.summary("620x"), Err(Error::NotFound(_))));
+    for (path, headers) in server.requests() {
+        assert!(!headers.contains_key("authorization"), "the GitHub token must not go to Steam ({path})");
+    }
+}
+
+#[test]
+fn mac_app_store_apps_are_found_and_handed_to_the_app_store() {
+    use bilby_core::source::appstore::MacAppStore;
+    let fixture_text = fixture("appstore_search.json");
+    let server = Server::start(vec![
+        ("/as/search?term=pixelmator&entity=macSoftware&country=us&limit=5", Reply::json(&fixture_text)),
+        ("/as/lookup?id=6746662575&entity=macSoftware&country=us", Reply::json(&fixture_text)),
+    ]);
+    let source = MacAppStore::with_api(Arc::new(client(&server, None)), &server.url("/as"));
+    assert!(source.available_on(&Platform::preset("macos-arm64").unwrap()));
+    assert!(!source.available_on(&Platform::preset("windows-x64").unwrap()));
+
+    let hits = source.search("pixelmator", 5).unwrap();
+    assert_eq!(hits[0].id, AppId::new(SourceKind::MacAppStore, "6746662575"));
+    assert_eq!(hits[0].price.as_deref(), Some("Free"));
+    assert_eq!(hits[1].price.as_deref(), Some("$49.99"));
+    let rating = hits[0].rating.unwrap();
+    assert!(rating.stars > 4.0 && rating.count > 100);
+    assert!(hits[0].icon_url.as_deref().unwrap().contains(".mzstatic.com/"));
+
+    let release = &source.releases("6746662575").unwrap()[0];
+    assert_eq!(release.assets[0].url, "macappstore://apps.apple.com/app/id6746662575");
+    assert!(release.assets[0].size > 0 && release.published.len() == 10);
+}

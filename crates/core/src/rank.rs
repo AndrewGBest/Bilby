@@ -147,6 +147,9 @@ fn liked(app: &AppSummary) -> f32 {
         SourceKind::Codeberg | SourceKind::GitLab => 3_000.0,
         // Installs in the last thirty days.
         SourceKind::Homebrew => 30_000.0,
+        // Recommendations on Steam; ratings on the App Store.
+        SourceKind::Steam => 100_000.0,
+        SourceKind::MacAppStore => 5_000.0,
         // Installs in the last month.
         SourceKind::Flathub => 100_000.0,
         SourceKind::Aur => 1_500.0,
@@ -218,6 +221,7 @@ mod tests {
             downloads: None,
             verified: false,
             momentum: None,
+            price: None,
         }
     }
 

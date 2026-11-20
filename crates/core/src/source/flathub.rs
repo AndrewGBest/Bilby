@@ -174,6 +174,7 @@ impl Flathub {
             downloads: None,
             verified: false,
             momentum: None,
+            price: None,
             id: AppId::new(SourceKind::Flathub, id),
         }
     }

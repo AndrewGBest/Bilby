@@ -1,0 +1,52 @@
+{
+ "resultCount": 2,
+ "results": [
+  {
+   "trackId": 6746662575,
+   "trackName": "Pixelmator Pro: Edit Images",
+   "sellerName": "Apple Inc.",
+   "artistName": "Apple",
+   "formattedPrice": "Free",
+   "price": 0.0,
+   "version": "5.0",
+   "averageUserRating": 4.4714,
+   "userRatingCount": 647,
+   "trackViewUrl": "https://apps.apple.com/us/app/pixelmator-pro-edit-images/id6746662575?uo=4",
+   "artworkUrl512": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/0f/70/80/0f7080d6-595f-99a0-cac6-33e026ccab0f/PixelmatorPro-0-1x_U007epad-0-0-0-1-0-0-P3-85-220-0.png/512x512bb.jpg",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/0f/70/80/0f7080d6-595f-99a0-cac6-33e026ccab0f/PixelmatorPro-0-1x_U007epad-0-0-0-1-0-0-P3-85-220-0.png/100x100bb.jpg",
+   "fileSizeBytes": "677995520",
+   "currentVersionReleaseDate": "2026-11-18T17:02:07Z",
+   "description": "Pixelmator Pro is part of Apple Creator Studio, an amazing collection of Apple\u2019s most powerful creative apps designed to help you bring your ideas to life. The suite includes Final Cut Pro, Logic Pro,",
+   "releaseNotes": "Reimagine Images with Generate Fill\n\u2022 Transform any detail in your image with Generate Fill, adding edits that blend nat",
+   "screenshotUrls": [],
+   "kind": "software",
+   "minimumOsVersion": "26.0",
+   "sellerUrl": "https://www.apple.com/pixelmator-pro/"
+  },
+  {
+   "trackId": 1289583905,
+   "trackName": "Pixelmator Pro",
+   "sellerName": "Apple Inc.",
+   "artistName": "Apple",
+   "formattedPrice": "$49.99",
+   "price": 49.99,
+   "version": "3.8",
+   "averageUserRating": 0,
+   "userRatingCount": 0,
+   "trackViewUrl": "https://apps.apple.com/us/app/pixelmator-pro/id1289583905?mt=12&uo=4",
+   "artworkUrl512": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/a1/e9/19/a1e91908-afba-6b30-d789-b03300253ab2/AppIcon-0-0-85-220-0-0-5-0-2x-0-0-0.png/512x512bb.png",
+   "artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/a1/e9/19/a1e91908-afba-6b30-d789-b03300253ab2/AppIcon-0-0-85-220-0-0-5-0-2x-0-0-0.png/100x100bb.png",
+   "fileSizeBytes": "571514078",
+   "currentVersionReleaseDate": "2026-04-09T17:04:19Z",
+   "description": "Pixelmator Pro has everything you need to create designs, edit photos, draw illustrations, paint digital art, and be creative in just about any way you can imagine.\n\nEdit and enhance\n\u2022 Adjust the colo",
+   "releaseNotes": "\u2022 Enjoy full support for compressed RAW images from Sony Alpha ILCE-7M5, FUJIFILM GFX 100S II, and FUJIFILM GFX 100RF ca",
+   "screenshotUrls": [
+    "https://is1-ssl.mzstatic.com/image/thumb/PurpleSource221/v4/ec/9a/85/ec9a8585-7af0-d465-5c0c-2412f7fd34fd/Mac_Screenshot1.png/800x500bb.jpg",
+    "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/3f/3c/24/3f3c248a-73fe-fe1b-cba6-ebc163464b62/5989e68a-d037-40fe-a254-c7a580b6a83d_Appstore_texts__copy_2_4.png/800x500bb.jpg"
+   ],
+   "kind": "mac-software",
+   "minimumOsVersion": "12.0",
+   "sellerUrl": "https://www.pixelmator.com/pro/"
+  }
+ ]
+}

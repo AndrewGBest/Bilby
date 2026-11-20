@@ -38,6 +38,8 @@ pub enum Format {
     SnapStore,
     /// A package from winget's repository, installed by winget.
     WingetPackage,
+    /// Something another store installs: the Steam app, the Mac App Store.
+    StoreApp,
     /// An app in the Flathub repository, installed by Flatpak itself.
     FlathubApp,
 }
@@ -66,6 +68,7 @@ impl Format {
             Format::WebApp => "Web app",
             Format::SnapStore => "Snap",
             Format::WingetPackage => "winget package",
+            Format::StoreApp => "Installed by its store",
             Format::FlathubApp => "Flatpak",
         }
     }
@@ -88,7 +91,7 @@ impl Format {
             | Format::FlathubApp => Os::Linux,
             Format::Dmg | Format::MacPkg => Os::MacOs,
             Format::Ipa => Os::Ios,
-            Format::Archive | Format::Binary => return None,
+            Format::Archive | Format::Binary | Format::StoreApp => return None,
         })
     }
 }

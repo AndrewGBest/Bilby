@@ -374,6 +374,7 @@ mod tests {
             downloads: None,
             verified: false,
             momentum: None,
+            price: None,
         }
     }
 

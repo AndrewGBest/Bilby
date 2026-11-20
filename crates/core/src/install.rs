@@ -32,6 +32,9 @@ pub enum Action {
     Flatpak,
     /// Have Flatpak install a downloaded `.flatpak` bundle.
     FlatpakBundle,
+    /// Hand over to another store's own app (Steam, the Mac App Store), which does
+    /// the installing. Nothing is downloaded by this store.
+    OpenStore,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -146,6 +149,25 @@ pub fn plan(asset: &Asset, info: &AssetInfo, p: &Platform) -> InstallPlan {
                 verb: format!("Install with {manager}"),
                 steps,
                 command: Some(command),
+            };
+        }
+        Format::StoreApp => {
+            let scheme = asset.url.split("://").next().unwrap_or("");
+            let (store, verb) = match scheme {
+                "steam" if asset.url.starts_with("steam://install/") => ("Steam", "Install with Steam"),
+                "steam" => ("Steam", "View in Steam"),
+                "macappstore" => ("the App Store", "Get on the App Store"),
+                _ => ("its store's page", "Open its store page"),
+            };
+            return InstallPlan {
+                action: Action::OpenStore,
+                verb: verb.to_string(),
+                steps: vec![
+                    format!("Bilby opens {store} on this app"),
+                    "That store asks for anything it needs (an account, a payment) and installs it".to_string(),
+                    "Bilby downloads nothing itself".to_string(),
+                ],
+                command: None,
             };
         }
         Format::SnapStore => {
@@ -494,6 +516,22 @@ pub fn open_url(url: &str) -> Result<()> {
     open_with_system(Path::new(url))
 }
 
+/// The only links handed to another store: its own scheme followed by a number, or its
+/// own website. Built by this store from a checked id; checked again before opening.
+pub fn store_link_ok(url: &str) -> bool {
+    let number = |rest: &str| (1..=12).contains(&rest.len()) && rest.chars().all(|c| c.is_ascii_digit());
+    [
+        "steam://install/",
+        "steam://store/",
+        "steam://rungameid/",
+        "macappstore://apps.apple.com/app/id",
+        "https://store.steampowered.com/app/",
+        "https://apps.apple.com/app/id",
+    ]
+    .iter()
+    .any(|prefix| url.strip_prefix(prefix).is_some_and(number))
+}
+
 /// The plan for a file the store would not install here: fetch it, check it, and show
 /// where it was put. Nothing is run.
 pub fn save_only() -> InstallPlan {
@@ -518,6 +556,25 @@ pub fn execute(
     if plan.action == Action::ShowCommand {
         let command = plan.command.clone().unwrap_or_default();
         return Ok(Outcome { message: format!("Run in a terminal: {command}"), file: None, store_managed: false });
+    }
+
+    if plan.action == Action::OpenStore {
+        if !store_link_ok(&asset.url) {
+            return Err(Error::Unsupported(format!("Refusing to open \"{}\": not a store link", asset.url)));
+        }
+        open(Path::new(&asset.url))?;
+        let store = if asset.url.starts_with("steam://") {
+            "Steam"
+        } else if asset.url.starts_with("macappstore://") {
+            "The App Store"
+        } else {
+            "Your browser"
+        };
+        return Ok(Outcome {
+            message: format!("{store} is taking it from here. Come back when it has finished."),
+            file: None,
+            store_managed: false,
+        });
     }
 
     if plan.action == Action::Flatpak {
@@ -596,7 +653,7 @@ pub fn execute(
             let _ = std::fs::remove_file(&dest);
             Ok(Outcome { message: format!("{verified}Installed with Flatpak. It is in your app menu."), file: None, store_managed: false })
         }
-        Action::ShowCommand | Action::WebApp | Action::Flatpak => unreachable!("handled above"),
+        Action::ShowCommand | Action::WebApp | Action::Flatpak | Action::OpenStore => unreachable!("handled above"),
     }
 }
 
@@ -623,6 +680,55 @@ mod tests {
 
     fn asset(name: &str, digest: Option<String>) -> Asset {
         Asset { name: name.to_string(), size: 4, url: format!("https://example.invalid/{name}"), digest, info: None }
+    }
+
+    #[test]
+    fn handing_over_to_another_store_opens_its_link_and_downloads_nothing() {
+        let dirs = temp_dirs("handoff");
+        let link = |url: &str| Asset {
+            name: "Install with Steam".into(),
+            size: 0,
+            url: url.into(),
+            digest: None,
+            info: Some(AssetInfo {
+                format: Format::StoreApp,
+                os: crate::asset::TargetOs::Known(crate::platform::Os::Linux),
+                arch: crate::asset::TargetArch::Unknown,
+                libc: None,
+                tv: false,
+                debug: false,
+            }),
+        };
+        let platform = Platform::preset("linux-x64-debian").unwrap();
+        let asset = link("steam://install/620");
+        let made = plan(&asset, asset.info.as_ref().unwrap(), &platform);
+        assert!(made.action == Action::OpenStore && made.verb == "Install with Steam");
+        let opened = RefCell::new(Vec::new());
+        let open = |path: &Path| {
+            opened.borrow_mut().push(path.to_path_buf());
+            Ok(())
+        };
+        let outcome = execute(&made, &asset, &Fake(b""), &dirs, &open, &mut |_, _| true).unwrap();
+        assert_eq!(opened.borrow()[0].to_str(), Some("steam://install/620"));
+        assert!(outcome.file.is_none() && outcome.message.starts_with("Steam is taking it from here"));
+        assert!(!dirs.downloads.exists(), "nothing was downloaded");
+
+        // Only a store's own link followed by a number is ever opened.
+        for bad in [
+            "steam://install/620/../x",
+            "steam://run/620",
+            "file:///etc/passwd",
+            "https://example.com/app/620",
+            "steam://install/",
+        ] {
+            assert!(!store_link_ok(bad), "{bad}");
+            let asset = link(bad);
+            assert!(execute(&made, &asset, &Fake(b""), &dirs, &open, &mut |_, _| true).is_err(), "{bad}");
+        }
+        assert!(store_link_ok("macappstore://apps.apple.com/app/id6746662575"));
+        assert_eq!(opened.borrow().len(), 1);
+        let mac = link("macappstore://apps.apple.com/app/id1");
+        assert_eq!(plan(&mac, mac.info.as_ref().unwrap(), &platform).verb, "Get on the App Store");
     }
 
     #[test]

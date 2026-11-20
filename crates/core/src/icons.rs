@@ -34,7 +34,9 @@ pub fn icon_key(id: &AppId) -> Option<String> {
         | SourceKind::Homebrew
         | SourceKind::Winget
         | SourceKind::Snap
-        | SourceKind::FDroid => None,
+        | SourceKind::FDroid
+        | SourceKind::Steam
+        | SourceKind::MacAppStore => None,
     }
 }
 

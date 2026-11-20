@@ -114,6 +114,7 @@ impl Index {
                         downloads: None,
                         verified: false,
                         momentum: None,
+                        price: None,
                     },
                 ))
             })
