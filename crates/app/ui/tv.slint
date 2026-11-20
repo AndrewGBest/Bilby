@@ -1039,7 +1039,14 @@ export component TvShell inherits Rectangle {
                             }
                             VerticalLayout {
                                 alignment: center;
-                                if focused : Text { text: mine && Store.install-state == 1 ? "OK to cancel" : "OK to " + (option.verb == "Download" ? "download" : "install"); color: Theme.ok; font-size: 12 * u; font-weight: 700; }
+                                // A download arrow on the focused file; a cross while it is coming down.
+                                if focused : Text {
+                                    text: mine && Store.install-state == 1 ? "✕" : "↓";
+                                    color: Theme.ok;
+                                    font-size: 18 * u;
+                                    font-weight: 700;
+                                    accessible-label: mine && Store.install-state == 1 ? "Cancel" : option.verb;
+                                }
                             }
                         }
                     }
