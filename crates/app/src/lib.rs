@@ -525,7 +525,7 @@ pub struct App {
     system: bilby_core::os::Report,
     system_check: Mutex<Option<bilby_core::os::Check>>,
     /// Lists fetched from the sources (popular on Flathub, ...), shown under the
-    /// hand-picked ones once they arrive.
+    /// bundled ones once they arrive.
     collections: Mutex<Vec<CoreSection>>,
     /// The store's own file, when it can be put in the app menu.
     self_program: Option<PathBuf>,
@@ -826,7 +826,7 @@ impl App {
     /// together so "Installed" and "Update" markers never disagree between pages.
     pub fn refresh(&self, ui: &AppWindow) {
         let store = ui.global::<Store>();
-        // The hand-picked list first, then the lists the sources keep themselves.
+        // The bundled starter list first, then the lists the sources keep themselves.
         let mut featured = self.catalog().featured();
         featured.extend(self.collections.lock().unwrap().iter().cloned());
         let to_sections = |list: &[CoreSection]| -> Vec<Section> {

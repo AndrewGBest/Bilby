@@ -64,8 +64,8 @@ There is no Android package yet, and no Flatpak
 
 **Find an app**
 
-- Browse hand-picked apps for your system. On Linux, also what is popular and trending
-  on Flathub.
+- Browse a short starter list of well-known apps that ships with Bilby. On Linux, also
+  what is popular and trending on Flathub.
 - Search every source your device has at once. The best match comes first: the app
   with the name you typed, then the ones most people use.
 - See what you are getting: pictures and a description, and, where the source provides

@@ -241,7 +241,7 @@ impl Source for Flathub {
         Ok(self.summaries_of(resp.hits))
     }
 
-    /// Flathub's own lists, for a home page with more on it than a hand-picked few.
+    /// Flathub's own lists, for a home page with more on it than the bundled few.
     fn collections(&self, limit: usize) -> Vec<(String, Vec<AppSummary>)> {
         const LISTS: [(&str, &str); 3] = [
             ("Popular on Flathub", "popular"),

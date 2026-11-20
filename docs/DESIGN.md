@@ -91,7 +91,7 @@ other stores do least thoroughly, and it has no UI dependencies.
 ┌──────────────────────────────── crates/core ─────────────────────────────────┐
 │  catalog   browse / search / details, filtered to this machine               │
 │     │                                                                        │
-│     ├── index      curated list for Discover (no API calls)                  │
+│     ├── index      starter list for Discover (no API calls)                  │
 │     ├── source     trait Source ── github.rs, aur.rs  (add: gitlab, ...)     │
 │     ├── asset      file name ──► format, OS, CPU, libc, TV                   │
 │     ├── compat     (asset, platform) ──► Native / Compatible / Incompatible  │
@@ -438,7 +438,7 @@ been run on a television.
 Results from all sources go into one list, best match first (`rank.rs`). Most of the
 score is how close the app's name is to what was typed; a quarter is how many people use
 it (stars or votes, on a scale that suits each source); the rest is small nudges: on the
-hand-picked list, already installed, flagged out of date, and where its own source
+bundled starter list, already installed, flagged out of date, and where its own source
 placed it. A source that publishes no numbers (a distribution's repository) gets a
 middle value for that part, so missing data never sinks a result. [assumption: the
 weights are a first guess and have not been tuned against real searches.]
@@ -781,7 +781,7 @@ send those. [The mapping gap was read in Slint 1.19's source; which key a given 
 sends was not tested, and a remote whose Back arrives as something else will still do
 nothing. A game controller is not a keyboard and is not handled at all.]
 
-**What Home shows.** The bundled list is twenty hand-picked apps, which is not a store.
+**What Home shows.** The bundled starter list is twenty apps, which is not a store.
 Where Flathub is a source, its own lists follow: popular, trending, new and updated.
 Developer tools are left off a TV's Home. [The address of Flathub's lists,
 `/api/v2/collection/{popular,trending,recently-updated}`, and the shape of what they

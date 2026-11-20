@@ -1140,7 +1140,7 @@ fn the_tv_has_a_library_page_and_a_home_that_is_the_store() {
 
 #[test]
 fn the_home_page_adds_the_lists_a_source_keeps() {
-    // On Linux with Flatpak, what is popular on Flathub follows the hand-picked apps.
+    // On Linux with Flatpak, what is popular on Flathub follows the bundled apps.
     let s = start("linux-x64-debian", Shell::Desktop);
     let titles: Vec<String> = s.store().get_sections().iter().map(|section| section.title.to_string()).collect();
     assert!(titles.iter().any(|t| t == "Popular on Flathub"), "{titles:?}");

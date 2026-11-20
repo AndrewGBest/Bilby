@@ -6,7 +6,7 @@
 //!
 //! * **how close the name is to what was typed** (most of the score),
 //! * **how many people use it** (stars, votes), on a scale that suits its source,
-//! * **small nudges** from anything else that is known: hand-picked for the Discover
+//! * **small nudges** from anything else that is known: on the bundled starter list for the Discover
 //!   page, already installed, where the source itself placed it, flagged out of date.
 //!
 //! A hit whose source publishes no numbers (a distribution's repository) gets a middle
@@ -29,7 +29,7 @@ pub struct Context {
     /// Where its own source placed it (0 is first) among how many.
     pub position: usize,
     pub of: usize,
-    /// It is on the hand-picked Discover list.
+    /// It is on the bundled Discover list.
     pub featured: bool,
 }
 

@@ -1,4 +1,5 @@
-//! The curated index behind the Discover page.
+//! The starter list behind the Discover page: a short list of well-known apps bundled
+//! with the store. Nobody has reviewed or endorsed them.
 //!
 //! Browsing must not cost API calls: an unauthenticated client gets 60 GitHub requests
 //! an hour, and checking every featured app's releases would spend them before the user

@@ -4,7 +4,7 @@
 //! * [`asset`]    – what is a release file (`foo-x86_64.AppImage`) built for?
 //! * [`compat`]   – does that file work on this machine, and how well?
 //! * [`source`]   – where apps come from (GitHub Releases, the AUR, ...)
-//! * [`index`]    – the curated list behind the Discover page
+//! * [`index`]    – the starter list bundled for the Discover page
 //! * [`catalog`]  – glue: browse / search / details, filtered to this machine
 //! * [`icons`]    – app pictures, fetched from the source and cached
 //! * [`install`]  – what installing a given file means on this machine
