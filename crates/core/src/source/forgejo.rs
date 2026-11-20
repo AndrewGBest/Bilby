@@ -98,6 +98,8 @@ impl From<Repo> for AppSummary {
             warning: None,
             origin: None,
             installed_version: None,
+            rating: None,
+            icon_url: None,
         }
     }
 }

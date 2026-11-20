@@ -76,11 +76,21 @@ impl Catalog {
     pub fn new(platform: Platform, http: Arc<dyn Http>, index: Index) -> Catalog {
         let sources: Vec<Arc<dyn Source>> = vec![
             Arc::new(GitHub::new(http.clone())),
+            Arc::new(crate::source::flathub::Flathub::new(http.clone(), Vec::new())),
             Arc::new(crate::source::forgejo::Forgejo::codeberg(http.clone())),
             Arc::new(Aur::new(http.clone())),
             Arc::new(crate::source::web::Websites),
         ];
         Catalog { platform, sources, index, http, check_limit: 8, include_prereleases: false }
+    }
+
+    /// Tell the catalog where Flatpak keeps installed apps, so Flathub apps that are
+    /// already on the device are marked as such.
+    pub fn use_flatpak_roots(&mut self, roots: Vec<std::path::PathBuf>) {
+        let flathub = Arc::new(crate::source::flathub::Flathub::new(self.http.clone(), roots));
+        if let Some(slot) = self.sources.iter_mut().find(|s| s.kind() == SourceKind::Flathub) {
+            *slot = flathub;
+        }
     }
 
     /// Assemble a catalog from explicit sources (other hosts, tests, future stores).
@@ -109,6 +119,7 @@ impl Catalog {
         if has_token {
             catalog.check_limit = 20;
         }
+        catalog.use_flatpak_roots(crate::install::Dirs::for_current_user().flatpak_roots);
         catalog
     }
 
@@ -256,6 +267,11 @@ impl Catalog {
     /// The project's README as Markdown, or `None` when there is none to show.
     pub fn about(&self, id: &AppId) -> Result<Option<String>> {
         self.source(id.source)?.about(&id.key)
+    }
+
+    /// Screenshots the source publishes for the app (Flathub does; release pages do not).
+    pub fn pictures(&self, id: &AppId) -> Vec<String> {
+        self.source(id.source).map(|s| s.pictures(&id.key)).unwrap_or_default()
     }
 
     pub fn details(&self, id: &AppId) -> Result<AppDetails> {

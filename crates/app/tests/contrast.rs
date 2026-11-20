@@ -41,6 +41,8 @@ fn text_is_readable_in_both_themes() {
             downloads: root.join("d"),
             applications: root.join("a"),
             menu: root.join("menu"),
+            flatpak: root.join("flatpak-program"),
+            flatpak_roots: vec![root.join("flatpak")],
             cache: root.join("c"),
             config: root.join("cfg"),
         }),

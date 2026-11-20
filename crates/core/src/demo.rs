@@ -594,9 +594,33 @@ fn mock_screenshot(seed: u32, variant: usize) -> Vec<u8> {
             }
         }
     }
-    // PNG: signature, IHDR, one IDAT of zlib-compressed rows (each led by filter 0), IEND.
-    let mut raw = Vec::with_capacity((W * 3 + 1) * H);
-    for row in pixels.chunks(W * 3) {
+    encode_png(W, H, &pixels)
+}
+
+/// A square picture that looks like an app icon: a coloured tile with a pale mark on it.
+fn mock_icon(seed: u32) -> Vec<u8> {
+    const S: usize = 128;
+    let hue = [(0x5b, 0x8d, 0xef), (0xe0, 0x6c, 0x9f), (0x3f, 0xb5, 0xa3), (0xe2, 0xa0, 0x3f), (0x9b, 0x7b, 0xe8)]
+        [seed as usize % 5];
+    let mut pixels = vec![0u8; S * S * 3];
+    for y in 0..S {
+        for x in 0..S {
+            let (dx, dy) = (x as i32 - 64, y as i32 - 64);
+            let d = dx * dx + dy * dy;
+            // A pale ring on the tile; which part is cut away depends on the seed.
+            let ring = (26 * 26..=44 * 44).contains(&d)
+                && !((seed % 3 == 0 && dx > 0 && dy < 0) || (seed % 3 == 1 && dy > 12));
+            let c = if ring { (0xf4, 0xf6, 0xfb) } else { hue };
+            pixels[(y * S + x) * 3..(y * S + x) * 3 + 3].copy_from_slice(&[c.0, c.1, c.2]);
+        }
+    }
+    encode_png(S, S, &pixels)
+}
+
+/// PNG: signature, IHDR, one IDAT of zlib-compressed rows (each led by filter 0), IEND.
+fn encode_png(width: usize, height: usize, pixels: &[u8]) -> Vec<u8> {
+    let mut raw = Vec::with_capacity((width * 3 + 1) * height);
+    for row in pixels.chunks(width * 3) {
         raw.push(0);
         raw.extend_from_slice(row);
     }
@@ -614,13 +638,87 @@ fn mock_screenshot(seed: u32, variant: usize) -> Vec<u8> {
         png.extend_from_slice(&crc.sum().to_be_bytes());
     };
     let mut header = Vec::new();
-    header.extend_from_slice(&(W as u32).to_be_bytes());
-    header.extend_from_slice(&(H as u32).to_be_bytes());
+    header.extend_from_slice(&(width as u32).to_be_bytes());
+    header.extend_from_slice(&(height as u32).to_be_bytes());
     header.extend_from_slice(&[8, 2, 0, 0, 0]);
     chunk(b"IHDR", &header);
     chunk(b"IDAT", &data);
     chunk(b"IEND", &[]);
     png
+}
+
+/// Fictional apps on Flathub.
+struct DemoFlatpak {
+    id: &'static str,
+    name: &'static str,
+    summary: &'static str,
+    developer: &'static str,
+    license: &'static str,
+    version: &'static str,
+    date_unix: u64,
+    size: u64,
+    installs: u64,
+    /// Star counts, one to five, as the ratings service would report them.
+    stars: [u32; 5],
+}
+
+const FLATPAKS: &[DemoFlatpak] = &[
+    DemoFlatpak {
+        id: "io.quillpad.Quillpad",
+        name: "Quillpad",
+        summary: "Notes and to-do lists that stay on your computer.",
+        developer: "Quillpad contributors",
+        license: "GPL-3.0-or-later",
+        version: "4.2.0",
+        date_unix: 1_793_750_400,
+        size: 38_400_000,
+        installs: 41_200,
+        stars: [12, 9, 30, 160, 610],
+    },
+    DemoFlatpak {
+        id: "org.sundial.Sundial",
+        name: "Sundial",
+        summary: "A calm calendar for your day and your week.",
+        developer: "Sundial project",
+        license: "MIT",
+        version: "2.9.1",
+        date_unix: 1_792_886_400,
+        size: 21_900_000,
+        installs: 8_300,
+        stars: [4, 6, 18, 70, 122],
+    },
+    DemoFlatpak {
+        id: "org.reelstudio.Reel",
+        name: "Reel",
+        summary: "Cut, join and title your home videos.",
+        developer: "Reel Studio",
+        license: "GPL-3.0-or-later",
+        version: "1.14.0",
+        date_unix: 1_794_268_800,
+        size: 142_000_000,
+        installs: 96_500,
+        stars: [40, 35, 90, 300, 520],
+    },
+];
+
+fn flatpak_appstream(app: &DemoFlatpak) -> Value {
+    let media = format!("https://dl.flathub.org/media/{}", app.id);
+    json!({
+        "type": "desktop-application",
+        "id": app.id,
+        "name": app.name,
+        "summary": app.summary,
+        "description": format!("<p>{} {} is free software, made by volunteers.</p><p>What it does:</p><ul><li>Starts quickly</li><li>Works without an account</li><li>Keeps your data on your computer</li></ul><p>(Fictional app: this is demo data.)</p>", app.name, app.summary.trim_end_matches('.')),
+        "developer_name": app.developer,
+        "icon": format!("{media}/icon.png"),
+        "project_license": app.license,
+        "releases": [{ "version": app.version, "timestamp": app.date_unix.to_string(), "description": "<p>Changes:</p><ul><li>Faster to open</li><li>Fixes for reported problems</li></ul>" }],
+        "screenshots": [
+            { "sizes": [{ "width": "224", "src": format!("{media}/docs/screenshot-1-small.png") }, { "width": "752", "src": format!("{media}/docs/screenshot-1.png") }], "caption": "The main window" },
+            { "sizes": [{ "width": "752", "src": format!("{media}/docs/screenshot-2.png") }] },
+        ],
+        "urls": { "homepage": format!("https://example.invalid/{}", app.name.to_lowercase()) },
+    })
 }
 
 /// Delay per tenth of a demo download, so progress is visible. Tests set it to 0.
@@ -664,6 +762,20 @@ impl Http for DemoHttp {
                 summary = app.summary,
             ));
         }
+        if let Some(id) = url.strip_prefix("https://flathub.org/api/v2/appstream/") {
+            return FLATPAKS
+                .iter()
+                .find(|a| a.id == id)
+                .map(|a| flatpak_appstream(a).to_string())
+                .ok_or_else(not_found);
+        }
+        if let Some(id) = url.strip_prefix("https://flathub.org/api/v2/summary/") {
+            let app = FLATPAKS.iter().find(|a| a.id == id).ok_or_else(not_found)?;
+            return Ok(
+                json!({ "arches": ["x86_64", "aarch64"], "download_size": app.size, "installed_size": app.size * 3 })
+                    .to_string(),
+            );
+        }
         if let Some(rest) = url.strip_prefix("https://codeberg.org/api/v1/repos/search?q=") {
             let q = url_decode(rest.split('&').next().unwrap_or(""));
             let data: Vec<Value> =
@@ -697,7 +809,41 @@ impl Http for DemoHttp {
         Err(not_found())
     }
 
+    fn post_json(&self, url: &str, body: &str) -> Result<String> {
+        if url.starts_with("https://flathub.org/api/v2/search") {
+            let query = serde_json::from_str::<Value>(body)
+                .ok()
+                .and_then(|v| v["query"].as_str().map(str::to_string))
+                .unwrap_or_default();
+            let hits: Vec<Value> = FLATPAKS
+                .iter()
+                .filter(|a| matches(&query, &[a.name, a.summary, a.id]))
+                .map(|a| {
+                    json!({
+                        "app_id": a.id, "id": a.id.replace('.', "_"), "name": a.name, "summary": a.summary,
+                        "icon": format!("https://dl.flathub.org/media/{}/icon.png", a.id),
+                        "developer_name": a.developer, "project_license": a.license,
+                        "installs_last_month": a.installs, "arches": ["x86_64", "aarch64"],
+                    })
+                })
+                .collect();
+            return Ok(json!({ "hits": hits, "query": query, "totalHits": hits.len() }).to_string());
+        }
+        Err(Error::NotFound(url.to_string()))
+    }
+
     fn download(&self, url: &str, dest: &Path, progress: &mut dyn FnMut(u64, Option<u64>) -> bool) -> Result<String> {
+        // Icons: Flathub's, and the logo a fictional project's README shows.
+        if url.ends_with("/icon.png") || url.ends_with("/logo.png") {
+            let seed = url.bytes().fold(7u32, |h, b| h.wrapping_mul(31).wrapping_add(b as u32));
+            if let Some(parent) = dest.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            let bytes = mock_icon(seed);
+            progress(bytes.len() as u64, Some(bytes.len() as u64));
+            std::fs::write(dest, &bytes)?;
+            return Ok(hex(&Sha256::digest(&bytes)));
+        }
         // The fictional owners have no pictures.
         if url.ends_with(".png?size=128") {
             return Err(Error::NotFound(url.to_string()));

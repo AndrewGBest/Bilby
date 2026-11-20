@@ -100,12 +100,14 @@ impl Package {
             warning: self.out_of_date.map(|_| "Flagged out of date on the AUR".to_string()),
             origin: None,
             installed_version: None,
+            rating: None,
+            icon_url: None,
         }
     }
 }
 
 /// Days-since-epoch to `YYYY-MM-DD` (civil-from-days, Howard Hinnant's algorithm).
-fn date_from_unix(secs: i64) -> String {
+pub(crate) fn date_from_unix(secs: i64) -> String {
     if secs <= 0 {
         return String::new();
     }

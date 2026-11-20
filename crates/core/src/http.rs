@@ -37,6 +37,12 @@ pub trait Http: Send + Sync {
     /// Returns the SHA-256 of what was written, as lowercase hex.
     fn download(&self, url: &str, dest: &Path, progress: &mut dyn FnMut(u64, Option<u64>) -> bool) -> Result<String>;
 
+    /// POST a JSON body and return the text answer. Only for sources whose search is a
+    /// POST (Flathub); nothing here changes anything on the server.
+    fn post_json(&self, url: &str, _body: &str) -> Result<String> {
+        Err(Error::Unsupported(format!("cannot send a request to {url}")))
+    }
+
     /// GitHub's request allowance as of the last API response, if any was seen.
     fn quota(&self) -> Option<Quota> {
         None
@@ -177,6 +183,15 @@ impl Http for NetHttp {
         self.call(url)?.into_string().map_err(|e| Error::Network(e.to_string()))
     }
 
+    fn post_json(&self, url: &str, body: &str) -> Result<String> {
+        match self.agent.post(url).set("Content-Type", "application/json").send_string(body) {
+            Ok(resp) => resp.into_string().map_err(|e| Error::Network(e.to_string())),
+            Err(ureq::Error::Status(404, _)) => Err(Error::NotFound(format!("Nothing was found at {url}"))),
+            Err(ureq::Error::Status(code, _)) => Err(Error::Status { code, url: url.to_string() }),
+            Err(e) => Err(Error::Network(describe_transport_error(url, &e))),
+        }
+    }
+
     fn download(&self, url: &str, dest: &Path, progress: &mut dyn FnMut(u64, Option<u64>) -> bool) -> Result<String> {
         let resp = self.call(url)?;
         let total = resp.header("content-length").and_then(|v| v.parse::<u64>().ok());
@@ -231,9 +246,11 @@ impl<H: Http> CachedHttp<H> {
     }
 }
 
-impl<H: Http> Http for CachedHttp<H> {
-    fn get(&self, url: &str) -> Result<String> {
-        let path = self.path_for(url);
+impl<H: Http> CachedHttp<H> {
+    /// Answer from the cache while it is fresh; otherwise ask, remember, and fall back
+    /// to a stale answer when the network or the allowance fails.
+    fn cached(&self, key: &str, ask: impl FnOnce() -> Result<String>) -> Result<String> {
+        let path = self.path_for(key);
         let cached = || std::fs::read_to_string(&path).ok();
         let fresh = std::fs::metadata(&path)
             .and_then(|m| m.modified())
@@ -245,7 +262,7 @@ impl<H: Http> Http for CachedHttp<H> {
                 return Ok(body);
             }
         }
-        match self.inner.get(url) {
+        match ask() {
             Ok(body) => {
                 if std::fs::create_dir_all(&self.dir).is_ok() {
                     let _ = std::fs::write(&path, &body);
@@ -256,6 +273,16 @@ impl<H: Http> Http for CachedHttp<H> {
             Err(e @ (Error::Network(_) | Error::RateLimited { .. })) => cached().ok_or(e),
             Err(e) => Err(e),
         }
+    }
+}
+
+impl<H: Http> Http for CachedHttp<H> {
+    fn get(&self, url: &str) -> Result<String> {
+        self.cached(url, || self.inner.get(url))
+    }
+
+    fn post_json(&self, url: &str, body: &str) -> Result<String> {
+        self.cached(&format!("{url}\n{body}"), || self.inner.post_json(url, body))
     }
 
     fn download(&self, url: &str, dest: &Path, progress: &mut dyn FnMut(u64, Option<u64>) -> bool) -> Result<String> {
@@ -270,6 +297,10 @@ impl<H: Http> Http for CachedHttp<H> {
 impl<H: Http + ?Sized> Http for std::sync::Arc<H> {
     fn quota(&self) -> Option<Quota> {
         (**self).quota()
+    }
+
+    fn post_json(&self, url: &str, body: &str) -> Result<String> {
+        (**self).post_json(url, body)
     }
 
     fn get(&self, url: &str) -> Result<String> {

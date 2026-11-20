@@ -2,6 +2,7 @@
 //! winget, ...) means implementing [`Source`]; nothing else in the app changes.
 
 pub mod aur;
+pub mod flathub;
 pub mod forgejo;
 pub mod github;
 pub mod system;
@@ -36,6 +37,11 @@ pub trait Source: Send + Sync {
     /// source has one. Costs a request, so it is asked for separately from details.
     fn about(&self, _key: &str) -> Result<Option<String>> {
         Ok(None)
+    }
+
+    /// Addresses of screenshots the source itself publishes for the app.
+    fn pictures(&self, _key: &str) -> Vec<String> {
+        Vec::new()
     }
 
     /// For sources made of several named places (repositories): their names.

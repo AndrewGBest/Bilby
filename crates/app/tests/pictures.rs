@@ -61,6 +61,8 @@ fn start(root: &Path) -> Session {
         downloads: root.join("downloads"),
         applications: root.join("Applications"),
         menu: root.join("menu"),
+        flatpak: root.join("flatpak-program"),
+        flatpak_roots: vec![root.join("flatpak")],
         cache: root.join("cache"),
         config: root.join("config"),
     };
@@ -114,26 +116,31 @@ fn pictures_appear_are_cached_and_their_absence_is_harmless() {
     let first_round = s.downloads.load(Ordering::SeqCst);
     assert_eq!(first_round, 8, "one request per owner on screen");
 
-    // The app page and search results reuse what is already known.
+    // An app's page finds the project's own logo in its README (128 pixels in the demo),
+    // which replaces the owner's picture (8 pixels here) everywhere the app is shown.
     s.app.open(&s.ui, "github:tidewave/tidewave");
-    assert_eq!(s.ui.global::<Store>().get_app().icon.size().width, 8);
+    assert_eq!(s.ui.global::<Store>().get_app().icon.size().width, 128);
+    assert_eq!(icon_width(&s, "Tidewave"), 128, "lists use the logo too");
+    assert_eq!(icon_width(&s, "Relay"), 8, "an app whose page was not opened keeps its owner's picture");
     s.app.search(&s.ui, "editor");
     assert_eq!(s.downloads.load(Ordering::SeqCst), first_round, "nothing is fetched twice in a session");
 
     // An app that was not on screen before gets its picture when it is opened.
     s.app.open(&s.ui, "github:oldtimer/relic");
-    assert_eq!(s.ui.global::<Store>().get_app().icon.size().width, 8);
+    assert_eq!(s.ui.global::<Store>().get_app().icon.size().width, 128);
     assert_eq!(s.downloads.load(Ordering::SeqCst), first_round + 1);
 
     // On disk: pictures under the owner's name, and a note for owners without one.
     let icons = s.dirs.cache.join("icons");
     assert!(icons.join("tidewave.png").is_file());
+    assert!(icons.join("app-github-tidewave-tidewave.png").is_file(), "the project's logo, under the app's name");
     assert!(icons.join("lumen-labs.none").is_file());
     assert!(icons.join("kestrel-sh.none").is_file());
 
     // A second launch reads the cache: no requests at all, pictures still there.
     let again = start(&root);
-    assert_eq!(icon_width(&again, "Tidewave"), 8);
+    assert_eq!(icon_width(&again, "Tidewave"), 128, "the logo found last time is still used");
+    assert_eq!(icon_width(&again, "Relay"), 8);
     assert_eq!(icon_width(&again, "Lumen"), 0);
     assert_eq!(again.downloads.load(Ordering::SeqCst), 0);
 

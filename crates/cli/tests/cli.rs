@@ -70,7 +70,7 @@ fn device_describes_the_chosen_machine() {
     let arch = out(&["--demo", "--as", "linux-x64-arch", "device"]);
     assert!(arch.starts_with("Linux · x86_64"));
     assert!(arch.contains("pacman packages"));
-    assert!(arch.contains("GitHub, Codeberg, AUR"));
+    assert!(arch.contains("GitHub, Flathub, Codeberg, AUR"));
     let windows = out(&["--demo", "--as", "windows-arm64", "device"]);
     assert!(windows.contains("x86_64, x86 (32-bit)"), "emulated architectures are listed");
     assert!(!windows.contains("AUR"));

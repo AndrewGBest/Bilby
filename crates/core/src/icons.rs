@@ -24,8 +24,15 @@ pub fn icon_key(id: &AppId) -> Option<String> {
         SourceKind::Codeberg => {
             id.key.split('/').next().filter(|o| !o.is_empty()).map(|o| format!("codeberg-{}", o.to_lowercase()))
         }
-        SourceKind::Aur | SourceKind::Pacman | SourceKind::Apt | SourceKind::Web => None,
+        SourceKind::Aur | SourceKind::Pacman | SourceKind::Apt | SourceKind::Web | SourceKind::Flathub => None,
     }
+}
+
+/// What identifies a picture that belongs to one app (its own logo), as a file name.
+pub fn app_key(id: &AppId) -> String {
+    let safe: String =
+        id.to_string().chars().map(|c| if c.is_ascii_alphanumeric() { c.to_ascii_lowercase() } else { '-' }).collect();
+    format!("app-{safe}")
 }
 
 pub fn icon_url(id: &AppId) -> Option<String> {

@@ -39,6 +39,10 @@ impl Http for Moody {
         self.check()?;
         DemoHttp.get(url)
     }
+    fn post_json(&self, url: &str, body: &str) -> Result<String> {
+        self.check()?;
+        DemoHttp.post_json(url, body)
+    }
     fn download(&self, url: &str, dest: &Path, progress: &mut dyn FnMut(u64, Option<u64>) -> bool) -> Result<String> {
         self.check()?;
         DemoHttp.download(url, dest, progress)
@@ -66,6 +70,8 @@ fn start(seed: &str) -> Session {
         downloads: root.join("downloads"),
         applications: root.join("Applications"),
         menu: root.join("menu"),
+        flatpak: root.join("flatpak-program"),
+        flatpak_roots: vec![root.join("flatpak")],
         cache: root.join("cache"),
         config: root.join("config"),
     };

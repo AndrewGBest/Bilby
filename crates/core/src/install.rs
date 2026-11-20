@@ -28,6 +28,10 @@ pub enum Action {
     ShowCommand,
     /// Put a website in the app list, to open in Longboard.
     WebApp,
+    /// Have Flatpak install the app from Flathub.
+    Flatpak,
+    /// Have Flatpak install a downloaded `.flatpak` bundle.
+    FlatpakBundle,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -77,8 +81,20 @@ pub fn plan(asset: &Asset, info: &AssetInfo, p: &Platform) -> InstallPlan {
             (Action::OpenFile, "Install", Some(format!("sudo pacman -U ./{file}")))
         }
         Format::Flatpak => {
-            steps.push("Your software installer opens the bundle".to_string());
-            (Action::OpenFile, "Install", Some(format!("flatpak install --user ./{file}")))
+            steps.push("Flatpak installs the bundle for your user account; no password is needed".to_string());
+            (Action::FlatpakBundle, "Install", Some(format!("flatpak install --user ./{file}")))
+        }
+        Format::FlathubApp => {
+            return InstallPlan {
+                action: Action::Flatpak,
+                verb: "Install".to_string(),
+                steps: vec![
+                    "Flatpak downloads it from Flathub and checks it".to_string(),
+                    "Your system may ask you to confirm".to_string(),
+                    "From then on Flatpak keeps it up to date".to_string(),
+                ],
+                command: Some(format!("flatpak install flathub {}", asset.name)),
+            };
         }
         Format::Snap => {
             steps.push("Install the snap".to_string());
@@ -182,6 +198,10 @@ pub struct Dirs {
     pub applications: PathBuf,
     /// Where the desktop looks for app-menu entries (`~/.local/share/applications`).
     pub menu: PathBuf,
+    /// The Flatpak program (`flatpak`, found on the PATH).
+    pub flatpak: PathBuf,
+    /// Flatpak's installations: system-wide and per-user. Installed apps are in `app/<id>`.
+    pub flatpak_roots: Vec<PathBuf>,
     pub cache: PathBuf,
     /// Settings and library (`state.json`).
     pub config: PathBuf,
@@ -209,6 +229,11 @@ impl Dirs {
             downloads: var("XDG_DOWNLOAD_DIR").unwrap_or_else(|| home.join("Downloads")).join("bilby"),
             applications: home.join("Applications"),
             menu: var("XDG_DATA_HOME").unwrap_or_else(|| home.join(".local").join("share")).join("applications"),
+            flatpak: PathBuf::from("flatpak"),
+            flatpak_roots: vec![
+                PathBuf::from("/var/lib/flatpak"),
+                var("XDG_DATA_HOME").unwrap_or_else(|| home.join(".local").join("share")).join("flatpak"),
+            ],
             cache: cache.join("bilby"),
             config: config.join("bilby"),
         }
@@ -312,6 +337,42 @@ pub fn remove_menu_entry(dirs: &Dirs, id: &str) {
     }
 }
 
+/// Run Flatpak and wait for it, giving up (and stopping it) when `keep_going` says so.
+/// Flatpak reports no usable progress, so the callback is only asked whether to go on.
+pub fn run_flatpak(dirs: &Dirs, args: &[&str], keep_going: &mut dyn FnMut(u64, Option<u64>) -> bool) -> Result<()> {
+    use std::process::{Command, Stdio};
+    let mut child = Command::new(&dirs.flatpak)
+        .args(args)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| Error::Unsupported(format!("Flatpak could not be started ({e}). Is it installed?")))?;
+    loop {
+        match child.try_wait()? {
+            Some(status) if status.success() => return Ok(()),
+            Some(_) => {
+                let mut said = String::new();
+                if let Some(mut stderr) = child.stderr.take() {
+                    let _ = std::io::Read::read_to_string(&mut stderr, &mut said);
+                }
+                // Flatpak's own last line is the most useful thing to show.
+                let why =
+                    said.lines().rev().find(|l| !l.trim().is_empty()).unwrap_or("it gave no reason").trim().to_string();
+                return Err(Error::Unsupported(format!("Flatpak could not do it: {why}")));
+            }
+            None => {
+                if !keep_going(0, None) {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    return Err(Error::Cancelled);
+                }
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            }
+        }
+    }
+}
+
 /// Start a program the store placed (an AppImage), without waiting for it.
 pub fn launch(path: &Path) -> Result<()> {
     launch_with(path, &[])
@@ -374,6 +435,15 @@ pub fn execute(
         return Ok(Outcome { message: format!("Run in a terminal: {command}"), file: None, store_managed: false });
     }
 
+    if plan.action == Action::Flatpak {
+        let id = asset.name.as_str();
+        run_flatpak(dirs, &["install", "--noninteractive", "--assumeyes", "--or-update", "flathub", id], progress)?;
+        return Ok(Outcome {
+            message: "Installed from Flathub. It is in your app menu.".to_string(),
+            file: None,
+            store_managed: false,
+        });
+    }
     if plan.action == Action::WebApp {
         let host = asset.url.trim_start_matches("https://").trim_end_matches('/');
         let longboard = find_longboard(dirs).ok_or_else(|| {
@@ -435,7 +505,13 @@ pub fn execute(
             "{verified}Saved to {}. Handing APKs to Android's installer is not implemented in this build yet; open the file to install it.",
             dest.display()
         ))),
-        Action::ShowCommand | Action::WebApp => unreachable!("handled above"),
+        Action::FlatpakBundle => {
+            let file = dest.display().to_string();
+            run_flatpak(dirs, &["install", "--user", "--noninteractive", "--assumeyes", &file], progress)?;
+            let _ = std::fs::remove_file(&dest);
+            Ok(Outcome { message: format!("{verified}Installed with Flatpak. It is in your app menu."), file: None, store_managed: false })
+        }
+        Action::ShowCommand | Action::WebApp | Action::Flatpak => unreachable!("handled above"),
     }
 }
 
@@ -471,6 +547,8 @@ mod tests {
             downloads: root.join("dl"),
             applications: root.join("apps"),
             menu: root.join("menu"),
+            flatpak: root.join("flatpak-program"),
+            flatpak_roots: vec![root.join("flatpak")],
             cache: root.join("cache"),
             config: root.join("config"),
         }

@@ -442,6 +442,8 @@ impl SystemRepos {
             warning: None,
             origin: Some(package.repo.clone()),
             installed_version: None,
+            rating: None,
+            icon_url: None,
         }
     }
 }

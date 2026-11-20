@@ -127,7 +127,7 @@ export component TvShell inherits Rectangle {
     property <int> act: 0;
     property <bool> files: false;
     property <bool> busy: Store.install-state == 1;
-    property <bool> is-update: Store.installed-version != "" && Store.app.version != "" && Store.installed-version != Store.app.version;
+    property <bool> is-update: Store.installed-version != "" && Store.installed-version != "installed" && Store.app.version != "" && Store.installed-version != Store.app.version;
     property <bool> open-instead: Store.can-open && !is-update && !busy;
     property <string> main-action: busy ? "Cancel" : open-instead ? "Open" : is-update ? "Update" : Store.options.length > 0 ? Store.options[0].verb : "";
     property <string> shown-id: Store.app.id;
@@ -404,7 +404,7 @@ export component TvShell inherits Rectangle {
                     if Store.release-age != "" : TvStat { u: root.u; value: Store.release-age; caption: "last updated"; }
                 }
                 Text {
-                    text: Store.details-loading ? "Checking what works on this TV…" : Store.details-error != "" ? Store.details-error + "  Press OK to try again." : Store.unavailable != "" ? Store.unavailable : Store.install-state == 1 ? "Downloading…  " + round(Store.install-progress * 100) + "%" : Store.install-state >= 2 ? Store.install-message : root.is-update ? "Update available: you have " + Store.installed-version : Store.installed-version != "" ? "Installed  ·  " + Store.installed-version : Store.is-website ? "Opens in Longboard, driven with your remote" : Store.options.length > 0 ? (Store.options[0].native ? "Made for this TV" : "Works on this TV") + (Store.options[0].verified ? "  ·  the download is checked" : "") : "";
+                    text: Store.details-loading ? "Checking what works on this TV…" : Store.details-error != "" ? Store.details-error + "  Press OK to try again." : Store.unavailable != "" ? Store.unavailable : Store.install-state == 1 ? "Downloading…  " + round(Store.install-progress * 100) + "%" : Store.install-state >= 2 ? Store.install-message : root.is-update ? "Update available: you have " + Store.installed-version : Store.installed-version == "installed" ? "Installed" : Store.installed-version != "" ? "Installed  ·  " + Store.installed-version : Store.is-website ? "Opens in Longboard, driven with your remote" : Store.options.length > 0 ? (Store.options[0].native ? "Made for this TV" : "Works on this TV") + (Store.options[0].verified ? "  ·  the download is checked" : "") : "";
                     color: Store.details-error != "" || Store.install-state == 3 ? Theme.bad : Store.unavailable != "" ? Theme.warn : Store.install-state == 1 ? Theme.accent : Theme.ok;
                     font-size: 12 * u;
                     font-weight: 700;

@@ -23,7 +23,7 @@ struct Session {
     state_file: PathBuf,
     /// Files the store handed to "the system installer" (recorded, never launched).
     opened: Arc<Mutex<Vec<PathBuf>>>,
-    /// Websites the store asked Longboard to open: the program and the address.
+    /// Programs the store started with arguments (Longboard, Flatpak): which, and with what.
     web_opened: Arc<Mutex<Vec<(PathBuf, String)>>>,
 }
 
@@ -42,6 +42,8 @@ fn dirs_in(root: &std::path::Path) -> Dirs {
         downloads: root.join("downloads"),
         applications: root.join("Applications"),
         menu: root.join("menu"),
+        flatpak: root.join("flatpak-program"),
+        flatpak_roots: vec![root.join("flatpak")],
         cache: root.join("cache"),
         config: root.join("config"),
     }
@@ -89,8 +91,8 @@ fn start_with(preset: &str, shell: Shell, seed: Option<&str>) -> Session {
             launched.lock().unwrap().push(path.to_path_buf());
             Ok(())
         })),
-        web_launcher: Some(Arc::new(move |longboard: &std::path::Path, url: &str| {
-            web_record.lock().unwrap().push((longboard.to_path_buf(), url.to_string()));
+        runner: Some(Arc::new(move |program: &std::path::Path, args: &[String]| {
+            web_record.lock().unwrap().push((program.to_path_buf(), args.join(" ")));
             Ok(())
         })),
         ..Default::default()
@@ -1281,7 +1283,10 @@ fn on_a_linux_tv_a_website_is_added_and_opened_like_an_app() {
     // The same button now opens it: Longboard is started on the site's address.
     assert!(s.store().get_can_open());
     s.press(Key::Return);
-    assert_eq!(s.web_opened.lock().unwrap().as_slice(), [(longboard.clone(), "https://lichess.org/".to_string())]);
+    assert_eq!(
+        s.web_opened.lock().unwrap().as_slice(),
+        [(longboard.clone(), "--url=https://lichess.org/".to_string())]
+    );
 
     // Removing it takes the entry out of the TV's app list.
     s.app.remove_from_library(&s.ui, "web:lichess.org");
@@ -1300,4 +1305,86 @@ fn websites_are_not_offered_away_from_a_linux_tv() {
         s.app.open(&s.ui, "web:lichess.org");
         assert!(!s.store().get_details_error().is_empty(), "{preset}: a website cannot be added here");
     }
+}
+
+/// A stand-in for the `flatpak` program: it does what the real one would do to the
+/// folders the store looks at, and writes down how it was called.
+#[cfg(unix)]
+fn fake_flatpak(s: &Session) -> PathBuf {
+    use std::os::unix::fs::PermissionsExt;
+    let log = s.dirs.cache.join("flatpak-calls.txt");
+    let apps = s.dirs.flatpak_roots[0].join("app");
+    let script = format!(
+        "#!/bin/sh\necho \"$@\" >> '{log}'\ncase \"$1\" in\n  install) for last; do :; done; mkdir -p '{apps}'/\"$last\" ;;\nesac\nexit 0\n",
+        log = log.display(),
+        apps = apps.display(),
+    );
+    std::fs::create_dir_all(s.dirs.flatpak.parent().unwrap()).unwrap();
+    std::fs::create_dir_all(&s.dirs.cache).unwrap();
+    std::fs::write(&s.dirs.flatpak, script).unwrap();
+    std::fs::set_permissions(&s.dirs.flatpak, std::fs::Permissions::from_mode(0o755)).unwrap();
+    log
+}
+
+#[test]
+#[cfg(unix)]
+fn a_flathub_app_is_found_installed_opened_and_removed() {
+    let s = start("linux-x64-debian", Shell::Desktop);
+    let log = fake_flatpak(&s);
+
+    // Search finds it beside the GitHub projects, with its own icon address.
+    s.app.search(&s.ui, "notes");
+    let hit =
+        s.store().get_results().iter().find(|c| c.id == "flathub:io.quillpad.Quillpad").expect("a Flathub result");
+    assert_eq!(hit.source, "Flathub");
+    assert_eq!(hit.icon.size().width, 128, "Flathub's icon for the app is shown");
+
+    // Its page has Flathub's pictures and description, and one button.
+    s.app.open(&s.ui, "flathub:io.quillpad.Quillpad");
+    assert_eq!(s.store().get_app().name, "Quillpad");
+    assert_eq!(s.store().get_screenshots().row_count(), 2);
+    assert!(s.store().get_about().contains("•  Works without an account"), "{}", s.store().get_about());
+    assert!(!s.store().get_can_open());
+
+    // Install: Flatpak is asked to fetch it from Flathub.
+    s.click("Install Flatpak");
+    assert_eq!(s.store().get_install_state(), 2, "{}", s.store().get_install_message());
+    assert_eq!(
+        std::fs::read_to_string(&log).unwrap().trim(),
+        "install --noninteractive --assumeyes --or-update flathub io.quillpad.Quillpad"
+    );
+    assert_eq!(s.saved().library[0].id, "flathub:io.quillpad.Quillpad");
+
+    // Now the button opens it, through Flatpak.
+    assert!(s.store().get_can_open());
+    s.click("Open Quillpad");
+    assert_eq!(s.web_opened.lock().unwrap().last().unwrap().1, "run io.quillpad.Quillpad");
+
+    // Removing it from the library has Flatpak uninstall it.
+    s.app.remove_from_library(&s.ui, "flathub:io.quillpad.Quillpad");
+    assert_eq!(
+        s.web_opened.lock().unwrap().last().unwrap().1,
+        "uninstall --noninteractive --assumeyes io.quillpad.Quillpad"
+    );
+    assert_eq!(s.store().get_toast(), "Uninstalling Quillpad…");
+}
+
+#[test]
+fn a_flatpak_installed_by_something_else_is_recognised() {
+    let s = start("linux-x64-debian", Shell::Desktop);
+    std::fs::create_dir_all(s.dirs.flatpak_roots[0].join("app").join("org.sundial.Sundial")).unwrap();
+    s.app.open(&s.ui, "flathub:org.sundial.Sundial");
+    assert_eq!(s.store().get_installed_version(), "installed");
+    assert!(s.store().get_can_open(), "it can be opened even though this store did not install it");
+    assert!(s.has("Open Sundial"));
+    assert!(s.saved().library.is_empty());
+}
+
+#[test]
+fn flathub_is_only_offered_where_flatpak_is() {
+    let windows = start("windows-x64", Shell::Desktop);
+    windows.app.search(&windows.ui, "notes");
+    assert!(!windows.store().get_results().iter().any(|c| c.id.starts_with("flathub:")));
+    windows.app.open(&windows.ui, "flathub:io.quillpad.Quillpad");
+    assert!(!windows.store().get_details_error().is_empty());
 }

@@ -106,6 +106,8 @@ fn popularity(app: &AppSummary) -> f32 {
     let a_lot = match app.id.source {
         SourceKind::GitHub => 50_000.0_f32,
         SourceKind::Codeberg => 3_000.0,
+        // Installs in the last month.
+        SourceKind::Flathub => 100_000.0,
         SourceKind::Aur => 1_500.0,
         // Distribution repositories publish no such number.
         SourceKind::Pacman | SourceKind::Apt | SourceKind::Web => return UNKNOWN_POPULARITY,
@@ -157,6 +159,8 @@ mod tests {
             warning: None,
             origin: None,
             installed_version: None,
+            rating: None,
+            icon_url: None,
         }
     }
 

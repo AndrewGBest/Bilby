@@ -74,8 +74,9 @@ pub struct Options {
     pub opener: Option<Opener>,
     /// How an installed app is started ([`install::launch`] unless a test says otherwise).
     pub launcher: Option<Opener>,
-    /// How a website is opened in Longboard: the program and the address.
-    pub web_launcher: Option<WebLauncher>,
+    /// How another program is started with arguments (Longboard on an address,
+    /// Flatpak to run or remove an app): the program and what to pass it.
+    pub runner: Option<Runner>,
     pub catalog_factory: Option<CatalogFactory>,
     /// The app id the store looks at for its own updates. Defaults to its GitHub
     /// repository; the demo catalog has no such project, so tests name a stand-in.
@@ -83,7 +84,7 @@ pub struct Options {
 }
 
 pub type Opener = Arc<dyn Fn(&std::path::Path) -> bilby_core::Result<()> + Send + Sync>;
-pub type WebLauncher = Arc<dyn Fn(&std::path::Path, &str) -> bilby_core::Result<()> + Send + Sync>;
+pub type Runner = Arc<dyn Fn(&std::path::Path, &[String]) -> bilby_core::Result<()> + Send + Sync>;
 
 /// Builds the catalog for a platform and the current settings. The default talks to the
 /// real sources (or the demo); tests substitute one that can go offline on demand.
@@ -359,6 +360,7 @@ fn make_catalog(platform: &Platform, demo: bool, settings: &Settings, dirs: &Dir
         Catalog::live(platform.clone(), token, dirs.cache.clone())
     };
     catalog.include_prereleases = settings.include_prereleases;
+    catalog.use_flatpak_roots(dirs.flatpak_roots.clone());
     Arc::new(catalog)
 }
 
@@ -396,11 +398,18 @@ fn decode_screenshot(path: &std::path::Path) -> Option<slint::SharedPixelBuffer<
     Some(slint::SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(decoded.as_raw(), width, height))
 }
 
+/// The app's own logo when one is known, else its owner's picture.
 fn picture_for(id: &str) -> slint::Image {
-    AppId::parse(id)
-        .and_then(|id| bilby_core::icons::icon_key(&id))
-        .and_then(|key| PICTURES.with(|p| p.borrow().get(&key).cloned()))
-        .unwrap_or_default()
+    let Some(id) = AppId::parse(id) else { return slint::Image::default() };
+    let own = bilby_core::icons::app_key(&id);
+    PICTURES.with(|p| {
+        let pictures = p.borrow();
+        pictures
+            .get(&own)
+            .or_else(|| bilby_core::icons::icon_key(&id).and_then(|owner| pictures.get(&owner)))
+            .cloned()
+            .unwrap_or_default()
+    })
 }
 
 /// The app currently on the details page.
@@ -451,7 +460,9 @@ pub struct App {
     pictures_requested: Mutex<HashSet<String>>,
     opener: Opener,
     launcher: Opener,
-    web_launcher: WebLauncher,
+    runner: Runner,
+    /// Icon addresses the sources gave, by app id.
+    icon_urls: Mutex<HashMap<String, String>>,
     catalog_factory: CatalogFactory,
 }
 
@@ -520,14 +531,24 @@ impl App {
         shown.extend(store.get_library().iter().map(|r| r.card.id.to_string()));
         shown.push(store.get_app().id.to_string());
 
-        let wanted: Vec<(String, AppId)> = {
+        // For each app: its own logo (an address the source gave, or one found earlier
+        // and kept on disk), and its owner's picture to fall back on.
+        let wanted: Vec<(String, AppId, Option<String>)> = {
             let mut requested = self.pictures_requested.lock().unwrap();
-            shown
-                .iter()
-                .filter_map(|id| AppId::parse(id))
-                .filter_map(|id| Some((bilby_core::icons::icon_key(&id)?, id)))
-                .filter(|(key, _)| requested.insert(key.clone()))
-                .collect()
+            let urls = self.icon_urls.lock().unwrap();
+            let mut wanted = Vec::new();
+            for id in shown.iter().filter_map(|id| AppId::parse(id)) {
+                let own = bilby_core::icons::app_key(&id);
+                if requested.insert(own.clone()) {
+                    wanted.push((own, id.clone(), Some(urls.get(&id.to_string()).cloned().unwrap_or_default())));
+                }
+                if let Some(owner) = bilby_core::icons::icon_key(&id) {
+                    if requested.insert(owner.clone()) {
+                        wanted.push((owner, id, None));
+                    }
+                }
+            }
+            wanted
         };
         if wanted.is_empty() {
             return;
@@ -538,7 +559,18 @@ impl App {
                 let http = app.catalog().http();
                 wanted
                     .into_iter()
-                    .filter_map(|(key, id)| Some((key, bilby_core::icons::fetch(http.as_ref(), &dir, &id).ok()??)))
+                    .filter_map(|(key, id, own)| {
+                        let path = match own {
+                            // No address: only what an earlier visit to its page left on disk.
+                            Some(url) if url.is_empty() => bilby_core::icons::cached(&dir, &key).flatten(),
+                            Some(url) => {
+                                bilby_core::icons::fetch_picture(http.as_ref(), &dir, &key, &url, 2 * 1024 * 1024)
+                                    .ok()?
+                            }
+                            None => bilby_core::icons::fetch(http.as_ref(), &dir, &id).ok()?,
+                        };
+                        Some((key, path?))
+                    })
                     .collect::<Vec<_>>()
             },
             |app, ui, found| {
@@ -596,10 +628,14 @@ impl App {
     fn card(&self, app: &AppSummary) -> AppCard {
         let id = app.id.to_string();
         let popularity = match (app.popularity, app.id.source) {
-            (Some(n), SourceKind::GitHub | SourceKind::Codeberg) => format!("★ {}", human_count(n)),
+            (Some(n), SourceKind::GitHub | SourceKind::Codeberg) => format!("{} stars", human_count(n)),
+            (Some(n), SourceKind::Flathub) => format!("{} installs a month", human_count(n)),
             (Some(n), SourceKind::Aur) => format!("{} votes", human_count(n)),
             _ => String::new(),
         };
+        if let Some(url) = &app.icon_url {
+            self.icon_urls.lock().unwrap().insert(id.clone(), url.clone());
+        }
         // In the store's library, or already installed by the system's package manager.
         let installed = self.state.lock().unwrap().installed(&id).is_some() || app.installed_version.is_some();
         let has_update = matches!(self.updates.lock().unwrap().get(&id), Some(UpdateStatus::Available { .. }));
@@ -965,25 +1001,70 @@ impl App {
     /// cannot be had (no README, offline, out of requests) the page simply has no
     /// About section.
     fn load_about(self: &Arc<Self>, id: AppId, generation: u64) {
+        let key = bilby_core::icons::app_key(&id);
+        let logo_known = PICTURES.with(|p| p.borrow().contains_key(&key));
         self.job(
             move |app| {
-                let Some(readme) = app.catalog().about(&id).ok().flatten() else { return (String::new(), Vec::new()) };
-                // Pictures are fetched and decoded here, off the interface's thread.
-                let http = app.catalog().http();
+                let catalog = app.catalog();
+                let http = catalog.http();
+                let readme = catalog.about(&id).ok().flatten().unwrap_or_default();
+                // Pictures are fetched and decoded here, off the interface's thread. The
+                // source's own screenshots first (Flathub has them), else the README's.
+                let mut urls = catalog.pictures(&id);
+                if urls.is_empty() {
+                    urls = bilby_core::screenshots::from_readme(&readme, &id);
+                }
                 let dir = app.dirs.cache.join("screenshots");
-                let pictures = bilby_core::screenshots::from_readme(&readme, &id)
+                let pictures = urls
                     .iter()
                     .filter_map(|url| bilby_core::screenshots::fetch(http.as_ref(), &dir, url).ok().flatten())
                     .filter_map(|path| decode_screenshot(&path))
                     .collect();
-                (plain_about(&readme), pictures)
+                // The project's own logo: what its README shows, else the usual places.
+                let mut logo = None;
+                if !logo_known && id.source == SourceKind::GitHub {
+                    let icons = app.dirs.cache.join("icons");
+                    let key = bilby_core::icons::app_key(&id);
+                    let places = bilby_core::screenshots::logo_from_readme(&readme, &id)
+                        .into_iter()
+                        .chain(bilby_core::screenshots::usual_logo_places(&id));
+                    for (n, url) in places.enumerate() {
+                        // Each place is remembered separately, so a miss is not asked again.
+                        let attempt = format!("{key}-try{n}");
+                        if let Ok(Some(path)) =
+                            bilby_core::icons::fetch_picture(http.as_ref(), &icons, &attempt, &url, 2 * 1024 * 1024)
+                        {
+                            // Kept under the app's own name, where lists look for it.
+                            let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("png").to_string();
+                            let kept = icons.join(format!("{key}.{ext}"));
+                            if std::fs::copy(&path, &kept).is_ok() {
+                                logo = Some(kept);
+                            }
+                            break;
+                        }
+                    }
+                }
+                (plain_about(&readme), pictures, logo)
             },
-            move |app, ui, (about, pictures): (String, Vec<slint::SharedPixelBuffer<slint::Rgba8Pixel>>)| {
+            move |app,
+                  ui,
+                  (about, pictures, logo): (
+                String,
+                Vec<slint::SharedPixelBuffer<slint::Rgba8Pixel>>,
+                Option<PathBuf>,
+            )| {
+                if let Some(image) = logo.as_deref().and_then(decode_picture) {
+                    PICTURES.with(|p| p.borrow_mut().insert(key.clone(), image));
+                    app.refresh(ui);
+                }
                 if app.details_generation.load(Ordering::SeqCst) == generation {
                     let store = ui.global::<Store>();
                     store.set_about(about.into());
                     let images: Vec<slint::Image> = pictures.into_iter().map(slint::Image::from_rgba8).collect();
                     store.set_screenshots(ModelRc::new(VecModel::from(images)));
+                    let mut card = store.get_app();
+                    card.icon = picture_for(&card.id);
+                    store.set_app(card);
                 }
             },
         );
@@ -1434,6 +1515,11 @@ impl App {
             state.installed(id)?;
             return install::find_longboard(&self.dirs);
         }
+        // A Flatpak is run by Flatpak, whoever installed it.
+        if let Some(app_id) = id.strip_prefix("flathub:") {
+            return bilby_core::source::flathub::is_installed(&self.dirs.flatpak_roots, app_id)
+                .then(|| self.dirs.flatpak.clone());
+        }
         let app = state.installed(id).filter(|a| a.store_managed)?;
         let path = PathBuf::from(app.path.as_deref()?);
         (path.starts_with(&self.dirs.applications) && path.is_file()).then_some(path)
@@ -1444,9 +1530,12 @@ impl App {
         let store = ui.global::<Store>();
         let id = store.get_app().id.to_string();
         let Some(path) = self.launchable(&id) else { return };
-        let started = match id.strip_prefix("web:") {
-            Some(host) => (self.web_launcher)(&path, &format!("https://{host}/")),
-            None => (self.launcher)(&path),
+        let started = if let Some(host) = id.strip_prefix("web:") {
+            (self.runner)(&path, &[format!("--url=https://{host}/")])
+        } else if let Some(app_id) = id.strip_prefix("flathub:") {
+            (self.runner)(&path, &["run".to_string(), app_id.to_string()])
+        } else {
+            (self.launcher)(&path)
         };
         match started {
             Ok(()) => self.toast(ui, &format!("Opening {}…", store.get_app().name), false),
@@ -1490,6 +1579,16 @@ impl App {
         install::remove_menu_entry(&self.dirs, id);
         if id.starts_with("web:") {
             message = format!("{} removed from this TV's app list", entry.name);
+        }
+        // A Flatpak is removed by Flatpak; it carries on after this returns.
+        if let Some(app_id) = id.strip_prefix("flathub:") {
+            let args = ["uninstall", "--noninteractive", "--assumeyes", app_id].map(String::from);
+            message = match (self.runner)(&self.dirs.flatpak, &args) {
+                Ok(()) => format!("Uninstalling {}…", entry.name),
+                Err(_) => {
+                    format!("{} removed from your library. Flatpak could not be started to uninstall it.", entry.name)
+                }
+            };
         }
         let store = ui.global::<Store>();
         if store.get_app().id == id {
@@ -1590,10 +1689,8 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         pictures_requested: Mutex::new(HashSet::new()),
         opener: options.opener.clone().unwrap_or_else(|| Arc::new(install::open_with_system)),
         launcher: options.launcher.clone().unwrap_or_else(|| Arc::new(install::launch)),
-        web_launcher: options
-            .web_launcher
-            .clone()
-            .unwrap_or_else(|| Arc::new(|longboard, url| install::launch_with(longboard, &[format!("--url={url}")]))),
+        runner: options.runner.clone().unwrap_or_else(|| Arc::new(install::launch_with)),
+        icon_urls: Mutex::new(HashMap::new()),
         catalog_factory,
     });
 
@@ -1903,6 +2000,8 @@ fn android_main(android_app: slint::android::AndroidApp) {
         downloads: downloads.join("downloads"),
         applications: internal.join("apps"),
         menu: internal.join("menu"),
+        flatpak: internal.join("flatpak-program"),
+        flatpak_roots: vec![internal.join("flatpak")],
         cache: internal.join("cache"),
         config: internal.join("config"),
     };

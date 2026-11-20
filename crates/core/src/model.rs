@@ -7,6 +7,8 @@ use crate::install::InstallPlan;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SourceKind {
     GitHub,
+    /// Flathub, the Flatpak app repository.
+    Flathub,
     /// Codeberg (a Forgejo instance).
     Codeberg,
     Aur,
@@ -26,6 +28,7 @@ impl SourceKind {
     pub fn label(self) -> &'static str {
         match self {
             SourceKind::GitHub => "GitHub",
+            SourceKind::Flathub => "Flathub",
             SourceKind::Codeberg => "Codeberg",
             SourceKind::Aur => "AUR",
             SourceKind::Pacman => "pacman repositories",
@@ -36,6 +39,7 @@ impl SourceKind {
     pub fn prefix(self) -> &'static str {
         match self {
             SourceKind::GitHub => "github",
+            SourceKind::Flathub => "flathub",
             SourceKind::Codeberg => "codeberg",
             SourceKind::Aur => "aur",
             SourceKind::Pacman => "pacman",
@@ -61,6 +65,7 @@ impl AppId {
         let (prefix, key) = s.split_once(':')?;
         let source = match prefix {
             "github" => SourceKind::GitHub,
+            "flathub" => SourceKind::Flathub,
             "codeberg" => SourceKind::Codeberg,
             "aur" => SourceKind::Aur,
             "pacman" => SourceKind::Pacman,
@@ -87,6 +92,11 @@ impl AppId {
         if let Some(rest) = stripped.strip_prefix("aur.archlinux.org/packages/") {
             let name = rest.split(['/', '?', '#']).next().unwrap_or("");
             return valid_key(SourceKind::Aur, name).then(|| AppId::new(SourceKind::Aur, name));
+        }
+        if let Some(rest) = stripped.strip_prefix("flathub.org/") {
+            // flathub.org/apps/org.example.App, with an optional language in front.
+            let name = rest.split(['?', '#']).next().unwrap_or("").split('/').rfind(|p| !p.is_empty()).unwrap_or("");
+            return valid_key(SourceKind::Flathub, name).then(|| AppId::new(SourceKind::Flathub, name));
         }
         if let Some(rest) = stripped.strip_prefix("codeberg.org/") {
             let mut parts = rest.split(['?', '#']).next().unwrap_or("").split('/').filter(|p| !p.is_empty());
@@ -119,6 +129,10 @@ pub fn valid_key(source: SourceKind, key: &str) -> bool {
         }
         // Arch and Debian package names may also contain `+` and `@`.
         SourceKind::Aur | SourceKind::Pacman | SourceKind::Apt => ok(key, &['+', '@']),
+        // A reverse-DNS application id: at least three dotted parts.
+        SourceKind::Flathub => {
+            key.len() <= 255 && key.split('.').count() >= 3 && key.split('.').all(|part| ok(part, &[]))
+        }
         // A host name: labels of letters, digits and hyphens, with at least one dot.
         SourceKind::Web => {
             key.len() <= 253
@@ -162,6 +176,18 @@ pub struct AppSummary {
     pub origin: Option<String>,
     /// The version the system's package manager already has installed, if any.
     pub installed_version: Option<String>,
+    /// Star rating from people who use it, where a ratings service knows the app.
+    pub rating: Option<Rating>,
+    /// Address of the app's own icon, when the source gives one.
+    pub icon_url: Option<String>,
+}
+
+/// An average star rating and how many people gave one.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Rating {
+    /// 0.0 to 5.0.
+    pub stars: f32,
+    pub count: u32,
 }
 
 #[derive(Debug, Clone, PartialEq)]

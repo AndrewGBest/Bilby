@@ -820,7 +820,8 @@ export component DetailsBody inherits Rectangle {
     property <OptionRow> best: Store.options[0];
     property <bool> busy: Store.install-state == 1;
     property <bool> mine: Store.install-index == 0 && Store.install-state != 0;
-    property <bool> is-update: Store.installed-version != "" && Store.app.version != "" && Store.installed-version != Store.app.version;
+    // "installed" alone means the system has it but did not say which version.
+    property <bool> is-update: Store.installed-version != "" && Store.installed-version != "installed" && Store.app.version != "" && Store.installed-version != Store.app.version;
     property <bool> open-instead: Store.can-open && !is-update && !(mine && busy);
     property <string> action: mine && busy ? "Cancel" : open-instead ? "Open" : is-update ? "Update" : Store.installed-version != "" && best.verb == "Install" ? "Reinstall" : best.verb;
     function act() {
@@ -1092,7 +1093,7 @@ export component DetailsBody inherits Rectangle {
                 Text {
                     x: 14px;
                     width: parent.width - 28px;
-                    text: Store.installed-version == Store.app.version || Store.app.version == "" ? "Installed  ·  " + Store.installed-version : "Update available  ·  you have " + Store.installed-version + ", latest is " + Store.app.version;
+                    text: Store.installed-version == "installed" ? "Installed" : Store.installed-version == Store.app.version || Store.app.version == "" ? "Installed  ·  " + Store.installed-version : "Update available  ·  you have " + Store.installed-version + ", latest is " + Store.app.version;
                     color: Theme.accent;
                     font-size: 13px;
                     font-weight: 600;

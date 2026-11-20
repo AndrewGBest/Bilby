@@ -48,6 +48,38 @@ pub fn from_readme(markdown: &str, id: &AppId) -> Vec<String> {
     found
 }
 
+/// The project's own logo, when its README shows one: an early image that calls itself
+/// a logo or an icon, or that is drawn small on purpose.
+pub fn logo_from_readme(markdown: &str, id: &AppId) -> Option<String> {
+    if id.source != SourceKind::GitHub {
+        return None;
+    }
+    // A logo sits at the top. Further down, small images are diagrams and emoji.
+    candidates(markdown).into_iter().take(4).find_map(|c| {
+        let url = c.url.to_ascii_lowercase();
+        let alt = c.alt.to_ascii_lowercase();
+        let path = url.split(['?', '#']).next().unwrap_or("");
+        let drawable = path.ends_with(".png") || path.ends_with(".jpg") || path.ends_with(".jpeg");
+        let badge = ["badge", "shields.io", "badgen", "/workflows/", "codecov", "travis", "sponsor", "button"]
+            .iter()
+            .any(|word| url.contains(word) || alt.contains(word));
+        let named = ["logo", "icon"].iter().any(|word| url.contains(word) || alt.contains(word));
+        let small = c.size.is_some_and(|s| (32..=320).contains(&s));
+        (drawable && !badge && (named || small)).then(|| resolve(&c.url, &id.key)).flatten()
+    })
+}
+
+/// Where projects commonly keep their icon, tried when the README shows none.
+pub fn usual_logo_places(id: &AppId) -> Vec<String> {
+    if id.source != SourceKind::GitHub {
+        return Vec::new();
+    }
+    ["icon.png", "logo.png", "assets/icon.png", "assets/logo.png"]
+        .iter()
+        .map(|path| format!("https://raw.githubusercontent.com/{}/HEAD/{path}", id.key))
+        .collect()
+}
+
 /// Every image in the text: Markdown `![alt](url)` and HTML `<img src=...>`.
 fn candidates(markdown: &str) -> Vec<Candidate> {
     let mut out: Vec<(usize, Candidate)> = Vec::new();
@@ -221,6 +253,36 @@ mod tests {
             ],
             "in order, at most four, without the logo, badges, the tiny image, the GIF and the SVG"
         );
+    }
+
+    #[test]
+    fn a_logo_is_an_early_image_that_says_so_or_is_small() {
+        let id = AppId::new(SourceKind::GitHub, "owner/app");
+        let logo = |markdown: &str| logo_from_readme(markdown, &id);
+        assert_eq!(
+            logo("<p align=\"center\"><img src=\"assets/logo.png\" width=\"120\"></p>\n# App\n![Shot](docs/main.png)")
+                .as_deref(),
+            Some("https://raw.githubusercontent.com/owner/app/HEAD/assets/logo.png")
+        );
+        assert_eq!(
+            logo("![App icon](art/app.png)").as_deref(),
+            Some("https://raw.githubusercontent.com/owner/app/HEAD/art/app.png")
+        );
+        assert_eq!(
+            logo("<img src=\"art/mark.png\" height=\"96\">").as_deref(),
+            Some("https://raw.githubusercontent.com/owner/app/HEAD/art/mark.png")
+        );
+        assert_eq!(logo("![Main window](docs/main.png)"), None, "a screenshot is not a logo");
+        assert_eq!(logo("![logo](assets/logo.svg)"), None, "a format the app cannot draw");
+        assert_eq!(logo("![logo badge](https://img.shields.io/badge/logo-x.png)"), None);
+        assert_eq!(logo("![logo](https://example.com/logo.png)"), None, "not from a third party");
+        assert_eq!(
+            logo("![a](1.png)\n![b](2.png)\n![c](3.png)\n![d](4.png)\n![logo](logo.png)"),
+            None,
+            "only near the top"
+        );
+        assert_eq!(usual_logo_places(&id).len(), 4);
+        assert!(usual_logo_places(&AppId::new(SourceKind::Aur, "x")).is_empty());
     }
 
     #[test]

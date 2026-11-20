@@ -99,6 +99,12 @@ fn handle(mut stream: TcpStream, routes: &HashMap<String, Reply>, log: &Seen) ->
             headers.insert(k.trim().to_ascii_lowercase(), v.trim().to_string());
         }
     }
+    // The body of a POST, read so the client is not cut off mid-send, and kept for the test.
+    let length = headers.get("content-length").and_then(|v| v.parse::<usize>().ok()).unwrap_or(0);
+    let mut body = vec![0u8; length];
+    std::io::Read::read_exact(&mut reader, &mut body)?;
+    headers.insert(":method".to_string(), request_line.split_whitespace().next().unwrap_or("").to_string());
+    headers.insert(":body".to_string(), String::from_utf8_lossy(&body).to_string());
     log.lock().unwrap().push((path.clone(), headers));
     let reply = routes.get(&path).cloned().unwrap_or_else(|| Reply::status(404));
     let mut head =
@@ -562,4 +568,63 @@ fn codeberg_search_and_releases_parse_the_documented_shape() {
     for (path, headers) in server.requests() {
         assert!(!headers.contains_key("authorization"), "the GitHub token must not go to Codeberg ({path})");
     }
+}
+
+// ---- Flathub ----
+
+#[test]
+fn flathub_search_and_details_parse_the_shapes_its_source_code_describes() {
+    use bilby_core::source::flathub::Flathub;
+    let search = r#"{"hits":[
+      {"app_id":"org.example.Notes","id":"org_example_Notes","name":"Notes","summary":"Write things down",
+       "icon":"https://dl.flathub.org/media/org/example/Notes/icon.png","developer_name":"Example","project_license":"MIT",
+       "installs_last_month":1234,"arches":["x86_64"],"unknown":true},
+      {"app_id":"../../etc","name":"bad"}],
+      "query":"notes","totalHits":2}"#;
+    let appstream = r#"{"type":"desktop-application","id":"org.example.Notes","name":"Notes","summary":"Write things down",
+      "description":"<p>Plain notes.</p><ul><li>Fast</li></ul>","developer_name":"Example",
+      "icon":"https://evil.example/icon.png","project_license":"MIT",
+      "releases":[{"version":"2.1","timestamp":1793750400,"description":"<p>Fixes</p>"},{"version":"2.0","timestamp":"1790000000"}],
+      "screenshots":[{"sizes":[{"width":"224","src":"https://dl.flathub.org/media/a-small.png"},{"width":752,"src":"https://dl.flathub.org/media/a.png"}]},
+                     {"sizes":[{"width":"1504","src":"https://dl.flathub.org/media/b.webp"}]},
+                     {"sizes":[{"width":"752","src":"https://elsewhere.example/c.png"}]}],
+      "urls":{"homepage":"https://example.org/notes","vcs_browser":"https://github.com/example/notes"}}"#;
+    let server = Server::start(vec![
+        ("/fh/search?locale=en", Reply::json(search)),
+        ("/fh/appstream/org.example.Notes", Reply::json(appstream)),
+        (
+            "/fh/summary/org.example.Notes",
+            Reply::json(r#"{"arches":["x86_64"],"download_size":4096,"installed_size":9000}"#),
+        ),
+    ]);
+    let roots = temp("flathub-roots");
+    std::fs::create_dir_all(roots.join("app").join("org.example.Notes")).unwrap();
+    let source = Flathub::with_api(Arc::new(client(&server, Some("github-token"))), &server.url("/fh"), vec![roots]);
+
+    let hits = source.search("notes", 5).unwrap();
+    assert_eq!(hits.len(), 1, "an id that could not be a real app is dropped");
+    assert_eq!(hits[0].id, AppId::new(SourceKind::Flathub, "org.example.Notes"));
+    assert_eq!(hits[0].popularity, Some(1234));
+    assert_eq!(hits[0].icon_url.as_deref(), Some("https://dl.flathub.org/media/org/example/Notes/icon.png"));
+    assert_eq!(hits[0].installed_version.as_deref(), Some("installed"), "found in Flatpak's own folder");
+    let sent = &server.requests()[0].1;
+    assert_eq!(sent[":method"], "POST");
+    assert!(sent[":body"].contains(r#""query":"notes""#), "{}", sent[":body"]);
+    assert!(!sent.contains_key("authorization"), "the GitHub token must not go to Flathub");
+
+    let summary = source.summary("org.example.Notes").unwrap();
+    assert_eq!(summary.homepage, "https://example.org/notes");
+    assert_eq!(summary.icon_url, None, "an icon served from somewhere else is not fetched");
+
+    let releases = source.releases("org.example.Notes").unwrap();
+    assert_eq!((releases[0].version.as_str(), releases[0].published.as_str()), ("2.1", "2026-11-04"));
+    assert_eq!(releases[0].notes, "Fixes");
+    assert_eq!(releases[0].assets[0].size, 4096);
+    assert_eq!(source.about("org.example.Notes").unwrap().as_deref(), Some("Plain notes.\n\n•  Fast"));
+    assert_eq!(
+        source.pictures("org.example.Notes"),
+        ["https://dl.flathub.org/media/a.png"],
+        "the size nearest a page; no WebP (cannot be drawn), nothing from another host"
+    );
+    assert!(matches!(source.summary("not-an-id"), Err(Error::NotFound(_))));
 }

@@ -34,6 +34,8 @@ pub enum Format {
     RepoPackage,
     /// A website opened like an app (in Longboard, on a Linux TV). Not a file at all.
     WebApp,
+    /// An app in the Flathub repository, installed by Flatpak itself.
+    FlathubApp,
 }
 
 impl Format {
@@ -58,6 +60,7 @@ impl Format {
             Format::AurBuild => "AUR package",
             Format::RepoPackage => "Repository package",
             Format::WebApp => "Web app",
+            Format::FlathubApp => "Flatpak",
         }
     }
 
@@ -74,7 +77,8 @@ impl Format {
             | Format::PacmanPkg
             | Format::AurBuild
             | Format::RepoPackage
-            | Format::WebApp => Os::Linux,
+            | Format::WebApp
+            | Format::FlathubApp => Os::Linux,
             Format::Dmg | Format::MacPkg => Os::MacOs,
             Format::Ipa => Os::Ios,
             Format::Archive | Format::Binary => return None,
@@ -120,8 +124,8 @@ impl AssetInfo {
     pub fn label(&self) -> String {
         let mut label = self.format.label().to_string();
         let arch = self.arch_label();
-        // A website has no processor to be built for.
-        if !arch.is_empty() && self.format != Format::WebApp {
+        // A website has no processor to be built for, and Flatpak picks the right build itself.
+        if !arch.is_empty() && !matches!(self.format, Format::WebApp | Format::FlathubApp) {
             label.push_str(" · ");
             label.push_str(&arch);
         }
