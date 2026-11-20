@@ -403,6 +403,11 @@ fn shell_for(form_factor: FormFactor) -> Shell {
     }
 }
 
+/// The source with this short name (`flathub`, `steam`).
+fn source_named(name: &str) -> Option<SourceKind> {
+    AppId::parse(&format!("{name}:x")).map(|id| id.source)
+}
+
 fn make_catalog(platform: &Platform, demo: bool, settings: &Settings, dirs: &Dirs) -> Arc<Catalog> {
     let mut catalog = if demo {
         Catalog::demo(platform.clone())
@@ -414,6 +419,7 @@ fn make_catalog(platform: &Platform, demo: bool, settings: &Settings, dirs: &Dir
         Catalog::live(platform.clone(), token, dirs.cache.clone())
     };
     catalog.include_prereleases = settings.include_prereleases;
+    catalog.disabled = settings.disabled_sources.iter().filter_map(|name| source_named(name)).collect();
     catalog.use_flatpak_roots(dirs.flatpak_roots.clone());
     Arc::new(catalog)
 }
@@ -535,6 +541,8 @@ pub struct App {
     signin_generation: AtomicU64,
     /// Where Steam's library is, when a test says; otherwise the usual places.
     steam_libraries: Option<Vec<PathBuf>>,
+    /// Search results are narrowed to this source, when one is chosen.
+    result_filter: Mutex<Option<SourceKind>>,
 }
 
 /// The store's icon, written beside its app-menu entry.
@@ -910,7 +918,30 @@ impl App {
 
         // Search results keep their markers in sync too.
         let (query, results) = self.results.lock().unwrap().clone();
-        store.set_results(self.cards(&results));
+        // The sources these results came from, for the filter under the search box.
+        let mut found: Vec<(SourceKind, i32)> = Vec::new();
+        for app in &results {
+            match found.iter_mut().find(|(kind, _)| *kind == app.id.source) {
+                Some((_, n)) => *n += 1,
+                None => found.push((app.id.source, 1)),
+            }
+        }
+        let filter = self.result_filter.lock().unwrap().filter(|kind| found.iter().any(|(k, _)| k == kind));
+        store.set_source_filter(filter.map(|k| k.prefix()).unwrap_or_default().into());
+        store.set_result_sources(ModelRc::new(VecModel::from(
+            found
+                .iter()
+                .map(|(kind, n)| SourceChoice {
+                    id: kind.prefix().into(),
+                    label: kind.label().into(),
+                    on: true,
+                    count: *n,
+                })
+                .collect::<Vec<_>>(),
+        )));
+        let shown: Vec<AppSummary> =
+            results.iter().filter(|app| filter.is_none_or(|kind| app.id.source == kind)).cloned().collect();
+        store.set_results(self.cards(&shown));
 
         // TV: the Library page has updates first, then the rest, then favourites.
         let section = |title: &str, cards: Vec<AppCard>| Section {
@@ -950,6 +981,18 @@ impl App {
         store.set_downloads_dir(self.dirs.downloads.display().to_string().into());
         store.set_show_welcome(!settings.welcomed);
         store.set_interface_mode(interface_mode(&settings.interface));
+        store.set_sources(ModelRc::new(VecModel::from(
+            self.catalog()
+                .available_sources()
+                .into_iter()
+                .map(|kind| SourceChoice {
+                    id: kind.prefix().into(),
+                    label: kind.label().into(),
+                    on: !settings.disabled_sources.iter().any(|name| name == kind.prefix()),
+                    count: 0,
+                })
+                .collect::<Vec<_>>(),
+        )));
         ui.global::<Theme>().set_reduce_motion(settings.reduce_motion);
         store.set_can_register(self.self_program.is_some());
         store.set_in_menu(self.self_program.is_some() && install::self_entry_path(&self.dirs).is_file());
@@ -1304,8 +1347,11 @@ impl App {
             return;
         }
         // A pasted link or owner/repo goes straight to that app.
+        // A new search starts unfiltered.
+        *self.result_filter.lock().unwrap() = None;
         if let Some(id) = AppId::from_user_input(&query) {
-            if self.catalog().active_sources().contains(&id.source) {
+            // A link opens even when its source is switched off: the person asked for it.
+            if self.catalog().available_sources().contains(&id.source) {
                 self.open(ui, &id.to_string());
                 return;
             }
@@ -2257,6 +2303,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         self_program: options.self_program.clone(),
         signin_generation: AtomicU64::new(0),
         steam_libraries: options.steam_libraries.clone(),
+        result_filter: Mutex::new(None),
     });
     app.apply_menu_entry(&ui);
     app.show_system(&ui, 0, "");
@@ -2401,6 +2448,25 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     on!(on_set_reduce_motion, |app, ui, on| {
         app.update_state(ui, |state| state.settings.reduce_motion = on);
         app.refresh_settings(ui);
+    });
+    on!(on_set_source, |app, ui, name, on| {
+        let name = name.to_string();
+        app.update_state(ui, |state| {
+            state.settings.disabled_sources.retain(|n| *n != name);
+            if !on {
+                state.settings.disabled_sources.push(name.clone());
+            }
+        });
+        // What is listed depends on it: build the catalog again and redraw.
+        app.rebuild_catalog();
+        app.collections.lock().unwrap().clear();
+        app.load_collections(ui);
+        app.refresh(ui);
+        app.refresh_settings(ui);
+    });
+    on!(on_filter_results, |app, ui, name| {
+        *app.result_filter.lock().unwrap() = source_named(name.as_str());
+        app.refresh(ui);
     });
     on!(on_set_interface, |app, ui, mode| { app.set_interface(ui, mode) });
     on!(on_answer_tv, |app, ui, yes| {

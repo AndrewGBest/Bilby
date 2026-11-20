@@ -34,6 +34,9 @@ pub struct Catalog {
     pub check_limit: usize,
     /// Treat pre-releases like stable releases (a user setting).
     pub include_prereleases: bool,
+    /// Sources the person switched off in Settings: not searched, not on the home page.
+    /// An app from one can still be opened by its link.
+    pub disabled: Vec<SourceKind>,
     /// Star ratings, once loaded, and the catalog that links packages to rated ids.
     /// Shared, so a rebuilt catalog keeps what an earlier one fetched.
     ratings: Arc<std::sync::RwLock<Option<Rated>>>,
@@ -105,6 +108,7 @@ impl Catalog {
             http,
             check_limit: 8,
             include_prereleases: false,
+            disabled: Vec::new(),
             ratings: Arc::default(),
             appstream_dirs: Vec::new(),
         }
@@ -133,6 +137,7 @@ impl Catalog {
             http,
             check_limit: 8,
             include_prereleases: false,
+            disabled: Vec::new(),
             ratings: Arc::default(),
             appstream_dirs: Vec::new(),
         }
@@ -201,12 +206,22 @@ impl Catalog {
     /// The names of the system repositories being read (`cachyos-v3`, `extra`, ...).
     /// Reads the package databases if that has not happened yet.
     pub fn system_repositories(&self) -> Vec<String> {
-        self.sources.iter().filter(|s| s.available_on(&self.platform)).flat_map(|s| s.origins()).collect()
+        self.sources.iter().filter(|s| self.uses(s.as_ref())).flat_map(|s| s.origins()).collect()
     }
 
     /// Sources that make sense on this machine.
-    pub fn active_sources(&self) -> Vec<SourceKind> {
+    /// A source that applies to this device and has not been switched off.
+    fn uses(&self, source: &dyn Source) -> bool {
+        source.available_on(&self.platform) && !self.disabled.contains(&source.kind())
+    }
+
+    /// Every source that applies to this device, switched off or not.
+    pub fn available_sources(&self) -> Vec<SourceKind> {
         self.sources.iter().filter(|s| s.available_on(&self.platform)).map(|s| s.kind()).collect()
+    }
+
+    pub fn active_sources(&self) -> Vec<SourceKind> {
+        self.sources.iter().filter(|s| self.uses(s.as_ref())).map(|s| s.kind()).collect()
     }
 
     /// The Discover page. Costs no network requests.
@@ -229,7 +244,7 @@ impl Catalog {
     pub fn collections(&self, limit: usize) -> Vec<Section> {
         let mut sections = Vec::new();
         for source in &self.sources {
-            if !source.available_on(&self.platform) {
+            if !self.uses(source.as_ref()) {
                 continue;
             }
             for (title, mut apps) in source.collections(limit) {
@@ -479,7 +494,7 @@ impl Catalog {
         }
         let mut per_source: Vec<Vec<AppSummary>> = Vec::new();
         let mut offline = false;
-        for source in self.sources.iter().filter(|s| s.available_on(&self.platform)) {
+        for source in self.sources.iter().filter(|s| self.uses(s.as_ref())) {
             let hits = match source.search(query, self.check_limit) {
                 Ok(hits) => hits,
                 Err(e) => {

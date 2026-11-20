@@ -1930,3 +1930,42 @@ fn signing_in_to_github_shows_a_code_and_keeps_the_token_it_is_given() {
     tv.press(Key::Return);
     assert!(!tv.store().get_has_token(), "and OK again signs out");
 }
+
+// ---- choosing where apps come from ----
+
+#[test]
+fn sources_can_be_switched_off_and_results_filtered_by_source() {
+    let s = start("linux-x64-debian", Shell::Desktop);
+    // A search that several sources answer.
+    s.app.search(&s.ui, "notes");
+    let sources: Vec<(String, i32)> =
+        s.store().get_result_sources().iter().map(|c| (c.id.to_string(), c.count)).collect();
+    assert!(sources.len() >= 2 && sources.iter().any(|(id, _)| id == "flathub"), "{sources:?}");
+    let all = s.store().get_results().row_count();
+
+    // Narrow to one source, and back.
+    s.store().invoke_filter_results("flathub".into());
+    assert_eq!(s.store().get_source_filter(), "flathub");
+    assert!(s.store().get_results().iter().all(|c| c.id.starts_with("flathub:")));
+    assert!(s.store().get_results().row_count() < all);
+    s.store().invoke_filter_results("".into());
+    assert_eq!(s.store().get_results().row_count(), all);
+
+    // Switched off in Settings: gone from searches and the home page, and remembered.
+    s.store().set_page(3);
+    assert!(s.store().get_sources().iter().any(|c| c.id == "flathub" && c.on));
+    s.store().invoke_set_source("flathub".into(), false);
+    assert_eq!(s.saved().settings.disabled_sources, ["flathub"]);
+    assert!(s.store().get_sources().iter().any(|c| c.id == "flathub" && !c.on), "still listed, to switch back on");
+    s.app.search(&s.ui, "notes");
+    assert!(s.store().get_results().iter().all(|c| !c.id.starts_with("flathub:")));
+    assert!(s.store().get_sections().iter().all(|section| !section.title.contains("Flathub")));
+    // A link to an app from it still opens: the person asked for that app.
+    s.app.search(&s.ui, "flathub:io.quillpad.Quillpad");
+    assert!(s.store().get_details_open());
+
+    s.store().invoke_set_source("flathub".into(), true);
+    assert!(s.saved().settings.disabled_sources.is_empty());
+    s.app.search(&s.ui, "notes");
+    assert!(s.store().get_results().iter().any(|c| c.id.starts_with("flathub:")));
+}

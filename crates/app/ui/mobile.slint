@@ -2,7 +2,7 @@
 // install button on the best option. Built for touch.
 import { Theme } from "theme.slint";
 import { Store } from "types.slint";
-import { AppRow, Busy, ChoiceChip, EmptyState, SearchField, DetailsBody, LibraryBody, SettingsBody, SystemBody, Appear, FadeIn, Toast, UpdatesBanner, Welcome } from "components.slint";
+import { AppRow, Busy, ChoiceChip, EmptyState, SearchField, DetailsBody, LibraryBody, SettingsBody, SourceFilter, SystemBody, Appear, FadeIn, Toast, UpdatesBanner, Welcome } from "components.slint";
 
 component Tab inherits Rectangle {
     in property <string> label;
@@ -234,6 +234,11 @@ export component MobileShell inherits Rectangle {
                                     font-size: 13px;
                                     wrap: word-wrap;
                                 }
+                            }
+                            if Store.result-sources.length > 1 && !Store.searching : HorizontalLayout {
+                                padding-left: 16px;
+                                padding-right: 16px;
+                                SourceFilter { }
                             }
                             if Store.search-error != "" && !Store.searching : HorizontalLayout {
                                 padding: 16px;

@@ -803,6 +803,24 @@ export component Welcome inherits Rectangle {
     }
 }
 
+// Under a search: show everything, or only what one source gave.
+export component SourceFilter inherits Flickable {
+    height: 36px;
+    viewport-width: chips.preferred-width;
+    HorizontalLayout {
+        alignment: start;
+        chips := HorizontalLayout {
+            spacing: 8px;
+            ChoiceChip { text: "All"; selected: Store.source-filter == ""; clicked => { Store.filter-results(""); } }
+            for source in Store.result-sources : ChoiceChip {
+                text: source.label + "  " + source.count;
+                selected: Store.source-filter == source.id;
+                clicked => { Store.filter-results(source.id); }
+            }
+        }
+    }
+}
+
 // Asked once, when a controller is attached but nothing says this is a TV.
 export component TvQuestion inherits Rectangle {
     in property <bool> compact;
@@ -1876,6 +1894,28 @@ export component SettingsBody inherits Rectangle {
                             label: "Show Bilby in the app menu";
                             checked: Store.in-menu;
                             toggled(on) => { Store.set-in-menu(on); }
+                        }
+                    }
+                }
+            }
+
+            SettingsCard {
+                title: "Where apps come from";
+                Text {
+                    text: "Switch off any place you do not want apps from. It is then left out of searches and the home page; an app from it can still be opened by its link.";
+                    color: Theme.text-dim;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                }
+                for source in Store.sources : HorizontalLayout {
+                    spacing: 12px;
+                    Text { horizontal-stretch: 1; text: source.label; color: Theme.text; font-size: 14px; vertical-alignment: center; overflow: elide; }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle {
+                            label: "Show apps from " + source.label;
+                            checked: source.on;
+                            toggled(on) => { Store.set-source(source.id, on); }
                         }
                     }
                 }

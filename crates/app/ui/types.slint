@@ -85,6 +85,16 @@ export struct SystemUpdate {
     via: string,
 }
 
+// A source of apps that can be switched on and off, or filtered by.
+export struct SourceChoice {
+    // Its short name: "flathub", "steam".
+    id: string,
+    label: string,
+    on: bool,
+    // In search results: how many of them it gave.
+    count: int,
+}
+
 export struct LibraryRow {
     card: AppCard,
     // "AppImage · x86_64  ·  installed 2026-11-19"
@@ -129,6 +139,9 @@ export global Store {
     in property <[AppCard]> results;
     in property <string> search-note;
     in property <string> search-error;
+    // The sources the current results came from, and the one being shown ("" for all).
+    in property <[SourceChoice]> result-sources;
+    in property <string> source-filter;
     in property <[string]> recent;
     // Featured apps matching what is being typed. Instant, no network.
     in property <[AppCard]> suggestions;
@@ -228,6 +241,8 @@ export global Store {
     in property <bool> show-welcome;
     // 0 decide for me, 1 desktop, 2 TV
     in property <int> interface-mode;
+    // Every source that applies to this device, and whether it is switched on.
+    in property <[SourceChoice]> sources;
     // The store is running from a file it can add to the app menu, and whether it has.
     in property <bool> can-register;
     in property <bool> in-menu;
@@ -272,6 +287,8 @@ export global Store {
     callback dismiss-welcome();
     callback view-store-update();
     callback set-interface(int);
+    callback set-source(string, bool);
+    callback filter-results(string);
     callback set-reduce-motion(bool);
     callback set-in-menu(bool);
     callback answer-tv(bool);

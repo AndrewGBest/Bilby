@@ -32,6 +32,8 @@ pub struct Settings {
     pub hide_from_menu: bool,
     /// Change things at once instead of animating them.
     pub reduce_motion: bool,
+    /// Sources switched off, by their short names (`flathub`, `steam`, ...).
+    pub disabled_sources: Vec<String>,
 }
 
 /// An app obtained through the store.
