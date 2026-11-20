@@ -607,7 +607,10 @@ mod tests {
         let entry = std::fs::read_to_string(self_entry_path(&dirs)).unwrap();
         assert!(entry.contains("\nName=Bilby\n"));
         assert!(entry.contains("\nExec=\"/home/someone/My Apps/bilby-v0.1.3-x86_64.AppImage\"\n"), "{entry}");
-        let icon = dirs.menu.parent().unwrap().join("icons/hicolor/512x512/apps/bilby.png");
+        // Joined piece by piece, as the code does, so the separators agree on every system.
+        let icon = ["icons", "hicolor", "512x512", "apps", "bilby.png"]
+            .iter()
+            .fold(dirs.menu.parent().unwrap().to_path_buf(), |path, part| path.join(part));
         assert!(entry.contains(&format!("\nIcon={}\n", icon.display())));
         assert_eq!(std::fs::read(&icon).unwrap(), b"png");
 
