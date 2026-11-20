@@ -938,6 +938,7 @@ impl App {
         store.set_downloads_dir(self.dirs.downloads.display().to_string().into());
         store.set_show_welcome(!settings.welcomed);
         store.set_interface_mode(interface_mode(&settings.interface));
+        ui.global::<Theme>().set_reduce_motion(settings.reduce_motion);
         store.set_can_register(self.self_program.is_some());
         store.set_in_menu(self.self_program.is_some() && install::self_entry_path(&self.dirs).is_file());
         self.refresh_quota(ui);
@@ -2255,6 +2256,10 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     on!(on_set_in_menu, |app, ui, shown| {
         app.update_state(ui, |state| state.settings.hide_from_menu = !shown);
         app.apply_menu_entry(ui);
+        app.refresh_settings(ui);
+    });
+    on!(on_set_reduce_motion, |app, ui, on| {
+        app.update_state(ui, |state| state.settings.reduce_motion = on);
         app.refresh_settings(ui);
     });
     on!(on_set_interface, |app, ui, mode| { app.set_interface(ui, mode) });

@@ -2,7 +2,7 @@
 // install button on the best option. Built for touch.
 import { Theme } from "theme.slint";
 import { Store } from "types.slint";
-import { AppRow, Busy, ChoiceChip, EmptyState, SearchField, DetailsBody, LibraryBody, SettingsBody, SystemBody, Toast, UpdatesBanner, Welcome } from "components.slint";
+import { AppRow, Busy, ChoiceChip, EmptyState, SearchField, DetailsBody, LibraryBody, SettingsBody, SystemBody, Appear, FadeIn, Toast, UpdatesBanner, Welcome } from "components.slint";
 
 component Tab inherits Rectangle {
     in property <string> label;
@@ -144,10 +144,12 @@ export component MobileShell inherits Rectangle {
             Rectangle {
                 vertical-stretch: 1;
                 clip: true;
-                if Store.details-open : DetailsBody { compact: true; }
+                if Store.details-open : FadeIn {
+                    DetailsBody { compact: true; }
+                }
 
-                Rectangle {
-                    visible: !Store.details-open && Store.page == 0;
+                Appear {
+                    shown: !Store.details-open && Store.page == 0;
                     VerticalLayout {
                         if Store.categories.length > 1 : Flickable {
                             height: 44px;
@@ -212,8 +214,8 @@ export component MobileShell inherits Rectangle {
                     }
                 }
 
-                Rectangle {
-                    visible: !Store.details-open && Store.page == 1;
+                Appear {
+                    shown: !Store.details-open && Store.page == 1;
                     Flickable {
                         VerticalLayout {
                             alignment: start;
@@ -279,16 +281,16 @@ export component MobileShell inherits Rectangle {
                     }
                 }
 
-                Rectangle {
-                    visible: !Store.details-open && Store.page == 2;
+                Appear {
+                    shown: !Store.details-open && Store.page == 2;
                     LibraryBody { compact: true; }
                 }
-                Rectangle {
-                    visible: !Store.details-open && Store.page == 3;
+                Appear {
+                    shown: !Store.details-open && Store.page == 3;
                     SettingsBody { compact: true; }
                 }
-                Rectangle {
-                    visible: !Store.details-open && Store.page == 4;
+                Appear {
+                    shown: !Store.details-open && Store.page == 4;
                     SystemBody { compact: true; }
                 }
             }

@@ -4,6 +4,12 @@ import { Palette } from "std-widgets.slint";
 export global Theme {
     // 0 follow the system, 1 light, 2 dark
     in property <int> mode: 0;
+    // Motion: short and purposeful, as on phones. With "reduce motion" on, things
+    // change at once instead of moving.
+    in property <bool> reduce-motion: false;
+    out property <duration> quick: reduce-motion ? 0ms : 110ms;
+    out property <duration> smooth: reduce-motion ? 0ms : 220ms;
+    out property <duration> slow: reduce-motion ? 0ms : 380ms;
     out property <bool> dark: mode == 2 || (mode == 0 && Palette.color-scheme == ColorScheme.dark);
 
     out property <color> bg: dark ? #0e1014 : #f4f5f8;

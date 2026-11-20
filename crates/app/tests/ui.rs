@@ -1858,3 +1858,19 @@ fn a_tv_remote_reads_reviews_and_picks_an_older_version() {
     assert_eq!(s.store().get_selected_version(), 0, "it stops at the newest");
     assert_eq!(s.store().get_app().version, newest);
 }
+
+#[test]
+fn motion_can_be_turned_down_and_the_choice_is_kept() {
+    let s = start("linux-x64-debian", Shell::Desktop);
+    assert!(!s.ui.global::<Theme>().get_reduce_motion(), "things move unless asked not to");
+    s.store().invoke_set_reduce_motion(true);
+    assert!(s.ui.global::<Theme>().get_reduce_motion());
+    assert!(s.saved().settings.reduce_motion);
+    assert_eq!(s.ui.global::<Theme>().get_smooth(), 0, "with it on, nothing takes time");
+
+    // A download shows how far along it is on the button that started it.
+    s.app.open(&s.ui, "github:lumen-labs/lumen");
+    assert!(s.store().get_options().row_count() > 0);
+    s.store().invoke_install(0);
+    assert_eq!(s.store().get_install_state(), 2, "the demo download finishes at once");
+}

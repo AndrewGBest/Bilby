@@ -4,7 +4,7 @@
 // surface and a 1080p or 4K desktop window.
 import { Theme } from "theme.slint";
 import { AppCard, Section, Store } from "types.slint";
-import { AppIcon } from "components.slint";
+import { AppIcon, FadeIn, ProgressBar } from "components.slint";
 
 // Sizes follow Android TV's guidance: content stays inside a 48dp side and 27dp
 // top/bottom margin, body text is 12dp or larger, and the focused item grows a little
@@ -128,6 +128,8 @@ component TvButton inherits Rectangle {
     in property <bool> focused;
     in property <bool> primary;
     in property <length> u;
+    // 0 to 1 while this button's action is under way.
+    in property <float> progress: -1;
     callback clicked;
     height: 34 * u;
     width: label.preferred-width + 28 * u;
@@ -141,7 +143,15 @@ component TvButton inherits Rectangle {
         border-width: focused ? 2 * u : 0;
         border-color: white;
         opacity: focused ? 1 : 0.75;
-        animate x, y, width, height, border-width, opacity { duration: 120ms; easing: ease-out; }
+        animate x, y, width, height, border-width, opacity { duration: Theme.quick; easing: ease-out; }
+        clip: root.progress >= 0;
+        if root.progress >= 0 : Rectangle {
+            x: 0;
+            width: parent.width * clamp(root.progress, 0.03, 1.0);
+            height: parent.height;
+            background: #ffffff66;
+            animate width { duration: Theme.smooth; easing: ease-out; }
+        }
         TouchArea {
             clicked => { root.clicked(); }
         }
@@ -571,7 +581,7 @@ export component TvShell inherits Rectangle {
         }
 
         // ---- this TV: what it runs and whether it is up to date ----
-        if root.on-system : Rectangle {
+        if root.on-system : FadeIn {
             VerticalLayout {
                 x: margin;
                 y: 70 * u;
@@ -678,7 +688,7 @@ export component TvShell inherits Rectangle {
         }
 
         // ---- home: the focused app in large type, rows of apps below ----
-        if !Store.details-open && !root.on-system : Rectangle {
+        if !Store.details-open && !root.on-system : FadeIn {
             VerticalLayout {
                 x: margin;
                 y: 74 * u;
@@ -786,7 +796,7 @@ export component TvShell inherits Rectangle {
         }
 
         // ---- app page: what it is and one button on the left, pictures on the right ----
-        if Store.details-open : Rectangle {
+        if Store.details-open : FadeIn {
             VerticalLayout {
                 x: margin;
                 y: 70 * u;
@@ -830,6 +840,7 @@ export component TvShell inherits Rectangle {
                     if root.main-action != "" || Store.details-error != "" : TvButton {
                         u: root.u;
                         text: Store.details-error != "" ? "Try again" : root.main-action;
+                        progress: root.busy ? Store.install-progress : -1;
                         primary: true;
                         focused: root.act == 0 && !root.files && !root.reading;
                         clicked => {

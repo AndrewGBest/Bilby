@@ -615,6 +615,29 @@ is expected to do the same; this has not been checked on Bigscreen. Older versio
 Bigscreen were said to show only some kinds of apps on its home rows, which was not
 verified either way.
 
+### Motion
+
+Things move for a reason, briefly, and the same way everywhere. The pattern follows
+what Android's Material guidance and Apple's interface guidelines both ask for: short
+durations, easing that slows into place, and motion that explains what happened
+rather than decorating it ([Material motion](https://m3.material.io/styles/motion/overview),
+[Apple: Motion](https://developer.apple.com/design/human-interface-guidelines/motion)).
+[The durations below were chosen to sit in the range those guides describe; the exact
+figures are judgement, and those pages were not re-read for this work.]
+
+| What | How it moves |
+|---|---|
+| Starting a download, install or update | The button that started it fills from left to right and becomes Cancel; a bar below shows the same, with a soft highlight passing over it. When the amount is unknown (Flatpak does not say) a band travels instead |
+| Finishing | A tick pops in beside the result; a failure gets a plain mark, no bounce |
+| Changing page, opening an app | The new page fades up a few pixels (220 ms). Leaving is immediate, so nothing lingers |
+| Pressing a button or a tile | It gives slightly (to 96%) and springs back; tiles lift a little under the pointer |
+| Messages at the bottom | Rise into place and fade |
+| Rating bars | Settle to their lengths |
+| TV | The focused item grows and gains a border, as before; screens fade in; the main button fills during a download |
+
+Settings has **Reduce motion**, which makes all of it instant, as both platforms offer.
+The system's own "reduce motion" preference is not read yet.
+
 ### Knowing it is a TV
 
 A television is not something a computer reports, and a 4K monitor and a 4K TV look

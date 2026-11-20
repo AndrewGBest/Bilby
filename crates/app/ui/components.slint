@@ -96,9 +96,22 @@ export component Button inherits Rectangle {
     in property <bool> danger: false;
     in property <bool> enabled: true;
     in property <length> font-size: 14px;
+    // 0 to 1 while the button's own action is under way: it fills like a progress bar.
+    in property <float> progress: -1;
     callback clicked;
     height: font-size * 2.9;
     border-radius: 10px;
+    clip: root.progress >= 0;
+    // Pressing gives a little, as a real button does.
+    transform-scale: ta.pressed && root.enabled ? 0.96 : 1;
+    animate transform-scale { duration: Theme.quick; easing: ease-out; }
+    if root.progress >= 0 : Rectangle {
+        x: 0;
+        width: parent.width * clamp(root.progress, 0.03, 1.0);
+        height: parent.height;
+        background: Theme.accent.with-alpha(0.32);
+        animate width { duration: Theme.smooth; easing: ease-out; }
+    }
     background: !enabled ? Theme.surface-2 : primary ? (ta.pressed ? Theme.accent.darker(15%) : ta.has-hover ? Theme.accent.brighter(8%) : Theme.accent) : (ta.has-hover ? Theme.surface-2 : Theme.surface);
     border-width: fs.has-focus ? 2px : primary ? 0px : 1px;
     border-color: fs.has-focus ? Theme.focus : Theme.stroke;
@@ -110,7 +123,7 @@ export component Button inherits Rectangle {
             root.clicked();
         }
     }
-    animate background { duration: 100ms; }
+    animate background { duration: Theme.quick; }
     fs := FocusScope {
         enabled: root.enabled;
         focus-on-click: false;
@@ -153,6 +166,90 @@ export component Busy inherits Rectangle {
         width: parent.width * 0.4;
         border-radius: 1.5px;
         background: Theme.accent;
+    }
+}
+
+// How far along a download or an update is. When the amount is not known (Flatpak
+// does not say), a band travels across instead of a bar filling.
+export component ProgressBar inherits Rectangle {
+    in property <float> value;
+    property <bool> unknown: root.value <= 0.01;
+    property <float> t: Theme.reduce-motion ? 0.3 : mod(animation-tick() / 1.3s, 1.0);
+    height: 6px;
+    border-radius: 3px;
+    background: Theme.surface-2;
+    clip: true;
+    accessible-role: progress-indicator;
+    accessible-value: round(root.value * 100) + "%";
+    fill := Rectangle {
+        x: root.unknown ? parent.width * (root.t * 1.4 - 0.4) : 0;
+        width: root.unknown ? parent.width * 0.4 : parent.width * clamp(root.value, 0.02, 1.0);
+        border-radius: 3px;
+        background: Theme.accent;
+        clip: true;
+        animate width { duration: Theme.smooth; easing: ease-out; }
+        // A soft highlight passing over the bar says "still working" between steps.
+        if !root.unknown && !Theme.reduce-motion : Rectangle {
+            x: fill.width * (root.t * 1.5 - 0.25);
+            width: 48px;
+            background: @linear-gradient(90deg, #ffffff00 0%, #ffffff55 50%, #ffffff00 100%);
+        }
+    }
+}
+
+// The moment something finishes: a tick that pops in. A failure gets a plain mark.
+export component DoneMark inherits Rectangle {
+    in property <bool> ok: true;
+    property <bool> ready: false;
+    width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    background: root.ok ? Theme.ok : Theme.bad;
+    transform-scale: root.ready ? 1 : 0.3;
+    opacity: root.ready ? 1 : 0;
+    accessible-role: none;
+    animate transform-scale { duration: Theme.slow; easing: ease-out-back; }
+    animate opacity { duration: Theme.quick; }
+    Timer {
+        interval: 20ms;
+        running: !root.ready;
+        triggered => { root.ready = true; }
+    }
+    Text { text: root.ok ? "✓" : "!"; color: Theme.bg; font-size: 12px; font-weight: 800; horizontal-alignment: center; vertical-alignment: center; }
+}
+
+// A page that eases in when it is shown: it fades up a few pixels, the way screens
+// arrive on a phone. Leaving is immediate, so nothing lingers.
+export component Appear inherits Rectangle {
+    in property <bool> shown;
+    visible: root.shown;
+    inner := Rectangle {
+        y: 12px;
+        width: parent.width;
+        height: parent.height;
+        opacity: 0;
+        @children
+    }
+    states [
+        on when root.shown: {
+            inner.opacity: 1;
+            inner.y: 0px;
+            in {
+                animate inner.opacity, inner.y { duration: Theme.smooth; easing: ease-out; }
+            }
+        }
+    ]
+}
+
+// The same for something that only exists while it is shown.
+export component FadeIn inherits Rectangle {
+    property <bool> ready: false;
+    opacity: root.ready ? 1 : 0;
+    animate opacity { duration: Theme.smooth; easing: ease-out; }
+    Timer {
+        interval: 16ms;
+        running: !root.ready;
+        triggered => { root.ready = true; }
     }
 }
 
@@ -276,7 +373,9 @@ export component AppTile inherits Rectangle {
     accessible-label: app.name;
     accessible-description: app.summary;
     accessible-action-default => { root.clicked(); }
-    animate background, border-color { duration: 120ms; }
+    transform-scale: ta.pressed ? 0.985 : ta.has-hover ? 1.012 : 1;
+    animate background, border-color { duration: Theme.quick; }
+    animate transform-scale { duration: Theme.quick; easing: ease-out; }
     fs := FocusScope {
         focus-on-click: false;
         key-pressed(event) => {
@@ -577,24 +676,22 @@ export component OptionCard inherits Rectangle {
                 wrap: word-wrap;
             }
         }
-        if mine && busy : Rectangle {
-            height: 4px;
-            border-radius: 2px;
-            background: Theme.surface-2;
-            Rectangle {
-                x: 0;
-                width: parent.width * clamp(Store.install-progress, 0.02, 1.0);
-                border-radius: 2px;
-                background: Theme.accent;
-                animate width { duration: 120ms; }
+        if mine && busy : ProgressBar { value: Store.install-progress; }
+        if mine && !busy : HorizontalLayout {
+            spacing: 8px;
+            VerticalLayout {
+                alignment: start;
+                DoneMark { ok: Store.install-state != 3; }
             }
-        }
-        if mine && !busy : Text {
-            text: Store.install-message;
-            color: Store.install-state == 3 ? Theme.bad : Theme.ok;
-            font-size: 12px;
-            wrap: word-wrap;
-            accessible-role: text;
+            Text {
+                horizontal-stretch: 1;
+                text: Store.install-message;
+                color: Store.install-state == 3 ? Theme.bad : Theme.ok;
+                font-size: 12px;
+                wrap: word-wrap;
+                vertical-alignment: center;
+                accessible-role: text;
+            }
         }
     }
 }
@@ -770,7 +867,14 @@ component RatingSummary inherits HorizontalLayout {
                     height: 6px;
                     border-radius: 3px;
                     background: Theme.stroke;
-                    Rectangle { x: 0; width: parent.width * share; height: parent.height; border-radius: 3px; background: Theme.warn; }
+                    Rectangle {
+                        x: 0;
+                        width: parent.width * share;
+                        height: parent.height;
+                        border-radius: 3px;
+                        background: Theme.warn;
+                        animate width { duration: Theme.slow; easing: ease-out; }
+                    }
                 }
             }
             Text { width: 34px; text: round(share * 100) + "%"; color: Theme.text-dim; font-size: 11px; vertical-alignment: center; }
@@ -945,6 +1049,7 @@ export component DetailsBody inherits Rectangle {
                             min-width: 150px;
                             font-size: 15px;
                             text: root.action;
+                            progress: root.mine && root.busy ? Store.install-progress : -1;
                             primary: !(root.mine && root.busy);
                             enabled: !root.busy || root.mine;
                             accessible-label: (root.mine && root.busy ? "Cancel" : root.open-instead ? "Open" : root.best.verb) + " " + (root.open-instead ? Store.app.name : root.best.label);
@@ -959,6 +1064,7 @@ export component DetailsBody inherits Rectangle {
                     horizontal-stretch: 1;
                     font-size: 15px;
                     text: root.action;
+                    progress: root.mine && root.busy ? Store.install-progress : -1;
                     primary: !(root.mine && root.busy);
                     enabled: !root.busy || root.mine;
                     accessible-label: (root.mine && root.busy ? "Cancel" : root.open-instead ? "Open" : root.best.verb) + " " + (root.open-instead ? Store.app.name : root.best.label);
@@ -1083,24 +1189,22 @@ export component DetailsBody inherits Rectangle {
                 }
             }
 
-            if root.mine && root.busy : Rectangle {
-                height: 4px;
-                border-radius: 2px;
-                background: Theme.surface-2;
-                Rectangle {
-                    x: 0;
-                    width: parent.width * clamp(Store.install-progress, 0.02, 1.0);
-                    border-radius: 2px;
-                    background: Theme.accent;
-                    animate width { duration: 120ms; }
+            if root.mine && root.busy : ProgressBar { value: Store.install-progress; }
+            if root.mine && !root.busy && !root.more : HorizontalLayout {
+                spacing: 8px;
+                VerticalLayout {
+                    alignment: start;
+                    DoneMark { ok: Store.install-state != 3; }
                 }
-            }
-            if root.mine && !root.busy && !root.more : Text {
-                text: Store.install-message;
-                color: Store.install-state == 3 ? Theme.bad : Theme.ok;
-                font-size: 13px;
-                wrap: word-wrap;
-                accessible-role: text;
+                Text {
+                    horizontal-stretch: 1;
+                    text: Store.install-message;
+                    color: Store.install-state == 3 ? Theme.bad : Theme.ok;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                    vertical-alignment: center;
+                    accessible-role: text;
+                }
             }
 
             if Store.app.summary != "" : Text {
@@ -1428,18 +1532,7 @@ component LibraryItem inherits Rectangle {
             accessible-label: "Skip this update of " + entry.card.name;
             clicked => { Store.skip-update(entry.card.id); }
         }
-        if updating : Rectangle {
-            height: 4px;
-            border-radius: 2px;
-            background: Theme.surface-2;
-            Rectangle {
-                x: 0;
-                width: parent.width * clamp(Store.install-progress, 0.02, 1.0);
-                border-radius: 2px;
-                background: Theme.accent;
-                animate width { duration: 120ms; }
-            }
-        }
+        if updating : ProgressBar { value: Store.install-progress; }
         if root.confirm : Text {
             text: entry.store-managed ? "This deletes the app's file from your Applications folder." : "This only forgets the app here. To uninstall it, use your system's software manager.";
             color: Theme.text-dim;
@@ -1813,6 +1906,25 @@ export component SettingsBody inherits Rectangle {
                     ChoiceChip { text: "Light"; selected: Store.theme-mode == 1; clicked => { Store.set-theme(1); } }
                     ChoiceChip { text: "Dark"; selected: Store.theme-mode == 2; clicked => { Store.set-theme(2); } }
                 }
+                HorizontalLayout {
+                    spacing: 12px;
+                    Text {
+                        horizontal-stretch: 1;
+                        text: "Reduce motion: pages and buttons change at once instead of moving.";
+                        color: Theme.text-dim;
+                        font-size: 13px;
+                        wrap: word-wrap;
+                        vertical-alignment: center;
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle {
+                            label: "Reduce motion";
+                            checked: Theme.reduce-motion;
+                            toggled(on) => { Store.set-reduce-motion(on); }
+                        }
+                    }
+                }
             }
 
             SettingsCard {
@@ -2035,7 +2147,7 @@ export component Toast inherits Rectangle {
     property <bool> shown: Store.toast != "";
     Rectangle {
         x: (root.width - self.width) / 2;
-        y: root.height - self.height - root.bottom;
+        y: root.height - self.height - root.bottom + (root.shown ? 0px : 14px);
         width: min(root.width - 32px, label.preferred-width + 60px);
         height: 44px;
         border-radius: 22px;
@@ -2044,7 +2156,8 @@ export component Toast inherits Rectangle {
         visible: self.opacity > 0;
         accessible-role: text;
         accessible-label: Store.toast;
-        animate opacity { duration: 160ms; }
+        animate opacity { duration: Theme.smooth; }
+        animate y { duration: Theme.smooth; easing: ease-out; }
         TouchArea {
             clicked => { Store.dismiss-toast(); }
         }

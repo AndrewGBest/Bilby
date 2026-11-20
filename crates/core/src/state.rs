@@ -30,6 +30,8 @@ pub struct Settings {
     pub asked_about_tv: bool,
     /// Do not add the store itself to the app menu.
     pub hide_from_menu: bool,
+    /// Change things at once instead of animating them.
+    pub reduce_motion: bool,
 }
 
 /// An app obtained through the store.
