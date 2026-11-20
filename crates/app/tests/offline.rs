@@ -1,15 +1,15 @@
 //! What a person sees when the network misbehaves: offline, rate limited, then back.
 //! The demo catalog is wrapped in a transport whose mood the test controls.
 
+use bilby::{build, App, AppWindow, CatalogFactory, Options, Shell, Store};
+use bilby_core::demo::{self, DemoHttp};
+use bilby_core::http::{Http, Quota};
+use bilby_core::install::Dirs;
+use bilby_core::{Catalog, Error, Platform, Result};
 use slint::{ComponentHandle, Model};
 use std::path::Path;
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::Arc;
-use untitledstore::{build, App, AppWindow, CatalogFactory, Options, Shell, Store};
-use ustore_core::demo::{self, DemoHttp};
-use ustore_core::http::{Http, Quota};
-use ustore_core::install::Dirs;
-use ustore_core::{Catalog, Error, Platform, Result};
 
 const ONLINE: u8 = 0;
 const OFFLINE: u8 = 1;
@@ -60,7 +60,7 @@ fn start(seed: &str) -> Session {
     i_slint_backend_testing::init_no_event_loop();
     demo::DOWNLOAD_STEP_MS.store(0, Ordering::Relaxed);
     let root =
-        std::env::temp_dir().join(format!("ustore-offline-{}-{:?}", std::process::id(), std::thread::current().id()));
+        std::env::temp_dir().join(format!("bilby-offline-{}-{:?}", std::process::id(), std::thread::current().id()));
     let _ = std::fs::remove_dir_all(&root);
     let dirs = Dirs {
         downloads: root.join("downloads"),

@@ -1,4 +1,6 @@
-# untitledstore
+<p align="center"><img src="crates/app/ui/icons/logo.svg" width="96" alt="Bilby logo: a long-eared bilby face"></p>
+
+# Bilby
 
 An app store for **GitHub Releases**, the **AUR** and **your distribution's own
 repositories** (Arch, CachyOS, Debian, Ubuntu and whatever else your package manager is
@@ -78,27 +80,27 @@ A working vertical slice. It has only ever been looked at on Linux.
 
 ```sh
 # The store, with the offline demo catalog
-cargo run -p untitledstore -- --demo
+cargo run -p bilby -- --demo
 
 # See what another device would be offered
-cargo run -p untitledstore -- --demo --as android-tv --ui tv
-cargo run -p untitledstore -- --demo --as windows-arm64
-cargo run -p untitledstore -- --demo --as android-arm64 --ui mobile --size 412x892
+cargo run -p bilby -- --demo --as android-tv --ui tv
+cargo run -p bilby -- --demo --as windows-arm64
+cargo run -p bilby -- --demo --as android-arm64 --ui mobile --size 412x892
 
 # The same engine without a window
-cargo run -p ustore-cli -- device
-cargo run -p ustore-cli -- --demo --as linux-x64-arch search lumen
-cargo run -p ustore-cli -- --demo --as macos-arm64 show github:kestrel-sh/kestrel
-cargo run -p ustore-cli -- --demo install github:tidewave/tidewave
-cargo run -p ustore-cli -- --demo updates
-cargo run -p ustore-cli -- classify ripgrep-14.1.0-x86_64-unknown-linux-musl.tar.gz
+cargo run -p bilby-cli -- device
+cargo run -p bilby-cli -- --demo --as linux-x64-arch search lumen
+cargo run -p bilby-cli -- --demo --as macos-arm64 show github:kestrel-sh/kestrel
+cargo run -p bilby-cli -- --demo install github:tidewave/tidewave
+cargo run -p bilby-cli -- --demo updates
+cargo run -p bilby-cli -- classify ripgrep-14.1.0-x86_64-unknown-linux-musl.tar.gz
 
 # Against the real GitHub and AUR: drop --demo.
-cargo run -p ustore-cli -- search ripgrep
+cargo run -p bilby-cli -- search ripgrep
 
 # First thing to run on a real connection: checks that GitHub and the AUR answer the way
 # the code expects, and that every featured app really has a file for this machine.
-cargo run -p ustore-cli -- doctor
+cargo run -p bilby-cli -- doctor
 ```
 
 Keyboard on desktop: `Ctrl+K` or `/` search, `Esc` or `Alt+Left` back, `Tab` and
@@ -130,7 +132,7 @@ The app can be driven without a person, which is how the screenshots here were m
 how `tests/binary.rs` checks the real binary:
 
 ```sh
-cargo run -p untitledstore -- --demo --as android-tv --ui tv --size 1920x1080 \
+cargo run -p bilby -- --demo --as android-tv --ui tv --size 1920x1080 \
     --script "down right ok" --screenshot tv.png --report tv.txt
 ```
 
@@ -139,17 +141,17 @@ cargo run -p untitledstore -- --demo --as android-tv --ui tv --size 1920x1080 \
 interface ended up showing as `key=value` lines. On a machine without a display, run it
 under `xvfb-run` with `SLINT_BACKEND=winit-software`.
 
-`--as <platform>` (see `ustore --list-platforms`) makes the whole app behave as another
+`--as <platform>` (see `bilby-cli --list-platforms`) makes the whole app behave as another
 device, which is the quickest way to see what a phone, a TV or a Windows-on-Arm laptop
 would be offered.
 
 ## Layout
 
 ```
-crates/core   ustore-core    platform detection, asset classification, compatibility,
+crates/core   bilby-core  platform detection, asset classification, compatibility,
                              sources (GitHub, AUR), index, install, library state
-crates/cli    ustore         command-line front end
-crates/app    untitledstore  Slint app: ui/desktop.slint, ui/mobile.slint, ui/tv.slint
+crates/cli    bilby-cli   command-line front end
+crates/app    bilby       Slint app: ui/desktop.slint, ui/mobile.slint, ui/tv.slint
 docs/DESIGN.md               the design, its trade-offs, and what is still open
 ```
 
@@ -157,10 +159,10 @@ docs/DESIGN.md               the design, its trade-offs, and what is still open
 
 | | Linux | Windows | macOS |
 |---|---|---|---|
-| Settings and library | `~/.config/untitledstore/state.json` | `%APPDATA%\untitledstore` | `~/Library/Application Support/untitledstore` |
-| Downloads | `~/Downloads/untitledstore` | same | same |
+| Settings and library | `~/.config/bilby/state.json` | `%APPDATA%\bilby` | `~/Library/Application Support/bilby` |
+| Downloads | `~/Downloads/bilby` | same | same |
 | AppImages | `~/Applications` | | |
-| Cache | `~/.cache/untitledstore` | `%LOCALAPPDATA%\untitledstore` | `~/Library/Caches/untitledstore` |
+| Cache | `~/.cache/bilby` | `%LOCALAPPDATA%\bilby` | `~/Library/Caches/bilby` |
 
 Only the Linux column has been exercised.
 

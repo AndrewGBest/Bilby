@@ -6,19 +6,19 @@
 //! (including nulls, missing optional fields and fields it does not know), not that the
 //! documentation matches production.
 
+use bilby_core::catalog::{Catalog, UpdateStatus};
+use bilby_core::compat::Level;
+use bilby_core::http::{CachedHttp, Http, NetHttp};
+use bilby_core::index::Index;
+use bilby_core::model::{AppId, SourceKind};
+use bilby_core::source::{aur::Aur, github::GitHub, Source};
+use bilby_core::{Error, Platform};
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use ustore_core::catalog::{Catalog, UpdateStatus};
-use ustore_core::compat::Level;
-use ustore_core::http::{CachedHttp, Http, NetHttp};
-use ustore_core::index::Index;
-use ustore_core::model::{AppId, SourceKind};
-use ustore_core::source::{aur::Aur, github::GitHub, Source};
-use ustore_core::{Error, Platform};
 
 #[derive(Clone)]
 struct Reply {
@@ -126,7 +126,7 @@ fn fixture(name: &str) -> String {
 }
 
 fn temp(tag: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("ustore-http-{tag}-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("bilby-http-{tag}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     dir
 }
@@ -144,7 +144,7 @@ fn get_returns_the_body_and_identifies_itself() {
     let http = client(&server, None);
     assert_eq!(http.get(&server.url("/api/thing")).unwrap(), "{\"ok\":true}");
     let (_, headers) = &server.requests()[0];
-    assert!(headers["user-agent"].starts_with("untitledstore/"));
+    assert!(headers["user-agent"].starts_with("bilby/"));
     assert_eq!(headers["accept"], "application/vnd.github+json");
     assert!(headers.contains_key("x-github-api-version"));
     assert!(!headers.contains_key("authorization"), "no token, no Authorization header");
@@ -270,7 +270,7 @@ fn downloads_report_progress_and_hash_what_they_wrote() {
         .unwrap();
     assert_eq!(std::fs::read(&dest).unwrap(), body);
     use sha2::{Digest, Sha256};
-    assert_eq!(hash, ustore_core::http::hex(&Sha256::digest(&body)));
+    assert_eq!(hash, bilby_core::http::hex(&Sha256::digest(&body)));
     assert!(calls.windows(2).all(|w| w[0].0 < w[1].0), "progress only moves forward");
     assert_eq!(calls.last().unwrap(), &(200_000, Some(200_000)));
     assert!(!dest.with_extension("part").exists(), "no leftovers");

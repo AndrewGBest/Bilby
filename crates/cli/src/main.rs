@@ -1,20 +1,20 @@
-//! `ustore`: the store without a window. Useful on servers, in scripts, and for checking
+//! `bilby-cli`: the store without a window. Useful on servers, in scripts, and for checking
 //! what the compatibility engine thinks of a release.
 
+use bilby_core::catalog::UpdateStatus;
+use bilby_core::install::{self, Dirs};
+use bilby_core::model::{human_count, human_size, AppId, SourceKind};
+use bilby_core::platform::PRESETS;
+use bilby_core::state::{now_unix, InstalledApp, State};
+use bilby_core::{Catalog, Platform};
 use std::path::Path;
 use std::process::ExitCode;
-use ustore_core::catalog::UpdateStatus;
-use ustore_core::install::{self, Dirs};
-use ustore_core::model::{human_count, human_size, AppId, SourceKind};
-use ustore_core::platform::PRESETS;
-use ustore_core::state::{now_unix, InstalledApp, State};
-use ustore_core::{Catalog, Platform};
 
 const USAGE: &str = "\
-ustore - app store for GitHub Releases and the AUR, filtered to your machine
+bilby-cli - app store for GitHub Releases and the AUR, filtered to your machine
 
 USAGE:
-    ustore [OPTIONS] <COMMAND>
+    bilby-cli [OPTIONS] <COMMAND>
 
 COMMANDS:
     device                 Show what was detected about this machine
@@ -232,7 +232,10 @@ fn install_cmd(
         None => 1,
     };
     let option = release.options.get(n.wrapping_sub(1)).ok_or_else(|| {
-        details.unavailable_reason.clone().unwrap_or_else(|| format!("there is no option {n}; see `ustore show {id}`"))
+        details
+            .unavailable_reason
+            .clone()
+            .unwrap_or_else(|| format!("there is no option {n}; see `bilby-cli show {id}`"))
     })?;
     for step in &option.plan.steps {
         println!("- {step}");
@@ -273,7 +276,7 @@ fn install_cmd(
 fn library(catalog: &Catalog, state_path: &Path, check: bool) {
     let state = State::load(state_path);
     if state.library.is_empty() {
-        println!("Nothing here yet. Apps you install with `ustore install` are listed here.");
+        println!("Nothing here yet. Apps you install with `bilby-cli install` are listed here.");
         return;
     }
     let statuses = if check {
@@ -358,7 +361,7 @@ fn doctor(catalog: &Catalog, demo: bool) -> Result<(), String> {
     report(true, format!("checked {checked} featured apps"));
 
     if let Some(quota) = catalog.quota() {
-        report(quota.remaining > 0, quota.describe(ustore_core::state::now_unix()));
+        report(quota.remaining > 0, quota.describe(bilby_core::state::now_unix()));
     }
     if problems == 0 {
         println!("\nAll checks passed.");
@@ -369,10 +372,10 @@ fn doctor(catalog: &Catalog, demo: bool) -> Result<(), String> {
 }
 
 fn classify(catalog: &Catalog, name: &str) {
-    match ustore_core::asset::classify(name) {
+    match bilby_core::asset::classify(name) {
         None => println!("{name}: not an installable file (checksum, signature, source, ...)"),
         Some(info) => {
-            let v = ustore_core::compat::evaluate(&info, &catalog.platform);
+            let v = bilby_core::compat::evaluate(&info, &catalog.platform);
             println!("{name}");
             println!("  format   {}", info.format.label());
             println!("  system   {:?}", info.os);

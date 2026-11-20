@@ -1,15 +1,15 @@
 //! App pictures: fetched in the background, shown when they arrive, cached on disk,
 //! and never in the way when they do not exist.
 
+use bilby::{build, App, AppWindow, CatalogFactory, Options, Shell, Store};
+use bilby_core::demo::{self, DemoHttp};
+use bilby_core::http::Http;
+use bilby_core::install::Dirs;
+use bilby_core::{Catalog, Error, Platform, Result};
 use slint::{ComponentHandle, Model};
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
-use untitledstore::{build, App, AppWindow, CatalogFactory, Options, Shell, Store};
-use ustore_core::demo::{self, DemoHttp};
-use ustore_core::http::Http;
-use ustore_core::install::Dirs;
-use ustore_core::{Catalog, Error, Platform, Result};
 
 /// A valid 8x8 PNG.
 const PNG: &[u8] = &[
@@ -100,7 +100,7 @@ fn icon_width(s: &Session, name: &str) -> u32 {
 #[test]
 fn pictures_appear_are_cached_and_their_absence_is_harmless() {
     i_slint_backend_testing::init_no_event_loop();
-    let root = std::env::temp_dir().join(format!("ustore-pictures-{}", std::process::id()));
+    let root = std::env::temp_dir().join(format!("bilby-pictures-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
 
     let s = start(&root);

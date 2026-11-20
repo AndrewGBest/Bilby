@@ -1,6 +1,6 @@
 [package]
-name = "ustore-core"
-description = "Platform detection, asset compatibility and package sources for untitledstore"
+name = "bilby-core"
+description = "Platform detection, asset compatibility and package sources for Bilby"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

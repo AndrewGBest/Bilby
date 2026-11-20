@@ -207,13 +207,8 @@ export component DesktopShell inherits Rectangle {
                         padding-bottom: 18px;
                         spacing: 10px;
                         alignment: start;
-                        Rectangle {
-                            width: 28px;
-                            height: 28px;
-                            border-radius: 8px;
-                            background: @linear-gradient(135deg, #8aa6ff 0%, #b28cff 100%);
-                        }
-                        Text { text: "untitledstore"; color: Theme.text; font-size: 16px; font-weight: 700; vertical-alignment: center; }
+                        Image { width: 28px; height: 28px; source: @image-url("icons/logo.svg"); accessible-role: none; }
+                        Text { text: "Bilby"; color: Theme.text; font-size: 16px; font-weight: 700; vertical-alignment: center; }
                     }
                     NavItem {
                         label: "Discover";

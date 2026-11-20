@@ -1,35 +1,33 @@
 //! The graphical store. One Slint window, three interfaces (desktop, mobile, TV), all
-//! rendering the same `Store` state that this file fills in from `ustore-core`.
+//! rendering the same `Store` state that this file fills in from `bilby-core`.
 //!
 //! Threading: the UI thread never waits on the network. Every catalog call goes through
 //! [`App::job`], which runs the work on a worker thread and hands the result back to the
 //! UI thread. Under test the same code runs inline, so tests exercise the real handlers.
 
+use bilby_core::catalog::{SearchOutcome, UpdateStatus};
+use bilby_core::index::Section as CoreSection;
+use bilby_core::install::{self, Action, Dirs};
+use bilby_core::model::{age_label, human_count, human_size, AppDetails, AppId, AppSummary, InstallOption, SourceKind};
+use bilby_core::platform::{FormFactor, PRESETS};
+use bilby_core::state::{now_unix, InstalledApp, Settings, State};
+use bilby_core::{Catalog, Error, Platform};
 use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
-use ustore_core::catalog::{SearchOutcome, UpdateStatus};
-use ustore_core::index::Section as CoreSection;
-use ustore_core::install::{self, Action, Dirs};
-use ustore_core::model::{
-    age_label, human_count, human_size, AppDetails, AppId, AppSummary, InstallOption, SourceKind,
-};
-use ustore_core::platform::{FormFactor, PRESETS};
-use ustore_core::state::{now_unix, InstalledApp, Settings, State};
-use ustore_core::{Catalog, Error, Platform};
 
 slint::include_modules!();
 
 const USAGE: &str = "\
-untitledstore - app store for GitHub Releases and the AUR, filtered to your machine
+Bilby - app store for GitHub Releases and the AUR, filtered to your machine
 
 OPTIONS:
     --ui <desktop|mobile|tv>   Force an interface (default: detected; desktop and mobile
                                also switch with the window width)
-    --as <platform>            Preview the store as another machine (ustore --list-platforms)
+    --as <platform>            Preview the store as another machine (bilby-cli --list-platforms)
     --demo                     Built-in fictional catalog, no network
     --open <id or link>        Start on an app's page (github:owner/repo, aur:package, URL)
     --search <words>           Start with a search
@@ -80,7 +78,7 @@ pub struct Options {
     pub store_app: Option<String>,
 }
 
-pub type Opener = Arc<dyn Fn(&std::path::Path) -> ustore_core::Result<()> + Send + Sync>;
+pub type Opener = Arc<dyn Fn(&std::path::Path) -> bilby_core::Result<()> + Send + Sync>;
 
 /// Builds the catalog for a platform and the current settings. The default talks to the
 /// real sources (or the demo); tests substitute one that can go offline on demand.
@@ -265,7 +263,7 @@ fn option_row(o: &InstallOption) -> OptionRow {
         label: o.label().into(),
         size: human_size(o.asset.size).into(),
         note: o.verdict.note.clone().unwrap_or_default().into(),
-        native: o.verdict.level == ustore_core::compat::Level::Native,
+        native: o.verdict.level == bilby_core::compat::Level::Native,
         verified: install::checkable_digest(&o.asset).is_some() && o.plan.action != Action::ShowCommand,
         verb: o.plan.verb.clone().into(),
         steps: ModelRc::new(VecModel::from(o.plan.steps.iter().map(SharedString::from).collect::<Vec<_>>())),
@@ -333,7 +331,7 @@ fn decode_picture(path: &std::path::Path) -> Option<slint::Image> {
 
 fn picture_for(id: &str) -> slint::Image {
     AppId::parse(id)
-        .and_then(|id| ustore_core::icons::icon_key(&id))
+        .and_then(|id| bilby_core::icons::icon_key(&id))
         .and_then(|key| PICTURES.with(|p| p.borrow().get(&key).cloned()))
         .unwrap_or_default()
 }
@@ -349,7 +347,7 @@ struct Current {
 }
 
 impl Current {
-    fn release(&self) -> Option<&ustore_core::model::ResolvedRelease> {
+    fn release(&self) -> Option<&bilby_core::model::ResolvedRelease> {
         let details = self.details.as_ref()?;
         match self.selected {
             Some(index) => details.versions.get(index),
@@ -456,7 +454,7 @@ impl App {
             shown
                 .iter()
                 .filter_map(|id| AppId::parse(id))
-                .filter_map(|id| Some((ustore_core::icons::icon_key(&id)?, id)))
+                .filter_map(|id| Some((bilby_core::icons::icon_key(&id)?, id)))
                 .filter(|(key, _)| requested.insert(key.clone()))
                 .collect()
         };
@@ -469,7 +467,7 @@ impl App {
                 let http = app.catalog().http();
                 wanted
                     .into_iter()
-                    .filter_map(|(key, id)| Some((key, ustore_core::icons::fetch(http.as_ref(), &dir, &id).ok()??)))
+                    .filter_map(|(key, id)| Some((key, bilby_core::icons::fetch(http.as_ref(), &dir, &id).ok()??)))
                     .collect::<Vec<_>>()
             },
             |app, ui, found| {
@@ -1088,7 +1086,7 @@ impl App {
                         app.update_state(ui, |state| state.record_install(entry));
                         // Installing an older version on purpose leaves an update pending.
                         let newest = details.versions.first().map(|r| r.version.clone()).unwrap_or_default();
-                        let status = if ustore_core::version::is_newer(&newest, &version) {
+                        let status = if bilby_core::version::is_newer(&newest, &version) {
                             let label = details.versions[0].options.first().map(|o| o.label()).unwrap_or_default();
                             UpdateStatus::Available { version: newest, label }
                         } else {
@@ -1286,7 +1284,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         store_app: match &options.store_app {
             Some(id) => AppId::parse(id),
             None if options.demo => None,
-            None => Some(AppId::new(SourceKind::GitHub, ustore_core::catalog::STORE_REPOSITORY)),
+            None => Some(AppId::new(SourceKind::GitHub, bilby_core::catalog::STORE_REPOSITORY)),
         },
         update_queue: Mutex::new(std::collections::VecDeque::new()),
         pictures_requested: Mutex::new(HashSet::new()),
@@ -1598,7 +1596,7 @@ fn android_main(android_app: slint::android::AndroidApp) {
         config: internal.join("config"),
     };
     if let Err(e) = run(Options { dirs: Some(dirs), ..Default::default() }) {
-        eprintln!("untitledstore: {e}");
+        eprintln!("bilby: {e}");
     }
 }
 

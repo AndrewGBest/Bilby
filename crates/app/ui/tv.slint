@@ -135,14 +135,8 @@ export component TvShell inherits Rectangle {
             width: parent.width - 2 * margin;
             height: 24 * u;
             spacing: 10 * u;
-            Rectangle {
-                width: 16 * u;
-                height: 16 * u;
-                y: 4 * u;
-                border-radius: 4 * u;
-                background: @linear-gradient(135deg, #8aa6ff 0%, #b28cff 100%);
-            }
-            Text { text: "untitledstore"; color: Theme.text; font-size: 11 * u; font-weight: 700; vertical-alignment: center; }
+            Image { width: 16 * u; height: 16 * u; y: 4 * u; source: @image-url("icons/logo.svg"); accessible-role: none; }
+            Text { text: "Bilby"; color: Theme.text; font-size: 11 * u; font-weight: 700; vertical-alignment: center; }
             Rectangle { horizontal-stretch: 1; }
             Rectangle {
                 width: 190 * u;

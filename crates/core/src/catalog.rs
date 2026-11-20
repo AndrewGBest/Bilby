@@ -47,7 +47,7 @@ fn describe_source_error(source: SourceKind, error: &Error) -> String {
 
 /// Where the store itself is published. Its own releases are found, filtered and
 /// installed exactly like any other app's.
-pub const STORE_REPOSITORY: &str = "AndrewGBest/untitledstore";
+pub const STORE_REPOSITORY: &str = "AndrewGBest/bilby";
 
 /// Result of checking one library entry for a newer release.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -414,9 +414,9 @@ mod tests {
         use crate::model::{Asset, Release};
         // The names .github/workflows/release.yml produces.
         let names = [
-            "untitledstore-v0.2.0-x86_64-unknown-linux-gnu.tar.gz",
-            "untitledstore-v0.2.0-x86_64-pc-windows-msvc.zip",
-            "untitledstore-v0.2.0-aarch64-apple-darwin.tar.gz",
+            "bilby-v0.2.0-x86_64-unknown-linux-gnu.tar.gz",
+            "bilby-v0.2.0-x86_64-pc-windows-msvc.zip",
+            "bilby-v0.2.0-aarch64-apple-darwin.tar.gz",
             "SHA256SUMS",
         ];
         let release = Release {

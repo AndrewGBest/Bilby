@@ -84,7 +84,7 @@ impl NetHttp {
             .timeout_connect(Duration::from_secs(15))
             .timeout_read(Duration::from_secs(30))
             .try_proxy_from_env(proxy_from_env)
-            .user_agent(concat!("untitledstore/", env!("CARGO_PKG_VERSION")))
+            .user_agent(concat!("bilby/", env!("CARGO_PKG_VERSION")))
             .build();
         NetHttp {
             agent,
@@ -310,7 +310,7 @@ mod tests {
 
     #[test]
     fn cache_serves_repeats_and_survives_outages() {
-        let dir = std::env::temp_dir().join(format!("ustore-cache-test-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("bilby-cache-test-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let inner = std::sync::Arc::new(Counting { calls: AtomicUsize::new(0), fail: false.into() });
 

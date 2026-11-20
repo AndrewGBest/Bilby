@@ -1,13 +1,13 @@
 [package]
-name = "ustore-cli"
-description = "Command-line front end for untitledstore"
+name = "bilby-cli"
+description = "Command-line front end for Bilby"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [[bin]]
-name = "ustore"
+name = "bilby-cli"
 path = "src/main.rs"
 
 [dependencies]
-ustore-core = { path = "../core" }
+bilby-core = { path = "../core" }

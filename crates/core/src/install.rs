@@ -190,10 +190,10 @@ impl Dirs {
             var("XDG_CONFIG_HOME").unwrap_or_else(|| home.join(".config"))
         };
         Dirs {
-            downloads: var("XDG_DOWNLOAD_DIR").unwrap_or_else(|| home.join("Downloads")).join("untitledstore"),
+            downloads: var("XDG_DOWNLOAD_DIR").unwrap_or_else(|| home.join("Downloads")).join("bilby"),
             applications: home.join("Applications"),
-            cache: cache.join("untitledstore"),
-            config: config.join("untitledstore"),
+            cache: cache.join("bilby"),
+            config: config.join("bilby"),
         }
     }
 }
@@ -321,7 +321,7 @@ mod tests {
     }
 
     fn temp_dirs(tag: &str) -> Dirs {
-        let root = std::env::temp_dir().join(format!("ustore-install-{tag}-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("bilby-install-{tag}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         Dirs {
             downloads: root.join("dl"),

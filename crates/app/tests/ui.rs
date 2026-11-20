@@ -5,16 +5,16 @@
 //! elements found by their accessible label, or sending key presses. Catalog work runs
 //! inline (`Options::inline`), so every assertion sees the finished result.
 
+use bilby::{build, App, AppWindow, Options, Shell, Store, Theme};
+use bilby_core::install::Dirs;
+use bilby_core::state::State;
+use bilby_core::Platform;
 use i_slint_backend_testing::{ElementHandle, ElementRoot};
 use slint::platform::{Key, PointerEventButton, WindowEvent};
 use slint::{ComponentHandle, Model, SharedString};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
-use untitledstore::{build, App, AppWindow, Options, Shell, Store, Theme};
-use ustore_core::install::Dirs;
-use ustore_core::state::State;
-use ustore_core::Platform;
 
 struct Session {
     ui: AppWindow,
@@ -29,7 +29,7 @@ static COUNTER: AtomicU32 = AtomicU32::new(0);
 
 fn temp_root() -> PathBuf {
     let n = COUNTER.fetch_add(1, Ordering::SeqCst);
-    let root = std::env::temp_dir().join(format!("ustore-ui-{}-{n}", std::process::id()));
+    let root = std::env::temp_dir().join(format!("bilby-ui-{}-{n}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
     std::fs::create_dir_all(&root).unwrap();
     root
@@ -59,7 +59,7 @@ fn init_backend() {
 /// saved state first, to test start-up with an existing library.
 fn start_with(preset: &str, shell: Shell, seed: Option<&str>) -> Session {
     init_backend();
-    ustore_core::demo::DOWNLOAD_STEP_MS.store(0, Ordering::Relaxed);
+    bilby_core::demo::DOWNLOAD_STEP_MS.store(0, Ordering::Relaxed);
     let root = temp_root();
     let dirs = dirs_in(&root);
     let state_file = dirs.config.join("demo-state.json");
@@ -174,22 +174,22 @@ impl Session {
 fn first_run_explains_the_store_once() {
     let s = start_with("linux-x64-debian", Shell::Desktop, None);
     assert!(s.store().get_show_welcome());
-    assert!(s.has("Welcome to untitledstore"));
+    assert!(s.has("Welcome to Bilby"));
     assert!(!s.has("View Tidewave"), "the welcome takes the spotlight's place");
     s.click("Got it");
     assert!(!s.store().get_show_welcome());
-    assert!(!s.has("Welcome to untitledstore"));
+    assert!(!s.has("Welcome to Bilby"));
     assert!(s.has("View Tidewave"));
     assert!(s.saved().settings.welcomed);
 
     let saved = std::fs::read_to_string(&s.state_file).unwrap();
     let again = start_with("linux-x64-debian", Shell::Desktop, Some(&saved));
-    assert!(!again.has("Welcome to untitledstore"), "it does not come back");
+    assert!(!again.has("Welcome to Bilby"), "it does not come back");
 
     let phone = start_with("android-arm64", Shell::Mobile, None);
-    assert!(phone.has("Welcome to untitledstore"));
+    assert!(phone.has("Welcome to Bilby"));
     phone.click("Got it");
-    assert!(!phone.has("Welcome to untitledstore"));
+    assert!(!phone.has("Welcome to Bilby"));
 }
 
 // ---- discover ---------------------------------------------------------------------

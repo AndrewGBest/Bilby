@@ -6,9 +6,9 @@
 //! from live releases, so treat this as a regression suite for the conventions, not as
 //! proof about any one project's current files.
 
-use ustore_core::asset::{classify, Format, TargetArch, TargetOs};
-use ustore_core::compat::{evaluate, Level};
-use ustore_core::platform::{Arch, Os, Platform, PRESETS};
+use bilby_core::asset::{classify, Format, TargetArch, TargetOs};
+use bilby_core::compat::{evaluate, Level};
+use bilby_core::platform::{Arch, Os, Platform, PRESETS};
 
 #[derive(Debug, PartialEq)]
 enum Want {

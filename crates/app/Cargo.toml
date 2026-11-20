@@ -1,5 +1,5 @@
 [package]
-name = "untitledstore"
+name = "bilby"
 description = "App store for GitHub Releases and the AUR that only shows what runs on your machine"
 version.workspace = true
 edition.workspace = true
@@ -10,11 +10,11 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [[bin]]
-name = "untitledstore"
+name = "bilby"
 path = "src/main.rs"
 
 [dependencies]
-ustore-core = { path = "../core" }
+bilby-core = { path = "../core" }
 slint = { version = "1.19", default-features = false, features = ["std", "compat-1-2", "backend-winit", "renderer-software", "renderer-femtovg"] }
 png = "0.17"
 # App pictures are PNGs or JPEGs. Slint's own "image-default-formats" would pull in every

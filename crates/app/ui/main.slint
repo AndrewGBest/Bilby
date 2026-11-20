@@ -7,7 +7,8 @@ import { TvShell } from "tv.slint";
 export { Store, Shell, Theme, AppCard, Section, OptionRow, HiddenRow, Fact, LibraryRow }
 
 export component AppWindow inherits Window {
-    title: Store.details-open && Store.app.name != "" ? Store.app.name + " · untitledstore" : "untitledstore";
+    icon: @image-url("icons/logo.svg");
+    title: Store.details-open && Store.app.name != "" ? Store.app.name + " · Bilby" : "Bilby";
     preferred-width: 1180px;
     preferred-height: 760px;
     min-width: 320px;

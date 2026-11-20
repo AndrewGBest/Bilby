@@ -1,10 +1,10 @@
 //! Colour contrast of both themes, measured with the WCAG 2 formula.
 //! Body text needs 4.5:1 against what it sits on; large or bold labels need 3:1.
 
+use bilby::{build, Options, Theme};
+use bilby_core::install::Dirs;
+use bilby_core::Platform;
 use slint::{Color, ComponentHandle};
-use untitledstore::{build, Options, Theme};
-use ustore_core::install::Dirs;
-use ustore_core::Platform;
 
 fn luminance(c: Color) -> f64 {
     let channel = |v: u8| {
@@ -32,7 +32,7 @@ fn blend(over: Color, alpha: f64, under: Color) -> Color {
 #[test]
 fn text_is_readable_in_both_themes() {
     i_slint_backend_testing::init_no_event_loop();
-    let root = std::env::temp_dir().join(format!("ustore-contrast-{}", std::process::id()));
+    let root = std::env::temp_dir().join(format!("bilby-contrast-{}", std::process::id()));
     let options = Options {
         demo: true,
         inline: true,

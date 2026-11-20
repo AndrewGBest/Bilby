@@ -405,7 +405,7 @@ const AUR: &[DemoAurPackage] = &[
 ];
 
 /// Contents of every demo download.
-const PAYLOAD: &[u8] = b"untitledstore demo payload\n";
+const PAYLOAD: &[u8] = b"bilby demo payload\n";
 
 fn fake_size(name: &str) -> u64 {
     // Stable, plausible-looking sizes derived from the name.

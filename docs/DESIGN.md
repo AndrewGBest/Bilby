@@ -1,4 +1,4 @@
-# untitledstore: design
+# Bilby: design
 
 Statements here are marked by how well they are supported:
 
@@ -21,7 +21,7 @@ One codebase, in Rust, with three interfaces: desktop (pointer and keyboard), mo
 
 ### Entirely client-side
 
-There is no untitledstore server, account, telemetry or hosted catalog, and the design
+There is no Bilby server, account, telemetry or hosted catalog, and the design
 must not grow one. The app talks only to the sources themselves (`api.github.com`,
 `github.com` downloads, `aur.archlinux.org`), and everything it remembers lives in one
 file on the device (`state.json`: settings, library, recent searches). Consequences that
@@ -86,7 +86,7 @@ other stores do least thoroughly, and it has no UI dependencies.
             │        └──────────── global Store (types.slint) ─────────┘      │
             │              lib.rs: worker threads <-> Store                   │
             └───────────────────────────────┬──────────────────────────────────┘
-   crates/cli (ustore) ─────────────────────┤
+   crates/cli (bilby-cli) ─────────────────────┤
                                             ▼
 ┌──────────────────────────────── crates/core ─────────────────────────────────┐
 │  catalog   browse / search / details, filtered to this machine               │
@@ -443,10 +443,10 @@ the Actions tab for the state of the latest commit rather than trusting this par
 
 | Suite | Count | What it exercises |
 |---|---|---|
-| `ustore-core` unit tests | 80 | detection, classification, compatibility, versions, state file, install plans and execution, index, suggestions, icons, catalog |
+| `bilby-core` unit tests | 80 | detection, classification, compatibility, versions, state file, install plans and execution, index, suggestions, icons, catalog |
 | `core/tests/corpus.rs` | 4 | 169 real-world-style names; cross-OS/CPU safety property; 20,000 generated names |
 | `core/tests/http_sources.rs` | 16 | the real HTTP client and both sources against a local server: headers, token scoping, rate limits, allowance, progress, cancel, cache, documented JSON shapes, garbage responses |
-| `cli/tests/cli.rs` | 8 | the `ustore` binary end to end, including install, library, updates and `doctor` |
+| `cli/tests/cli.rs` | 8 | the `bilby-cli` binary end to end, including install, library, updates and `doctor` |
 | `app/tests/ui.rs` | 39 | the real window on Slint's headless backend: clicks by accessible label, key presses, all three interfaces |
 | `app/tests/offline.rs` | 7 | the same window with a transport that goes offline or rate limited on demand, then recovers |
 | `app/tests/pictures.rs` | 1 | app pictures: fetched, decoded, shown, cached on disk, harmless when missing |
@@ -492,7 +492,7 @@ regression tests, only the screenshots in `docs/screenshots/`.
 | Android TV | Same as Android | Also a leanback launcher entry and banner |
 | iOS | Core type-checks for `aarch64-apple-ios` | See below |
 
-"Type-checks" means `cargo check -p ustore-core --no-default-features --target ...`
+"Type-checks" means `cargo check -p bilby-core --no-default-features --target ...`
 passes (in CI on every push): the core's own code compiles for that target. The network
 stack and the UI have not been built for Android or iOS.
 
@@ -560,7 +560,7 @@ licensed separately.
 ## 12. Next steps, in order of value
 
 1. Run against the live GitHub and AUR APIs and fix whatever the real responses break.
-   `ustore doctor` does this in one command: it searches, loads an app, checks every
+   `bilby-cli doctor` does this in one command: it searches, loads an app, checks every
    featured entry against this machine and prints GitHub's remaining allowance. It also
    exposes wrong entries in the hand-written featured list.
 2. Run the classifier over a large sample of real release file names; fix the misses.

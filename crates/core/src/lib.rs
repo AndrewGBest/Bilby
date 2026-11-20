@@ -1,4 +1,4 @@
-//! Core of untitledstore: everything that is not UI.
+//! Core of Bilby: everything that is not UI.
 //!
 //! * [`platform`] – what machine are we running on?
 //! * [`asset`]    – what is a release file (`foo-x86_64.AppImage`) built for?

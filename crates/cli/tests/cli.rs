@@ -1,4 +1,4 @@
-//! The `ustore` binary, run as a user would run it, against the demo catalog.
+//! The `bilby-cli` binary, run as a user would run it, against the demo catalog.
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
@@ -9,7 +9,7 @@ static COUNTER: AtomicU32 = AtomicU32::new(0);
 /// A throw-away home directory, so tests never touch real settings or downloads.
 fn home() -> PathBuf {
     let n = COUNTER.fetch_add(1, Ordering::SeqCst);
-    let dir = std::env::temp_dir().join(format!("ustore-cli-{}-{n}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("bilby-clitest-{}-{n}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     dir
@@ -31,7 +31,7 @@ fn find(dir: &Path, name: &str) -> Option<PathBuf> {
 }
 
 fn run_in(home: &Path, args: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_ustore"))
+    Command::new(env!("CARGO_BIN_EXE_bilby-cli"))
         .args(args)
         .env("HOME", home)
         .env("USERPROFILE", home)

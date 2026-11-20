@@ -54,5 +54,5 @@ jobs:
         with:
           targets: aarch64-linux-android, aarch64-apple-ios
       - uses: Swatinem/rust-cache@v2
-      - run: cargo check -p ustore-core --no-default-features --target aarch64-linux-android
-      - run: cargo check -p ustore-core --no-default-features --target aarch64-apple-ios
+      - run: cargo check -p bilby-core --no-default-features --target aarch64-linux-android
+      - run: cargo check -p bilby-core --no-default-features --target aarch64-apple-ios

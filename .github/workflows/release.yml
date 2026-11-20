@@ -33,24 +33,24 @@ jobs:
           targets: ${{ matrix.target }}
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev libxkbcommon-dev
-      - run: cargo build --release --target ${{ matrix.target }} -p untitledstore -p ustore-cli
+      - run: cargo build --release --target ${{ matrix.target }} -p bilby -p bilby-cli
       - name: Package
         shell: bash
         run: |
-          name="untitledstore-${GITHUB_REF_NAME}-${{ matrix.target }}"
+          name="bilby-${GITHUB_REF_NAME}-${{ matrix.target }}"
           mkdir "$name"
           cp README.md "$name/"
           if [ "${{ matrix.archive }}" = "zip" ]; then
-            cp "target/${{ matrix.target }}/release/untitledstore.exe" "target/${{ matrix.target }}/release/ustore.exe" "$name/"
+            cp "target/${{ matrix.target }}/release/bilby.exe" "target/${{ matrix.target }}/release/bilby-cli.exe" "$name/"
             7z a "$name.zip" "$name"
           else
-            cp "target/${{ matrix.target }}/release/untitledstore" "target/${{ matrix.target }}/release/ustore" "$name/"
+            cp "target/${{ matrix.target }}/release/bilby" "target/${{ matrix.target }}/release/bilby-cli" "$name/"
             tar -czf "$name.tar.gz" "$name"
           fi
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}
-          path: untitledstore-*.${{ matrix.archive }}
+          path: bilby-*.${{ matrix.archive }}
 
   publish:
     needs: build
@@ -62,4 +62,4 @@ jobs:
       - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" untitledstore-* --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" bilby-* --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes

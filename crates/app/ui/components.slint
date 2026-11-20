@@ -629,7 +629,7 @@ export component Welcome inherits Rectangle {
     VerticalLayout {
         padding: compact ? 14px : 20px;
         spacing: 8px;
-        Text { text: "Welcome to untitledstore"; color: Theme.text; font-size: 17px; font-weight: 700; }
+        Text { text: "Welcome to Bilby"; color: Theme.text; font-size: 17px; font-weight: 700; }
         Text {
             text: "•  You are seeing apps for " + Store.platform-title + ". Anything that cannot be installed on this device is hidden.";
             color: Theme.text;
@@ -1229,7 +1229,7 @@ export component SettingsBody inherits Rectangle {
                         alignment: center;
                         horizontal-stretch: 1;
                         Text {
-                            text: "untitledstore " + Store.store-update + " is available. You have " + Store.app-version + ".";
+                            text: "Bilby " + Store.store-update + " is available. You have " + Store.app-version + ".";
                             color: Theme.accent;
                             font-size: 14px;
                             font-weight: 600;
@@ -1243,7 +1243,7 @@ export component SettingsBody inherits Rectangle {
                     }
                 }
                 Text {
-                    text: "untitledstore " + Store.app-version + ". Everything runs on this device: there is no account and no server of ours. The store talks directly to GitHub and the AUR, and keeps your library and settings in a file on this device.";
+                    text: "Bilby " + Store.app-version + ". Everything runs on this device: there is no account and no server of ours. The store talks directly to GitHub and the AUR, and keeps your library and settings in a file on this device.";
                     color: Theme.text-dim;
                     font-size: 13px;
                     wrap: word-wrap;

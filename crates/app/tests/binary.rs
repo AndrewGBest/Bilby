@@ -29,7 +29,7 @@ struct Run {
 
 fn run(seed: &str, args: &[&str]) -> Run {
     let n = COUNTER.fetch_add(1, Ordering::SeqCst);
-    let home = std::env::temp_dir().join(format!("ustore-bin-{}-{n}", std::process::id()));
+    let home = std::env::temp_dir().join(format!("bilby-bin-{}-{n}", std::process::id()));
     let _ = std::fs::remove_dir_all(&home);
     std::fs::create_dir_all(&home).unwrap();
     let state = home.join("state.json");
@@ -38,7 +38,7 @@ fn run(seed: &str, args: &[&str]) -> Run {
     let report = home.join("report.txt");
     let output = Command::new("xvfb-run")
         .args(["-a", "-s", "-screen 0 1600x1000x24"])
-        .arg(env!("CARGO_BIN_EXE_untitledstore"))
+        .arg(env!("CARGO_BIN_EXE_bilby"))
         .args(["--demo", "--theme", "dark", "--state"])
         .arg(&state)
         .args(args)
@@ -159,7 +159,7 @@ fn one_click_update_with_real_threads() {
     assert_eq!(run.get("updating"), "");
     assert_eq!(run.get("updates"), "0");
     assert_eq!(run.get("toast"), "Kestrel updated to v1.21.0");
-    assert!(run.home.join("Downloads").join("untitledstore").join("kestrel-x86_64-unknown-linux-gnu.tar.gz").is_file());
+    assert!(run.home.join("Downloads").join("bilby").join("kestrel-x86_64-unknown-linux-gnu.tar.gz").is_file());
 }
 
 #[test]
