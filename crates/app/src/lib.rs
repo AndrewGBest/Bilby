@@ -75,6 +75,9 @@ pub struct Options {
     /// handler; tests record the call instead of launching installers.
     pub opener: Option<Opener>,
     pub catalog_factory: Option<CatalogFactory>,
+    /// The app id the store looks at for its own updates. Defaults to its GitHub
+    /// repository; the demo catalog has no such project, so tests name a stand-in.
+    pub store_app: Option<String>,
 }
 
 pub type Opener = Arc<dyn Fn(&std::path::Path) -> ustore_core::Result<()> + Send + Sync>;
@@ -372,6 +375,9 @@ pub struct App {
     details_generation: AtomicU64,
     toast_generation: Arc<AtomicU64>,
     cancel_install: Arc<AtomicBool>,
+    /// The store's own app id, checked for updates like any other app. `None` in the
+    /// demo, whose fictional GitHub does not have it.
+    store_app: Option<AppId>,
     /// Library apps waiting their turn after "Update all".
     update_queue: Mutex<std::collections::VecDeque<String>>,
     /// Owners whose picture has been asked for in this session (found or not).
@@ -1159,6 +1165,24 @@ impl App {
         );
     }
 
+    /// Is there a newer release of the store itself with a file for this device? One
+    /// request, and quiet: the answer appears in Settings.
+    pub fn check_store_update(self: &Arc<Self>, ui: &AppWindow) {
+        let _ = ui;
+        let Some(id) = self.store_app.clone() else { return };
+        self.job(
+            move |app| app.catalog().check_update(&id, env!("CARGO_PKG_VERSION")),
+            |_app, ui, status| {
+                let version = match status {
+                    UpdateStatus::Available { version, .. } => version,
+                    // Up to date, nothing for this device, or could not be checked: say nothing.
+                    _ => String::new(),
+                };
+                ui.global::<Store>().set_store_update(version.into());
+            },
+        );
+    }
+
     pub fn remove_from_library(&self, ui: &AppWindow, id: &str) {
         let mut removed = None;
         self.update_state(ui, |state| removed = state.remove(id));
@@ -1259,6 +1283,11 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         details_generation: AtomicU64::new(0),
         toast_generation: Arc::new(AtomicU64::new(0)),
         cancel_install: Arc::new(AtomicBool::new(false)),
+        store_app: match &options.store_app {
+            Some(id) => AppId::parse(id),
+            None if options.demo => None,
+            None => Some(AppId::new(SourceKind::GitHub, ustore_core::catalog::STORE_REPOSITORY)),
+        },
         update_queue: Mutex::new(std::collections::VecDeque::new()),
         pictures_requested: Mutex::new(HashSet::new()),
         opener: options.opener.clone().unwrap_or_else(|| Arc::new(install::open_with_system)),
@@ -1383,6 +1412,12 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         app.update_state(ui, |state| state.settings.welcomed = true);
         app.refresh_settings(ui);
     });
+    on!(on_view_store_update, |app, ui| {
+        // The store's own page is an app page like any other: same files, same checks.
+        if let Some(id) = app.store_app.clone() {
+            app.open(ui, &id.to_string());
+        }
+    });
     on!(on_dismiss_toast, |app, ui| {
         let _ = &app;
         ui.global::<Store>().set_toast(SharedString::new());
@@ -1414,6 +1449,7 @@ pub fn run(options: Options) -> Result<(), Box<dyn std::error::Error>> {
     // the store again.
     if !app.state().settings.skip_update_check_on_start {
         app.check_updates(&ui, false);
+        app.check_store_update(&ui);
     }
 
     if let Some(path) = options.screenshot.clone() {
@@ -1541,6 +1577,7 @@ fn describe(ui: &AppWindow) -> String {
         format!("updates={}", store.get_updates_count()),
         format!("checking_updates={}", store.get_checking_updates()),
         format!("updating={}", store.get_updating_id()),
+        format!("store_update={}", store.get_store_update()),
         format!("toast={}", store.get_toast()),
     ]
     .join("\n")

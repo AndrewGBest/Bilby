@@ -45,6 +45,10 @@ fn describe_source_error(source: SourceKind, error: &Error) -> String {
     }
 }
 
+/// Where the store itself is published. Its own releases are found, filtered and
+/// installed exactly like any other app's.
+pub const STORE_REPOSITORY: &str = "AndrewGBest/untitledstore";
+
 /// Result of checking one library entry for a newer release.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UpdateStatus {
@@ -403,6 +407,39 @@ mod tests {
         assert_eq!(error.to_string(), "GitHub has no project called “nobody/nothing”.");
         let error = demo("linux-x64-arch").details(&id("aur:no-such-package")).unwrap_err();
         assert_eq!(error.to_string(), "AUR has no package called “no-such-package”.");
+    }
+
+    #[test]
+    fn the_stores_own_release_files_resolve_on_every_desktop() {
+        use crate::model::{Asset, Release};
+        // The names .github/workflows/release.yml produces.
+        let names = [
+            "untitledstore-v0.2.0-x86_64-unknown-linux-gnu.tar.gz",
+            "untitledstore-v0.2.0-x86_64-pc-windows-msvc.zip",
+            "untitledstore-v0.2.0-aarch64-apple-darwin.tar.gz",
+            "SHA256SUMS",
+        ];
+        let release = Release {
+            version: "v0.2.0".into(),
+            published: String::new(),
+            prerelease: false,
+            notes: String::new(),
+            assets: names
+                .iter()
+                .map(|n| Asset { name: n.to_string(), size: 1, url: String::new(), digest: None, info: None })
+                .collect(),
+        };
+        let offered = |preset: &str| -> Vec<String> {
+            demo(preset).resolve_release(&release).options.into_iter().map(|o| o.asset.name).collect()
+        };
+        assert_eq!(offered("linux-x64-debian"), [names[0]]);
+        assert_eq!(offered("linux-x64-arch"), [names[0]]);
+        assert_eq!(offered("windows-x64"), [names[1]]);
+        assert_eq!(offered("windows-arm64"), [names[1]], "through emulation");
+        assert_eq!(offered("macos-arm64"), [names[2]]);
+        assert!(offered("macos-x64").is_empty(), "no Intel Mac build is published");
+        assert!(offered("linux-arm64-debian").is_empty());
+        assert!(offered("android-arm64").is_empty());
     }
 
     #[test]

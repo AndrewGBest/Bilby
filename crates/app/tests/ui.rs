@@ -723,6 +723,62 @@ fn the_library_lists_waiting_updates_first() {
     assert_eq!(names(&s), ["Kestrel", "Tidewave", "Lumen"], "the app with an update moves to the top");
 }
 
+/// A store whose "own repository" is the given demo project.
+fn start_as_store(preset: &str, store_app: &str) -> Session {
+    init_backend();
+    let root = temp_root();
+    let dirs = dirs_in(&root);
+    std::fs::create_dir_all(&dirs.config).unwrap();
+    std::fs::write(dirs.config.join("demo-state.json"), r#"{"settings":{"welcomed":true}}"#).unwrap();
+    let options = Options {
+        demo: true,
+        inline: true,
+        platform: Some(Platform::preset(preset).unwrap()),
+        shell: Some(Shell::Desktop),
+        dirs: Some(dirs.clone()),
+        opener: Some(Arc::new(|_| Ok(()))),
+        store_app: Some(store_app.to_string()),
+        ..Default::default()
+    };
+    let (ui, app) = build(&options).unwrap();
+    ui.window().set_size(slint::LogicalSize::new(1280.0, 2400.0));
+    ui.show().unwrap();
+    let state_file = dirs.config.join("demo-state.json");
+    Session { ui, app, dirs, state_file, opened: Arc::default() }
+}
+
+#[test]
+fn the_store_finds_its_own_updates_like_any_other_apps() {
+    // Kestrel v1.21.0 stands in for a newer release of the store (which is 0.x).
+    let s = start_as_store("linux-x64-debian", "github:kestrel-sh/kestrel");
+    s.store().set_page(3);
+    assert_eq!(s.store().get_store_update(), "", "nothing is claimed before checking");
+    assert!(!s.has("View the store's update"));
+    s.app.check_store_update(&s.ui);
+    assert_eq!(s.store().get_store_update(), "v1.21.0");
+    assert_eq!(s.store().get_toast(), "", "it does not interrupt");
+
+    // The update is an ordinary app page: the file for this device, checksum and all.
+    s.click("View the store's update");
+    assert!(s.store().get_details_open());
+    assert_eq!(s.store().get_app().id, "github:kestrel-sh/kestrel");
+    assert_eq!(s.option_labels()[0], "Portable archive · x86_64");
+
+    // A newer release with nothing for this device is not an update for this device.
+    let no_build = start_as_store("linux-x64-debian", "github:winspect/winspect");
+    no_build.app.check_store_update(&no_build.ui);
+    assert_eq!(no_build.store().get_store_update(), "");
+    // A check that fails stays silent rather than alarming.
+    let gone = start_as_store("linux-x64-debian", "github:nobody/nothing");
+    gone.app.check_store_update(&gone.ui);
+    assert_eq!(gone.store().get_store_update(), "");
+    assert_eq!(gone.store().get_toast(), "");
+    // The demo has no such project unless a test names one.
+    let demo = start("linux-x64-debian", Shell::Desktop);
+    demo.app.check_store_update(&demo.ui);
+    assert_eq!(demo.store().get_store_update(), "");
+}
+
 #[test]
 fn clearing_the_cache_only_touches_the_cache() {
     let s = start("linux-x64-debian", Shell::Desktop);

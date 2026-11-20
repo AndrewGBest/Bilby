@@ -1223,6 +1223,25 @@ export component SettingsBody inherits Rectangle {
 
             SettingsCard {
                 title: "About";
+                if Store.store-update != "" : HorizontalLayout {
+                    spacing: 12px;
+                    VerticalLayout {
+                        alignment: center;
+                        horizontal-stretch: 1;
+                        Text {
+                            text: "untitledstore " + Store.store-update + " is available. You have " + Store.app-version + ".";
+                            color: Theme.accent;
+                            font-size: 14px;
+                            font-weight: 600;
+                            wrap: word-wrap;
+                        }
+                    }
+                    Button {
+                        text: "View update";
+                        accessible-label: "View the store's update";
+                        clicked => { Store.view-store-update(); }
+                    }
+                }
                 Text {
                     text: "untitledstore " + Store.app-version + ". Everything runs on this device: there is no account and no server of ours. The store talks directly to GitHub and the AUR, and keeps your library and settings in a file on this device.";
                     color: Theme.text-dim;

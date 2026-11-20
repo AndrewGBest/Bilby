@@ -298,6 +298,28 @@ Not done: dnf (Fedora) and zypper (openSUSE) metadata, Flatpak remotes (Flathub)
 winget and Homebrew. Each is another `Backend` in `source/system.rs` or another
 `Source`; nothing else in the app needs to change.
 
+### The store's own updates
+
+The store treats its own repository (`STORE_REPOSITORY` in `catalog.rs`) as one more
+app. At start-up, unless start-up checks are switched off, it asks for the newest
+release that has a file for this device and compares it with its own version. If there
+is one, Settings shows it with a "View update" button that opens the store's own app
+page, where the usual rules apply: only files for this device, checksum verified. One
+request, cached like the rest. There is no separate updater and no update server.
+**[verified]** by test with a stand-in project; never against the real repository,
+which has no releases yet.
+
+`.github/workflows/release.yml` builds archives for Linux x86_64, Windows x86_64 and
+Apple-silicon macOS when a `v*` tag is pushed, named so the classifier resolves them
+(**[verified]** by `the_stores_own_release_files_resolve_on_every_desktop`). The
+workflow itself has never run.
+
+What this does not do yet: replace the running program. The release files are archives,
+so today "installing" the update downloads it and shows the folder; swapping the binary
+is manual. A copy installed from a package manager should be updated through that
+instead. Closing that gap means publishing an AppImage, a `.deb` and a Windows
+installer, or having the store replace its own executable and restart.
+
 ### App pictures
 
 GitHub projects have no icon in the API. The store shows the owner's avatar, which for
@@ -413,7 +435,7 @@ been run on a television.
 
 ## 8. Testing
 
-166 tests, none needing the internet. **[verified]**: all pass on Linux here. CI runs
+168 tests, none needing the internet. **[verified]**: all pass on Linux here. CI runs
 the suite on Linux, Windows and macOS on every push. It passed on all three for the
 version-picker commit (run 13). The run after that failed on Windows only, because a
 test clicked a button that was below the window there; the test helper was fixed. Check
@@ -421,11 +443,11 @@ the Actions tab for the state of the latest commit rather than trusting this par
 
 | Suite | Count | What it exercises |
 |---|---|---|
-| `ustore-core` unit tests | 79 | detection, classification, compatibility, versions, state file, install plans and execution, index, suggestions, icons, catalog |
+| `ustore-core` unit tests | 80 | detection, classification, compatibility, versions, state file, install plans and execution, index, suggestions, icons, catalog |
 | `core/tests/corpus.rs` | 4 | 169 real-world-style names; cross-OS/CPU safety property; 20,000 generated names |
 | `core/tests/http_sources.rs` | 16 | the real HTTP client and both sources against a local server: headers, token scoping, rate limits, allowance, progress, cancel, cache, documented JSON shapes, garbage responses |
 | `cli/tests/cli.rs` | 8 | the `ustore` binary end to end, including install, library, updates and `doctor` |
-| `app/tests/ui.rs` | 38 | the real window on Slint's headless backend: clicks by accessible label, key presses, all three interfaces |
+| `app/tests/ui.rs` | 39 | the real window on Slint's headless backend: clicks by accessible label, key presses, all three interfaces |
 | `app/tests/offline.rs` | 7 | the same window with a transport that goes offline or rate limited on demand, then recovers |
 | `app/tests/pictures.rs` | 1 | app pictures: fetched, decoded, shown, cached on disk, harmless when missing |
 | `app/tests/binary.rs` | 7 | the real application (threads, event loop, software renderer) under `xvfb-run`, Linux only |

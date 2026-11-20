@@ -43,6 +43,9 @@ Screenshots show the built-in demo catalog; the apps in it are fictional.
 - **Library and updates**: remembers what you installed, checks the sources for newer
   releases that fit your device, and updates one app or all of them with one click from the Library.
   Older versions can be picked from the app page.
+- **Updates itself the same way**: the store checks its own GitHub repository for a
+  newer release with a file for your device and says so in Settings. The update is an
+  ordinary app page, so it gets the same filtering and checksum check as everything else.
 - **App pictures**: the owner's avatar, fetched straight from GitHub and cached on the
   device; initials on a colour until it arrives, or if there is none.
 - **Three interfaces** in one app: desktop (mouse and full keyboard use), mobile (touch),
@@ -60,8 +63,8 @@ A working vertical slice. It has only ever been looked at on Linux.
 
 | | State |
 |---|---|
-| Engine, sources, library, updates, install planning | Implemented; 166 automated tests in total |
-| Desktop, mobile and TV interfaces | Implemented; 46 tests drive the real window headlessly, 7 more run the real binary under a virtual display |
+| Engine, sources, library, updates, install planning | Implemented; 168 automated tests in total |
+| Desktop, mobile and TV interfaces | Implemented; 47 tests drive the real window headlessly, 7 more run the real binary under a virtual display |
 | apt repositories | Read from real Ubuntu 24.04 package lists on the build machine |
 | pacman repositories (Arch, CachyOS, ...) | Tested against databases built in the tests from the documented format; **never read from a real Arch or CachyOS system** |
 | Fedora (dnf), openSUSE (zypper), Flathub, winget, Homebrew | Not yet |

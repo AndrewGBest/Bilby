@@ -136,6 +136,8 @@ export global Store {
     in property <bool> check-updates-on-start;
     in property <bool> has-token;
     in property <string> downloads-dir;
+    // A newer release of the store itself that has a file for this device, "" when none.
+    in property <string> store-update;
     // GitHub's remaining request allowance, in words. Empty until known.
     in property <string> quota-text;
     // First run: explain what this store is before anything is installed.
@@ -167,4 +169,5 @@ export global Store {
     callback open-url(string);
     callback dismiss-toast();
     callback dismiss-welcome();
+    callback view-store-update();
 }
