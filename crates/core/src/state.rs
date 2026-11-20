@@ -50,6 +50,42 @@ pub struct InstalledApp {
     /// Seconds since the Unix epoch.
     #[serde(default)]
     pub installed_at: u64,
+    /// A newer version the user chose not to be told about. Later versions are
+    /// announced as usual.
+    #[serde(default)]
+    pub skipped_version: String,
+}
+
+/// An app marked to come back to. Enough is kept to show it without the network.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Favourite {
+    pub id: String,
+    pub name: String,
+    #[serde(default)]
+    pub author: String,
+    #[serde(default)]
+    pub summary: String,
+}
+
+impl Favourite {
+    pub fn of(app: &AppSummary) -> Favourite {
+        Favourite {
+            id: app.id.to_string(),
+            name: app.name.clone(),
+            author: app.author.clone(),
+            summary: app.summary.clone(),
+        }
+    }
+}
+
+/// What `export` writes and `import` reads: the library and favourites, no settings
+/// (the file is meant to be shared or moved, and settings can hold a token).
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Backup {
+    pub bilby_backup: u32,
+    pub library: Vec<InstalledApp>,
+    pub favourites: Vec<Favourite>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -58,6 +94,7 @@ pub struct State {
     pub settings: Settings,
     pub library: Vec<InstalledApp>,
     pub recent_searches: Vec<String>,
+    pub favourites: Vec<Favourite>,
 }
 
 impl State {
@@ -110,6 +147,69 @@ impl State {
         Some(self.library.remove(index))
     }
 
+    pub fn is_favourite(&self, id: &str) -> bool {
+        self.favourites.iter().any(|f| f.id == id)
+    }
+
+    /// Mark or unmark an app. Returns whether it is a favourite afterwards.
+    pub fn toggle_favourite(&mut self, favourite: Favourite) -> bool {
+        if self.is_favourite(&favourite.id) {
+            self.favourites.retain(|f| f.id != favourite.id);
+            return false;
+        }
+        self.favourites.insert(0, favourite);
+        true
+    }
+
+    /// Stop announcing `version` of a library app. Returns false if it is not installed.
+    pub fn skip_version(&mut self, id: &str, version: &str) -> bool {
+        match self.library.iter_mut().find(|a| a.id == id) {
+            Some(app) => {
+                app.skipped_version = version.to_string();
+                true
+            }
+            None => false,
+        }
+    }
+
+    pub fn backup(&self) -> Backup {
+        let mut library = self.library.clone();
+        // Paths belong to this device; on another one they would point at nothing.
+        for app in &mut library {
+            app.path = None;
+            app.store_managed = false;
+        }
+        Backup { bilby_backup: 1, library, favourites: self.favourites.clone() }
+    }
+
+    /// The backup as the text of a file.
+    pub fn backup_json(&self) -> Result<String> {
+        Ok(serde_json::to_string_pretty(&self.backup())?)
+    }
+
+    /// Merge a backup in. What is already here wins; returns `(apps, favourites)` added.
+    pub fn restore(&mut self, text: &str) -> Result<(usize, usize)> {
+        let backup: Backup = serde_json::from_str(text)?;
+        if backup.bilby_backup == 0 {
+            return Err(crate::error::Error::Parse("this is not a Bilby backup file".into()));
+        }
+        let ok = |id: &str| crate::model::AppId::parse(id).is_some_and(|i| crate::model::valid_key(i.source, &i.key));
+        let (mut apps, mut favourites) = (0, 0);
+        for app in backup.library {
+            if ok(&app.id) && self.installed(&app.id).is_none() {
+                self.library.push(app);
+                apps += 1;
+            }
+        }
+        for favourite in backup.favourites {
+            if ok(&favourite.id) && !self.is_favourite(&favourite.id) {
+                self.favourites.push(favourite);
+                favourites += 1;
+            }
+        }
+        Ok((apps, favourites))
+    }
+
     pub fn add_search(&mut self, query: &str) {
         let query = query.trim();
         if query.chars().count() < 2 {
@@ -140,6 +240,7 @@ impl InstalledApp {
             path: None,
             store_managed: false,
             installed_at: now,
+            skipped_version: String::new(),
         }
     }
 }
@@ -170,6 +271,7 @@ mod tests {
             path: None,
             store_managed: false,
             installed_at: 1,
+            skipped_version: String::new(),
         }
     }
 
@@ -240,5 +342,69 @@ mod tests {
         assert_eq!(state.recent_searches[0], "a5");
         assert_eq!(state.recent_searches.iter().filter(|q| q.eq_ignore_ascii_case("bat")).count(), 1);
         assert!(!state.recent_searches.contains(&"x".to_string()), "one-letter searches are not kept");
+    }
+
+    fn summary(id: &str) -> AppSummary {
+        AppSummary {
+            id: crate::model::AppId::parse(id).unwrap(),
+            name: "Thing".into(),
+            author: "someone".into(),
+            summary: "Does things".into(),
+            popularity: None,
+            homepage: String::new(),
+            license: None,
+            category: None,
+            version: None,
+            install_label: None,
+            warning: None,
+            origin: None,
+            installed_version: None,
+        }
+    }
+
+    #[test]
+    fn favourites_toggle_and_keep_what_is_needed_to_show_them() {
+        let mut state = State::default();
+        assert!(state.toggle_favourite(Favourite::of(&summary("github:a/b"))));
+        assert!(state.toggle_favourite(Favourite::of(&summary("codeberg:c/d"))));
+        assert_eq!(state.favourites[0].id, "codeberg:c/d", "newest first");
+        assert_eq!(state.favourites[1].name, "Thing");
+        assert!(!state.toggle_favourite(Favourite::of(&summary("github:a/b"))), "a second press removes it");
+        assert!(!state.is_favourite("github:a/b") && state.is_favourite("codeberg:c/d"));
+    }
+
+    #[test]
+    fn a_skipped_version_is_remembered_until_the_next_install() {
+        let mut state = State::default();
+        state.record_install(app("github:a/b", "v1"));
+        assert!(state.skip_version("github:a/b", "v2"));
+        assert_eq!(state.installed("github:a/b").unwrap().skipped_version, "v2");
+        assert!(!state.skip_version("github:not/here", "v2"));
+        state.record_install(app("github:a/b", "v3"));
+        assert_eq!(state.installed("github:a/b").unwrap().skipped_version, "");
+    }
+
+    #[test]
+    fn a_backup_moves_the_library_but_not_settings_or_paths() {
+        let mut old = State::default();
+        old.settings.github_token = "secret".into();
+        let mut owned = app("github:a/b", "v1");
+        owned.path = Some("/home/me/Applications/a.AppImage".into());
+        owned.store_managed = true;
+        old.record_install(owned);
+        old.toggle_favourite(Favourite::of(&summary("aur:paru")));
+        let text = serde_json::to_string(&old.backup()).unwrap();
+        assert!(!text.contains("secret") && !text.contains("/home/me"));
+
+        let mut new = State::default();
+        new.record_install(app("github:a/b", "v9"));
+        assert_eq!(new.restore(&text).unwrap(), (0, 1), "what is already here wins");
+        assert_eq!(new.installed("github:a/b").unwrap().version, "v9");
+        assert_eq!(new.restore(&text).unwrap(), (0, 0), "restoring twice adds nothing");
+
+        assert!(new.restore("{\"library\":[]}").is_err(), "some other JSON file is refused");
+        assert!(new.restore("not json").is_err());
+        let hostile = r#"{"bilby_backup":1,"library":[{"id":"github:../x","name":"x","version":"1"}]}"#;
+        assert_eq!(new.restore(hostile).unwrap(), (0, 0), "ids that could not be real are dropped");
     }
 }

@@ -300,7 +300,7 @@ export component DesktopShell inherits Rectangle {
                         horizontal-stretch: 1;
                         max-width: 560px;
                         text <=> Store.query;
-                        placeholder: "Search, or paste a GitHub link   (Ctrl+K)";
+                        placeholder: "Search, or paste a project link   (Ctrl+K)";
                         accepted(text) => { Store.search(text); }
                         edited(text) => { Store.typing(text); }
                     }
@@ -348,7 +348,7 @@ export component DesktopShell inherits Rectangle {
                                 }
                                 if Store.sections.length == 0 : EmptyState {
                                     title: "Nothing featured for this device yet";
-                                    body: "Search for an app by name, or paste a GitHub link.";
+                                    body: "Search for an app by name, or paste a project link.";
                                     action: "Search";
                                     acted => {
                                         Store.page = 1;

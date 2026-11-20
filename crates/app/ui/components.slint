@@ -686,14 +686,27 @@ export component DetailsBody inherits Rectangle {
                         if Store.license != "" && !compact : Chip { text: Store.license; }
                     }
                 }
-                if Store.homepage != "" && !compact : VerticalLayout {
+                if !compact : VerticalLayout {
                     alignment: start;
-                    Button {
+                    spacing: 8px;
+                    if Store.homepage != "" : Button {
                         text: "Project page";
                         primary: false;
                         clicked => { Store.open-url(Store.homepage); }
                     }
+                    Button {
+                        text: Store.is-favourite ? "★ Favourite" : "☆ Favourite";
+                        primary: false;
+                        accessible-label: Store.is-favourite ? "Remove from favourites" : "Add to favourites";
+                        clicked => { Store.toggle-favourite(); }
+                    }
                 }
+            }
+            if compact : Button {
+                text: Store.is-favourite ? "★ In your favourites" : "☆ Add to favourites";
+                primary: false;
+                accessible-label: Store.is-favourite ? "Remove from favourites" : "Add to favourites";
+                clicked => { Store.toggle-favourite(); }
             }
 
             if Store.app.summary != "" : Text {
@@ -890,6 +903,15 @@ component LibraryItem inherits Rectangle {
                         clicked => { root.act(); }
                     }
                 }
+                if entry.status == 3 && !updating : VerticalLayout {
+                    alignment: center;
+                    Button {
+                        text: "Skip";
+                        primary: false;
+                        accessible-label: "Skip this update of " + entry.card.name;
+                        clicked => { Store.skip-update(entry.card.id); }
+                    }
+                }
                 VerticalLayout {
                     alignment: center;
                     Button {
@@ -916,6 +938,13 @@ component LibraryItem inherits Rectangle {
                 enabled: root.can-act;
                 accessible-label: (entry.status != 3 ? "Details of " : updating ? "Cancel updating " : "Update ") + entry.card.name;
                 clicked => { root.act(); }
+            }
+            if entry.status == 3 && !updating : Button {
+                horizontal-stretch: 1;
+                text: "Skip";
+                primary: false;
+                accessible-label: "Skip this update of " + entry.card.name;
+                clicked => { Store.skip-update(entry.card.id); }
             }
             Button {
                 horizontal-stretch: 1;
@@ -954,19 +983,19 @@ component LibraryItem inherits Rectangle {
 
 export component LibraryBody inherits Rectangle {
     in property <bool> compact;
-    if Store.library.length == 0 : EmptyState {
+    if Store.library.length == 0 && Store.favourites.length == 0 : EmptyState {
         title: "Your library is empty";
-        body: "Apps you install from the store show up here, and the store can tell you when they have a new release.";
+        body: "Apps you install from the store show up here, and the store can tell you when they have a new release. Favourites are kept here too.";
         action: "Browse apps";
         acted => { Store.page = 0; }
     }
-    if Store.library.length > 0 : Flickable {
+    if Store.library.length > 0 || Store.favourites.length > 0 : Flickable {
         VerticalLayout {
             padding: compact ? 16px : 32px;
             padding-top: compact ? 8px : 14px;
             spacing: 12px;
             alignment: start;
-            HorizontalLayout {
+            if Store.library.length > 0 : HorizontalLayout {
                 spacing: 12px;
                 VerticalLayout {
                     alignment: center;
@@ -1010,7 +1039,7 @@ export component LibraryBody inherits Rectangle {
                 enabled: Store.updating-id == "";
                 clicked => { Store.update-all(); }
             }
-            if compact : Button {
+            if compact && Store.library.length > 0 : Button {
                 text: "Check for updates";
                 primary: false;
                 enabled: !Store.checking-updates && Store.updating-id == "";
@@ -1018,6 +1047,25 @@ export component LibraryBody inherits Rectangle {
             }
             if Store.checking-updates : Busy { }
             for item in Store.library : LibraryItem { entry: item; compact: root.compact; }
+            if Store.favourites.length > 0 : Text {
+                text: "Favourites";
+                color: Theme.text;
+                font-size: compact ? 16px : 20px;
+                font-weight: 700;
+            }
+            if Store.favourites.length > 0 : Rectangle {
+                border-radius: 12px;
+                background: Theme.surface;
+                border-width: 1px;
+                border-color: Theme.stroke;
+                clip: true;
+                VerticalLayout {
+                    for app in Store.favourites : AppRow {
+                        app: app;
+                        clicked => { Store.open(app.id); }
+                    }
+                }
+            }
         }
     }
 }

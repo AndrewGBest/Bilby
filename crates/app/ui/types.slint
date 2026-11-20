@@ -114,6 +114,8 @@ export global Store {
     // Releases that have a file for this machine, newest first, and the one shown.
     in property <[string]> versions;
     in property <int> selected-version;
+    // The open app is in the user's favourites.
+    in property <bool> is-favourite;
 
     // --- install ----------------------------------------------------------------
     // 0 idle, 1 working, 2 done, 3 failed
@@ -129,6 +131,8 @@ export global Store {
     in property <string> last-checked;
     // The library app being updated in place right now, "" when none.
     in property <string> updating-id;
+    // Apps marked to come back to; kept on this device like everything else.
+    in property <[AppCard]> favourites;
 
     // --- settings ---------------------------------------------------------------
     in property <int> theme-mode;
@@ -159,6 +163,8 @@ export global Store {
     callback update-app(string);
     callback update-all();
     callback remove-from-library(string);
+    callback skip-update(string);
+    callback toggle-favourite();
     callback set-theme(int);
     callback set-prereleases(bool);
     callback set-check-on-start(bool);

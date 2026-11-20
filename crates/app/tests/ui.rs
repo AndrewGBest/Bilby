@@ -1071,3 +1071,49 @@ fn tv_puts_the_library_first() {
     assert!(row.apps.row_data(0).unwrap().has_update);
     assert_eq!(s.store().get_toast(), "", "a start-up check stays quiet");
 }
+
+#[test]
+fn favourites_are_kept_in_the_library_without_installing() {
+    let s = start_with("linux-x64-debian", Shell::Desktop, Some(r#"{"settings":{"welcomed":true}}"#));
+    s.app.open(&s.ui, "github:lumen-labs/lumen");
+    assert!(!s.store().get_is_favourite());
+    s.click("Add to favourites");
+    assert!(s.store().get_is_favourite());
+    assert_eq!(s.saved().favourites[0].id, "github:lumen-labs/lumen");
+    assert_eq!(s.saved().favourites[0].name, "Lumen");
+    assert!(s.saved().library.is_empty(), "a favourite is not an install");
+
+    // The library page lists it even though nothing is installed, and it opens from there.
+    s.store().set_details_open(false);
+    s.store().set_page(2);
+    assert!(s.has("Favourites"));
+    assert!(!s.has("Your library is empty"));
+    s.activate("Lumen");
+    assert!(s.store().get_details_open());
+    assert!(s.store().get_is_favourite(), "the page remembers");
+    s.click("Remove from favourites");
+    assert!(s.saved().favourites.is_empty());
+    assert!(!s.store().get_is_favourite());
+}
+
+#[test]
+fn an_update_can_be_skipped_until_the_next_one() {
+    let seed = r#"{"settings":{"welcomed":true},"library":[
+        {"id":"github:kestrel-sh/kestrel","name":"Kestrel","version":"v1.20.0"},
+        {"id":"github:lumen-labs/lumen","name":"Lumen","version":"v0.19.2"}]}"#;
+    let s = start_with("linux-x64-debian", Shell::Desktop, Some(seed));
+    s.store().set_page(2);
+    s.app.check_updates(&s.ui, false);
+    assert_eq!(s.store().get_updates_count(), 1);
+    s.click("Skip this update of Kestrel");
+    assert_eq!(s.store().get_updates_count(), 0);
+    assert!(s.store().get_toast().contains("Skipping Kestrel v1.21.0"));
+    assert_eq!(s.saved().library.iter().find(|a| a.name == "Kestrel").unwrap().skipped_version, "v1.21.0");
+    let row = s.store().get_library().iter().find(|r| r.card.name == "Kestrel").unwrap();
+    assert_eq!(row.status_text, "Up to date  ·  skipping v1.21.0");
+    assert!(!s.has("Skip this update of Kestrel"));
+
+    // Checking again does not bring the same version back.
+    s.app.check_updates(&s.ui, false);
+    assert_eq!(s.store().get_updates_count(), 0);
+}

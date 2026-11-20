@@ -176,3 +176,25 @@ fn classify_explains_a_file_name() {
     let sums = out(&["--demo", "classify", "SHA256SUMS"]);
     assert!(sums.contains("not an installable file"));
 }
+
+#[test]
+fn a_library_moves_between_devices_with_export_and_import() {
+    let old = home();
+    let installed = run_in(&old, &["--demo", "--as", "linux-x64-debian", "install", "github:kestrel-sh/kestrel"]);
+    assert!(installed.status.success(), "{}", String::from_utf8_lossy(&installed.stderr));
+    let file = old.join("backup.json");
+    let file = file.to_str().unwrap();
+    assert!(run_in(&old, &["--demo", "export", file]).status.success());
+    let text = std::fs::read_to_string(file).unwrap();
+    assert!(text.contains("github:kestrel-sh/kestrel") && text.contains("bilby_backup"));
+
+    let new = home();
+    let imported = run_in(&new, &["--demo", "import", file]);
+    assert!(String::from_utf8_lossy(&imported.stdout).contains("Added 1 to the library"));
+    let library = run_in(&new, &["--demo", "library"]);
+    assert!(String::from_utf8_lossy(&library.stdout).contains("github:kestrel-sh/kestrel"));
+
+    let bad = run_in(&new, &["--demo", "import", "/nowhere/at/all.json"]);
+    assert!(!bad.status.success());
+    assert!(String::from_utf8_lossy(&bad.stderr).contains("couldn't read"));
+}

@@ -24,6 +24,8 @@ COMMANDS:
     install <id> [n]       Download and install option n (default 1) of an app
     library                Apps installed through the store
     updates                Check the library for newer releases
+    export [file]          Write the library and favourites to a file (no settings, no token)
+    import <file>          Add an exported library and favourites to this device
     classify <file name>   Explain how a release file name is interpreted
     doctor                 Check that the sources answer and that every featured app
                            really has something for this machine
@@ -97,6 +99,8 @@ fn main() -> ExitCode {
         Some("show") if args.len() == 2 => show(&catalog, &args[1]),
         Some("install") if args.len() >= 2 => install_cmd(&catalog, &dirs, &state_path, &args[1], args.get(2)),
         Some("doctor") => doctor(&catalog, demo),
+        Some("export") if args.len() <= 2 => export(&state_path, args.get(1)),
+        Some("import") if args.len() == 2 => import(&state_path, &args[1]),
         Some("library") => {
             library(&catalog, &state_path, false);
             Ok(())
@@ -288,6 +292,9 @@ fn library(catalog: &Catalog, state_path: &Path, check: bool) {
     };
     for (i, app) in state.library.iter().enumerate() {
         let status = match statuses.get(i) {
+            Some(UpdateStatus::Available { version, .. }) if *version == app.skipped_version => {
+                format!("up to date (skipping {version})")
+            }
             Some(UpdateStatus::Available { version, .. }) => format!("update available: {version}"),
             Some(UpdateStatus::UpToDate) => "up to date".to_string(),
             Some(UpdateStatus::Unknown(why)) => format!("could not check: {why}"),
@@ -295,6 +302,31 @@ fn library(catalog: &Catalog, state_path: &Path, check: bool) {
         };
         println!("{:<34} {:<14} {:<28} {}", app.id, app.version, app.label, status);
     }
+}
+
+/// Write the library and favourites to a file (or standard output) to move or share.
+fn export(state_path: &Path, to: Option<&String>) -> Result<(), String> {
+    let text = State::load(state_path).backup_json().map_err(|e| e.to_string())?;
+    match to {
+        Some(file) => {
+            std::fs::write(file, text).map_err(|e| format!("couldn't write {file}: {e}"))?;
+            println!("Saved to {file}");
+        }
+        None => println!("{text}"),
+    }
+    Ok(())
+}
+
+/// Merge an exported file into this device's library and favourites.
+fn import(state_path: &Path, file: &str) -> Result<(), String> {
+    let mut state = State::load(state_path);
+    let text = std::fs::read_to_string(file).map_err(|e| format!("couldn't read {file}: {e}"))?;
+    let (apps, favourites) = state.restore(&text).map_err(|e| e.to_string())?;
+    state.save(state_path).map_err(|e| e.to_string())?;
+    println!(
+        "Added {apps} to the library and {favourites} to favourites. Run `bilby-cli updates` to see what is newer."
+    );
+    Ok(())
 }
 
 /// A self-check against whatever the catalog talks to. Each line is one thing a person

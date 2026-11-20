@@ -10,7 +10,7 @@ use bilby_core::index::Section as CoreSection;
 use bilby_core::install::{self, Action, Dirs};
 use bilby_core::model::{age_label, human_count, human_size, AppDetails, AppId, AppSummary, InstallOption, SourceKind};
 use bilby_core::platform::{FormFactor, PRESETS};
-use bilby_core::state::{now_unix, InstalledApp, Settings, State};
+use bilby_core::state::{now_unix, Favourite, InstalledApp, Settings, State};
 use bilby_core::{Catalog, Error, Platform};
 use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel};
 use std::cell::RefCell;
@@ -577,6 +577,26 @@ impl App {
         }
     }
 
+    fn favourite_card(&self, favourite: &Favourite) -> AppCard {
+        let state = self.state.lock().unwrap();
+        let installed = state.installed(&favourite.id);
+        AppCard {
+            id: favourite.id.as_str().into(),
+            name: favourite.name.as_str().into(),
+            author: favourite.author.as_str().into(),
+            summary: favourite.summary.as_str().into(),
+            source: AppId::parse(&favourite.id).map(|id| id.source.label()).unwrap_or("").into(),
+            badge: SharedString::new(),
+            version: installed.map(|a| a.version.clone()).unwrap_or_default().into(),
+            popularity: SharedString::new(),
+            initials: initials(&favourite.name).into(),
+            tint: tint_for(&favourite.id),
+            icon: picture_for(&favourite.id),
+            installed: installed.is_some(),
+            has_update: false,
+        }
+    }
+
     // ---- pages ----
 
     /// Discover, the TV rows and the library all depend on the same data; redraw them
@@ -603,7 +623,9 @@ impl App {
             .library
             .iter()
             .map(|app| {
-                let date = age_label(&unix_date(app.installed_at), now);
+                // Entries that came from a backup or an older file have no install time.
+                let date =
+                    if app.installed_at == 0 { String::new() } else { age_label(&unix_date(app.installed_at), now) };
                 let mut detail = app.version.clone();
                 if !app.label.is_empty() {
                     detail.push_str(&format!("  ·  {}", app.label));
@@ -613,6 +635,9 @@ impl App {
                 }
                 let (status, status_text) = match updates.get(&app.id) {
                     None => (0, String::new()),
+                    Some(UpdateStatus::UpToDate) if !app.skipped_version.is_empty() => {
+                        (2, format!("Up to date  ·  skipping {}", app.skipped_version))
+                    }
                     Some(UpdateStatus::UpToDate) => (2, "Up to date".to_string()),
                     Some(UpdateStatus::Available { version, .. }) => (3, format!("Update available: {version}")),
                     Some(UpdateStatus::Unknown(why)) => (4, format!("Couldn't check: {why}")),
@@ -631,6 +656,9 @@ impl App {
         let update_count = rows.iter().filter(|r| r.status == 3).count();
         store.set_updates_count(update_count as i32);
         store.set_library(ModelRc::new(VecModel::from(rows)));
+        let favourites: Vec<AppCard> = state.favourites.iter().map(|f| self.favourite_card(f)).collect();
+        store.set_favourites(ModelRc::new(VecModel::from(favourites)));
+        store.set_is_favourite(state.is_favourite(store.get_app().id.as_str()));
         let checked = self.last_checked.load(Ordering::SeqCst);
         store.set_last_checked(
             match now.saturating_sub(checked) {
@@ -776,6 +804,7 @@ impl App {
         let generation = self.details_generation.fetch_add(1, Ordering::SeqCst) + 1;
         // Show what the list already knew while the releases load.
         let known = find_card(&store, id);
+        store.set_is_favourite(self.state().is_favourite(id));
         store.set_details_open(true);
         store.set_details_error(SharedString::new());
         store.set_unavailable(SharedString::new());
@@ -1144,8 +1173,16 @@ impl App {
                 let failed = statuses.iter().filter(|s| matches!(s, UpdateStatus::Unknown(_))).count();
                 {
                     let mut updates = app.updates.lock().unwrap();
+                    let state = app.state();
                     for ((id, _), status) in apps.iter().zip(statuses) {
-                        updates.insert(id.to_string(), status);
+                        let id = id.to_string();
+                        // A version the user chose to skip is not announced again.
+                        let skipped = state.installed(&id).map(|a| a.skipped_version.clone()).unwrap_or_default();
+                        let status = match status {
+                            UpdateStatus::Available { version, .. } if version == skipped => UpdateStatus::UpToDate,
+                            other => other,
+                        };
+                        updates.insert(id, status);
                     }
                 }
                 app.last_checked.store(now_unix(), Ordering::SeqCst);
@@ -1179,6 +1216,44 @@ impl App {
                 ui.global::<Store>().set_store_update(version.into());
             },
         );
+    }
+
+    /// Stop offering the update that is waiting for this app; the one after it is
+    /// announced as usual.
+    pub fn skip_update(&self, ui: &AppWindow, id: &str) {
+        let waiting = self.updates.lock().unwrap().get(id).cloned();
+        let Some(UpdateStatus::Available { version, .. }) = waiting else { return };
+        let mut name = String::new();
+        self.update_state(ui, |state| {
+            if state.skip_version(id, &version) {
+                name = state.installed(id).map(|a| a.name.clone()).unwrap_or_default();
+            }
+        });
+        if name.is_empty() {
+            return;
+        }
+        self.updates.lock().unwrap().insert(id.to_string(), UpdateStatus::UpToDate);
+        self.refresh(ui);
+        self.toast(ui, &format!("Skipping {name} {version}. You'll hear about the next one."), false);
+    }
+
+    /// Add the open app to the favourites, or take it out.
+    pub fn toggle_favourite(&self, ui: &AppWindow) {
+        let card = ui.global::<Store>().get_app();
+        if AppId::parse(card.id.as_str()).is_none() {
+            return;
+        }
+        let favourite = Favourite {
+            id: card.id.to_string(),
+            name: card.name.to_string(),
+            author: card.author.to_string(),
+            summary: card.summary.to_string(),
+        };
+        let mut added = false;
+        self.update_state(ui, |state| added = state.toggle_favourite(favourite));
+        self.refresh(ui);
+        let message = if added { "Added to favourites. Find them in your library." } else { "Removed from favourites" };
+        self.toast(ui, message, false);
     }
 
     pub fn remove_from_library(&self, ui: &AppWindow, id: &str) {
@@ -1223,6 +1298,7 @@ fn find_card(store: &Store, id: &str) -> Option<AppCard> {
         .or_else(|| store.get_results().iter().find(|c| c.id == id))
         .or_else(|| store.get_suggestions().iter().find(|c| c.id == id))
         .or_else(|| store.get_library().iter().map(|r| r.card).find(|c| c.id == id))
+        .or_else(|| store.get_favourites().iter().find(|c| c.id == id))
 }
 
 /// Create the window and wire it to the catalog, without starting the event loop.
@@ -1350,6 +1426,8 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     on!(on_update_app, |app, ui, id| { app.update_app(ui, &id) });
     on!(on_update_all, |app, ui| { app.update_all(ui) });
     on!(on_remove_from_library, |app, ui, id| { app.remove_from_library(ui, &id) });
+    on!(on_skip_update, |app, ui, id| { app.skip_update(ui, &id) });
+    on!(on_toggle_favourite, |app, ui| { app.toggle_favourite(ui) });
     on!(on_set_theme, |app, ui, mode| {
         let name = ["system", "light", "dark"].get(mode as usize).copied().unwrap_or("system");
         app.update_state(ui, |state| state.settings.theme = name.to_string());
