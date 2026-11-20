@@ -34,6 +34,8 @@ export struct AppCard {
     headline: string,
     // The source has confirmed who the developer is.
     verified: bool,
+    // How many other sources have this same app (0 when this is the only one).
+    more-sources: int,
     has-update: bool,
 }
 
@@ -151,6 +153,9 @@ export global Store {
     in property <bool> details-loading;
     in property <string> details-error;
     in property <AppCard> app;
+    // Every source that has this app, when more than one does. `id` is the app's id at
+    // that source and `on` marks the one this page is showing.
+    in property <[SourceChoice]> app-sources;
     in property <string> release-date;
     in property <string> release-age;
     in property <string> license;

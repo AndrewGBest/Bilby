@@ -24,6 +24,7 @@ pub mod http;
 pub mod icons;
 pub mod index;
 pub mod install;
+pub mod merge;
 pub mod model;
 pub mod os;
 pub mod platform;

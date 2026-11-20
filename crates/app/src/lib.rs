@@ -543,6 +543,9 @@ pub struct App {
     steam_libraries: Option<Vec<PathBuf>>,
     /// Search results are narrowed to this source, when one is chosen.
     result_filter: Mutex<Option<SourceKind>>,
+    /// For each app the last search found at several sources: every source's entry
+    /// for it, as (app id, what to call the source).
+    alternates: Mutex<HashMap<String, Vec<(String, String)>>>,
 }
 
 /// The store's icon, written beside its app-menu entry.
@@ -771,6 +774,7 @@ impl App {
             price: app.price.clone().unwrap_or_default().into(),
             headline: headline.into(),
             verified: app.verified,
+            more_sources: 0,
             has_update: installed && has_update,
         }
     }
@@ -806,6 +810,7 @@ impl App {
             price: SharedString::new(),
             headline: SharedString::new(),
             verified: false,
+            more_sources: 0,
             has_update,
         }
     }
@@ -834,6 +839,7 @@ impl App {
             price: SharedString::new(),
             headline: SharedString::new(),
             verified: false,
+            more_sources: 0,
             has_update: false,
         }
     }
@@ -939,9 +945,31 @@ impl App {
                 })
                 .collect::<Vec<_>>(),
         )));
-        let shown: Vec<AppSummary> =
-            results.iter().filter(|app| filter.is_none_or(|kind| app.id.source == kind)).cloned().collect();
-        store.set_results(self.cards(&shown));
+        // One app from several sources is one result; its page offers the sources.
+        let groups = bilby_core::merge::group(results.clone());
+        let mut alternates = HashMap::new();
+        for group in groups.iter().filter(|g| !g.others.is_empty()) {
+            let members: Vec<(String, String)> =
+                group.members().map(|m| (m.id.to_string(), bilby_core::merge::source_label(m))).collect();
+            for member in group.members() {
+                alternates.insert(member.id.to_string(), members.clone());
+            }
+        }
+        *self.alternates.lock().unwrap() = alternates;
+        let cards: Vec<AppCard> = match filter {
+            // Narrowed to one source, each entry is shown as that source has it.
+            Some(kind) => results.iter().filter(|app| app.id.source == kind).map(|app| self.card(app)).collect(),
+            None => groups
+                .iter()
+                .map(|group| {
+                    let mut card = self.card(&group.lead);
+                    card.more_sources = group.others.len() as i32;
+                    card
+                })
+                .collect(),
+        };
+        store.set_results(ModelRc::new(VecModel::from(cards)));
+        self.show_app_sources(ui);
 
         // TV: the Library page has updates first, then the rest, then favourites.
         let section = |title: &str, cards: Vec<AppCard>| Section {
@@ -1062,6 +1090,30 @@ impl App {
             self.refresh(ui);
         }
         self.refresh_settings(ui);
+    }
+
+    /// Put the open app's sources beside its button, when it has more than one.
+    fn show_app_sources(&self, ui: &AppWindow) {
+        let store = ui.global::<Store>();
+        let id = store.get_app().id.to_string();
+        let choices: Vec<SourceChoice> = self
+            .alternates
+            .lock()
+            .unwrap()
+            .get(&id)
+            .map(|members| {
+                members
+                    .iter()
+                    .map(|(app, label)| SourceChoice {
+                        id: app.as_str().into(),
+                        label: label.as_str().into(),
+                        on: *app == id,
+                        count: 0,
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        store.set_app_sources(ModelRc::new(VecModel::from(choices)));
     }
 
     /// Sign in to GitHub with a code: show it, then wait for the person to enter it at
@@ -1457,6 +1509,7 @@ impl App {
         // Library cards carry "old → new" as their version; the page shows the release's.
         card.version = SharedString::new();
         store.set_app(card);
+        self.show_app_sources(ui);
         let Some(app_id) = AppId::parse(id) else {
             store.set_details_loading(false);
             store.set_details_error(format!("“{id}” is not an app id.").into());
@@ -2304,6 +2357,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         signin_generation: AtomicU64::new(0),
         steam_libraries: options.steam_libraries.clone(),
         result_filter: Mutex::new(None),
+        alternates: Mutex::new(HashMap::new()),
     });
     app.apply_menu_entry(&ui);
     app.show_system(&ui, 0, "");

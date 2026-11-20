@@ -5,7 +5,7 @@
 //! elements found by their accessible label, or sending key presses. Catalog work runs
 //! inline (`Options::inline`), so every assertion sees the finished result.
 
-use bilby::{build, App, AppWindow, Options, Shell, Store, Theme};
+use bilby::{build, App, AppCard, AppWindow, Options, Shell, SourceChoice, Store, Theme};
 use bilby_core::install::Dirs;
 use bilby_core::state::State;
 use bilby_core::Platform;
@@ -1968,4 +1968,48 @@ fn sources_can_be_switched_off_and_results_filtered_by_source() {
     assert!(s.saved().settings.disabled_sources.is_empty());
     s.app.search(&s.ui, "notes");
     assert!(s.store().get_results().iter().any(|c| c.id.starts_with("flathub:")));
+}
+
+// ---- one app, several sources ----
+
+#[test]
+fn an_app_found_at_several_sources_is_one_result_with_its_sources_by_the_button() {
+    // On an Arch-based system the demo has Relay both in pacman's repositories and on GitHub.
+    let s = start("linux-x64-arch", Shell::Desktop);
+    s.app.search(&s.ui, "relay");
+    let results: Vec<AppCard> = s.store().get_results().iter().collect();
+    let harbors: Vec<&AppCard> = results.iter().filter(|c| c.name.to_lowercase() == "relay").collect();
+    assert_eq!(
+        harbors.len(),
+        1,
+        "one tile, not one per source: {:?}",
+        results.iter().map(|c| c.id.to_string()).collect::<Vec<_>>()
+    );
+    assert!(harbors[0].more_sources >= 1);
+    let lead = harbors[0].id.to_string();
+
+    // Its page says which source the button uses and offers the others beside it.
+    s.app.open(&s.ui, &lead);
+    let sources: Vec<SourceChoice> = s.store().get_app_sources().iter().collect();
+    assert!(sources.len() >= 2);
+    assert_eq!(sources.iter().filter(|c| c.on).count(), 1);
+    assert_eq!(sources.iter().find(|c| c.on).unwrap().id, lead.as_str());
+    let other = sources.iter().find(|c| !c.on).unwrap().clone();
+    assert!(s.has(&format!("Switch to {}", other.label)));
+
+    // Choosing another source shows the app as that source has it, with the choice kept.
+    s.click(&format!("Switch to {}", other.label));
+    assert_eq!(s.store().get_app().id, other.id);
+    let now: Vec<SourceChoice> = s.store().get_app_sources().iter().collect();
+    assert_eq!(now.iter().find(|c| c.on).unwrap().id, other.id);
+    assert_eq!(now.len(), sources.len());
+
+    // Filtering by source shows each entry as that source has it.
+    s.store().set_details_open(false);
+    s.store().invoke_filter_results("github".into());
+    assert!(s.store().get_results().iter().all(|c| c.id.starts_with("github:") && c.more_sources == 0));
+
+    // An app only one source has offers no choice.
+    s.app.open(&s.ui, "github:lumen-labs/lumen");
+    assert_eq!(s.store().get_app_sources().row_count(), 0);
 }

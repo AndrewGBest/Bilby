@@ -977,6 +977,8 @@ pub fn system_repos() -> Vec<crate::source::system::Backend> {
                 ),
                 package("pinecone", "0.61.0-1.1", "Fast fuzzy finder for the terminal.", "cachyos-v3", "x86_64_v3"),
                 package("harbor", "5.3.1-1", "Run and manage containers without a daemon.", "extra", "x86_64"),
+                // Also on GitHub in this catalog: one app, two sources.
+                package("relay", "2.1.0-1", "Send files between nearby devices without the cloud.", "extra", "x86_64"),
                 package("mistral-fonts", "4.1-1", "A family of clear interface typefaces.", "extra", "any"),
                 package("coreshell", "5.3-1", "The standard command interpreter.", "core", "x86_64"),
             ],
