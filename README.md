@@ -89,7 +89,7 @@ ever been run on Linux.
 
 | | State |
 |---|---|
-| Linux | Builds, runs, all 235 automated tests pass |
+| Linux | Builds, runs, all 236 automated tests pass |
 | Windows, macOS | Builds and passes the tests on GitHub's machines. Nobody has seen the window on either yet |
 | Android (phone, tablet, TV) | The engine compiles. There is no installable package and APKs cannot be installed yet |
 | iOS | Can only ever browse, not install: see [the design notes](docs/DESIGN.md#ios) |

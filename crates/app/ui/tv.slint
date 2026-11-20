@@ -241,8 +241,18 @@ export component TvShell inherits Rectangle {
     // The buttons on an app's page, left to right: the main one, Favourite, Other files
     // (when there are any) and Remove (when the app is in the library).
     property <bool> has-files: Store.options.length > 0 && !Store.is-website;
-    property <int> remove-idx: !Store.in-library ? -1 : has-files ? 3 : 2;
-    property <int> last-act: Store.in-library ? remove-idx : has-files ? 2 : 1;
+    property <bool> has-reviews: Store.reviews.length > 0;
+    property <int> reviews-idx: !has-reviews ? -1 : has-files ? 3 : 2;
+    property <int> remove-idx: !Store.in-library ? -1 : 2 + (has-files ? 1 : 0) + (has-reviews ? 1 : 0);
+    property <int> last-act: 1 + (has-files ? 1 : 0) + (has-reviews ? 1 : 0) + (Store.in-library ? 1 : 0);
+    // Reading what people wrote: one review at a time, large enough for the sofa.
+    property <bool> reading: false;
+    property <int> rev: 0;
+    changed has-reviews => {
+        if (!root.has-reviews) {
+            root.reading = false;
+        }
+    }
     // Remove asks twice: the first OK only arms it.
     property <bool> remove-armed: false;
     changed act => { root.remove-armed = false; }
@@ -250,6 +260,8 @@ export component TvShell inherits Rectangle {
     property <string> shown-id: Store.app.id;
     changed shown-id => {
         root.remove-armed = false;
+        root.reading = false;
+        root.rev = 0;
         root.act = 0;
         root.files = false;
         root.opt = 0;
@@ -356,9 +368,11 @@ export component TvShell inherits Rectangle {
             }
             if (Store.details-open) {
                 if (event.text == Key.Escape || event.text == Key.Back || event.text == Key.Backspace) {
-                    // Back closes the list of files first, then the page.
+                    // Back closes the list of files or the reviews first, then the page.
                     if (root.files) {
                         root.files = false;
+                    } else if (root.reading) {
+                        root.reading = false;
                     } else {
                         Store.close-details();
                     }
@@ -371,12 +385,35 @@ export component TvShell inherits Rectangle {
                         }
                     } else if (event.text == Key.DownArrow) {
                         root.opt = max(0, min(Store.options.length - 1, root.opt + 1));
+                    } else if (event.text == Key.RightArrow && !root.busy) {
+                        // Right is an older version, Left a newer one.
+                        if (Store.selected-version < Store.versions.length - 1) {
+                            root.opt = 0;
+                            Store.select-version(Store.selected-version + 1);
+                        }
+                    } else if (event.text == Key.LeftArrow && !root.busy) {
+                        if (Store.selected-version > 0) {
+                            root.opt = 0;
+                            Store.select-version(Store.selected-version - 1);
+                        }
                     } else if (event.text == Key.Return || event.text == " ") {
                         if (root.busy) {
                             Store.cancel-install();
                         } else if (Store.options.length > 0) {
                             Store.install(root.opt);
                         }
+                    }
+                } else if (root.reading) {
+                    if (event.text == Key.DownArrow || event.text == Key.RightArrow) {
+                        root.rev = min(Store.reviews.length - 1, root.rev + 1);
+                    } else if (event.text == Key.UpArrow || event.text == Key.LeftArrow) {
+                        if (root.rev == 0) {
+                            root.reading = false;
+                        } else {
+                            root.rev -= 1;
+                        }
+                    } else if (event.text == Key.Return || event.text == " ") {
+                        root.reading = false;
                     }
                 } else if (event.text == Key.LeftArrow) {
                     if (root.act == 0) {
@@ -398,6 +435,9 @@ export component TvShell inherits Rectangle {
                         } else {
                             root.remove-armed = true;
                         }
+                    } else if (root.act == root.reviews-idx) {
+                        root.rev = 0;
+                        root.reading = true;
                     } else {
                         root.opt = 0;
                         root.files = true;
@@ -768,7 +808,8 @@ export component TvShell inherits Rectangle {
                     alignment: start;
                     if Store.app.rating != "" : TvStat { u: root.u; value: "★ " + Store.app.rating; caption: Store.app.rating-count; }
                     if Store.app.downloads != "" : TvStat { u: root.u; value: Store.app.downloads; caption: Store.app.downloads-note; }
-                    if Store.app.popularity != "" : TvStat { u: root.u; value: Store.app.popularity; caption: "on " + Store.app.source; }
+                    // The row has room for four: with a rating and downloads, the source's own count waits.
+                    if Store.app.popularity != "" && !(Store.app.rating != "" && Store.app.downloads != "") : TvStat { u: root.u; value: Store.app.popularity; caption: "on " + Store.app.source; }
                     if Store.options.length > 0 && Store.options[0].size != "" : TvStat { u: root.u; value: Store.options[0].size; caption: "download"; }
                     if Store.release-age != "" : TvStat { u: root.u; value: Store.release-age; caption: "last updated"; }
                 }
@@ -788,7 +829,7 @@ export component TvShell inherits Rectangle {
                         u: root.u;
                         text: Store.details-error != "" ? "Try again" : root.main-action;
                         primary: true;
-                        focused: root.act == 0 && !root.files;
+                        focused: root.act == 0 && !root.files && !root.reading;
                         clicked => {
                             root.act = 0;
                             root.press-main();
@@ -796,8 +837,9 @@ export component TvShell inherits Rectangle {
                     }
                     TvButton {
                         u: root.u;
-                        text: Store.is-favourite ? "★  Favourite" : "☆  Favourite";
-                        focused: (root.act == 1 || (root.act == 0 && root.main-action == "" && Store.details-error == "")) && !root.files;
+                        // A star alone, so five buttons fit; the corner says what it does.
+                        text: Store.is-favourite ? "★" : "☆";
+                        focused: (root.act == 1 || (root.act == 0 && root.main-action == "" && Store.details-error == "")) && !root.files && !root.reading;
                         clicked => {
                             root.act = 1;
                             Store.toggle-favourite();
@@ -805,18 +847,30 @@ export component TvShell inherits Rectangle {
                     }
                     if Store.options.length > 0 && !Store.is-website : TvButton {
                         u: root.u;
-                        text: "Other files";
-                        focused: root.act == 2 && !root.files;
+                        text: "Versions";
+                        focused: root.act == 2 && !root.files && !root.reading;
                         clicked => {
                             root.act = 2;
                             root.opt = 0;
+                            root.reading = false;
                             root.files = true;
+                        }
+                    }
+                    if root.has-reviews : TvButton {
+                        u: root.u;
+                        text: "Reviews";
+                        focused: root.act == root.reviews-idx && !root.files && !root.reading;
+                        clicked => {
+                            root.act = root.reviews-idx;
+                            root.rev = 0;
+                            root.files = false;
+                            root.reading = true;
                         }
                     }
                     if Store.in-library : TvButton {
                         u: root.u;
                         text: root.remove-armed ? "Confirm" : "Remove";
-                        focused: root.act == root.remove-idx && !root.files;
+                        focused: root.act == root.remove-idx && !root.files && !root.reading;
                         clicked => {
                             root.act = root.remove-idx;
                             if (root.remove-armed) {
@@ -850,7 +904,58 @@ export component TvShell inherits Rectangle {
             }
 
             // Right: pictures and the description, or every file when asked for.
-            if !root.files : VerticalLayout {
+            if root.reading && root.rev < Store.reviews.length : VerticalLayout {
+                x: 480 * u;
+                y: 70 * u;
+                width: parent.width - self.x - margin;
+                spacing: 8 * u;
+                alignment: start;
+                Text {
+                    text: "What people say  ·  " + (root.rev + 1) + " of " + Store.reviews.length + (Store.app.rating != "" ? "  ·  ★ " + Store.app.rating + " from " + Store.app.rating-count : "");
+                    color: Theme.text;
+                    font-size: 13 * u;
+                    font-weight: 700;
+                    wrap: word-wrap;
+                }
+                Rectangle {
+                    border-radius: 10 * u;
+                    background: Theme.surface-2;
+                    border-width: 2 * u;
+                    border-color: white;
+                    height: review-box.preferred-height;
+                    accessible-role: text;
+                    accessible-label: "Review " + (root.rev + 1) + ": " + Store.reviews[root.rev].title;
+                    review-box := VerticalLayout {
+                        width: parent.width;
+                        padding: 14 * u;
+                        spacing: 6 * u;
+                        Text { text: Store.reviews[root.rev].stars; color: Theme.warn; font-size: 14 * u; }
+                        Text { text: Store.reviews[root.rev].title; color: Theme.text; font-size: 15 * u; font-weight: 700; wrap: word-wrap; }
+                        Rectangle {
+                            review-line := Text { text: "X"; font-size: 13 * u; visible: false; }
+                            height: min(review-text.preferred-height, floor(250 * u / review-line.preferred-height) * review-line.preferred-height);
+                            clip: true;
+                            review-text := Text {
+                                y: 0;
+                                width: parent.width;
+                                text: Store.reviews[root.rev].text;
+                                color: Theme.text;
+                                font-size: 13 * u;
+                                wrap: word-wrap;
+                                vertical-alignment: TextVerticalAlignment.top;
+                            }
+                        }
+                        Text { text: Store.reviews[root.rev].meta; color: Theme.text-dim; font-size: 11 * u; overflow: elide; }
+                    }
+                }
+                Text {
+                    text: "Reviews are written by other people and come from the ratings service the GNOME and KDE app stores use.";
+                    color: Theme.text-dim;
+                    font-size: 11 * u;
+                    wrap: word-wrap;
+                }
+            }
+            if !root.files && !root.reading : VerticalLayout {
                 x: 480 * u;
                 y: 70 * u;
                 width: parent.width - self.x - margin;
@@ -890,7 +995,12 @@ export component TvShell inherits Rectangle {
                 width: parent.width - self.x - margin;
                 spacing: 8 * u;
                 alignment: start;
-                Text { text: "Every file that works on this TV"; color: Theme.text; font-size: 13 * u; font-weight: 700; }
+                Text {
+                    text: Store.versions.length > 1 ? "Version " + Store.versions[Store.selected-version] + (Store.selected-version == 0 ? "  ·  newest" : "") + "  ·  " + (Store.selected-version + 1) + " of " + Store.versions.length : "Every file that works on this TV";
+                    color: Theme.text;
+                    font-size: 13 * u;
+                    font-weight: 700;
+                }
                 for option[i] in Store.options : Rectangle {
                     property <bool> focused: i == root.opt;
                     property <bool> mine: Store.install-index == i && Store.install-state != 0;
@@ -944,7 +1054,7 @@ export component TvShell inherits Rectangle {
     Text {
         x: root.margin;
         y: root.height - 27 * u - 12 * u;
-        text: search.has-focus ? "Type, then OK to search  ·  Down or Back to leave" : Store.details-open ? (root.files ? "OK installs the chosen file  ·  Back closes this list" : root.remove-armed ? "OK again removes " + Store.app.name + " from this TV  ·  any other button cancels" : "Left and Right choose  ·  OK selects  ·  Back returns") : root.zone == 1 ? "Left and Right choose  ·  OK opens  ·  Back goes Home" : root.on-system ? "Up and Down move  ·  OK selects or switches  ·  Back goes Home" : "Arrows move  ·  OK opens  ·  Up or Back for the menu";
+        text: search.has-focus ? "Type, then OK to search  ·  Down or Back to leave" : Store.details-open ? (root.files ? (Store.versions.length > 1 ? "Left and Right change version  ·  " : "") + "OK installs the chosen file  ·  Back closes this list" : root.reading ? "Up and Down for more reviews  ·  Back closes them" : root.act == 1 ? (Store.is-favourite ? "OK takes it out of your favourites" : "OK keeps it in your favourites, in the Library") + "  ·  Back returns" : root.remove-armed ? "OK again removes " + Store.app.name + " from this TV  ·  any other button cancels" : "Left and Right choose  ·  OK selects  ·  Back returns") : root.zone == 1 ? "Left and Right choose  ·  OK opens  ·  Back goes Home" : root.on-system ? "Up and Down move  ·  OK selects or switches  ·  Back goes Home" : "Arrows move  ·  OK opens  ·  Up or Back for the menu";
         color: Theme.text-dim;
         font-size: 11 * u;
         opacity: 0.8;

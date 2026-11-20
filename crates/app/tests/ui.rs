@@ -1271,7 +1271,7 @@ fn the_tv_app_page_has_one_main_button_and_the_rest_a_step_away() {
     assert!(s.store().get_details_open());
     assert_eq!(s.store().get_install_state(), 0, "nothing was installed by starring");
 
-    // Right again is Other files; OK opens the list, Down picks the second file, OK takes it.
+    // Right again is Versions; OK opens the list, Down picks the second file, OK takes it.
     s.press(Key::RightArrow);
     s.press(Key::Return);
     s.press(Key::DownArrow);
@@ -1813,4 +1813,48 @@ fn a_tv_remote_reaches_settings_and_can_remove_an_app() {
     s.press(Key::Return);
     assert!(s.saved().library.is_empty());
     assert!(!s.store().get_in_library() && !s.has("Remove"));
+}
+
+#[test]
+fn a_tv_remote_reads_reviews_and_picks_an_older_version() {
+    let s = start("linux-tv", Shell::Tv);
+    s.app.load_ratings(&s.ui);
+
+    // An app with reviews: the Reviews button shows one at a time.
+    s.app.open(&s.ui, "flathub:io.quillpad.Quillpad");
+    assert_eq!(s.store().get_reviews().row_count(), 3);
+    assert!(s.has("Reviews"));
+    // Main, star, Versions, Reviews.
+    for _ in 0..3 {
+        s.press(Key::RightArrow);
+    }
+    s.press(Key::Return);
+    assert!(s.has("Review 1: Exactly what I wanted"));
+    s.press(Key::DownArrow);
+    assert!(s.has("Review 2: Good, with one wish") && !s.has("Review 1: Exactly what I wanted"));
+    s.press(Key::DownArrow);
+    s.press(Key::DownArrow);
+    assert!(s.has("Review 3: Lost my window layout"), "it stops at the last one");
+    // Back closes the reviews, not the page.
+    s.press(Key::Escape);
+    assert!(s.store().get_details_open() && !s.has("Review 3: Lost my window layout"));
+
+    // An app without reviews has no such button.
+    s.app.open(&s.ui, "github:kestrel-sh/kestrel");
+    assert!(!s.has("Reviews"));
+    // Versions: Right is older, Left is newer, and the files follow the version.
+    let versions = s.store().get_versions().row_count();
+    assert!(versions > 1, "the demo app has older releases");
+    s.press(Key::RightArrow);
+    s.press(Key::RightArrow);
+    s.press(Key::Return);
+    assert_eq!(s.store().get_selected_version(), 0);
+    let newest = s.store().get_app().version;
+    s.press(Key::RightArrow);
+    assert_eq!(s.store().get_selected_version(), 1);
+    assert_ne!(s.store().get_app().version, newest);
+    s.press(Key::LeftArrow);
+    s.press(Key::LeftArrow);
+    assert_eq!(s.store().get_selected_version(), 0, "it stops at the newest");
+    assert_eq!(s.store().get_app().version, newest);
 }
