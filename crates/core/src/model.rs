@@ -18,12 +18,22 @@ pub enum SourceKind {
     Apt,
     /// Websites opened like apps on a Linux TV.
     Web,
+    /// GitLab.com projects that publish files with their releases.
+    GitLab,
+    /// Homebrew casks: Mac apps, with the address and checksum of each download.
+    Homebrew,
+    /// The Windows Package Manager's community repository.
+    Winget,
+    /// The Snap Store.
+    Snap,
+    /// F-Droid, the catalog of free Android apps.
+    FDroid,
 }
 
 impl SourceKind {
     /// A code host whose projects publish release files (as opposed to a package repository).
     pub fn is_forge(self) -> bool {
-        matches!(self, SourceKind::GitHub | SourceKind::Codeberg)
+        matches!(self, SourceKind::GitHub | SourceKind::Codeberg | SourceKind::GitLab)
     }
     pub fn label(self) -> &'static str {
         match self {
@@ -34,6 +44,11 @@ impl SourceKind {
             SourceKind::Pacman => "pacman repositories",
             SourceKind::Apt => "apt repositories",
             SourceKind::Web => "Websites",
+            SourceKind::GitLab => "GitLab",
+            SourceKind::Homebrew => "Homebrew",
+            SourceKind::Winget => "winget",
+            SourceKind::Snap => "Snap Store",
+            SourceKind::FDroid => "F-Droid",
         }
     }
     pub fn prefix(self) -> &'static str {
@@ -45,6 +60,11 @@ impl SourceKind {
             SourceKind::Pacman => "pacman",
             SourceKind::Apt => "apt",
             SourceKind::Web => "web",
+            SourceKind::GitLab => "gitlab",
+            SourceKind::Homebrew => "brew",
+            SourceKind::Winget => "winget",
+            SourceKind::Snap => "snap",
+            SourceKind::FDroid => "fdroid",
         }
     }
 }
@@ -71,6 +91,11 @@ impl AppId {
             "pacman" => SourceKind::Pacman,
             "apt" => SourceKind::Apt,
             "web" => SourceKind::Web,
+            "gitlab" => SourceKind::GitLab,
+            "brew" => SourceKind::Homebrew,
+            "winget" => SourceKind::Winget,
+            "snap" => SourceKind::Snap,
+            "fdroid" => SourceKind::FDroid,
             _ => return None,
         };
         (!key.is_empty()).then(|| AppId::new(source, key))
@@ -97,6 +122,27 @@ impl AppId {
             // flathub.org/apps/org.example.App, with an optional language in front.
             let name = rest.split(['?', '#']).next().unwrap_or("").split('/').rfind(|p| !p.is_empty()).unwrap_or("");
             return valid_key(SourceKind::Flathub, name).then(|| AppId::new(SourceKind::Flathub, name));
+        }
+        if let Some(rest) = stripped.strip_prefix("gitlab.com/") {
+            // gitlab.com/group/subgroup/project, up to the "/-/" that starts a page inside it.
+            let path = rest.split(['?', '#']).next().unwrap_or("").split("/-/").next().unwrap_or("");
+            let key = path.trim_matches('/').trim_end_matches(".git").to_string();
+            return valid_key(SourceKind::GitLab, &key).then(|| AppId::new(SourceKind::GitLab, key));
+        }
+        let last = |rest: &str| -> String {
+            rest.split(['?', '#']).next().unwrap_or("").split('/').rfind(|p| !p.is_empty()).unwrap_or("").to_string()
+        };
+        if let Some(rest) = stripped.strip_prefix("f-droid.org/") {
+            let name = last(rest);
+            return valid_key(SourceKind::FDroid, &name).then(|| AppId::new(SourceKind::FDroid, name));
+        }
+        if let Some(rest) = stripped.strip_prefix("snapcraft.io/") {
+            let name = last(rest);
+            return valid_key(SourceKind::Snap, &name).then(|| AppId::new(SourceKind::Snap, name));
+        }
+        if let Some(rest) = stripped.strip_prefix("formulae.brew.sh/cask/") {
+            let name = last(rest);
+            return valid_key(SourceKind::Homebrew, &name).then(|| AppId::new(SourceKind::Homebrew, name));
         }
         if let Some(rest) = stripped.strip_prefix("codeberg.org/") {
             let mut parts = rest.split(['?', '#']).next().unwrap_or("").split('/').filter(|p| !p.is_empty());
@@ -127,8 +173,20 @@ pub fn valid_key(source: SourceKind, key: &str) -> bool {
         SourceKind::GitHub | SourceKind::Codeberg => {
             matches!(key.split_once('/'), Some((owner, repo)) if ok(owner, &[]) && ok(repo, &[]))
         }
-        // Arch and Debian package names may also contain `+` and `@`.
-        SourceKind::Aur | SourceKind::Pacman | SourceKind::Apt => ok(key, &['+', '@']),
+        // group/project, or group/subgroup/.../project.
+        SourceKind::GitLab => {
+            let parts: Vec<&str> = key.split('/').collect();
+            (2..=6).contains(&parts.len()) && parts.iter().all(|part| ok(part, &[]))
+        }
+        // Arch and Debian package names may also contain `+` and `@`; so may cask names.
+        SourceKind::Aur | SourceKind::Pacman | SourceKind::Apt | SourceKind::Homebrew => ok(key, &['+', '@']),
+        SourceKind::Snap => key.len() <= 40 && ok(key, &[]),
+        // Publisher.Package, as winget writes them.
+        SourceKind::Winget => key.len() <= 128 && key.contains('.') && ok(key, &['+']),
+        // An Android package name: at least two dotted parts.
+        SourceKind::FDroid => {
+            key.len() <= 255 && key.split('.').count() >= 2 && key.split('.').all(|part| ok(part, &[]))
+        }
         // A reverse-DNS application id: at least three dotted parts.
         SourceKind::Flathub => {
             key.len() <= 255 && key.split('.').count() >= 3 && key.split('.').all(|part| ok(part, &[]))
@@ -150,6 +208,32 @@ pub fn valid_key(source: SourceKind, key: &str) -> bool {
 impl std::fmt::Display for AppId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}:{}", self.source.prefix(), self.key)
+    }
+}
+
+impl AppSummary {
+    /// An app known only by id and name; the source fills in what else it has.
+    pub fn new(id: AppId, name: impl Into<String>) -> AppSummary {
+        AppSummary {
+            id,
+            name: name.into(),
+            author: String::new(),
+            summary: String::new(),
+            popularity: None,
+            homepage: String::new(),
+            license: None,
+            category: None,
+            version: None,
+            install_label: None,
+            warning: None,
+            origin: None,
+            installed_version: None,
+            rating: None,
+            icon_url: None,
+            downloads: None,
+            verified: false,
+            momentum: None,
+        }
     }
 }
 

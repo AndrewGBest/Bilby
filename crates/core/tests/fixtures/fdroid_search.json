@@ -1,0 +1,64 @@
+{
+ "apps": [
+  {
+   "name": "NewPipe",
+   "summary": "A free lightweight YouTube frontend for Android.",
+   "icon": "https://ftp.fau.de/fdroid/repo/org.schabi.newpipe/en-US/icon_OHy4y1W-fJCNhHHOBCM9V_cxZNJJgbcNkB-x7UDTY9Q=.png",
+   "url": "https://f-droid.org/en/packages/org.schabi.newpipe"
+  },
+  {
+   "name": "MA YouPipe",
+   "summary": "A Material 3 based alternative to NewPipe using the same extractor",
+   "icon": "https://ftp.fau.de/fdroid/repo/com.vayunmathur.youpipe/en-US/icon_dPRu8COjMLlV1ELhdu5VIKa207jg46u20yu1Ks5QWxA=.png",
+   "url": "https://f-droid.org/en/packages/com.vayunmathur.youpipe"
+  },
+  {
+   "name": "LocalTube",
+   "summary": "Self-hosted streaming server solution built on top of NewPipe Extractor",
+   "icon": "https://ftp.fau.de/fdroid/repo/org.schabi.newpipe.localserver/en-US/icon_HCBQvM11RgfF3l1sujCnIaMjJDgYwjT89jXtPR_8yns=.png",
+   "url": "https://f-droid.org/en/packages/org.schabi.newpipe.localserver"
+  },
+  {
+   "name": "BendyStraw",
+   "summary": "An app for managing NewPipe databases",
+   "icon": "https://ftp.fau.de/fdroid/repo/rocks.mm_dev.BendyStraw/en-US/icon_bT7aA98uz_5LmgcdUvcXW8136dc57ZMUV2J8-lOr2Jw=.png",
+   "url": "https://f-droid.org/en/packages/rocks.mm_dev.BendyStraw"
+  },
+  {
+   "name": "Momkin",
+   "summary": "See what is being said",
+   "icon": "https://ftp.fau.de/fdroid/repo/icons/eu.dorfbrunnen.momkin.3.png",
+   "url": "https://f-droid.org/en/packages/eu.dorfbrunnen.momkin"
+  },
+  {
+   "name": "PipePipe",
+   "summary": "A FLOSS Android app to let you browse YouTube, NicoNico and BiliBili freely.",
+   "icon": "https://ftp.fau.de/fdroid/repo/InfinityLoop1309.NewPipeEnhanced/en-US/icon_CWQFN3-pZavxIDWYPYl4GHg-v7k6uCvk6PkmD9S8gSo=.png",
+   "url": "https://f-droid.org/en/packages/InfinityLoop1309.NewPipeEnhanced"
+  },
+  {
+   "name": "LearnTube",
+   "summary": "A learning-focused YouTube client with progress tracking and notes.",
+   "icon": "https://ftp.fau.de/fdroid/repo/com.learntube.app/en-US/icon_OHy4y1W-fJCNhHHOBCM9V_cxZNJJgbcNkB-x7UDTY9Q=.png",
+   "url": "https://f-droid.org/en/packages/com.learntube.app"
+  },
+  {
+   "name": "Tubester",
+   "summary": "Scan Hitster cards and play their songs on YouTube",
+   "icon": "https://ftp.fau.de/fdroid/repo/org.codeberg.pako.tubester/en-US/icon_Heg6NcSEM0mcSx1viUfQHSEddVnCmPKC-cLEBk4_bRI=.png",
+   "url": "https://f-droid.org/en/packages/org.codeberg.pako.tubester"
+  },
+  {
+   "name": "Ring-R",
+   "summary": "Create custom ringtones from your favorite youtube videos",
+   "icon": "https://ftp.fau.de/fdroid/repo/com.hexcorp.ringr/en-US/icon_77ADEmHBB2fviOonjHGB927_6EIsh3SFUJJtJjx_aG0=.png",
+   "url": "https://f-droid.org/en/packages/com.hexcorp.ringr"
+  },
+  {
+   "name": "Jeden Tag ein Set",
+   "summary": "A free app for the electric music side jedentageinset.de",
+   "icon": "https://ftp.fau.de/fdroid/repo/icons/org.schabi.jedentageinset.30.png",
+   "url": "https://f-droid.org/en/packages/org.schabi.jedentageinset"
+  }
+ ]
+}

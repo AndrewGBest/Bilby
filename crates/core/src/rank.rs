@@ -144,12 +144,19 @@ fn usage(app: &AppSummary) -> f32 {
 fn liked(app: &AppSummary) -> f32 {
     let a_lot = match app.id.source {
         SourceKind::GitHub => 50_000.0_f32,
-        SourceKind::Codeberg => 3_000.0,
+        SourceKind::Codeberg | SourceKind::GitLab => 3_000.0,
+        // Installs in the last thirty days.
+        SourceKind::Homebrew => 30_000.0,
         // Installs in the last month.
         SourceKind::Flathub => 100_000.0,
         SourceKind::Aur => 1_500.0,
         // Distribution repositories publish no such number.
-        SourceKind::Pacman | SourceKind::Apt | SourceKind::Web => return UNKNOWN_POPULARITY,
+        SourceKind::Pacman
+        | SourceKind::Apt
+        | SourceKind::Web
+        | SourceKind::Winget
+        | SourceKind::Snap
+        | SourceKind::FDroid => return UNKNOWN_POPULARITY,
     };
     match app.popularity {
         // Logarithmic: the step from 10 to 100 matters as much as from 1,000 to 10,000.

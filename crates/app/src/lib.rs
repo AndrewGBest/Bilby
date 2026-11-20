@@ -715,8 +715,10 @@ impl App {
             // A count of nothing is left out: it reads as a verdict, and is usually just
             // an app nobody has got round to starring.
             (Some(0), _) | (None, _) => String::new(),
-            (Some(n), SourceKind::GitHub | SourceKind::Codeberg) => format!("{} stars", human_count(n)),
-            (Some(n), SourceKind::Flathub) => format!("{} installs a month", human_count(n)),
+            (Some(n), SourceKind::GitHub | SourceKind::Codeberg | SourceKind::GitLab) => {
+                format!("{} stars", human_count(n))
+            }
+            (Some(n), SourceKind::Flathub | SourceKind::Homebrew) => format!("{} installs a month", human_count(n)),
             (Some(n), SourceKind::Aur) => format!("{} votes", human_count(n)),
             _ => String::new(),
         };
@@ -1576,7 +1578,12 @@ impl App {
         // apps are installed for them, so they read like any other app.
         store.set_is_package(matches!(
             details.summary.id.source,
-            SourceKind::Aur | SourceKind::Pacman | SourceKind::Apt | SourceKind::Web
+            SourceKind::Aur
+                | SourceKind::Pacman
+                | SourceKind::Apt
+                | SourceKind::Web
+                | SourceKind::Snap
+                | SourceKind::Winget
         ));
         store.set_is_website(details.summary.id.source == SourceKind::Web);
         // What the system's package manager has, when the store's own library has nothing.

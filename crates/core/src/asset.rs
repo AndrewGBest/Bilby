@@ -34,6 +34,10 @@ pub enum Format {
     RepoPackage,
     /// A website opened like an app (in Longboard, on a Linux TV). Not a file at all.
     WebApp,
+    /// A snap from the Snap Store, installed by snapd.
+    SnapStore,
+    /// A package from winget's repository, installed by winget.
+    WingetPackage,
     /// An app in the Flathub repository, installed by Flatpak itself.
     FlathubApp,
 }
@@ -60,6 +64,8 @@ impl Format {
             Format::AurBuild => "AUR package",
             Format::RepoPackage => "Repository package",
             Format::WebApp => "Web app",
+            Format::SnapStore => "Snap",
+            Format::WingetPackage => "winget package",
             Format::FlathubApp => "Flatpak",
         }
     }
@@ -68,7 +74,7 @@ impl Format {
     pub fn implied_os(self) -> Option<Os> {
         Some(match self {
             Format::Apk | Format::ApkBundle => Os::Android,
-            Format::Exe | Format::Msi | Format::Msix => Os::Windows,
+            Format::Exe | Format::Msi | Format::Msix | Format::WingetPackage => Os::Windows,
             Format::Deb
             | Format::Rpm
             | Format::AppImage
@@ -78,6 +84,7 @@ impl Format {
             | Format::AurBuild
             | Format::RepoPackage
             | Format::WebApp
+            | Format::SnapStore
             | Format::FlathubApp => Os::Linux,
             Format::Dmg | Format::MacPkg => Os::MacOs,
             Format::Ipa => Os::Ios,

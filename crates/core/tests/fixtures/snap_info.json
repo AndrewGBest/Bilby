@@ -1,0 +1,90 @@
+{
+ "channel-map": [
+  {
+   "channel": {
+    "architecture": "amd64",
+    "name": "stable",
+    "released-at": "2026-09-22T13:42:44.025641+00:00",
+    "risk": "stable",
+    "track": "latest"
+   },
+   "download": {
+    "deltas": [],
+    "sha3-384": "2c00f12922016b1e94e98b2f127d08fa6598161c6a6ee5e459735991df790b4f5f15e6111decaadc012053538d26cd97",
+    "size": 277643264,
+    "url": "https://api.snapcraft.io/api/v1/snaps/download/RT9mcUhVsRYrDLG8qnvGiy26NKvv6Qkd_4472.snap"
+   },
+   "revision": 4472,
+   "version": "3.0.24-rc1"
+  },
+  {
+   "channel": {
+    "architecture": "amd64",
+    "name": "candidate",
+    "released-at": "2026-09-17T13:11:58.431745+00:00",
+    "risk": "candidate",
+    "track": "latest"
+   },
+   "download": {
+    "deltas": [],
+    "sha3-384": "2c00f12922016b1e94e98b2f127d08fa6598161c6a6ee5e459735991df790b4f5f15e6111decaadc012053538d26cd97",
+    "size": 277643264,
+    "url": "https://api.snapcraft.io/api/v1/snaps/download/RT9mcUhVsRYrDLG8qnvGiy26NKvv6Qkd_4472.snap"
+   },
+   "revision": 4472,
+   "version": "3.0.24-rc1"
+  },
+  {
+   "channel": {
+    "architecture": "amd64",
+    "name": "beta",
+    "released-at": "2026-11-20T02:25:59.534167+00:00",
+    "risk": "beta",
+    "track": "latest"
+   },
+   "download": {
+    "deltas": [],
+    "sha3-384": "7023484ee0f0e276af6fd73f70a7caa45c5b118235dc4888a03453ab188538a3775ad06e33dc7b8b44be98132b064b01",
+    "size": 277413888,
+    "url": "https://api.snapcraft.io/api/v1/snaps/download/RT9mcUhVsRYrDLG8qnvGiy26NKvv6Qkd_4596.snap"
+   },
+   "revision": 4596,
+   "version": "3.0.24-70-gdf78dd9424"
+  }
+ ],
+ "default-track": null,
+ "name": "vlc",
+ "snap": {
+  "description": "VLC is a free and open source cross-platform multimedia player and framework\nthat plays most multimedia files as well as DVDs, Audio CDs, VCDs, and various\nstreaming protocols.\n\nSimple, fast and powerful\n\n* **Plays everything** : Files, Discs, Webcams\u00b9, Devices and Streams.\n* **Plays most codecs wit",
+  "license": "GPL-2.0+",
+  "media": [
+   {
+    "height": 256,
+    "type": "icon",
+    "url": "https://dashboard.snapcraft.io/site_media/appmedia/2016/07/vlc.png",
+    "width": 256
+   },
+   {
+    "height": 690,
+    "type": "screenshot",
+    "url": "https://dashboard.snapcraft.io/site_media/appmedia/2016/07/vlc-2.0-poney.jpg",
+    "width": 1000
+   },
+   {
+    "height": 236,
+    "type": "screenshot",
+    "url": "https://dashboard.snapcraft.io/site_media/appmedia/2018/04/banner_32i5K4c.png",
+    "width": 1200
+   }
+  ],
+  "publisher": {
+   "display-name": "VideoLAN",
+   "id": "yBzXLuxwoWh5b2tgI8gxjziVNEHLm64z",
+   "username": "videolan",
+   "validation": "verified"
+  },
+  "summary": "The ultimate media player",
+  "title": "VLC"
+ },
+ "snap-id": "RT9mcUhVsRYrDLG8qnvGiy26NKvv6Qkd"
+}

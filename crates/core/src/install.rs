@@ -148,6 +148,32 @@ pub fn plan(asset: &Asset, info: &AssetInfo, p: &Platform) -> InstallPlan {
                 command: Some(command),
             };
         }
+        Format::SnapStore => {
+            let name = asset.name.split_whitespace().next().unwrap_or(&asset.name).to_string();
+            return InstallPlan {
+                action: Action::ShowCommand,
+                verb: "Install with snap".to_string(),
+                steps: vec![
+                    "snapd downloads it from the Snap Store and checks its signature".to_string(),
+                    "Run the command below; it asks for your password".to_string(),
+                    "From then on snapd keeps it up to date by itself".to_string(),
+                ],
+                command: Some(format!("sudo snap install {name}")),
+            };
+        }
+        Format::WingetPackage => {
+            let name = asset.name.split_whitespace().next().unwrap_or(&asset.name).to_string();
+            return InstallPlan {
+                action: Action::ShowCommand,
+                verb: "Install with winget".to_string(),
+                steps: vec![
+                    "winget downloads the installer from its publisher and checks it".to_string(),
+                    "Run the command below in a terminal; Windows may ask you to confirm".to_string(),
+                    "Update it later with: winget upgrade".to_string(),
+                ],
+                command: Some(format!("winget install --id {name} -e")),
+            };
+        }
         Format::AurBuild => {
             let name = asset.name.split_whitespace().next().unwrap_or(&asset.name).to_string();
             let command = match p.linux.as_ref().and_then(|l| l.aur_helper.clone()) {

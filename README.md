@@ -96,14 +96,18 @@ There is no Android package yet, and no Flatpak
 ## Where apps come from
 
 Each source only appears on devices it applies to. A Windows user never sees the AUR.
-On Windows and macOS, apps come from GitHub Releases and Codeberg; Linux adds the rest.
 
 | Source | Shown on | What you get |
 |---|---|---|
 | **GitHub Releases** | Windows, macOS, Linux | Any project that publishes files with its releases |
+| **GitLab** | Windows, macOS, Linux | The same, for projects on GitLab.com |
+| **winget** | Windows | The Windows Package Manager's catalog. Bilby shows the install command |
+| **Homebrew** | macOS | Thousands of Mac apps. Bilby downloads each from its publisher and checks it; Homebrew itself is not needed |
 | **Flathub** | Linux with Flatpak | Its whole catalog, with ratings, reviews and install counts |
 | **Your distribution** | Arch-based (pacman) and Debian-based (apt) systems | Every package your system is already set up to install |
 | **The AUR** | Arch-based systems | Community build recipes |
+| **Snap Store** | Linux with snapd | Its whole catalog. Bilby shows the install command |
+| **F-Droid** | Android (when the Android app arrives) | Its catalog of free Android apps |
 | **Codeberg** | Windows, macOS, Linux | Projects by link and from the home page. Codeberg is turning away searches at the moment |
 | **Websites** | Linux TVs | Sites that open like apps in Longboard |
 
@@ -129,6 +133,8 @@ Bilby works and is being used, but it is early. Plainly:
 |---|---|
 | **Linux** | Works. Tried on Debian 13: real searches on every source and a real install from Flathub |
 | **Windows, macOS** | Downloads are published and the tests pass on both. Nobody has checked the window by eye yet, so expect rough edges |
+| **winget** (Windows) | Written without a Windows machine to try it on. English-language Windows only |
+| **Homebrew** (macOS) | Searching and choosing the right download work against the real catalog. Installing from it has not been tried on a Mac |
 | **Android** (phone, tablet, TV) | Not installable yet. The core compiles for it and the phone and TV layouts exist |
 | **iOS** | Could only ever browse, not install ([why](docs/DESIGN.md#ios)) |
 | **System updates** | Finds updates correctly on Debian. Installing them has not been run on a real system |

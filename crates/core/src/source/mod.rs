@@ -2,11 +2,16 @@
 //! winget, ...) means implementing [`Source`]; nothing else in the app changes.
 
 pub mod aur;
+pub mod fdroid;
 pub mod flathub;
 pub mod forgejo;
 pub mod github;
+pub mod gitlab;
+pub mod homebrew;
+pub mod snap;
 pub mod system;
 pub mod web;
+pub mod winget;
 
 use crate::error::Result;
 use crate::model::{AppSummary, Release, SourceKind};

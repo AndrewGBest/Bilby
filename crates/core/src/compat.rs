@@ -60,7 +60,7 @@ pub fn evaluate(info: &AssetInfo, p: &Platform) -> Verdict {
             Format::AurBuild if linux.family != LinuxFamily::Arch => Some("The AUR is for Arch based systems"),
             Format::RepoPackage if !(linux.pacman || linux.dpkg) => Some("No supported package manager on this system"),
             Format::Flatpak | Format::FlathubApp if !linux.flatpak => Some("Flatpak is not installed"),
-            Format::Snap if !linux.snap => Some("snapd is not installed"),
+            Format::Snap | Format::SnapStore if !linux.snap => Some("snapd is not installed"),
             Format::AppImage if linux.libc == Libc::Musl => Some("AppImages need glibc; this system uses musl"),
             _ => None,
         };
@@ -92,9 +92,16 @@ pub fn evaluate(info: &AssetInfo, p: &Platform) -> Verdict {
             // and say that it is an assumption.
             let assumed = match (p.os, info.format) {
                 // A lone APK is normally a universal one; AUR recipes build for the host.
-                (Os::Android, _) | (Os::Ios, _) | (_, Format::AurBuild | Format::RepoPackage | Format::FlathubApp) => {
-                    None
-                }
+                (Os::Android, _)
+                | (Os::Ios, _)
+                | (
+                    _,
+                    Format::AurBuild
+                    | Format::RepoPackage
+                    | Format::FlathubApp
+                    | Format::SnapStore
+                    | Format::WingetPackage,
+                ) => None,
                 // macOS downloads without an arch are universal or Intel; both run.
                 (Os::MacOs, _) if p.can_run(Arch::X86_64) => None,
                 _ => Some(Arch::X86_64),
@@ -212,7 +219,7 @@ fn format_preference(format: Format, p: &Platform) -> i32 {
                 AurBuild => 20,
                 Archive => 14,
                 Binary => 12,
-                Snap => 10,
+                Snap | SnapStore => 10,
                 _ => 5,
             }
         }

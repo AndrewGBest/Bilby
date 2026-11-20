@@ -1,0 +1,44 @@
+[
+ {
+  "id": 3472737,
+  "name": "inkscape",
+  "path_with_namespace": "inkscape/inkscape",
+  "description": "Inkscape vector image editor",
+  "star_count": 4029,
+  "web_url": "https://gitlab.com/inkscape/inkscape",
+  "avatar_url": "https://gitlab.com/uploads/-/system/project/avatar/3472737/inkscape.png?v=1795211676",
+  "archived": null,
+  "forked_from_project": null,
+  "namespace": {
+   "id": 470642,
+   "name": "Inkscape",
+   "path": "inkscape",
+   "kind": "group",
+   "full_path": "inkscape",
+   "parent_id": null,
+   "avatar_url": "/uploads/-/system/group/avatar/470642/inkscape.png?v=1761414213",
+   "web_url": "https://gitlab.com/groups/inkscape"
+  }
+ },
+ {
+  "id": 2313989,
+  "name": "inkscape-web",
+  "path_with_namespace": "inkscape/inkscape-web",
+  "description": "The inkscape website, a django based cms with apps for uploading images, managing projects.",
+  "star_count": 67,
+  "web_url": "https://gitlab.com/inkscape/inkscape-web",
+  "avatar_url": "https://gitlab.com/uploads/-/system/project/avatar/2313989/inkscape-web.png?v=1795191471",
+  "archived": null,
+  "forked_from_project": null,
+  "namespace": {
+   "id": 470642,
+   "name": "Inkscape",
+   "path": "inkscape",
+   "kind": "group",
+   "full_path": "inkscape",
+   "parent_id": null,
+   "avatar_url": "/uploads/-/system/group/avatar/470642/inkscape.png?v=1761414213",
+   "web_url": "https://gitlab.com/groups/inkscape"
+  }
+ }
+]

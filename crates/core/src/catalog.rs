@@ -151,6 +151,14 @@ impl Catalog {
         for backend in [Backend::system_pacman(), Backend::system_apt()] {
             catalog.sources.insert(0, Arc::new(SystemRepos::new(backend, platform.clone())));
         }
+        // More places apps are published. They are asked only by the live catalog; the
+        // demo has no stand-in for them.
+        let shared = catalog.http.clone();
+        catalog.sources.push(Arc::new(crate::source::gitlab::GitLab::new(shared.clone())));
+        catalog.sources.push(Arc::new(crate::source::homebrew::Homebrew::new(shared.clone(), &platform)));
+        catalog.sources.push(Arc::new(crate::source::snap::SnapStore::new(shared.clone())));
+        catalog.sources.push(Arc::new(crate::source::fdroid::FDroid::new(shared)));
+        catalog.sources.push(Arc::new(crate::source::winget::Winget::new()));
         if has_token {
             catalog.check_limit = 20;
         }
@@ -361,7 +369,14 @@ impl Catalog {
             SourceKind::Flathub => id.key.as_str(),
             SourceKind::Pacman | SourceKind::Apt => rated.components.id_of_package(&id.key)?,
             SourceKind::GitHub => rated.components.id_of_repo(&id.key)?,
-            SourceKind::Codeberg | SourceKind::Aur | SourceKind::Web => return None,
+            SourceKind::Codeberg
+            | SourceKind::Aur
+            | SourceKind::Web
+            | SourceKind::GitLab
+            | SourceKind::Homebrew
+            | SourceKind::Winget
+            | SourceKind::Snap
+            | SourceKind::FDroid => return None,
         };
         Some((appstream_id.to_string(), rated.ratings.get(appstream_id)?))
     }

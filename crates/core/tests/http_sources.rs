@@ -657,3 +657,102 @@ fn flathub_search_and_details_parse_the_shapes_its_source_code_describes() {
     );
     assert!(matches!(source.summary("not-an-id"), Err(Error::NotFound(_))));
 }
+
+// ---- GitLab, Homebrew, the Snap Store and F-Droid ----
+//
+// Unlike the fixtures above, these were captured from the live services and trimmed.
+
+#[test]
+fn gitlab_projects_and_their_release_links_are_read() {
+    use bilby_core::source::gitlab::GitLab;
+    let server = Server::start(vec![
+        (
+            "/gl/projects?search=inkscape&order_by=star_count&sort=desc&visibility=public&per_page=5",
+            Reply::json(&fixture("gitlab_projects.json")),
+        ),
+        ("/gl/projects/fdroid%2Ffdroidclient/releases?per_page=6", Reply::json(&fixture("gitlab_releases.json"))),
+    ]);
+    let source = GitLab::with_api(Arc::new(client(&server, Some("github-token"))), &server.url("/gl"));
+    let hits = source.search("inkscape", 5).unwrap();
+    assert_eq!(hits[0].id, AppId::new(SourceKind::GitLab, "inkscape/inkscape"));
+    assert_eq!((hits[0].name.as_str(), hits[0].popularity), ("inkscape", Some(4029)));
+    assert!(hits[0].icon_url.as_deref().unwrap().starts_with("https://gitlab.com/"));
+    assert!(source.search("ab", 5).unwrap().is_empty(), "GitLab refuses searches under three letters");
+
+    let releases = source.releases("fdroid/fdroidclient").unwrap();
+    assert_eq!(releases[0].version, "1.23.2");
+    let names: Vec<&str> = releases[0].assets.iter().map(|a| a.name.as_str()).collect();
+    assert!(names.contains(&"org.fdroid.fdroid_1023052.apk"), "a link's file name is what gets classified: {names:?}");
+    assert!(matches!(source.releases("../x"), Err(Error::NotFound(_))));
+    for (path, headers) in server.requests() {
+        assert!(!headers.contains_key("authorization"), "the GitHub token must not go to GitLab ({path})");
+    }
+}
+
+#[test]
+fn a_homebrew_cask_becomes_a_checked_download_for_this_mac() {
+    use bilby_core::source::homebrew::Homebrew;
+    let server = Server::start(vec![
+        ("/brew/analytics/cask-install/30d.json", Reply::json(&fixture("brew_analytics.json"))),
+        ("/brew/cask/firefox.json", Reply::json(&fixture("brew_cask.json"))),
+    ]);
+    let mac = Platform::preset("macos-arm64").unwrap();
+    let source = Homebrew::with_api(Arc::new(client(&server, None)), &server.url("/brew"), &mac);
+    assert!(source.available_on(&mac) && !source.available_on(&Platform::preset("windows-x64").unwrap()));
+
+    // Names are matched against the list of installs; details come from the cask itself.
+    let hits = source.search("firefox", 1).unwrap();
+    assert_eq!(hits.len(), 1);
+    assert_eq!(hits[0].id, AppId::new(SourceKind::Homebrew, "firefox"));
+    assert_eq!((hits[0].name.as_str(), hits[0].summary.as_str()), ("Mozilla Firefox", "Web browser"));
+    assert!(hits[0].popularity.unwrap() > 1000, "installs in the last thirty days");
+
+    let release = &source.releases("firefox").unwrap()[0];
+    let file = &release.assets[0];
+    assert!(file.name.ends_with(".dmg") && file.url.starts_with("https://"), "{}", file.name);
+    assert!(file.digest.as_deref().unwrap().starts_with("sha256:"), "the cask's checksum is checked after download");
+    assert_eq!(file.info.as_ref().unwrap().format, bilby_core::asset::Format::Dmg);
+    assert!(matches!(source.summary("../x"), Err(Error::NotFound(_))));
+}
+
+#[test]
+fn the_snap_store_is_searched_and_installs_are_left_to_snapd() {
+    use bilby_core::source::snap::SnapStore;
+    let fields = "title,summary,description,publisher,version,media,download,license";
+    let find = format!("/snap/find?q=vlc&fields={fields}");
+    let info = format!("/snap/info/vlc?fields={fields}");
+    let server = Server::start(vec![
+        (find.as_str(), Reply::json(&fixture("snap_find.json"))),
+        (info.as_str(), Reply::json(&fixture("snap_info.json"))),
+    ]);
+    let source = SnapStore::with_api(Arc::new(client(&server, None)), &server.url("/snap"));
+    assert!(!source.available_on(&Platform::preset("linux-x64-debian").unwrap()), "only where snapd is set up");
+
+    let hits = source.search("vlc", 5).unwrap();
+    assert_eq!(hits[0].id, AppId::new(SourceKind::Snap, "vlc"));
+    assert_eq!((hits[0].name.as_str(), hits[0].author.as_str()), ("VLC", "VideoLAN"));
+    let release = &source.releases("vlc").unwrap()[0];
+    assert!(!release.version.is_empty() && release.assets[0].size > 0);
+    assert_eq!(release.assets[0].info.as_ref().unwrap().format, bilby_core::asset::Format::SnapStore);
+    assert!(source.about("vlc").unwrap().unwrap().starts_with("VLC is"));
+}
+
+#[test]
+fn f_droid_apps_are_found_and_each_version_is_one_apk() {
+    use bilby_core::source::fdroid::FDroid;
+    let server = Server::start(vec![
+        ("/fs/search_apps?q=newpipe", Reply::json(&fixture("fdroid_search.json"))),
+        ("/fd/api/v1/packages/org.schabi.newpipe", Reply::json(&fixture("fdroid_package.json"))),
+    ]);
+    let source = FDroid::with_api(Arc::new(client(&server, None)), &server.url("/fs"), &server.url("/fd"));
+    assert!(source.available_on(&Platform::preset("android-arm64").unwrap()));
+    assert!(!source.available_on(&Platform::preset("linux-x64-debian").unwrap()));
+
+    let hits = source.search("newpipe", 3).unwrap();
+    assert_eq!(hits[0].id, AppId::new(SourceKind::FDroid, "org.schabi.newpipe"));
+    assert_eq!(hits[0].name, "NewPipe");
+    let releases = source.releases("org.schabi.newpipe").unwrap();
+    assert_eq!(releases[0].version, "0.29.3", "the version F-Droid suggests comes first");
+    assert!(releases[0].assets[0].url.ends_with("/repo/org.schabi.newpipe_1017.apk"));
+    assert_eq!(releases.len(), 2, "the same version listed twice is offered once");
+}

@@ -1,0 +1,41 @@
+{
+ "category": "cask_install",
+ "items": [
+  {
+   "number": 24,
+   "cask": "firefox",
+   "count": "18,340",
+   "percent": "0.61"
+  },
+  {
+   "number": 324,
+   "cask": "firefox@developer-edition",
+   "count": "1,043",
+   "percent": "0.03"
+  },
+  {
+   "number": 708,
+   "cask": "firefox@nightly",
+   "count": "323",
+   "percent": "0.01"
+  },
+  {
+   "number": 1284,
+   "cask": "firefox@esr",
+   "count": "123",
+   "percent": "0"
+  },
+  {
+   "number": 1,
+   "cask": "codex",
+   "count": "546,210",
+   "percent": "18.31"
+  },
+  {
+   "number": 2,
+   "cask": "android-platform-tools",
+   "count": "80,981",
+   "percent": "2.71"
+  }
+ ]
+}

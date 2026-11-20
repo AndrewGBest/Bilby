@@ -1,0 +1,80 @@
+{
+ "results": [
+  {
+   "name": "vlc",
+   "revision": {
+    "download": {
+     "size": 277643264
+    },
+    "version": "3.0.24-rc1"
+   },
+   "snap": {
+    "license": "GPL-2.0+",
+    "media": [
+     {
+      "height": 256,
+      "type": "icon",
+      "url": "https://dashboard.snapcraft.io/site_media/appmedia/2016/07/vlc.png",
+      "width": 256
+     },
+     {
+      "height": 690,
+      "type": "screenshot",
+      "url": "https://dashboard.snapcraft.io/site_media/appmedia/2016/07/vlc-2.0-poney.jpg",
+      "width": 1000
+     },
+     {
+      "height": 236,
+      "type": "screenshot",
+      "url": "https://dashboard.snapcraft.io/site_media/appmedia/2018/04/banner_32i5K4c.png",
+      "width": 1200
+     }
+    ],
+    "publisher": {
+     "display-name": "VideoLAN",
+     "id": "yBzXLuxwoWh5b2tgI8gxjziVNEHLm64z",
+     "username": "videolan",
+     "validation": "verified"
+    },
+    "summary": "The ultimate media player",
+    "title": "VLC"
+   },
+   "snap-id": "RT9mcUhVsRYrDLG8qnvGiy26NKvv6Qkd"
+  },
+  {
+   "name": "mjpg-streamer",
+   "revision": {
+    "download": {
+     "size": 3563520
+    },
+    "version": "2.0"
+   },
+   "snap": {
+    "license": "GPL-2.0",
+    "media": [
+     {
+      "height": 256,
+      "type": "icon",
+      "url": "https://dashboard.snapcraft.io/site_media/appmedia/2018/01/webcam.png",
+      "width": 256
+     },
+     {
+      "height": 607,
+      "type": "screenshot",
+      "url": "https://dashboard.snapcraft.io/site_media/appmedia/2018/01/streamer.png",
+      "width": 991
+     }
+    ],
+    "publisher": {
+     "display-name": "Oliver Grawert",
+     "id": "QfOqF7d2M1Pk2O0SbEKqTdB9Ry2aI0BP",
+     "username": "ogra",
+     "validation": "starred"
+    },
+    "summary": "UVC webcam streaming tool",
+    "title": "mjpg-streamer"
+   },
+   "snap-id": "XPY44rghkhHKYcQ7zxe7Pif5ODuelmwb"
+  }
+ ]
+}

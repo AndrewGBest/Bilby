@@ -1,0 +1,46 @@
+[
+ {
+  "tag_name": "1.23.2",
+  "released_at": "2026-02-18T00:00:00.000Z",
+  "upcoming_release": false,
+  "description": "### 1.23.2 (2026-02-18)\n\n* Show banner for https://keepandroidopen.org",
+  "assets": {
+   "links": [
+    {
+     "name": "org.fdroid.fdroid_1023052.apk.asc",
+     "url": "https://gitlab.com/fdroid/fdroidclient/-/package_files/286375953/download",
+     "direct_asset_url": "https://gitlab.com/fdroid/fdroidclient/-/package_files/286375953/download",
+     "link_type": "other"
+    },
+    {
+     "name": "org.fdroid.fdroid_1023052.apk",
+     "url": "https://gitlab.com/fdroid/fdroidclient/-/package_files/286373490/download",
+     "direct_asset_url": "https://gitlab.com/fdroid/fdroidclient/-/package_files/286373490/download",
+     "link_type": "package"
+    }
+   ]
+  }
+ },
+ {
+  "tag_name": "1.23.0",
+  "released_at": "2025-05-22T00:00:00.000Z",
+  "upcoming_release": false,
+  "description": "### 1.23.0 (2025-05-22)\n\n* Updated app screenshots for Material 3 (Thanks Thore!)\n* Last material design adaptions: roun",
+  "assets": {
+   "links": [
+    {
+     "name": "org.fdroid.fdroid_1023050.apk.asc",
+     "url": "https://gitlab.com/fdroid/fdroidclient/-/package_files/204739177/download",
+     "direct_asset_url": "https://gitlab.com/fdroid/fdroidclient/-/package_files/204739177/download",
+     "link_type": "other"
+    },
+    {
+     "name": "org.fdroid.fdroid_1023050.apk",
+     "url": "https://gitlab.com/fdroid/fdroidclient/-/package_files/204739018/download",
+     "direct_asset_url": "https://gitlab.com/fdroid/fdroidclient/-/package_files/204739018/download",
+     "link_type": "package"
+    }
+   ]
+  }
+ }
+]

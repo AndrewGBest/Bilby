@@ -52,7 +52,7 @@ Status: **Yes** = in Bilby; **New** = added in the change that added this docume
 | Self-hosted Forgejo/Gitea, added by URL | Komi | Not yet. The Codeberg code already speaks the Forgejo API; what is missing is letting the user add a host |
 | GitLab, F-Droid repositories, SourceHut, others | Obtainium | Not yet |
 | Private repositories with per-host tokens | Komi, Obtainium | Partly: one GitHub token |
-| System package managers | UniGetUI, GNOME Software, Discover | Yes for pacman, apt and Flatpak (Flathub); dnf, zypper, winget, Homebrew not yet |
+| System package managers | UniGetUI, GNOME Software, Discover | Yes for pacman, apt, Flatpak (Flathub), Snap, winget and Homebrew casks; dnf and zypper not yet |
 | AUR | none read | Yes |
 
 ### Discovery and search

@@ -1,0 +1,18 @@
+{
+ "packageName": "org.schabi.newpipe",
+ "suggestedVersionCode": 1017,
+ "packages": [
+  {
+   "versionName": "0.29.3",
+   "versionCode": 1017
+  },
+  {
+   "versionName": "0.29.1",
+   "versionCode": 1015
+  },
+  {
+   "versionName": "0.29.1",
+   "versionCode": 1015
+  }
+ ]
+}

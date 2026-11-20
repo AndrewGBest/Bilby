@@ -179,9 +179,42 @@ file has a reason. **[verified]**
 
 ## 5. Sources
 
-`trait Source { search, summary, releases, available_on }`. Three exist: GitHub Releases,
-the AUR, and the system's own repositories. Adding GitLab, Codeberg / Forgejo, F-Droid,
-Flathub or winget means one new file.
+`trait Source { search, summary, releases, available_on }`. Each source is one file,
+and appears only on the systems it applies to:
+
+| Source | Windows | macOS | Linux | Android | How it installs |
+|---|:-:|:-:|:-:|:-:|---|
+| GitHub Releases | ✓ | ✓ | ✓ | ✓ | Bilby fetches the file and hands it to the system |
+| GitLab | ✓ | ✓ | ✓ | ✓ | The same |
+| Codeberg | ✓ | ✓ | ✓ | ✓ | The same (its search is turning clients away) |
+| winget | ✓ | | | | Shows the `winget install` command |
+| Homebrew casks | | ✓ | | | Bilby fetches the publisher's own download and checks it against the cask's SHA-256. Homebrew need not be installed |
+| Flathub | | | with Flatpak | | Bilby runs Flatpak |
+| pacman, apt repositories | | | Arch, Debian families | | Shows the command |
+| AUR | | | Arch family | | Shows the command |
+| Snap Store | | | with snapd | | Shows the `snap install` command |
+| F-Droid | | | | ✓ | Bilby fetches the APK |
+| Websites | | | TV only | | Adds a launcher that opens Longboard |
+
+What was checked, and how:
+
+- **GitLab, Homebrew, F-Droid**: run against the live services from the command-line
+  tool (as a Linux machine, a Mac and an Android phone), and tested against answers
+  captured from them.
+- **Snap Store**: tested against answers captured from the live API; no machine with
+  snapd was to hand to try it end to end.
+- **winget**: written from memory of what the `winget` command prints and tested only
+  against that recollection. It has not run on Windows. On a Windows set to a
+  language other than English the headings differ and nothing will be found.
+- **Homebrew on Intel Macs** takes the first download listed under a macOS version
+  name rather than `arm64_...`; on the casks tried that is the Intel build, but the
+  rule is a reading of the data, not something Homebrew documents here.
+
+Looked at and left out for now: **Chocolatey** (its packages need its own tool and
+administrator rights, and winget covers the same ground), **Scoop** (no search service
+of its own), the **Microsoft Store** and **Mac App Store** (no way to install from them
+without their own apps), **dnf and zypper** repositories (their package lists are in
+formats not yet read), and **Nix**.
 
 ### GitHub
 

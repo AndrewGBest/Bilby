@@ -24,7 +24,17 @@ pub fn icon_key(id: &AppId) -> Option<String> {
         SourceKind::Codeberg => {
             id.key.split('/').next().filter(|o| !o.is_empty()).map(|o| format!("codeberg-{}", o.to_lowercase()))
         }
-        SourceKind::Aur | SourceKind::Pacman | SourceKind::Apt | SourceKind::Web | SourceKind::Flathub => None,
+        // The rest give each app its own picture, or none.
+        SourceKind::Aur
+        | SourceKind::Pacman
+        | SourceKind::Apt
+        | SourceKind::Web
+        | SourceKind::Flathub
+        | SourceKind::GitLab
+        | SourceKind::Homebrew
+        | SourceKind::Winget
+        | SourceKind::Snap
+        | SourceKind::FDroid => None,
     }
 }
 

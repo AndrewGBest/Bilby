@@ -108,6 +108,10 @@ impl NetHttp {
 
     fn request(&self, url: &str) -> ureq::Request {
         let mut req = self.agent.get(url);
+        // The Snap Store asks every client which kind of device it is; 16 is "any".
+        if url.starts_with("https://api.snapcraft.io/") {
+            req = req.set("Snap-Device-Series", "16");
+        }
         if url.starts_with(&self.github_api) {
             req = req.set("Accept", "application/vnd.github+json").set("X-GitHub-Api-Version", "2022-11-28");
             // The token is only ever sent to the API host, never to download redirects
