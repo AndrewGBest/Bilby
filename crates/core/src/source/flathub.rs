@@ -207,6 +207,23 @@ impl Flathub {
     }
 }
 
+impl Flathub {
+    fn summaries_of(&self, hits: Vec<Hit>) -> Vec<AppSummary> {
+        hits.into_iter()
+            .filter(|h| valid_key(SourceKind::Flathub, &h.app_id))
+            .map(|h| {
+                let mut app = self.summary_from(h.app_id, h.name, h.summary, h.developer_name);
+                app.popularity = h.installs_last_month;
+                app.license = h.project_license;
+                app.icon_url = own_media(h.icon);
+                app.verified = h.verification_verified;
+                app.momentum = h.trending.map(|t| if t > 0.0 { 0.75 } else { 0.25 });
+                app
+            })
+            .collect()
+    }
+}
+
 impl Source for Flathub {
     fn kind(&self) -> SourceKind {
         SourceKind::Flathub
@@ -221,20 +238,27 @@ impl Source for Flathub {
         let body = serde_json::json!({ "query": query, "hits_per_page": limit.clamp(1, 50), "page": 1 }).to_string();
         let resp: SearchResponse =
             serde_json::from_str(&self.http.post_json(&format!("{}/search?locale=en", self.api), &body)?)?;
-        Ok(resp
-            .hits
-            .into_iter()
-            .filter(|h| valid_key(SourceKind::Flathub, &h.app_id))
-            .map(|h| {
-                let mut app = self.summary_from(h.app_id, h.name, h.summary, h.developer_name);
-                app.popularity = h.installs_last_month;
-                app.license = h.project_license;
-                app.icon_url = own_media(h.icon);
-                app.verified = h.verification_verified;
-                app.momentum = h.trending.map(|t| if t > 0.0 { 0.75 } else { 0.25 });
-                app
-            })
-            .collect())
+        Ok(self.summaries_of(resp.hits))
+    }
+
+    /// Flathub's own lists, for a home page with more on it than a hand-picked few.
+    fn collections(&self, limit: usize) -> Vec<(String, Vec<AppSummary>)> {
+        const LISTS: [(&str, &str); 3] = [
+            ("Popular on Flathub", "popular"),
+            ("Trending on Flathub", "trending"),
+            ("New and updated on Flathub", "recently-updated"),
+        ];
+        let fetch = |path: &str| -> Result<Vec<AppSummary>> {
+            let url = format!("{}/collection/{path}?page=1&per_page={}&locale=en", self.api, limit.clamp(1, 50));
+            let resp: SearchResponse = serde_json::from_str(&self.http.get(&url)?)?;
+            Ok(self.summaries_of(resp.hits))
+        };
+        // A list that cannot be fetched is left out; the rest of the page does not wait on it.
+        LISTS
+            .iter()
+            .filter_map(|(title, path)| Some((title.to_string(), fetch(path).ok()?)))
+            .filter(|(_, apps)| !apps.is_empty())
+            .collect()
     }
 
     fn summary(&self, key: &str) -> Result<AppSummary> {

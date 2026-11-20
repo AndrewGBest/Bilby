@@ -210,6 +210,24 @@ impl Catalog {
         sections
     }
 
+    /// Lists the sources themselves keep, such as what is popular on Flathub. Unlike
+    /// [`Catalog::featured`] this uses the network, so call it off the UI thread.
+    pub fn collections(&self, limit: usize) -> Vec<Section> {
+        let mut sections = Vec::new();
+        for source in &self.sources {
+            if !source.available_on(&self.platform) {
+                continue;
+            }
+            for (title, mut apps) in source.collections(limit) {
+                for app in &mut apps {
+                    app.rating = app.rating.or_else(|| self.rating_for(&app.id));
+                }
+                sections.push(Section { title, apps });
+            }
+        }
+        sections
+    }
+
     /// Featured apps matching what has been typed so far. Instant and free: it only looks
     /// at the bundled index, so it can run on every keystroke.
     pub fn suggest(&self, query: &str, limit: usize) -> Vec<AppSummary> {

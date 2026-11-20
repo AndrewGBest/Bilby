@@ -707,9 +707,31 @@ Longboard keeps its own list of web apps with a Home tile and optional separate
 sign-ins, and has no command to add to it, so a site added here opens in Longboard but
 is not on Longboard's Home. A `--add-app=` option in Longboard would close that gap.]
 
+**Getting around.** The top bar is the map: Home, Library, Search and This TV. Up from
+the apps reaches it (landing on Search from Home), Left and Right move along it, OK
+or Down goes in. Back closes the list of files, then the app's page, then goes up to
+the bar, then Home. The Library page has the apps with updates first, then the rest,
+then favourites, with "Update all" and "Check for updates" above them.
+
+**The Back key.** Remotes and media keyboards send a key of their own for Back
+(`XF86Back`), which Slint's desktop backend has no mapping for and so drops: its key
+table lists `Back` with no window-system key beside it. Bilby reads the window
+system's events itself and turns that key into Escape, and Select into Return. In the
+TV layout the right and "back" mouse buttons do the same, because air-mouse remotes
+send those. [The mapping gap was read in Slint 1.19's source; which key a given remote
+sends was not tested, and a remote whose Back arrives as something else will still do
+nothing. A game controller is not a keyboard and is not handled at all.]
+
+**What Home shows.** The bundled list is twenty hand-picked apps, which is not a store.
+Where Flathub is a source, its own lists follow: popular, trending, new and updated.
+Developer tools are left off a TV's Home. [The address of Flathub's lists,
+`/api/v2/collection/{popular,trending,recently-updated}`, and the shape of what they
+return are from memory; no documentation was found and it has not run against
+Flathub. If it is wrong the rows are simply absent.]
+
 An app's page on TV has three buttons in a row (the main one, Favourite, Other files),
 the facts row, a picture and the description. Still missing on TV: choosing an older
-version, a settings screen, and "update all".
+version and a full settings screen.
 
 ## 8. Testing
 

@@ -60,6 +60,41 @@ component TvTile inherits Rectangle {
     }
 }
 
+// An entry of the top bar: where you are is underlined, where the remote points is boxed.
+component TvTab inherits Rectangle {
+    in property <string> text;
+    in property <bool> current;
+    in property <bool> focused;
+    in property <bool> attention;
+    in property <length> u;
+    width: label.preferred-width + 22 * u;
+    border-radius: 14 * u;
+    background: focused ? Theme.surface-2 : transparent;
+    border-width: focused ? 2 * u : 0;
+    border-color: white;
+    accessible-role: tab;
+    accessible-label: root.text;
+    accessible-item-selected: root.current;
+    label := Text {
+        width: parent.width;
+        height: parent.height;
+        text: root.text;
+        color: root.attention ? Theme.warn : root.current || root.focused ? Theme.text : Theme.text-dim;
+        font-size: 12 * u;
+        font-weight: root.current ? 700 : 600;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    if root.current && !root.focused : Rectangle {
+        x: 11 * u;
+        y: parent.height - 2 * u;
+        width: parent.width - 22 * u;
+        height: 2 * u;
+        border-radius: 1 * u;
+        background: Theme.accent;
+    }
+}
+
 // A button on the TV app page. The remote moves between them; OK presses the focused one.
 component TvButton inherits Rectangle {
     in property <string> text;
@@ -107,7 +142,8 @@ component TvStat inherits VerticalLayout {
 
 export component TvShell inherits Rectangle {
     property <length> u: root.height / 540;
-    property <[Section]> rows: Store.tv-rows;
+    property <bool> on-library: Store.page == 2 && !Store.details-open;
+    property <[Section]> rows: Store.page == 2 ? Store.tv-library-rows : Store.tv-rows;
     property <int> cur-row: 0;
     property <int> cur-col: 0;
     // Focused option on the details screen.
@@ -126,9 +162,41 @@ export component TvShell inherits Rectangle {
     // whether the list of every file is open.
     property <int> act: 0;
     property <bool> files: false;
-    // The top bar's "This TV" chip has the focus, and which button does on its page.
-    property <bool> chip: false;
+    // Where the remote's focus is: 0 the grid of apps, 1 the top bar, 2 the library's
+    // own buttons. `tab` is the focused entry of the top bar: Home, Library, Search,
+    // This TV.
+    property <int> zone: 0;
+    property <int> tab: 0;
+    property <int> lib-act: 0;
+    property <bool> lib-has-actions: root.on-library && Store.library.length > 0;
+    property <bool> lib-can-update-all: Store.updates-count > 1 && Store.updating-id == "";
     property <int> sys-act: 0;
+    function enter-bar() {
+        // From Home, Up lands on Search: it is what people go up there for.
+        root.tab = Store.page == 2 ? 1 : Store.page == 4 ? 3 : 2;
+        root.zone = 1;
+    }
+    // Go where the focused entry of the top bar leads.
+    function activate-tab() {
+        root.cur-row = 0;
+        root.cur-col = 0;
+        if (root.tab == 0) {
+            Store.page = 0;
+            root.zone = 0;
+        } else if (root.tab == 1) {
+            Store.page = 2;
+            root.lib-act = 0;
+            root.zone = Store.library.length > 0 ? 2 : Store.tv-library-rows.length > 0 ? 0 : 1;
+        } else if (root.tab == 2) {
+            Store.page = 0;
+            root.zone = 0;
+            search.focus();
+        } else {
+            Store.page = 4;
+            root.sys-act = 0;
+            root.zone = 0;
+        }
+    }
     property <bool> on-system: Store.page == 4 && !Store.details-open;
     property <bool> sys-can-update: Store.system-state == 3;
     // Buttons on that page: Update (when there is one), Check again (where updates are
@@ -173,12 +241,14 @@ export component TvShell inherits Rectangle {
         // While the search box has focus, steal the keys that should leave it.
         capture-key-pressed(event) => {
             if (search.has-focus && (event.text == Key.DownArrow || event.text == Key.Escape || event.text == Key.Back)) {
+                root.zone = 0;
                 scope.focus();
                 return accept;
             }
-            // Right from an empty search box moves on to the "This TV" chip.
-            if (search.has-focus && search.text == "" && event.text == Key.RightArrow) {
-                root.chip = true;
+            // Up, or sideways from an empty box, goes back to the top bar.
+            if (search.has-focus && (event.text == Key.UpArrow || (search.text == "" && (event.text == Key.RightArrow || event.text == Key.LeftArrow)))) {
+                root.tab = 2;
+                root.zone = 1;
                 scope.focus();
                 return accept;
             }
@@ -188,22 +258,30 @@ export component TvShell inherits Rectangle {
             if (search.has-focus) {
                 return reject;
             }
-            if (root.chip) {
-                if (event.text == Key.Return || event.text == " ") {
-                    root.chip = false;
-                    root.sys-act = 0;
-                    Store.page = 4;
-                } else if (event.text == Key.LeftArrow) {
-                    root.chip = false;
-                    search.focus();
-                } else {
-                    root.chip = false;
+            if (root.zone == 1 && !Store.details-open) {
+                if (event.text == Key.LeftArrow) {
+                    root.tab = max(0, root.tab - 1);
+                } else if (event.text == Key.RightArrow) {
+                    root.tab = min(3, root.tab + 1);
+                } else if (event.text == Key.Return || event.text == " " || event.text == Key.DownArrow) {
+                    root.activate-tab();
+                } else if (event.text == Key.Escape || event.text == Key.Back || event.text == Key.Backspace) {
+                    // Back from anywhere but Home goes Home; on Home there is nowhere
+                    // further back, so the system may have the key.
+                    if (Store.page == 0) {
+                        return reject;
+                    }
+                    root.tab = 0;
+                    root.activate-tab();
                 }
                 return accept;
             }
             if (root.on-system) {
                 if (event.text == Key.Escape || event.text == Key.Back || event.text == Key.Backspace) {
-                    Store.page = 0;
+                    root.tab = 0;
+                    root.activate-tab();
+                } else if (event.text == Key.UpArrow) {
+                    root.enter-bar();
                 } else if (event.text == Key.RightArrow) {
                     root.sys-act = min(root.sys-last, root.sys-act + 1);
                 } else if (event.text == Key.LeftArrow) {
@@ -263,6 +341,27 @@ export component TvShell inherits Rectangle {
                 }
                 return accept;
             }
+            if (root.zone == 2) {
+                // The library's own buttons.
+                if (event.text == Key.LeftArrow) {
+                    root.lib-act = max(0, root.lib-act - 1);
+                } else if (event.text == Key.RightArrow) {
+                    root.lib-act = min(root.lib-can-update-all ? 1 : 0, root.lib-act + 1);
+                } else if (event.text == Key.Return || event.text == " ") {
+                    if (root.lib-can-update-all && root.lib-act == 0) {
+                        Store.update-all();
+                    } else {
+                        Store.check-updates();
+                    }
+                } else if (event.text == Key.DownArrow) {
+                    if (rows.length > 0) {
+                        root.zone = 0;
+                    }
+                } else {
+                    root.enter-bar();
+                }
+                return accept;
+            }
             if (event.text == Key.RightArrow) {
                 root.cur-col = max(0, min(rows[cur-row].apps.length - 1, root.cur-col + 1));
             } else if (event.text == Key.LeftArrow) {
@@ -276,15 +375,19 @@ export component TvShell inherits Rectangle {
                 if (root.cur-row > 0) {
                     root.cur-row -= 1;
                     root.cur-col = max(0, min(rows[cur-row].apps.length - 1, root.cur-col));
+                } else if (root.lib-has-actions) {
+                    root.zone = 2;
                 } else {
-                    search.focus();
+                    root.enter-bar();
                 }
             } else if (event.text == Key.Return || event.text == " ") {
                 if (current.id != "") {
                     Store.open(current.id);
                 }
+            } else if (event.text == Key.Escape || event.text == Key.Back || event.text == Key.Backspace) {
+                // Back from the apps goes up to the top bar, as on other TV stores.
+                root.enter-bar();
             } else {
-                // Back on the home screen: let the system leave the app.
                 return reject;
             }
             accept
@@ -299,13 +402,28 @@ export component TvShell inherits Rectangle {
             spacing: 10 * u;
             Image { width: 20 * u; height: 20 * u; y: 4 * u; source: @image-url("icons/logo.svg"); accessible-role: none; }
             Text { text: "Bilby"; color: Theme.text; font-size: 14 * u; font-weight: 700; vertical-alignment: center; }
+            Rectangle { width: 14 * u; }
+            TvTab {
+                u: root.u;
+                text: "Home";
+                current: Store.page == 0 && !Store.details-open;
+                focused: root.zone == 1 && root.tab == 0 && !Store.details-open && !search.has-focus;
+            }
+            TvTab {
+                u: root.u;
+                text: Store.updates-count > 0 ? "Library  ·  " + Store.updates-count + (Store.updates-count == 1 ? " update" : " updates") : "Library";
+                current: root.on-library;
+                focused: root.zone == 1 && root.tab == 1 && !Store.details-open && !search.has-focus;
+                attention: Store.updates-count > 0;
+            }
             Rectangle { horizontal-stretch: 1; }
             Rectangle {
+                property <bool> pointed: root.zone == 1 && root.tab == 2 && !Store.details-open;
                 width: 230 * u;
                 border-radius: 14 * u;
                 background: Theme.surface;
-                border-width: search.has-focus ? 2 * u : 0.5 * u;
-                border-color: search.has-focus ? white : Theme.stroke;
+                border-width: search.has-focus || self.pointed ? 2 * u : 0.5 * u;
+                border-color: search.has-focus || self.pointed ? white : Theme.stroke;
                 Image {
                     x: 11 * u;
                     source: @image-url("icons/search.svg");
@@ -315,7 +433,7 @@ export component TvShell inherits Rectangle {
                 }
                 if search.text == "" : Text {
                     x: 30 * u;
-                    text: search.has-focus ? "Type, or Right for this TV" : "Search  ·  press Up";
+                    text: search.has-focus ? "Type, then press OK" : "Search";
                     color: Theme.text-dim;
                     font-size: 12 * u;
                     vertical-alignment: center;
@@ -333,29 +451,18 @@ export component TvShell inherits Rectangle {
                         Store.search(self.text);
                         root.cur-row = 0;
                         root.cur-col = 0;
+                        root.zone = 0;
                         scope.focus();
                     }
                 }
             }
-            // The device, and its updates: reached with Up, then Right.
-            Rectangle {
-                width: chip-text.preferred-width + 20 * u;
-                border-radius: 14 * u;
-                background: root.chip ? Theme.surface-2 : transparent;
-                border-width: root.chip ? 2 * u : 0;
-                border-color: white;
-                accessible-role: button;
-                accessible-label: chip-text.text;
-                chip-text := Text {
-                    width: parent.width;
-                    height: parent.height;
-                    text: Store.device-name + (Store.system-state == 3 ? "  ·  " + Store.system-headline : "");
-                    color: Store.system-state == 3 ? Theme.warn : Theme.ok;
-                    font-size: 12 * u;
-                    font-weight: 600;
-                    horizontal-alignment: center;
-                    vertical-alignment: center;
-                }
+            // The device, its updates, and the way back to the desktop layout.
+            TvTab {
+                u: root.u;
+                text: Store.device-name + (Store.system-state == 3 ? "  ·  " + Store.system-headline : "");
+                current: root.on-system;
+                focused: root.zone == 1 && root.tab == 3 && !Store.details-open && !search.has-focus;
+                attention: Store.system-state == 3;
             }
         }
 
@@ -393,21 +500,21 @@ export component TvShell inherits Rectangle {
                         u: root.u;
                         text: "Update now";
                         primary: true;
-                        focused: root.sys-act == 0;
+                        focused: root.zone == 0 && root.sys-act == 0;
                         clicked => { Store.system-update(); }
                     }
                     if Store.system-supported && !root.sys-working : TvButton {
                         u: root.u;
                         text: "Check again";
                         primary: !root.sys-can-update;
-                        focused: root.sys-act == (root.sys-can-update ? 1 : 0);
+                        focused: root.zone == 0 && root.sys-act == (root.sys-can-update ? 1 : 0);
                         clicked => { Store.system-check(); }
                     }
                     TvButton {
                         u: root.u;
                         text: "Desktop layout";
                         primary: false;
-                        focused: root.sys-act == root.sys-last;
+                        focused: root.zone == 0 && root.sys-act == root.sys-last;
                         clicked => { Store.set-interface(1); }
                     }
                 }
@@ -440,7 +547,7 @@ export component TvShell inherits Rectangle {
                     Text { width: 130 * u; text: fact.name; color: Theme.text-dim; font-size: 12 * u; }
                     Text { horizontal-stretch: 1; text: fact.value; color: Theme.text; font-size: 12 * u; wrap: word-wrap; }
                 }
-                Text { text: "Back returns to the apps."; color: Theme.text-dim; font-size: 11 * u; }
+                Text { text: "Back returns to Home."; color: Theme.text-dim; font-size: 11 * u; }
             }
         }
 
@@ -461,12 +568,34 @@ export component TvShell inherits Rectangle {
                     font-size: 12 * u;
                 }
                 if rows.length == 0 : Text {
-                    text: Store.searching ? "Searching…" : "Nothing for this TV yet. Press Up to search.";
+                    text: Store.searching ? "Searching…" : root.on-library ? "Apps you install with Bilby show up here, and so do your favourites." : "Nothing for this TV yet. Press Up to search.";
+                    wrap: word-wrap;
                     color: Theme.text-dim;
                     font-size: 14 * u;
                 }
             }
-            if Store.search-note != "" : Text {
+            // The library's own buttons, beside the focused app.
+            if root.lib-has-actions : HorizontalLayout {
+                x: margin + 548 * u;
+                y: 78 * u;
+                spacing: 12 * u;
+                alignment: start;
+                if root.lib-can-update-all : TvButton {
+                    u: root.u;
+                    text: "Update all";
+                    primary: true;
+                    focused: root.zone == 2 && root.lib-act == 0;
+                    clicked => { Store.update-all(); }
+                }
+                TvButton {
+                    u: root.u;
+                    text: Store.checking-updates ? "Checking…" : "Check for updates";
+                    primary: !root.lib-can-update-all;
+                    focused: root.zone == 2 && root.lib-act == (root.lib-can-update-all ? 1 : 0);
+                    clicked => { Store.check-updates(); }
+                }
+            }
+            if Store.search-note != "" && !root.on-library : Text {
                 x: margin;
                 y: 212 * u;
                 width: parent.width - 2 * margin;
@@ -513,10 +642,11 @@ export component TvShell inherits Rectangle {
                                 height: tile-h;
                                 u: root.u;
                                 app: app;
-                                focused: r == root.cur-row && c == root.cur-col && !search.has-focus;
+                                focused: root.zone == 0 && r == root.cur-row && c == root.cur-col && !search.has-focus;
                                 clicked => {
                                     root.cur-row = r;
                                     root.cur-col = c;
+                                    root.zone = 0;
                                     scope.focus();
                                     Store.open(app.id);
                                 }

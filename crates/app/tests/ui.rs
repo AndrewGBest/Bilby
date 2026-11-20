@@ -1101,15 +1101,56 @@ fn tv_focus_survives_rows_changing_under_it() {
 }
 
 #[test]
-fn tv_puts_the_library_first() {
-    let seed = r#"{"library":[{"id":"github:marquee-tv/marquee","name":"Marquee","version":"v20.0"}]}"#;
+fn the_tv_has_a_library_page_and_a_home_that_is_the_store() {
+    let seed = r#"{"settings":{"welcomed":true},"library":[
+        {"id":"github:marquee-tv/marquee","name":"Marquee","version":"v20.0"},
+        {"id":"github:tidewave/tidewave","name":"Tidewave","version":"v3.4.0"}]}"#;
     let s = start_with("android-tv", Shell::Tv, Some(seed));
-    assert_eq!(s.store().get_tv_rows().row_data(0).unwrap().title, "Your library");
+    // Home is the store: what is installed is not what it leads with.
+    let home: Vec<String> = s.store().get_tv_rows().iter().map(|row| row.title.to_string()).collect();
+    assert_eq!(home[0], "Made for TV", "{home:?}");
+    assert!(!home.iter().any(|t| t == "Developer tools"), "nobody writes code from the sofa: {home:?}");
+
     s.app.check_updates(&s.ui, false);
-    let row = s.store().get_tv_rows().row_data(0).unwrap();
-    assert_eq!(row.title, "Your library  ·  1 update");
-    assert!(row.apps.row_data(0).unwrap().has_update);
     assert_eq!(s.store().get_toast(), "", "a start-up check stays quiet");
+    let library: Vec<String> = s.store().get_tv_library_rows().iter().map(|row| row.title.to_string()).collect();
+    assert_eq!(library, ["Updates available", "Installed with Bilby"]);
+    assert!(s.has("Library  ·  1 update"), "the top bar says an update is waiting");
+
+    // With the remote: Up to the bar (Search), Left to Library, OK.
+    s.press(Key::UpArrow);
+    s.press(Key::LeftArrow);
+    s.press(Key::Return);
+    assert_eq!(s.store().get_page(), 2);
+    assert!(s.has("Check for updates"));
+    // The library's buttons have the focus; Down goes to the apps, OK opens the first.
+    s.press(Key::DownArrow);
+    s.press(Key::Return);
+    assert!(s.store().get_details_open());
+    assert_eq!(s.store().get_app().id, "github:marquee-tv/marquee", "the app with an update comes first");
+
+    // Back closes the app, Back again goes up to the bar, and Back from there goes Home.
+    s.press(Key::Escape);
+    assert!(!s.store().get_details_open());
+    assert_eq!(s.store().get_page(), 2);
+    s.press(Key::Escape);
+    s.press(Key::Escape);
+    assert_eq!(s.store().get_page(), 0);
+}
+
+#[test]
+fn the_home_page_adds_the_lists_a_source_keeps() {
+    // On Linux with Flatpak, what is popular on Flathub follows the hand-picked apps.
+    let s = start("linux-x64-debian", Shell::Desktop);
+    let titles: Vec<String> = s.store().get_sections().iter().map(|section| section.title.to_string()).collect();
+    assert!(titles.iter().any(|t| t == "Popular on Flathub"), "{titles:?}");
+    assert!(titles.iter().position(|t| t == "Popular on Flathub") > titles.iter().position(|t| t == "Developer tools"));
+    let popular = s.store().get_sections().iter().find(|section| section.title == "Popular on Flathub").unwrap();
+    assert_eq!(popular.apps.row_data(0).unwrap().id, "flathub:org.reelstudio.Reel", "most installed first");
+
+    // Where Flathub is not a source, there are no such lists and nothing is asked for.
+    let windows = start("windows-x64", Shell::Desktop);
+    assert!(windows.store().get_sections().iter().all(|section| !section.title.contains("Flathub")));
 }
 
 #[test]

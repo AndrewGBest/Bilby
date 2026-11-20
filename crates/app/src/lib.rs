@@ -521,6 +521,9 @@ pub struct App {
     host: Arc<dyn bilby_core::os::Host>,
     system: bilby_core::os::Report,
     system_check: Mutex<Option<bilby_core::os::Check>>,
+    /// Lists fetched from the sources (popular on Flathub, ...), shown under the
+    /// hand-picked ones once they arrive.
+    collections: Mutex<Vec<CoreSection>>,
 }
 
 impl App {
@@ -813,7 +816,9 @@ impl App {
     /// together so "Installed" and "Update" markers never disagree between pages.
     pub fn refresh(&self, ui: &AppWindow) {
         let store = ui.global::<Store>();
-        let featured = self.catalog().featured();
+        // The hand-picked list first, then the lists the sources keep themselves.
+        let mut featured = self.catalog().featured();
+        featured.extend(self.collections.lock().unwrap().iter().cloned());
         let to_sections = |list: &[CoreSection]| -> Vec<Section> {
             list.iter().map(|s| Section { title: s.title.clone().into(), apps: self.cards(&s.apps) }).collect()
         };
@@ -886,17 +891,26 @@ impl App {
         let (query, results) = self.results.lock().unwrap().clone();
         store.set_results(self.cards(&results));
 
-        // TV: library first (updates are the reason to open a store), then results.
-        let mut tv = Vec::new();
-        if !state.library.is_empty() {
-            let title = if update_count > 0 {
-                format!("Your library  ·  {}", plural(update_count, "update"))
-            } else {
-                "Your library".to_string()
-            };
-            let cards: Vec<AppCard> = state.library.iter().map(|a| self.library_card(a)).collect();
-            tv.push(Section { title: title.into(), apps: ModelRc::new(VecModel::from(cards)) });
+        // TV: the Library page has updates first, then the rest, then favourites.
+        let section = |title: &str, cards: Vec<AppCard>| Section {
+            title: title.into(),
+            apps: ModelRc::new(VecModel::from(cards)),
+        };
+        let (waiting, current): (Vec<AppCard>, Vec<AppCard>) =
+            state.library.iter().map(|a| self.library_card(a)).partition(|card| card.has_update);
+        let mut tv_library = Vec::new();
+        if !waiting.is_empty() {
+            tv_library.push(section("Updates available", waiting));
         }
+        if !current.is_empty() {
+            tv_library.push(section("Installed with Bilby", current));
+        }
+        if !state.favourites.is_empty() {
+            tv_library.push(section("Favourites", state.favourites.iter().map(|f| self.favourite_card(f)).collect()));
+        }
+        store.set_tv_library_rows(ModelRc::new(VecModel::from(tv_library)));
+        // TV home: search results, then the store.
+        let mut tv = Vec::new();
         if !results.is_empty() {
             tv.push(Section { title: format!("Results for “{query}”").into(), apps: self.cards(&results) });
         }
@@ -960,6 +974,10 @@ impl App {
         store.set_ask_tv(false);
         store.set_shell(shell_for(form));
         store.set_adaptive(form != FormFactor::Tv);
+        // A TV has no use for window borders; a desktop wants them back.
+        if !self.inline {
+            ui.window().set_fullscreen(form == FormFactor::Tv);
+        }
         // The TV layout is designed dark; elsewhere the chosen theme applies.
         let theme = self.theme_override.clone().unwrap_or_else(|| self.state().settings.theme);
         ui.global::<Theme>().set_mode(if form == FormFactor::Tv { 2 } else { theme_mode(&theme) });
@@ -969,12 +987,27 @@ impl App {
             // What suits a TV differs (TV builds first, websites on Linux), so the lists
             // are fetched again for the new shape.
             self.rebuild_catalog();
+            self.collections.lock().unwrap().clear();
+            self.load_collections(ui);
             let platform = self.platform.read().unwrap().clone();
             store.set_platform_title(platform.title().into());
             store.set_device_name(platform.friendly().into());
             self.refresh(ui);
         }
         self.refresh_settings(ui);
+    }
+
+    /// Fetch the lists the sources keep (what is popular on Flathub and the like) and
+    /// add them to the home page. The page is usable before they arrive.
+    pub fn load_collections(self: &Arc<Self>, ui: &AppWindow) {
+        let _ = ui;
+        self.job(
+            |app| app.catalog().collections(12),
+            |app, ui, sections| {
+                *app.collections.lock().unwrap() = sections;
+                app.refresh(ui);
+            },
+        );
     }
 
     // ---- this device ----
@@ -2055,6 +2088,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         host,
         system,
         system_check: Mutex::new(None),
+        collections: Mutex::new(Vec::new()),
     });
     app.show_system(&ui, 0, "");
 
@@ -2064,6 +2098,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     app.refresh(&ui);
     app.refresh_settings(&ui);
     app.load_pictures(&ui);
+    app.load_collections(&ui);
     // Read the system's package databases in the background: it can take a moment on a
     // large distribution, and the first search should not be the one to pay for it.
     app.job(
@@ -2226,8 +2261,45 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     Ok((ui, app))
 }
 
+/// Translate what a TV remote sends into keys the interface understands.
+///
+/// Slint passes on the keys of a keyboard, but drops the "Back" key that remotes and
+/// media keyboards send, so pressing it did nothing. Here it becomes Escape, which every
+/// page already treats as "back". "Select" becomes Return. In the TV layout the right
+/// and "back" mouse buttons do the same, because air-mouse remotes send those for Back.
+#[cfg(not(target_os = "android"))]
+fn translate_remote_keys(ui: &AppWindow) {
+    use slint::platform::{Key, WindowEvent};
+    use slint::winit_030::winit::event::{ElementState, MouseButton, WindowEvent as Raw};
+    use slint::winit_030::winit::keyboard::{Key as RawKey, NamedKey};
+    use slint::winit_030::{EventResult, WinitWindowAccessor};
+    let weak = ui.as_weak();
+    ui.window().on_winit_window_event(move |window, event| {
+        let on_tv = || weak.upgrade().is_some_and(|ui| ui.get_effective() == Shell::Tv);
+        let (key, state) = match event {
+            Raw::KeyboardInput { event, .. } => match &event.logical_key {
+                RawKey::Named(NamedKey::BrowserBack | NamedKey::GoBack) => (Key::Escape, event.state),
+                RawKey::Named(NamedKey::Select | NamedKey::Accept) => (Key::Return, event.state),
+                _ => return EventResult::Propagate,
+            },
+            Raw::MouseInput { button: MouseButton::Right | MouseButton::Back, state, .. } if on_tv() => {
+                (Key::Escape, *state)
+            }
+            _ => return EventResult::Propagate,
+        };
+        let text: SharedString = key.into();
+        window.dispatch_event(match state {
+            ElementState::Pressed => WindowEvent::KeyPressed { text },
+            ElementState::Released => WindowEvent::KeyReleased { text },
+        });
+        EventResult::PreventDefault
+    });
+}
+
 pub fn run(options: Options) -> Result<(), Box<dyn std::error::Error>> {
     let (ui, app) = build(&options)?;
+    #[cfg(not(target_os = "android"))]
+    translate_remote_keys(&ui);
     let store = ui.global::<Store>();
     if let Some((w, h)) = options.size {
         ui.window().set_size(slint::LogicalSize::new(w as f32, h as f32));

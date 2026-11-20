@@ -21,6 +21,11 @@ png = "0.17"
 # format the image crate knows (AVIF, EXR, WebP, ...); two decoders are enough.
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 
+# Remote controls send keys Slint does not pass on (Back, above all); this gives access
+# to the window system's own events so they can be translated.
+[target.'cfg(not(target_os = "android"))'.dependencies]
+slint = { version = "1.19", default-features = false, features = ["unstable-winit-030"] }
+
 [target.'cfg(target_os = "android")'.dependencies]
 slint = { version = "1.19", default-features = false, features = ["std", "compat-1-2", "backend-android-activity-06"] }
 

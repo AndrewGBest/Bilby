@@ -703,6 +703,17 @@ const FLATPAKS: &[DemoFlatpak] = &[
     },
 ];
 
+/// An app as Flathub's search and its lists describe it.
+fn flatpak_hit(a: &DemoFlatpak) -> Value {
+    json!({
+        "app_id": a.id, "id": a.id.replace('.', "_"), "name": a.name, "summary": a.summary,
+        "icon": format!("https://dl.flathub.org/media/{}/icon.png", a.id),
+        "developer_name": a.developer, "project_license": a.license,
+        "installs_last_month": a.installs, "arches": ["x86_64", "aarch64"],
+        "verification_verified": a.installs > 10_000, "trending": a.installs as f64 / 1000.0 - 15.0,
+    })
+}
+
 fn flatpak_appstream(app: &DemoFlatpak) -> Value {
     let media = format!("https://dl.flathub.org/media/{}", app.id);
     json!({
@@ -772,6 +783,16 @@ impl Http for DemoHttp {
                 .map(|a| flatpak_appstream(a).to_string())
                 .ok_or_else(not_found);
         }
+        if let Some(rest) = url.strip_prefix("https://flathub.org/api/v2/collection/") {
+            // Popular: most installed first. The other lists: the same apps, turned round.
+            let mut apps: Vec<&DemoFlatpak> = FLATPAKS.iter().collect();
+            apps.sort_by_key(|a| std::cmp::Reverse(a.installs));
+            if !rest.starts_with("popular") {
+                apps.reverse();
+            }
+            let hits: Vec<Value> = apps.into_iter().map(flatpak_hit).collect();
+            return Ok(json!({ "hits": hits, "totalHits": hits.len() }).to_string());
+        }
         if let Some(id) = url.strip_prefix("https://flathub.org/api/v2/stats/") {
             let app = FLATPAKS.iter().find(|a| a.id == id).ok_or_else(|| Error::NotFound(url.to_string()))?;
             return Ok(json!({ "installs_total": app.installs * 31, "installs_last_month": app.installs }).to_string());
@@ -822,19 +843,8 @@ impl Http for DemoHttp {
                 .ok()
                 .and_then(|v| v["query"].as_str().map(str::to_string))
                 .unwrap_or_default();
-            let hits: Vec<Value> = FLATPAKS
-                .iter()
-                .filter(|a| matches(&query, &[a.name, a.summary, a.id]))
-                .map(|a| {
-                    json!({
-                        "app_id": a.id, "id": a.id.replace('.', "_"), "name": a.name, "summary": a.summary,
-                        "icon": format!("https://dl.flathub.org/media/{}/icon.png", a.id),
-                        "developer_name": a.developer, "project_license": a.license,
-                        "installs_last_month": a.installs, "arches": ["x86_64", "aarch64"],
-                        "verification_verified": a.installs > 10_000, "trending": a.installs as f64 / 1000.0 - 15.0,
-                    })
-                })
-                .collect();
+            let hits: Vec<Value> =
+                FLATPAKS.iter().filter(|a| matches(&query, &[a.name, a.summary, a.id])).map(flatpak_hit).collect();
             return Ok(json!({ "hits": hits, "query": query, "totalHits": hits.len() }).to_string());
         }
         if url == crate::ratings::ODRS_FETCH {

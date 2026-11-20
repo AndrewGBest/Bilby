@@ -179,10 +179,20 @@ fn tv_remote_and_typed_search_with_real_key_events() {
     if !have_xvfb() {
         return;
     }
-    // Up focuses search, type, OK searches (on a worker), Right moves, OK opens the result.
+    // Up reaches Search in the top bar, OK starts typing, OK searches (on a worker),
+    // Right moves, OK opens the result.
     let run = run(
         RETURNING,
-        &["--as", "android-tv", "--ui", "tv", "--size", "1920x1080", "--script", "up text:play ok wait right ok wait"],
+        &[
+            "--as",
+            "android-tv",
+            "--ui",
+            "tv",
+            "--size",
+            "1920x1080",
+            "--script",
+            "up ok text:play ok wait right ok wait",
+        ],
     );
     assert_eq!(run.get("shell"), "tv");
     assert_eq!(run.get("results"), "3");

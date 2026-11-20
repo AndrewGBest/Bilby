@@ -45,6 +45,12 @@ pub trait Source: Send + Sync {
     }
 
     /// For sources made of several named places (repositories): their names.
+    /// Ready-made lists the source keeps (most popular, trending, ...), each with a title.
+    /// Fetched over the network; a source without any returns nothing.
+    fn collections(&self, _limit: usize) -> Vec<(String, Vec<AppSummary>)> {
+        Vec::new()
+    }
+
     fn origins(&self) -> Vec<String> {
         Vec::new()
     }

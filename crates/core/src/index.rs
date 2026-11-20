@@ -129,6 +129,10 @@ impl Index {
             if p.form_factor == FormFactor::Tv && e.tv {
                 continue;
             }
+            // Nobody writes code from the sofa.
+            if p.form_factor == FormFactor::Tv && e.category == "Developer tools" {
+                continue;
+            }
             push(&e.category, app);
         }
         sections
