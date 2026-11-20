@@ -110,7 +110,11 @@ fn popularity(app: &AppSummary) -> f32 {
         Some(rating) => {
             let trust = rating.count as f32 / (rating.count as f32 + 30.0);
             let rated = UNKNOWN_POPULARITY * (1.0 - trust) + (rating.stars / 5.0).clamp(0.0, 1.0) * trust;
-            // With both a rating and a count of users, each tells half the story.
+            // How many people bothered to rate it says how widely it is used, much as
+            // stars do on GitHub: the same rating from 2,000 people outranks it from 40.
+            let reach = ((rating.count as f32 + 1.0).ln() / 3_001.0_f32.ln()).clamp(0.0, 1.0);
+            let rated = rated * (0.7 + 0.3 * reach);
+            // With a count of users from the source as well, each tells half the story.
             if has_usage(app) {
                 (rated + counted) / 2.0
             } else {
@@ -252,6 +256,7 @@ mod tests {
         assert!(rated(1.8, 900) < popularity(&plain), "widely disliked sinks below unknown");
         assert!(rated(4.7, 900) > rated(5.0, 5), "five perfect votes are not much evidence");
         assert!((rated(5.0, 5) - popularity(&plain)).abs() < 0.1);
+        assert!(rated(4.5, 2_000) > rated(4.5, 40), "more people rating it is itself a sign of use");
         // With stars on GitHub as well, both count.
         let mut both = app("github:a/b", "b", "", Some(40_000));
         let stars_only = popularity(&both);

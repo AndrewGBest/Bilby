@@ -462,7 +462,7 @@ from memory of both stores, not checked against them while writing]
 | Screenshots | Up to ten ([Apple](https://developer.apple.com/app-store/product-page/)) | Up to four, found in the project's README (`screenshots.rs`). Badges, logos, icons, small images, GIFs and SVGs are left out, and pictures are only fetched from GitHub's own hosts so that no third party learns who looked. Packages from repositories have none yet |
 | Description | First lines, then "more" | The start of the README, folded to a few lines with "Read more" |
 | What's New | Shown on the page and in Updates ([Apple](https://developer.apple.com/app-store/product-page/)) | Release notes, folded; shown above the description once the app is installed |
-| Ratings and reviews | Yes | Star ratings where a ratings service knows the app (Flathub, distribution packages). No written reviews: see below |
+| Ratings and reviews | Yes | Star ratings where a ratings service knows the app (Flathub, distribution packages). Written reviews for the same apps, read-only |
 | Information | A plain table at the bottom: provider, size, compatibility, ... | The same: from, made by, version, released, licence, works on, kind of file, size |
 | Everything technical | Not shown at all | Under *More options and details*: every file with its name, command and steps, older versions, and the hidden files with the reason for each |
 
@@ -477,7 +477,7 @@ watched and stopped. *Other versions and files* sits directly under the main but
 the version picker, every way to install here, and the files for other devices, which
 can be downloaded anyway (checked, saved, never run).
 
-Known differences that are still gaps: no written reviews (see below), no "top
+Known differences that are still gaps: reviews can be read but not written, no "top
 charts", and Open works for AppImages, Flatpaks and web apps but not for packages
 handed to the system installer.
 
@@ -515,26 +515,28 @@ counts as popularity, pulled towards the middle when few people gave one.
 [The file's shape was read from ODRS's source; the live service was unreachable. The
 catalog reader has only read files written for its tests.]
 
-**Why not written reviews.** They were looked at and left out, for four reasons:
+**Written reviews** [Decision, Andrew, 2026-11-20] come from the same service and are
+shown on the page of any app it knows; an app without them has no Reviews section at
+all. They are asked for when such a page is opened, up to eight, best first.
 
-1. *Privacy.* Ratings arrive as one file for everybody. Reviews must be asked for one
-   app at a time, so each request tells the service which app this device is looking
-   at, and its privacy policy says addresses are logged and kept for five years
-   ([policy](https://github.com/GNOME/odrs-web/blob/master/odrs/templates/privacy.html)).
-   That is a different thing from what Bilby promises on its first screen.
-2. *Writing them needs an identity.* Posting or voting requires a stable id derived
-   from the user name and the machine id
-   ([GNOME Software's code](https://github.com/GNOME/gnome-software/blob/main/lib/gs-utils.c)).
-   A store with no accounts would be quietly creating one.
-3. *No permission.* ODRS has no terms for third-party clients; its front page says only
-   that it "will go away if it starts being misused". Reading a public file once a day
-   is plainly light use. Sending per-app requests from a new store should be asked
-   about first.
-4. *Coverage.* Reviews exist only for apps with an AppStream id, which is Flathub and
-   distribution packages. Most GitHub projects would show an empty reviews section.
+What this costs in privacy, plainly: unlike the ratings file, a request for reviews
+names the app, so the service learns which app's page was opened from which address,
+and its [privacy policy](https://github.com/GNOME/odrs-web/blob/master/odrs/templates/privacy.html)
+says addresses are logged for five years. Bilby sends nothing else that identifies the
+device: no user id (GNOME Software and Discover send a hash of the user name and
+machine id), a system name of "unknown", and no app version. The Settings toggle
+covers ratings and reviews together and says this in its description; turning it off
+stops both.
 
-If reviews are wanted later, the smallest honest version is read-only, off by default,
-with the setting saying exactly what is sent, and after asking the ODRS maintainers.
+Reviews are read-only. Writing or voting on one needs the persistent id above, which a
+store with no accounts would have to invent for the user; that is left for a decision
+of its own. [Whether the live service answers a request without a user id was read
+from its source code, where it is allowed, and not tried. If it refuses, the app
+simply shows no reviews.]
+
+The number of ratings is shown beside the score and counts towards search order, as
+stars do for GitHub projects: it is the nearest thing these apps have to a measure of
+how widely they are used.
 
 ### TV
 

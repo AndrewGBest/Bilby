@@ -324,6 +324,12 @@ impl Catalog {
     /// a rated id: directly for Flathub, through the system's catalog for packages and
     /// GitHub projects.
     pub fn rating_for(&self, id: &AppId) -> Option<crate::model::Rating> {
+        self.rated_as(id).map(|(_, rating)| rating)
+    }
+
+    /// The id the ratings service knows the app by, and its rating. `None` when
+    /// ratings are off, or the service does not know the app.
+    fn rated_as(&self, id: &AppId) -> Option<(String, crate::model::Rating)> {
         let guard = self.ratings.read().unwrap();
         let rated = guard.as_ref()?;
         let appstream_id = match id.source {
@@ -332,7 +338,18 @@ impl Catalog {
             SourceKind::GitHub => rated.components.id_of_repo(&id.key)?,
             SourceKind::Codeberg | SourceKind::Aur | SourceKind::Web => return None,
         };
-        rated.ratings.get(appstream_id)
+        Some((appstream_id.to_string(), rated.ratings.get(appstream_id)?))
+    }
+
+    /// What people wrote about the app. Asked for only when the ratings service is
+    /// known to have the app; anything else returns nothing without a request.
+    pub fn reviews(&self, id: &AppId) -> Vec<crate::ratings::Review> {
+        match self.rated_as(id) {
+            Some((appstream_id, _)) => {
+                crate::ratings::fetch_reviews(self.http.as_ref(), &appstream_id).unwrap_or_default()
+            }
+            None => Vec::new(),
+        }
     }
 
     /// Screenshots the source publishes for the app (Flathub does; release pages do not).

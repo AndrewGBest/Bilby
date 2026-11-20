@@ -77,7 +77,7 @@ Status: **Yes** = in Bilby; **New** = added in the change that added this docume
 | Files listed with platform and size | Komi | Yes, plus the reason for each hidden one |
 | Screenshots | GNOME Software, Discover | Yes: Flathub's for Flathub apps, and up to four found in a GitHub project's README |
 | Ratings | GNOME Software, Discover | Yes, from the same service they use (ODRS), for Flathub apps and distribution packages. One file a day; the service never learns which apps are viewed |
-| Written reviews | GNOME Software, Discover | **By design**: each request would name the app being viewed, and writing one needs a persistent identity. See DESIGN.md |
+| Written reviews | GNOME Software, Discover | Yes, read-only, for the apps that have them. Opening such an app's page tells the ratings service which app it was; no user id is sent. Writing reviews is not there |
 | Developer profile, issues and pull requests, security advisories | Komi | **By design**: the project page is one click away and does it better |
 | Translating READMEs and notes | Komi | Not yet |
 

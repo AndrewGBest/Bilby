@@ -182,6 +182,15 @@ fn tint_for(id: &str) -> slint::Color {
 /// `install-index` values from here up mean "the hidden file numbered index - this".
 const HIDDEN_BASE: i32 = 1000;
 
+/// "821 ratings", "12k ratings": how many people rated an app.
+fn ratings_text(count: u32) -> String {
+    if count == 1 {
+        "1 rating".to_string()
+    } else {
+        format!("{} ratings", human_count(count as u64))
+    }
+}
+
 /// The opening of a README as plain text: what the project says it is, without the
 /// title (the page already shows it), badges, pictures, tables or code samples.
 fn plain_about(markdown: &str) -> String {
@@ -669,7 +678,7 @@ impl App {
             initials: initials(&app.name).into(),
             installed,
             rating: rating.map(bilby_core::ratings::stars_text).unwrap_or_default().into(),
-            rating_count: rating.map(|r| plural(r.count as usize, "rating")).unwrap_or_default().into(),
+            rating_count: rating.map(|r| ratings_text(r.count)).unwrap_or_default().into(),
             has_update: installed && has_update,
         }
     }
@@ -873,8 +882,7 @@ impl App {
                         let rating = app.catalog().rating_for(&id);
                         let mut card = store.get_app();
                         card.rating = rating.map(bilby_core::ratings::stars_text).unwrap_or_default().into();
-                        card.rating_count =
-                            rating.map(|r| plural(r.count as usize, "rating")).unwrap_or_default().into();
+                        card.rating_count = rating.map(|r| ratings_text(r.count)).unwrap_or_default().into();
                         store.set_app(card);
                     }
                 }
@@ -985,6 +993,7 @@ impl App {
         store.set_notes(SharedString::new());
         store.set_about(SharedString::new());
         store.set_screenshots(ModelRc::default());
+        store.set_reviews(ModelRc::default());
         store.set_release_date(SharedString::new());
         store.set_release_age(SharedString::new());
         store.set_license(SharedString::new());
@@ -1102,14 +1111,17 @@ impl App {
                         }
                     }
                 }
-                (plain_about(&readme), pictures, logo)
+                // What people wrote, for apps the ratings service knows; none otherwise.
+                let reviews = catalog.reviews(&id);
+                (plain_about(&readme), pictures, logo, reviews)
             },
             move |app,
                   ui,
-                  (about, pictures, logo): (
+                  (about, pictures, logo, reviews): (
                 String,
                 Vec<slint::SharedPixelBuffer<slint::Rgba8Pixel>>,
                 Option<PathBuf>,
+                Vec<bilby_core::ratings::Review>,
             )| {
                 if let Some(image) = logo.as_deref().and_then(decode_picture) {
                     PICTURES.with(|p| p.borrow_mut().insert(key.clone(), image));
@@ -1120,6 +1132,29 @@ impl App {
                     store.set_about(about.into());
                     let images: Vec<slint::Image> = pictures.into_iter().map(slint::Image::from_rgba8).collect();
                     store.set_screenshots(ModelRc::new(VecModel::from(images)));
+                    let rows: Vec<ReviewRow> = reviews
+                        .iter()
+                        .map(|r| {
+                            let mut meta: Vec<String> = Vec::new();
+                            if !r.author.is_empty() {
+                                meta.push(r.author.clone());
+                            }
+                            if !r.date.is_empty() {
+                                meta.push(r.date.clone());
+                            }
+                            if !r.version.is_empty() {
+                                meta.push(format!("version {}", r.version));
+                            }
+                            ReviewRow {
+                                stars: format!("{}{}", "★".repeat(r.stars as usize), "☆".repeat(5 - r.stars as usize))
+                                    .into(),
+                                title: r.title.as_str().into(),
+                                text: r.text.as_str().into(),
+                                meta: meta.join("  ·  ").into(),
+                            }
+                        })
+                        .collect();
+                    store.set_reviews(ModelRc::new(VecModel::from(rows)));
                     let mut card = store.get_app();
                     card.icon = picture_for(&card.id);
                     store.set_app(card);

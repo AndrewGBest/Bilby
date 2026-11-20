@@ -49,6 +49,16 @@ export struct HiddenRow {
     reason: string,
 }
 
+// What one person wrote about an app.
+export struct ReviewRow {
+    // "★★★★☆"
+    stars: string,
+    title: string,
+    text: string,
+    // "Ana  ·  2026-10-02  ·  version 4.1"
+    meta: string,
+}
+
 export struct Fact {
     name: string,
     value: string,
@@ -110,6 +120,8 @@ export global Store {
     in property <string> about;
     // Pictures of the app found in its README.
     in property <[image]> screenshots;
+    // Written reviews, for apps a ratings service knows. Empty for every other app.
+    in property <[ReviewRow]> reviews;
     in property <string> warning;
     in property <string> homepage;
     // Set when nothing in the app's releases fits this machine.

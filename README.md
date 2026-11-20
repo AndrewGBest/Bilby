@@ -40,9 +40,9 @@ A source only appears on devices it applies to. A Windows user never sees the AU
 - Search puts the best match first: the app with the name you typed, then the apps most
   people use. You can also paste a project link.
 - Each app's page shows its logo, pictures and a description taken from the project.
-- Star ratings where they exist, from the service the GNOME and KDE stores use. One
-  file with every rating is fetched once a day, so nobody learns which apps you look
-  at. No written reviews, on purpose; [here is why](docs/DESIGN.md#flathub-logos-and-ratings).
+- Star ratings and written reviews where they exist, from the service the GNOME and
+  KDE stores use. The number of ratings doubles as a sign of how widely an app is used.
+  [What this sends, and what it does not](docs/DESIGN.md#flathub-logos-and-ratings).
 - Lists have an Install button on every app.
 
 **Installing**
@@ -83,7 +83,7 @@ ever been run on Linux.
 
 | | State |
 |---|---|
-| Linux | Builds, runs, all 210 automated tests pass |
+| Linux | Builds, runs, all 212 automated tests pass |
 | Windows, macOS | Builds and passes the tests on GitHub's machines. Nobody has seen the window on either yet |
 | Android (phone, tablet, TV) | The engine compiles. There is no installable package and APKs cannot be installed yet |
 | iOS | Can only ever browse, not install: see [the design notes](docs/DESIGN.md#ios) |

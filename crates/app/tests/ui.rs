@@ -1428,3 +1428,29 @@ fn with_ratings_turned_off_nothing_is_fetched() {
     s.app.search(&s.ui, "notes");
     assert!(s.store().get_results().iter().all(|c| c.rating.is_empty()));
 }
+
+#[test]
+fn written_reviews_appear_only_for_apps_that_have_them() {
+    let s = start("linux-x64-debian", Shell::Desktop);
+    s.app.load_ratings(&s.ui);
+
+    // An app the ratings service knows: its reviews are on its page.
+    s.app.open(&s.ui, "flathub:io.quillpad.Quillpad");
+    let reviews = s.store().get_reviews();
+    assert_eq!(reviews.row_count(), 3);
+    let first = reviews.row_data(0).unwrap();
+    assert_eq!((first.stars.as_str(), first.title.as_str()), ("★★★★★", "Exactly what I wanted"));
+    assert_eq!(first.meta, "Marta  ·  2026-11-01  ·  version 4.2.0");
+    assert_eq!(reviews.row_data(2).unwrap().stars, "★★☆☆☆");
+    assert!(s.has("Reviews"));
+
+    // An app it does not know: no section, and the last app's reviews do not linger.
+    s.app.open(&s.ui, "github:lumen-labs/lumen");
+    assert_eq!(s.store().get_reviews().row_count(), 0);
+    assert!(!s.has("Reviews"));
+
+    // With ratings and reviews turned off, nothing is asked for and nothing is shown.
+    s.store().invoke_set_ratings(false);
+    s.app.open(&s.ui, "flathub:io.quillpad.Quillpad");
+    assert_eq!(s.store().get_reviews().row_count(), 0);
+}

@@ -829,6 +829,26 @@ impl Http for DemoHttp {
                 .collect();
             return Ok(json!({ "hits": hits, "query": query, "totalHits": hits.len() }).to_string());
         }
+        if url == crate::ratings::ODRS_FETCH {
+            let asked = serde_json::from_str::<Value>(body)
+                .ok()
+                .and_then(|v| v["app_id"].as_str().map(str::to_string))
+                .unwrap_or_default();
+            let Some(app) = FLATPAKS.iter().find(|a| a.id == asked) else { return Ok("[]".to_string()) };
+            let review = |rating: u32, who: &str, days_before: u64, title: &str, text: String| {
+                json!({
+                    "app_id": app.id, "rating": rating, "summary": title, "description": text, "user_display": who,
+                    "date_created": app.date_unix - days_before * 86_400, "version": app.version, "distro": "Demo Linux",
+                    "karma_up": 4, "karma_down": 0, "score": rating, "locale": "en",
+                })
+            };
+            return Ok(json!([
+                review(100, "Marta", 3, "Exactly what I wanted", format!("{} opens fast and stays out of the way. I moved everything over in an evening.", app.name)),
+                review(80, "J. Okafor", 21, "Good, with one wish", "Does what it says. I would like bigger text in the lists, but it has been reliable for months.".to_string()),
+                review(40, "sam", 60, "Lost my window layout", "After the last update it forgot how I had things arranged. Everything else still works. (Fictional review: this is demo data.)".to_string()),
+            ])
+            .to_string());
+        }
         Err(Error::NotFound(url.to_string()))
     }
 

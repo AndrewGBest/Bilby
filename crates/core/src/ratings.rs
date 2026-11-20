@@ -9,7 +9,10 @@
 //! (<https://github.com/GNOME/odrs-web>, `odrs/views_api.py`); the live service could
 //! not be reached from where this was written.
 //!
-//! Written reviews are deliberately not fetched. See `docs/DESIGN.md`.
+//! Written reviews come from the same service, but one app at a time: opening the page
+//! of an app the service knows asks it for that app's reviews. Nothing identifying is
+//! sent beyond what any web request carries: no user id, a generic system name, and no
+//! version. Reviews are only read; writing one needs an identity the store does not have.
 
 use crate::error::Result;
 use crate::http::Http;
@@ -20,6 +23,97 @@ use std::path::Path;
 use std::time::{Duration, SystemTime};
 
 pub const ODRS_RATINGS: &str = "https://odrs.gnome.org/1.0/reviews/api/ratings";
+pub const ODRS_FETCH: &str = "https://odrs.gnome.org/1.0/reviews/api/fetch";
+
+/// How many reviews an app's page asks for.
+pub const REVIEWS_SHOWN: usize = 8;
+
+/// What one person wrote about an app.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Review {
+    /// 1 to 5.
+    pub stars: u8,
+    pub title: String,
+    pub text: String,
+    pub author: String,
+    /// `YYYY-MM-DD`, or empty when the service gave no date.
+    pub date: String,
+    /// The app's version the review is about, or empty.
+    pub version: String,
+}
+
+#[derive(Deserialize)]
+struct RawReview {
+    /// 0 to 100.
+    rating: Option<serde_json::Value>,
+    summary: Option<String>,
+    description: Option<String>,
+    user_display: Option<String>,
+    date_created: Option<serde_json::Value>,
+    version: Option<String>,
+}
+
+fn as_number(value: &Option<serde_json::Value>) -> Option<f64> {
+    match value.as_ref()? {
+        serde_json::Value::Number(n) => n.as_f64(),
+        serde_json::Value::String(s) => s.trim().parse().ok(),
+        _ => None,
+    }
+}
+
+/// One line of text from whatever a stranger typed: no control characters, bounded.
+fn tidy(text: Option<String>, limit: usize) -> String {
+    let text = text.unwrap_or_default();
+    let clean: String = text.chars().map(|c| if c == '\n' || !c.is_control() { c } else { ' ' }).collect();
+    let clean = clean.trim();
+    match clean.char_indices().nth(limit) {
+        Some((at, _)) => format!("{}…", clean[..at].trim_end()),
+        None => clean.to_string(),
+    }
+}
+
+/// Parse the service's answer: an array of reviews, best first.
+pub fn parse_reviews(json: &str) -> Result<Vec<Review>> {
+    let raw: Vec<RawReview> = serde_json::from_str(json)?;
+    Ok(raw
+        .into_iter()
+        .filter_map(|r| {
+            let rating = as_number(&r.rating)?;
+            let (title, text) = (tidy(r.summary, 120), tidy(r.description, 1200));
+            // A row with nothing written is a placeholder, not a review.
+            if rating <= 0.0 || (title.is_empty() && text.is_empty()) {
+                return None;
+            }
+            Some(Review {
+                stars: ((rating / 20.0).round() as u8).clamp(1, 5),
+                title,
+                text,
+                author: tidy(r.user_display, 40),
+                date: as_number(&r.date_created)
+                    .filter(|secs| *secs > 0.0)
+                    .map(|secs| crate::source::aur::date_from_unix(secs as i64))
+                    .unwrap_or_default(),
+                version: tidy(r.version, 30).trim_start_matches("unknown").to_string(),
+            })
+        })
+        .take(REVIEWS_SHOWN)
+        .collect())
+}
+
+/// Ask the service for an app's reviews. One request, naming the app and nothing else.
+pub fn fetch_reviews(http: &dyn Http, appstream_id: &str) -> Result<Vec<Review>> {
+    let id = appstream_id.trim();
+    let body = serde_json::json!({
+        "app_id": id,
+        // Some apps are filed under the older spelling of their id.
+        "compat_ids": [format!("{}.desktop", id.trim_end_matches(".desktop"))],
+        "locale": "en",
+        "distro": "unknown",
+        "version": "unknown",
+        "limit": REVIEWS_SHOWN,
+    });
+    parse_reviews(&http.post_json(ODRS_FETCH, &body.to_string())?)
+}
 
 /// How long a downloaded ratings file is used before asking again.
 pub const MAX_AGE: Duration = Duration::from_secs(24 * 60 * 60);
@@ -146,5 +240,35 @@ mod tests {
         assert_eq!(ratings.len(), 2);
         assert!(Ratings::parse("[]").is_err());
         assert!(Ratings::parse("not json").is_err());
+    }
+
+    #[test]
+    fn reviews_are_read_cleaned_and_placeholders_dropped() {
+        let json = r#"[
+          {"app_id":"org.example.Good","rating":100,"summary":"Does the job","description":"Simple and quick.\nNo account needed.",
+           "user_display":"Ana","date_created":1793750400,"version":"4.2.0","karma_up":3,"score":90,"user_hash":"abc"},
+          {"rating":"40","summary":"  Crashed\u0007 once  ","description":"","user_display":null,"date_created":"0","version":"unknown"},
+          {"rating":0,"summary":"","description":"","user_skey":"x"},
+          {"summary":"no rating at all","description":"x"}
+        ]"#;
+        let reviews = parse_reviews(json).unwrap();
+        assert_eq!(reviews.len(), 2, "the placeholder and the unrated row are not reviews");
+        assert_eq!(
+            reviews[0],
+            Review {
+                stars: 5,
+                title: "Does the job".into(),
+                text: "Simple and quick.\nNo account needed.".into(),
+                author: "Ana".into(),
+                date: "2026-11-04".into(),
+                version: "4.2.0".into(),
+            }
+        );
+        assert_eq!((reviews[1].stars, reviews[1].title.as_str(), reviews[1].author.as_str()), (2, "Crashed  once", ""));
+        assert_eq!((reviews[1].date.as_str(), reviews[1].version.as_str()), ("", ""));
+        let long = format!(r#"[{{"rating":80,"summary":"s","description":"{}"}}]"#, "word ".repeat(600));
+        assert!(parse_reviews(&long).unwrap()[0].text.chars().count() <= 1201, "an essay is cut");
+        assert!(parse_reviews("{}").is_err());
+        assert_eq!(parse_reviews("[]").unwrap(), []);
     }
 }
