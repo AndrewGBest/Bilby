@@ -130,7 +130,7 @@ component TvButton inherits Rectangle {
     in property <length> u;
     callback clicked;
     height: 34 * u;
-    width: label.preferred-width + 30 * u;
+    width: label.preferred-width + 28 * u;
     Rectangle {
         x: focused ? -3 * u : 0;
         y: focused ? -2 * u : 0;
@@ -816,8 +816,8 @@ export component TvShell inherits Rectangle {
                     if Store.release-age != "" : TvStat { u: root.u; value: Store.release-age; caption: "last updated"; }
                 }
                 Text {
-                    text: Store.details-loading ? "Checking what works on this TV…" : Store.details-error != "" ? Store.details-error + "  Press OK to try again." : Store.unavailable != "" ? Store.unavailable : Store.install-state == 1 ? "Downloading…  " + round(Store.install-progress * 100) + "%" : Store.install-state >= 2 ? Store.install-message : root.is-update ? "Update available: you have " + Store.installed-version : Store.installed-version == "installed" ? "Installed" : Store.installed-version != "" ? "Installed  ·  " + Store.installed-version : Store.is-website ? "Opens in Longboard, driven with your remote" : Store.options.length > 0 ? (Store.options[0].native ? "Made for this TV" : "Works on this TV") + (Store.options[0].verified ? "  ·  the download is checked" : "") : "";
-                    color: Store.details-error != "" || Store.install-state == 3 ? Theme.bad : Store.unavailable != "" ? Theme.warn : Store.install-state == 1 ? Theme.accent : Theme.ok;
+                    text: root.remove-armed ? "Press OK again to remove " + Store.app.name + " from this TV" : Store.details-loading ? "Checking what works on this TV…" : Store.details-error != "" ? Store.details-error + "  Press OK to try again." : Store.unavailable != "" ? Store.unavailable : Store.install-state == 1 ? "Downloading…  " + round(Store.install-progress * 100) + "%" : Store.install-state >= 2 ? Store.install-message : root.is-update ? "Update available: you have " + Store.installed-version : Store.installed-version == "installed" ? "Installed" : Store.installed-version != "" ? "Installed  ·  " + Store.installed-version : Store.is-website ? "Opens in Longboard, driven with your remote" : Store.options.length > 0 ? (Store.options[0].native ? "Made for this TV" : "Works on this TV") + (Store.options[0].verified ? "  ·  the download is checked" : "") : "";
+                    color: Store.details-error != "" || Store.install-state == 3 ? Theme.bad : Store.unavailable != "" || root.remove-armed ? Theme.warn : Store.install-state == 1 ? Theme.accent : Theme.ok;
                     font-size: 12 * u;
                     font-weight: 700;
                     wrap: word-wrap;
@@ -907,13 +907,13 @@ export component TvShell inherits Rectangle {
 
             // Right: pictures and the description, or every file when asked for.
             if root.reading && root.rev < Store.reviews.length : VerticalLayout {
-                x: 480 * u;
+                x: 496 * u;
                 y: 70 * u;
                 width: parent.width - self.x - margin;
                 spacing: 8 * u;
                 alignment: start;
                 Text {
-                    text: "What people say  ·  " + (root.rev + 1) + " of " + Store.reviews.length + (Store.app.rating != "" ? "  ·  ★ " + Store.app.rating + " from " + Store.app.rating-count : "");
+                    text: (root.rev > 0 ? "‹   " : "") + "Review " + (root.rev + 1) + " of " + Store.reviews.length + (root.rev < Store.reviews.length - 1 ? "   ›" : "") + (Store.app.rating != "" ? "      ★ " + Store.app.rating + " from " + Store.app.rating-count : "");
                     color: Theme.text;
                     font-size: 13 * u;
                     font-weight: 700;
@@ -958,7 +958,7 @@ export component TvShell inherits Rectangle {
                 }
             }
             if !root.files && !root.reading : VerticalLayout {
-                x: 480 * u;
+                x: 496 * u;
                 y: 70 * u;
                 width: parent.width - self.x - margin;
                 spacing: 12 * u;
@@ -992,13 +992,13 @@ export component TvShell inherits Rectangle {
                 }
             }
             if root.files : VerticalLayout {
-                x: 480 * u;
+                x: 496 * u;
                 y: 70 * u;
                 width: parent.width - self.x - margin;
                 spacing: 8 * u;
                 alignment: start;
                 Text {
-                    text: Store.versions.length > 1 ? "Version " + Store.versions[Store.selected-version] + (Store.selected-version == 0 ? "  ·  newest" : "") + "  ·  " + (Store.selected-version + 1) + " of " + Store.versions.length : "Every file that works on this TV";
+                    text: Store.versions.length > 1 ? (Store.selected-version > 0 ? "‹   " : "") + "Version " + Store.versions[Store.selected-version] + (Store.selected-version == 0 ? "  ·  newest" : "") + (Store.selected-version < Store.versions.length - 1 ? "   ›  older" : "") : "Every file that works on this TV";
                     color: Theme.text;
                     font-size: 13 * u;
                     font-weight: 700;
@@ -1052,16 +1052,6 @@ export component TvShell inherits Rectangle {
             }
         }
     }
-    // What the remote does here, in the corner where TV interfaces put it.
-    Text {
-        x: root.margin;
-        y: root.height - 27 * u - 12 * u;
-        text: search.has-focus ? "Type, then OK to search  ·  Down or Back to leave" : Store.details-open ? (root.files ? (Store.versions.length > 1 ? "Left and Right change version  ·  " : "") + "OK installs the chosen file  ·  Back closes this list" : root.reading ? "Up and Down for more reviews  ·  Back closes them" : root.act == 1 ? (Store.is-favourite ? "OK takes it out of your favourites" : "OK keeps it in your favourites, in the Library") + "  ·  Back returns" : root.remove-armed ? "OK again removes " + Store.app.name + " from this TV  ·  any other button cancels" : "Left and Right choose  ·  OK selects  ·  Back returns") : root.zone == 1 ? "Left and Right choose  ·  OK opens  ·  Back goes Home" : root.on-system ? "Up and Down move  ·  OK selects or switches  ·  Back goes Home" : "Arrows move  ·  OK opens  ·  Up or Back for the menu";
-        color: Theme.text-dim;
-        font-size: 11 * u;
-        opacity: 0.8;
-    }
-
     if Store.toast != "" : Rectangle {
         x: (parent.width - self.width) / 2;
         // Clear of the bottom safe margin.

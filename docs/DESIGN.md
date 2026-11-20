@@ -750,8 +750,10 @@ Versions, Reviews (where there are any) and, for an app in the library, Remove, 
 asks for a second OK. An installed app
 that cannot be opened from here says "Install again", not "Install". The This TV page
 carries the settings that matter on a TV (ratings and reviews, checking for updates at
-start, test versions) as rows the remote switches with OK. Every screen says in its
-bottom corner what the remote does there. Reviews open one at a time, large, with
+start, test versions) as rows the remote switches with OK. There is no legend of
+remote buttons: arrows, OK and Back do what they do on every TV, things that move
+sideways show an arrow on the side that has more, and a confirmation is spelled out
+in the line above the buttons. Reviews open one at a time, large, with
 Up and Down to move between them. Versions lists the files of one release; Left and
 Right move to older and newer releases. Still missing on TV: entering a GitHub
 token, which needs signing in with a code rather than typing one.
