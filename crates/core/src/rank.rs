@@ -126,7 +126,11 @@ fn popularity(app: &AppSummary) -> f32 {
 }
 
 fn has_usage(app: &AppSummary) -> bool {
-    app.popularity.is_some() && !matches!(app.id.source, SourceKind::Pacman | SourceKind::Apt | SourceKind::Web)
+    app.popularity.is_some()
+        && !matches!(
+            app.id.source,
+            SourceKind::Pacman | SourceKind::Apt | SourceKind::Dnf | SourceKind::Zypper | SourceKind::Web
+        )
 }
 
 /// How many people use it, on the source's own scale.
@@ -156,6 +160,8 @@ fn liked(app: &AppSummary) -> f32 {
         // Distribution repositories publish no such number.
         SourceKind::Pacman
         | SourceKind::Apt
+        | SourceKind::Dnf
+        | SourceKind::Zypper
         | SourceKind::Web
         | SourceKind::Winget
         | SourceKind::Snap
@@ -178,7 +184,7 @@ fn nudges(app: &AppSummary, featured: bool) -> f32 {
         value += 0.2;
     }
     // A distribution's own repository: maintained, signed and already trusted here.
-    if matches!(app.id.source, SourceKind::Pacman | SourceKind::Apt) {
+    if matches!(app.id.source, SourceKind::Pacman | SourceKind::Apt | SourceKind::Dnf | SourceKind::Zypper) {
         value += 0.2;
     }
     // The source itself flags a problem (an AUR package marked out of date).

@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata xmlns="http://linux.duke.edu/metadata/common" xmlns:rpm="http://linux.duke.edu/metadata/rpm" packages="53164">
+<package type="rpm">
+  <name>0ad</name>
+  <arch>x86_64</arch>
+  <version epoch="0" ver="0.28.0" rel="1.5"/>
+  <checksum type="sha512" pkgid="YES">df97ba73e221d4407c1c01fc20f93822d4504e4a85cb6bc64dedbd106f5994dd38823f04f538dab06025629b15305d48151ff29110df37f96ae3494cbd0fd5be</checksum>
+  <summary>A real-time strategy game of ancient warfare</summary>
+  <description>0 A.D. (pronounced "zero ey-dee") is a real-time strategy (RTS) game
+of ancient warfare. It is a historically-based war/economy game that
+allows players to relive or rewrite the history of Western
+civilizations, focusing on the years between 500 B.C. and 500 A.D.
+The project contains 3D graphics, detailed artwork, sound, and a
+flexible game engine.</description>
+  <packager>https://bugs.opensuse.org</packager>
+  <url>https://play0ad.com/</url>
+  <time file="1785149162" build="1772143717"/>
+  <size package="3629659" installed="10732455" archive="10734996"/>
+  <location href="x86_64/0ad-0.28.0-1.5.x86_64.rpm"/>
+  <format>
+    <rpm:license>BSD-3-Clause AND CC-BY-SA-3.0 AND GPL-2.0-or-later AND LGPL-3.0-or-later AND MIT AND ISC AND MPL-2.0</rpm:license>
+    <rpm:vendor>openSUSE</rpm:vendor>
+    <rpm:group>Amusements/Games/Strategy/Real Time</rpm:group>
+    <rpm:buildhost>reproducible</rpm:buildhost>
+    <rpm:sourcerpm>0ad-0.28.0-1.5.src.rpm</rpm:sourcerpm>
+    <rpm:header-range start="4504" end="18169"/>
+  </format>
+</package>
+<package type="rpm">
+  <name>ripgrep</name>
+  <arch>x86_64</arch>
+  <version epoch="0" ver="15.2.0" rel="1.3"/>
+  <checksum type="sha512" pkgid="YES">3097ef660b2364786b97266368926a83970508ec0c258746c7ade6668bdb18adba5dc6ce249816075d57fb0f499af711b3a59d0ef81d922f0ef02e66d6aa34fd</checksum>
+  <summary>A search tool that combines ag with grep</summary>
+  <description>ripgrep is a line oriented search tool that combines the usability of
+The Silver Searcher (similar to ack) with the raw speed of GNU grep.
+ripgrep works by recursively searching your current directory
+for a regex pattern.</description>
+  <packager>https://bugs.opensuse.org</packager>
+  <url>https://github.com/BurntSushi/ripgrep</url>
+  <time file="1788367911" build="1784184072"/>
+  <size package="1559848" installed="5520260" archive="5521556"/>
+  <location href="x86_64/ripgrep-15.2.0-1.3.x86_64.rpm"/>
+  <format>
+    <rpm:license>MIT AND Unlicense</rpm:license>
+    <rpm:vendor>openSUSE</rpm:vendor>
+    <rpm:group>Productivity/Text/Utilities</rpm:group>
+    <rpm:buildhost>reproducible</rpm:buildhost>
+    <rpm:sourcerpm>ripgrep-15.2.0-1.3.src.rpm</rpm:sourcerpm>
+    <rpm:header-range start="4504" end="14817"/>
+  </format>
+</package>
+<package type="rpm">
+  <name>vlc</name>
+  <arch>x86_64</arch>
+  <version epoch="0" ver="3.0.24" rel="6.2"/>
+  <checksum type="sha512" pkgid="YES">8e330b79f75923bad07b7e9dbbae62e42e1b1baa592cde64e1a507afbffac39f5c39e126c81214971b4664ebec88383e389d89ac1a52e577a2e340d7c73748df</checksum>
+  <summary>Graphical media player</summary>
+  <description>VLC media player is a multimedia player for many
+audio and video files and formats (such as MPEG, DivX, mp3, ogg, ...)
+as well as DVDs, VCDs, and various streaming protocols.
+It can also be used as a server to stream in unicast or multicast
+in IPv4 or IPv6 on a high-bandwidth network.</description>
+  <packager>https://bugs.opensuse.org</packager>
+  <url>http://www.videolan.org</url>
+  <time file="1792876732" build="1792689576"/>
+  <size package="157109" installed="148760" archive="153852"/>
+  <location href="x86_64/vlc-3.0.24-6.2.x86_64.rpm"/>
+  <format>
+    <rpm:license>GPL-2.0-or-later AND LGPL-2.1-or-later</rpm:license>
+    <rpm:vendor>openSUSE</rpm:vendor>
+    <rpm:group>Productivity/Multimedia/Video/Players</rpm:group>
+    <rpm:buildhost>reproducible</rpm:buildhost>
+    <rpm:sourcerpm>vlc-3.0.24-6.2.src.rpm</rpm:sourcerpm>
+    <rpm:header-range start="4504" end="34001"/>
+    </format>
+</package>
+<package type="rpm">
+  <name>yast2-trans-af</name>
+  <arch>noarch</arch>
+  <version epoch="0" ver="84.87.20261114.c49da5721f" rel="1.1"/>
+  <checksum type="sha512" pkgid="YES">930c5bf4b89ae2d53951e0a908d0a8ecc5cfb22880417cab19e5010b3f281cd3428cfeaed07655432d7fa91701a0de73c685d833bf98b2d7453ac8cc3a019c1f</checksum>
+  <summary>YaST2 - Afrikaans Translations</summary>
+  <description>YaST2 - Translations for Afrikaans.</description>
+  <packager>https://bugs.opensuse.org</packager>
+  <url>http://l10n.opensuse.org/</url>
+  <time file="1794933893" build="1794805961"/>
+  <size package="320057" installed="548888" archive="564888"/>
+  <location href="noarch/yast2-trans-af-84.87.20261114.c49da5721f-1.1.noarch.rpm"/>
+  <format>
+    <rpm:license>GPL-2.0-or-later</rpm:license>
+    <rpm:vendor>openSUSE</rpm:vendor>
+    <rpm:group>System/YaST</rpm:group>
+    <rpm:buildhost>reproducible</rpm:buildhost>
+    <rpm:sourcerpm>yast2-trans-84.87.20261114.c49da5721f-1.1.src.rpm</rpm:sourcerpm>
+    <rpm:header-range start="4504" end="158533"/>
+    </format>
+</package>
+</metadata>

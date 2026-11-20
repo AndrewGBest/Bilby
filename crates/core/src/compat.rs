@@ -58,7 +58,9 @@ pub fn evaluate(info: &AssetInfo, p: &Platform) -> Verdict {
             Format::Rpm if !linux.rpm => Some("RPM packages need a Fedora/openSUSE based system"),
             Format::PacmanPkg if !linux.pacman => Some("Pacman packages need an Arch based system"),
             Format::AurBuild if linux.family != LinuxFamily::Arch => Some("The AUR is for Arch based systems"),
-            Format::RepoPackage if !(linux.pacman || linux.dpkg) => Some("No supported package manager on this system"),
+            Format::RepoPackage if !(linux.pacman || linux.dpkg || linux.rpm) => {
+                Some("No supported package manager on this system")
+            }
             Format::Flatpak | Format::FlathubApp if !linux.flatpak => Some("Flatpak is not installed"),
             Format::Snap | Format::SnapStore if !linux.snap => Some("snapd is not installed"),
             Format::AppImage if linux.libc == Libc::Musl => Some("AppImages need glibc; this system uses musl"),

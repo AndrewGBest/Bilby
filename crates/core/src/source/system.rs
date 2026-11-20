@@ -54,6 +54,13 @@ pub enum Backend {
     Pacman { sync_dir: PathBuf, conf: PathBuf, local_dir: PathBuf },
     /// `status` is dpkg's record of what is installed.
     Apt { lists_dir: PathBuf, status: PathBuf },
+    /// Fedora and its relatives. dnf keeps its lists in a format of its own, so it is
+    /// asked for them: `dnf` is the program, `rpm` the one that says what is installed,
+    /// and `cache_dirs` are watched to notice a refresh.
+    Dnf { dnf: PathBuf, rpm: PathBuf, cache_dirs: Vec<PathBuf> },
+    /// openSUSE. `raw_dir` holds one folder per repository, each with a
+    /// `repodata/*-primary.xml` list; `rpm` says what is installed.
+    Zypper { raw_dir: PathBuf, rpm: PathBuf },
     /// A fixed list, for the demo catalog and tests. `installed` is name -> version.
     Fixed { kind: SourceKind, packages: Vec<SystemPackage>, installed: Vec<(String, String)> },
 }
@@ -70,17 +77,47 @@ impl Backend {
         Backend::Apt { lists_dir: "/var/lib/apt/lists".into(), status: "/var/lib/dpkg/status".into() }
     }
 
+    pub fn system_dnf() -> Backend {
+        Backend::Dnf {
+            dnf: "dnf".into(),
+            rpm: "rpm".into(),
+            cache_dirs: vec!["/var/cache/libdnf5".into(), "/var/cache/dnf".into()],
+        }
+    }
+    pub fn system_zypper() -> Backend {
+        Backend::Zypper { raw_dir: "/var/cache/zypp/raw".into(), rpm: "rpm".into() }
+    }
+
     fn kind(&self) -> SourceKind {
         match self {
             Backend::Pacman { .. } => SourceKind::Pacman,
             Backend::Apt { .. } => SourceKind::Apt,
+            Backend::Dnf { .. } => SourceKind::Dnf,
+            Backend::Zypper { .. } => SourceKind::Zypper,
             Backend::Fixed { kind, .. } => *kind,
         }
     }
 
     /// The database files, with what is needed to notice that they changed.
     fn files(&self) -> Vec<(PathBuf, u64, Option<SystemTime>)> {
+        // The rpm families keep one folder per repository, with the lists inside.
+        let repodata = |roots: &[PathBuf]| -> Vec<(PathBuf, u64, Option<SystemTime>)> {
+            let mut files: Vec<_> = roots
+                .iter()
+                .flat_map(|root| std::fs::read_dir(root).into_iter().flatten().flatten())
+                .flat_map(|repo| std::fs::read_dir(repo.path().join("repodata")).into_iter().flatten().flatten())
+                .filter(|entry| entry.file_name().to_string_lossy().contains("primary.xml"))
+                .filter_map(|entry| {
+                    let meta = std::fs::metadata(entry.path()).ok()?;
+                    meta.is_file().then(|| (entry.path(), meta.len(), meta.modified().ok()))
+                })
+                .collect();
+            files.sort();
+            files
+        };
         let (dir, wanted): (&Path, fn(&str) -> bool) = match self {
+            Backend::Dnf { cache_dirs, .. } => return repodata(cache_dirs),
+            Backend::Zypper { raw_dir, .. } => return repodata(std::slice::from_ref(raw_dir)),
             Backend::Pacman { sync_dir, .. } => (sync_dir, |name| name.ends_with(".db")),
             Backend::Apt { lists_dir, .. } => (lists_dir, |name| {
                 let base = name.trim_end_matches(".lz4").trim_end_matches(".gz").trim_end_matches(".zst");
@@ -107,6 +144,7 @@ impl Backend {
     fn installed(&self) -> HashMap<String, String> {
         match self {
             Backend::Fixed { installed, .. } => installed.iter().cloned().collect(),
+            Backend::Dnf { rpm, .. } | Backend::Zypper { rpm, .. } => rpm_installed(rpm),
             // Directory names are `name-version-release`; the name itself may contain dashes.
             Backend::Pacman { local_dir, .. } => std::fs::read_dir(local_dir)
                 .into_iter()
@@ -142,6 +180,37 @@ impl Backend {
     fn load(&self, platform: &Platform) -> Vec<SystemPackage> {
         match self {
             Backend::Fixed { packages, .. } => packages.clone(),
+            Backend::Dnf { dnf, .. } => dnf_available(dnf, platform),
+            Backend::Zypper { .. } => {
+                let mut newest: HashMap<String, SystemPackage> = HashMap::new();
+                for (path, _, _) in self.files() {
+                    // The folder above "repodata" is the repository's name.
+                    let repo = path
+                        .parent()
+                        .and_then(Path::parent)
+                        .and_then(Path::file_name)
+                        .map(|n| n.to_string_lossy().into_owned())
+                        .unwrap_or_default();
+                    let Ok(packages) = read_rpm_primary(&path, &repo) else { continue };
+                    for package in packages {
+                        if !matches!(arch_of(&package.arch), TargetArch::Any)
+                            && arch_of(&package.arch) != TargetArch::One(platform.arch)
+                        {
+                            continue;
+                        }
+                        // The same package in "oss" and "update": zypper takes the newer.
+                        match newest.get(&package.name) {
+                            Some(have) if !crate::version::is_newer(&package.version, &have.version) => {}
+                            _ => {
+                                newest.insert(package.name.clone(), package);
+                            }
+                        }
+                    }
+                }
+                let mut out: Vec<_> = newest.into_values().collect();
+                out.sort_by(|a, b| a.name.cmp(&b.name));
+                out
+            }
             Backend::Pacman { conf, .. } => {
                 let order = pacman_repo_order(&std::fs::read_to_string(conf).unwrap_or_default());
                 let mut by_repo: Vec<(String, Vec<SystemPackage>)> = self
@@ -194,6 +263,150 @@ impl Backend {
             }
         }
     }
+}
+
+/// What rpm says is installed: name -> version-release.
+fn rpm_installed(rpm: &Path) -> HashMap<String, String> {
+    let output = std::process::Command::new(rpm)
+        .args(["-qa", "--qf", "%{NAME}\\t%{VERSION}-%{RELEASE}\\n"])
+        .stdin(std::process::Stdio::null())
+        .output();
+    let text = output.map(|o| String::from_utf8_lossy(&o.stdout).into_owned()).unwrap_or_default();
+    text.lines().filter_map(|line| line.split_once('\t')).map(|(n, v)| (n.to_string(), v.to_string())).collect()
+}
+
+/// Everything dnf could install, from its own cache (`-C`: no network, no root).
+/// dnf does not expand `\t` in its format, so the fields are separated by real tabs.
+fn dnf_available(dnf: &Path, platform: &Platform) -> Vec<SystemPackage> {
+    let arch = match platform.arch {
+        Arch::Aarch64 => "aarch64",
+        Arch::X86_64 => "x86_64",
+        _ => return Vec::new(),
+    };
+    let format = "%{name}\t%{evr}\t%{arch}\t%{repoid}\t%{downloadsize}\t%{license}\t%{url}\t%{summary}\n";
+    let output = std::process::Command::new(dnf)
+        .args([
+            "-q",
+            "-C",
+            "repoquery",
+            "--available",
+            "--latest-limit",
+            "1",
+            "--arch",
+            &format!("{arch},noarch"),
+            "--qf",
+            format,
+        ])
+        .stdin(std::process::Stdio::null())
+        .output();
+    let text = output.map(|o| String::from_utf8_lossy(&o.stdout).into_owned()).unwrap_or_default();
+    let mut packages = parse_dnf_list(&text);
+    packages.sort_by(|a, b| a.name.cmp(&b.name));
+    // The same name in "fedora" and "updates": keep the newer.
+    packages.dedup_by(|later, earlier| {
+        if later.name != earlier.name {
+            return false;
+        }
+        if crate::version::is_newer(&later.version, &earlier.version) {
+            std::mem::swap(later, earlier);
+        }
+        true
+    });
+    packages
+}
+
+/// One package per line: name, version, architecture, repository, size, licence,
+/// homepage, summary, separated by tabs.
+pub fn parse_dnf_list(text: &str) -> Vec<SystemPackage> {
+    text.lines()
+        .filter_map(|line| {
+            let fields: Vec<&str> = line.splitn(8, '\t').collect();
+            let [name, version, arch, repo, size, license, url, summary] = fields.as_slice() else { return None };
+            (!name.is_empty() && !version.is_empty()).then(|| SystemPackage {
+                name: name.to_string(),
+                version: version.to_string(),
+                summary: summary.to_string(),
+                repo: repo.to_string(),
+                arch: arch.to_string(),
+                homepage: url.to_string(),
+                license: license.to_string(),
+                size: size.parse().unwrap_or(0),
+                built: String::new(),
+            })
+        })
+        .collect()
+}
+
+/// Read an rpm repository's `primary.xml`, as createrepo writes it: one element per
+/// line apart from descriptions. Read as a stream; the whole list is far too big to
+/// hold in memory at once (openSUSE's is 170 MB).
+pub fn read_rpm_primary(path: &Path, repo: &str) -> Result<Vec<SystemPackage>> {
+    use std::io::BufRead;
+    let reader = std::io::BufReader::with_capacity(1 << 16, open_maybe_compressed(path)?);
+    let text_of = |line: &str, tag: &str| -> Option<String> {
+        let rest = line.strip_prefix('<')?.strip_prefix(tag)?.strip_prefix('>')?;
+        Some(unescape_xml(rest.split("</").next().unwrap_or(rest)))
+    };
+    let attr = |line: &str, name: &str| -> Option<String> {
+        let at = line.find(&format!(" {name}=\""))? + name.len() + 3;
+        Some(unescape_xml(&line[at..at + line[at..].find('"')?]))
+    };
+    let mut out = Vec::new();
+    let mut current: Option<SystemPackage> = None;
+    for line in reader.lines() {
+        // A line that is not text (it should not happen) ends the list rather than failing it.
+        let Ok(line) = line else { break };
+        let line = line.trim_start();
+        if line.starts_with("<package ") {
+            current = Some(SystemPackage {
+                name: String::new(),
+                version: String::new(),
+                summary: String::new(),
+                repo: repo.to_string(),
+                arch: String::new(),
+                homepage: String::new(),
+                license: String::new(),
+                size: 0,
+                built: String::new(),
+            });
+            continue;
+        }
+        let Some(package) = current.as_mut() else { continue };
+        if line.starts_with("</package>") {
+            if let Some(done) =
+                current.take().filter(|p| !p.name.is_empty() && !p.version.is_empty() && p.arch != "src")
+            {
+                out.push(done);
+            }
+        } else if let Some(name) = text_of(line, "name") {
+            package.name = name;
+        } else if let Some(arch) = text_of(line, "arch") {
+            package.arch = if arch == "noarch" { "any".to_string() } else { arch };
+        } else if line.starts_with("<version ") {
+            let (epoch, ver, rel) = (attr(line, "epoch"), attr(line, "ver"), attr(line, "rel"));
+            let ver = [ver.unwrap_or_default(), rel.unwrap_or_default()].join("-").trim_end_matches('-').to_string();
+            package.version = match epoch.as_deref() {
+                Some("0") | Some("") | None => ver,
+                Some(epoch) => format!("{epoch}:{ver}"),
+            };
+        } else if let Some(summary) = text_of(line, "summary") {
+            package.summary = summary;
+        } else if let Some(url) = text_of(line, "url") {
+            package.homepage = url;
+        } else if line.starts_with("<size ") {
+            package.size = attr(line, "package").and_then(|s| s.parse().ok()).unwrap_or(0);
+        } else if line.starts_with("<time ") {
+            let built = attr(line, "build").and_then(|s| s.parse::<i64>().ok()).unwrap_or(0);
+            package.built = date_from_unix(built);
+        } else if let Some(license) = text_of(line, "rpm:license") {
+            package.license = license;
+        }
+    }
+    Ok(out)
+}
+
+fn unescape_xml(text: &str) -> String {
+    text.replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"").replace("&apos;", "'").replace("&amp;", "&")
 }
 
 /// Repository names from `pacman.conf`, in the order pacman consults them.
@@ -466,6 +679,9 @@ impl Source for SystemRepos {
         let has_manager = match self.backend.kind() {
             SourceKind::Pacman => linux.pacman,
             SourceKind::Apt => linux.dpkg,
+            // Both use rpm; which one is this system's is a matter of family.
+            SourceKind::Zypper => linux.rpm && linux.family == crate::platform::LinuxFamily::Suse,
+            SourceKind::Dnf => linux.rpm && linux.family != crate::platform::LinuxFamily::Suse,
             _ => false,
         };
         has_manager && self.backend.exists()
@@ -526,7 +742,12 @@ impl Source for SystemRepos {
 
     fn releases(&self, key: &str) -> Result<Vec<Release>> {
         let package = self.find(key)?;
-        let manager = if self.backend.kind() == SourceKind::Pacman { "pacman" } else { "apt" };
+        let manager = match self.backend.kind() {
+            SourceKind::Pacman => "pacman",
+            SourceKind::Dnf => "dnf",
+            SourceKind::Zypper => "zypper",
+            _ => "apt",
+        };
         let mut notes = format!(
             "From the “{}” repository configured on this system. Installed and updated by {manager}.",
             package.repo
@@ -717,6 +938,35 @@ mod tests {
         assert!(release.notes.contains("“cachyos” repository"));
         assert!(matches!(repos.summary("nope"), Err(Error::NotFound(_))));
         assert!(repos.summary("../etc").is_err());
+    }
+
+    #[test]
+    fn rpm_package_lists_are_read_as_fedora_and_opensuse_write_them() {
+        // Both samples are cut from the real lists of Fedora 45 and openSUSE Tumbleweed.
+        let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests").join("fixtures");
+        let suse = read_rpm_primary(&fixtures.join("rpm_primary.xml"), "repo-oss").unwrap();
+        let names: Vec<&str> = suse.iter().map(|p| p.name.as_str()).collect();
+        assert_eq!(names, ["0ad", "ripgrep", "vlc", "yast2-trans-af"]);
+        let ripgrep = &suse[1];
+        assert_eq!((ripgrep.arch.as_str(), ripgrep.repo.as_str()), ("x86_64", "repo-oss"));
+        assert!(ripgrep.version.starts_with("15.") && ripgrep.size > 1_000_000 && ripgrep.built.len() == 10);
+        assert!(!ripgrep.summary.is_empty() && ripgrep.homepage.starts_with("https://"));
+        assert_eq!(suse[3].arch, "any", "noarch packages run everywhere");
+
+        let fedora = parse_dnf_list(&std::fs::read_to_string(fixtures.join("dnf_list.tsv")).unwrap());
+        let vlc = fedora.iter().find(|p| p.name == "vlc").unwrap();
+        assert_eq!(vlc.version, "1:3.0.24-3.fc45", "the epoch is kept: it decides which version is newer");
+        assert_eq!((vlc.repo.as_str(), vlc.homepage.as_str()), ("fedora", "https://www.videolan.org"));
+        assert!(parse_dnf_list("not a package line\n\n").is_empty());
+
+        // Each family's source appears only on its own systems.
+        let on = |backend: Backend, preset: &str| {
+            let platform = Platform::preset(preset).unwrap();
+            let fixed = Backend::Fixed { kind: backend.kind(), packages: vec![], installed: vec![] };
+            SystemRepos::new(fixed, platform.clone()).available_on(&platform)
+        };
+        assert!(on(Backend::system_dnf(), "linux-x64-fedora"));
+        assert!(!on(Backend::system_dnf(), "linux-x64-debian") && !on(Backend::system_zypper(), "linux-x64-fedora"));
     }
 
     #[test]

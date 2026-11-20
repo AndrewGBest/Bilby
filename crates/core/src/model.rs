@@ -16,6 +16,10 @@ pub enum SourceKind {
     Pacman,
     /// Repositories configured for apt on this machine (Debian, Ubuntu, PPAs, ...).
     Apt,
+    /// Repositories configured for dnf on this machine (Fedora and its relatives).
+    Dnf,
+    /// Repositories configured for zypper on this machine (openSUSE).
+    Zypper,
     /// Websites opened like apps on a Linux TV.
     Web,
     /// GitLab.com projects that publish files with their releases.
@@ -47,6 +51,8 @@ impl SourceKind {
             SourceKind::Aur => "AUR",
             SourceKind::Pacman => "pacman repositories",
             SourceKind::Apt => "apt repositories",
+            SourceKind::Dnf => "dnf repositories",
+            SourceKind::Zypper => "zypper repositories",
             SourceKind::Web => "Websites",
             SourceKind::GitLab => "GitLab",
             SourceKind::Homebrew => "Homebrew",
@@ -65,6 +71,8 @@ impl SourceKind {
             SourceKind::Aur => "aur",
             SourceKind::Pacman => "pacman",
             SourceKind::Apt => "apt",
+            SourceKind::Dnf => "dnf",
+            SourceKind::Zypper => "zypper",
             SourceKind::Web => "web",
             SourceKind::GitLab => "gitlab",
             SourceKind::Homebrew => "brew",
@@ -98,6 +106,8 @@ impl AppId {
             "aur" => SourceKind::Aur,
             "pacman" => SourceKind::Pacman,
             "apt" => SourceKind::Apt,
+            "dnf" => SourceKind::Dnf,
+            "zypper" => SourceKind::Zypper,
             "web" => SourceKind::Web,
             "gitlab" => SourceKind::GitLab,
             "brew" => SourceKind::Homebrew,
@@ -199,7 +209,12 @@ pub fn valid_key(source: SourceKind, key: &str) -> bool {
             (2..=6).contains(&parts.len()) && parts.iter().all(|part| ok(part, &[]))
         }
         // Arch and Debian package names may also contain `+` and `@`; so may cask names.
-        SourceKind::Aur | SourceKind::Pacman | SourceKind::Apt | SourceKind::Homebrew => ok(key, &['+', '@']),
+        SourceKind::Aur
+        | SourceKind::Pacman
+        | SourceKind::Apt
+        | SourceKind::Dnf
+        | SourceKind::Zypper
+        | SourceKind::Homebrew => ok(key, &['+', '@']),
         SourceKind::Snap => key.len() <= 40 && ok(key, &[]),
         // A number the store gave the app.
         SourceKind::Steam | SourceKind::MacAppStore => {

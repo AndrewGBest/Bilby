@@ -148,7 +148,9 @@ impl Catalog {
         let mut catalog = Catalog::new(platform.clone(), Arc::new(http), Index::bundled());
         // The repositories this machine's own package manager is set up for come first:
         // they are maintained, signed and kept up to date by the distribution.
-        for backend in [Backend::system_pacman(), Backend::system_apt()] {
+        for backend in
+            [Backend::system_pacman(), Backend::system_apt(), Backend::system_dnf(), Backend::system_zypper()]
+        {
             catalog.sources.insert(0, Arc::new(SystemRepos::new(backend, platform.clone())));
         }
         // More places apps are published. They are asked only by the live catalog; the
@@ -371,7 +373,9 @@ impl Catalog {
         let rated = guard.as_ref()?;
         let appstream_id = match id.source {
             SourceKind::Flathub => id.key.as_str(),
-            SourceKind::Pacman | SourceKind::Apt => rated.components.id_of_package(&id.key)?,
+            SourceKind::Pacman | SourceKind::Apt | SourceKind::Dnf | SourceKind::Zypper => {
+                rated.components.id_of_package(&id.key)?
+            }
             SourceKind::GitHub => rated.components.id_of_repo(&id.key)?,
             SourceKind::Codeberg
             | SourceKind::Aur

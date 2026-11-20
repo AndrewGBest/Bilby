@@ -1589,6 +1589,8 @@ impl App {
             SourceKind::Aur
                 | SourceKind::Pacman
                 | SourceKind::Apt
+                | SourceKind::Dnf
+                | SourceKind::Zypper
                 | SourceKind::Web
                 | SourceKind::Snap
                 | SourceKind::Winget

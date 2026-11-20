@@ -28,6 +28,8 @@ pub fn icon_key(id: &AppId) -> Option<String> {
         SourceKind::Aur
         | SourceKind::Pacman
         | SourceKind::Apt
+        | SourceKind::Dnf
+        | SourceKind::Zypper
         | SourceKind::Web
         | SourceKind::Flathub
         | SourceKind::GitLab
