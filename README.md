@@ -6,7 +6,7 @@
 
 <p align="center">
   <b>An app store that only shows what runs on your device.</b><br>
-  GitHub Releases, Flathub, Codeberg and your Linux distribution, in one place.<br>
+  For Windows, macOS and Linux, on a desktop or a TV. Android is on the way.<br>
   No account. No server of ours. No tracking.
 </p>
 
@@ -25,14 +25,18 @@
 Outside the big app stores, getting an app usually means a page of download files and
 working out which one is yours.
 
-**Bilby works it out for you.** It looks at your system, your processor and the kind of
-device you are on, and turns a release with 18 files into one **Install** button. The
-other 17 stay out of the way unless you ask for them.
+**Bilby works it out for you.** It looks at your system (Windows, macOS, or which kind
+of Linux), your processor and the kind of device you are on, and turns a release with
+18 files into one **Install** button. The other 17 stay out of the way unless you ask
+for them.
+
+It gathers apps from wherever they are published: project release pages on GitHub and
+Codeberg everywhere, plus Flathub and your distribution's own repositories on Linux.
 
 | On a desktop | On a phone | On a TV |
 |:---:|:---:|:---:|
 | <img src="docs/screenshots/desktop-details.png" alt="An app's page on a desktop"> | <img src="docs/screenshots/mobile-details.png" width="220" alt="An app's page on a phone"> | <img src="docs/screenshots/tv-home.png" alt="The home screen on a TV"> |
-| Mouse and keyboard | Touch | Remote only |
+| Mouse and keyboard | Touch (the layout exists; no Android package yet) | Remote only |
 
 <sub>The screenshots show the built-in demo catalog. The apps in it are made up.</sub>
 
@@ -60,15 +64,19 @@ There is no Android package yet, and no Flatpak
 
 **Find an app**
 
-- Browse hand-picked apps, plus what is popular and trending on Flathub.
-- Search every source at once. The best match comes first: the app with the name you
-  typed, then the ones most people use.
-- See what you are getting: pictures, a description, star ratings and written reviews,
-  how many people have downloaded it, and whether the developer is verified.
+- Browse hand-picked apps for your system. On Linux, also what is popular and trending
+  on Flathub.
+- Search every source your device has at once. The best match comes first: the app
+  with the name you typed, then the ones most people use.
+- See what you are getting: pictures and a description, and, where the source provides
+  them, download counts, star ratings, written reviews and whether the developer is
+  verified. Ratings and reviews exist mainly for Linux apps.
 
 **Install it**
 
-- One button installs the right file for your device.
+- One button fetches the right file for your device and hands it to your system's
+  installer: an `.exe` or `.msi` on Windows, a `.dmg` or `.pkg` on macOS, a package,
+  AppImage or Flatpak on Linux.
 - Downloads are checked against the checksum the source publishes, when there is one.
 - Every other file and every older version is one press away, never hidden for good.
 
@@ -80,21 +88,23 @@ There is no Android package yet, and no Flatpak
 
 **Use it from the sofa**
 
-- The TV layout is driven with a remote: arrows, OK and Back.
+- The TV layout is driven with a remote: arrows, OK and Back. Today that means a
+  computer connected to a TV; Android TV comes with the Android package.
 - On a Linux TV, websites can be added like apps and open in
   [Longboard](https://github.com/AndrewGBest/Longboard), a browser made for remotes.
 
 ## Where apps come from
 
 Each source only appears on devices it applies to. A Windows user never sees the AUR.
+On Windows and macOS, apps come from GitHub Releases and Codeberg; Linux adds the rest.
 
 | Source | Shown on | What you get |
 |---|---|---|
-| **GitHub Releases** | Everywhere | Any project that publishes files with its releases |
+| **GitHub Releases** | Windows, macOS, Linux | Any project that publishes files with its releases |
 | **Flathub** | Linux with Flatpak | Its whole catalog, with ratings, reviews and install counts |
 | **Your distribution** | Arch-based (pacman) and Debian-based (apt) systems | Every package your system is already set up to install |
 | **The AUR** | Arch-based systems | Community build recipes |
-| **Codeberg** | Everywhere | Projects by link and from the home page. Codeberg is turning away searches at the moment |
+| **Codeberg** | Windows, macOS, Linux | Projects by link and from the home page. Codeberg is turning away searches at the moment |
 | **Websites** | Linux TVs | Sites that open like apps in Longboard |
 
 ## Your privacy
@@ -118,8 +128,8 @@ Bilby works and is being used, but it is early. Plainly:
 | | State |
 |---|---|
 | **Linux** | Works. Tried on Debian 13: real searches on every source and a real install from Flathub |
-| **Windows, macOS** | Builds and passes its tests. Nobody has checked the window by eye yet |
-| **Android** | Not installable yet. The core compiles for it |
+| **Windows, macOS** | Downloads are published and the tests pass on both. Nobody has checked the window by eye yet, so expect rough edges |
+| **Android** (phone, tablet, TV) | Not installable yet. The core compiles for it and the phone and TV layouts exist |
 | **iOS** | Could only ever browse, not install ([why](docs/DESIGN.md#ios)) |
 | **System updates** | Finds updates correctly on Debian. Installing them has not been run on a real system |
 | **Arch, Fedora** | Written from documentation and tested against stand-ins, not on real systems |
