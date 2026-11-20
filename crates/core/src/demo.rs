@@ -609,7 +609,7 @@ fn mock_icon(seed: u32) -> Vec<u8> {
             let d = dx * dx + dy * dy;
             // A pale ring on the tile; which part is cut away depends on the seed.
             let ring = (26 * 26..=44 * 44).contains(&d)
-                && !((seed % 3 == 0 && dx > 0 && dy < 0) || (seed % 3 == 1 && dy > 12));
+                && !((seed.is_multiple_of(3) && dx > 0 && dy < 0) || (seed % 3 == 1 && dy > 12));
             let c = if ring { (0xf4, 0xf6, 0xfb) } else { hue };
             pixels[(y * S + x) * 3..(y * S + x) * 3 + 3].copy_from_slice(&[c.0, c.1, c.2]);
         }
@@ -833,6 +833,24 @@ impl Http for DemoHttp {
     }
 
     fn download(&self, url: &str, dest: &Path, progress: &mut dyn FnMut(u64, Option<u64>) -> bool) -> Result<String> {
+        // Star ratings, in the shape the ratings service publishes them.
+        if url == crate::ratings::ODRS_RATINGS {
+            let all: serde_json::Map<String, Value> = FLATPAKS
+                .iter()
+                .map(|a| {
+                    let [one, two, three, four, five] = a.stars;
+                    let total = one + two + three + four + five;
+                    (a.id.to_string(), json!({ "star0": 0, "star1": one, "star2": two, "star3": three, "star4": four, "star5": five, "total": total }))
+                })
+                .collect();
+            if let Some(parent) = dest.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            let bytes = Value::Object(all).to_string().into_bytes();
+            progress(bytes.len() as u64, Some(bytes.len() as u64));
+            std::fs::write(dest, &bytes)?;
+            return Ok(hex(&Sha256::digest(&bytes)));
+        }
         // Icons: Flathub's, and the logo a fictional project's README shows.
         if url.ends_with("/icon.png") || url.ends_with("/logo.png") {
             let seed = url.bytes().fold(7u32, |h, b| h.wrapping_mul(31).wrapping_add(b as u32));

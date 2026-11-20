@@ -52,7 +52,7 @@ Status: **Yes** = in Bilby; **New** = added in the change that added this docume
 | Self-hosted Forgejo/Gitea, added by URL | Komi | Not yet. The Codeberg code already speaks the Forgejo API; what is missing is letting the user add a host |
 | GitLab, F-Droid repositories, SourceHut, others | Obtainium | Not yet |
 | Private repositories with per-host tokens | Komi, Obtainium | Partly: one GitHub token |
-| System package managers | UniGetUI, GNOME Software, Discover | Yes for pacman and apt; dnf, zypper, Flatpak, winget, Homebrew not yet |
+| System package managers | UniGetUI, GNOME Software, Discover | Yes for pacman, apt and Flatpak (Flathub); dnf, zypper, winget, Homebrew not yet |
 | AUR | none read | Yes |
 
 ### Discovery and search
@@ -75,8 +75,9 @@ Status: **Yes** = in Bilby; **New** = added in the change that added this docume
 | Release notes, stars, licence | Komi | Yes |
 | Pick any older release | Komi, UniGetUI | Yes (the releases that have a file for the device) |
 | Files listed with platform and size | Komi | Yes, plus the reason for each hidden one |
-| Screenshots | GNOME Software, Discover | Not yet. Release pages have none to offer; READMEs sometimes do |
-| Ratings and reviews | GNOME Software, Discover | **By design**: needs a server and an account system |
+| Screenshots | GNOME Software, Discover | Yes: Flathub's for Flathub apps, and up to four found in a GitHub project's README |
+| Ratings | GNOME Software, Discover | Yes, from the same service they use (ODRS), for Flathub apps and distribution packages. One file a day; the service never learns which apps are viewed |
+| Written reviews | GNOME Software, Discover | **By design**: each request would name the app being viewed, and writing one needs a persistent identity. See DESIGN.md |
 | Developer profile, issues and pull requests, security advisories | Komi | **By design**: the project page is one click away and does it better |
 | Translating READMEs and notes | Komi | Not yet |
 

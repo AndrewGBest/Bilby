@@ -19,6 +19,9 @@ export struct AppCard {
     icon: image,
     // In the library, and whether a newer release is known.
     installed: bool,
+    // "4.6" and "931 ratings", when a ratings service knows the app; else "".
+    rating: string,
+    rating-count: string,
     has-update: bool,
 }
 
@@ -147,6 +150,7 @@ export global Store {
     // --- settings ---------------------------------------------------------------
     in property <int> theme-mode;
     in property <bool> include-prereleases;
+    in property <bool> show-ratings;
     in property <bool> check-updates-on-start;
     in property <bool> has-token;
     in property <string> downloads-dir;
@@ -182,6 +186,7 @@ export global Store {
     callback download-hidden(int);
     callback set-theme(int);
     callback set-prereleases(bool);
+    callback set-ratings(bool);
     callback set-check-on-start(bool);
     callback open-downloads();
     callback save-token(string);

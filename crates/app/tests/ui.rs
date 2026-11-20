@@ -1388,3 +1388,43 @@ fn flathub_is_only_offered_where_flatpak_is() {
     windows.app.open(&windows.ui, "flathub:io.quillpad.Quillpad");
     assert!(!windows.store().get_details_error().is_empty());
 }
+
+#[test]
+fn star_ratings_are_shown_where_known_and_can_be_turned_off() {
+    let s = start("linux-x64-debian", Shell::Desktop);
+    // What the store does when it opens.
+    s.app.load_ratings(&s.ui);
+    assert!(s.dirs.cache.join("ratings.json").is_file(), "one file with every app's rating");
+
+    // In search results and on the app's page, for an app the ratings service knows.
+    s.app.search(&s.ui, "notes");
+    let rated = s.store().get_results().iter().find(|c| c.id == "flathub:io.quillpad.Quillpad").unwrap();
+    assert_eq!((rated.rating.as_str(), rated.rating_count.as_str()), ("4.6", "821 ratings"));
+    let unrated = s.store().get_results().iter().find(|c| c.id == "github:driftnotes/drift").unwrap();
+    assert_eq!(unrated.rating, "", "no rating is invented for an app the service does not know");
+    s.app.open(&s.ui, "flathub:io.quillpad.Quillpad");
+    assert_eq!(s.store().get_app().rating, "4.6");
+    assert!(s.has("★ 4.6 821 ratings"));
+
+    // Settings: off means gone from the screen straight away, and remembered.
+    s.store().invoke_set_ratings(false);
+    assert!(s.saved().settings.hide_ratings);
+    assert!(!s.store().get_show_ratings());
+    s.app.search(&s.ui, "notes");
+    assert!(s.store().get_results().iter().all(|c| c.rating.is_empty()));
+
+    // And back on.
+    s.store().invoke_set_ratings(true);
+    s.app.search(&s.ui, "notes");
+    assert!(s.store().get_results().iter().any(|c| c.rating == "4.6"));
+}
+
+#[test]
+fn with_ratings_turned_off_nothing_is_fetched() {
+    let s =
+        start_with("linux-x64-debian", Shell::Desktop, Some(r#"{"settings":{"welcomed":true,"hide_ratings":true}}"#));
+    s.app.load_ratings(&s.ui);
+    assert!(!s.dirs.cache.join("ratings.json").exists());
+    s.app.search(&s.ui, "notes");
+    assert!(s.store().get_results().iter().all(|c| c.rating.is_empty()));
+}

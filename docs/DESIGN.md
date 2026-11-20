@@ -462,7 +462,7 @@ from memory of both stores, not checked against them while writing]
 | Screenshots | Up to ten ([Apple](https://developer.apple.com/app-store/product-page/)) | Up to four, found in the project's README (`screenshots.rs`). Badges, logos, icons, small images, GIFs and SVGs are left out, and pictures are only fetched from GitHub's own hosts so that no third party learns who looked. Packages from repositories have none yet |
 | Description | First lines, then "more" | The start of the README, folded to a few lines with "Read more" |
 | What's New | Shown on the page and in Updates ([Apple](https://developer.apple.com/app-store/product-page/)) | Release notes, folded; shown above the description once the app is installed |
-| Ratings and reviews | Yes | **None, by design**: they need a server and accounts. Stars stand in |
+| Ratings and reviews | Yes | Star ratings where a ratings service knows the app (Flathub, distribution packages). No written reviews: see below |
 | Information | A plain table at the bottom: provider, size, compatibility, ... | The same: from, made by, version, released, licence, works on, kind of file, size |
 | Everything technical | Not shown at all | Under *More options and details*: every file with its name, command and steps, older versions, and the hidden files with the reason for each |
 
@@ -477,8 +477,64 @@ watched and stopped. *Other versions and files* sits directly under the main but
 the version picker, every way to install here, and the files for other devices, which
 can be downloaded anyway (checked, saved, never run).
 
-Known differences that are still gaps: no ratings or reviews, no "top charts", and
-Open only works for AppImages.
+Known differences that are still gaps: no written reviews (see below), no "top
+charts", and Open works for AppImages, Flatpaks and web apps but not for packages
+handed to the system installer.
+
+### Flathub, logos and ratings
+
+**Flathub** (`source/flathub.rs`) is a source wherever Flatpak is set up. Its API gives
+what release pages lack: an icon, screenshots, a description and an id that ratings
+are keyed by. Install runs `flatpak install --noninteractive --assumeyes --or-update
+flathub <id>`, Open runs `flatpak run <id>`, and removing the app from the library runs
+`flatpak uninstall`. Flatpaks installed by something else are recognised from
+Flatpak's own folders and can be opened. A `.flatpak` file on a release page is
+installed with `flatpak install --user`. [The API shapes and command options were read
+from Flathub's and Flatpak's source and documentation; neither the live service nor a
+real `flatpak` has been run against. Tests use a stand-in server and a stand-in
+program.]
+
+**Logos.** An app's icon is, in order: the icon its source gives (Flathub); for a
+GitHub project, an early image in its README that calls itself a logo or icon or is
+drawn small; else `icon.png` or `logo.png` at the usual places in the repository; else
+the owner's picture; else initials on a colour. README and repository logos are found
+when the app's page is opened, kept on disk under the app's name, and used in lists
+from then on. PNG and JPEG only: many projects' logos are SVG, which the app cannot
+draw yet, so those fall back to the owner's picture.
+
+**Ratings** (`ratings.rs`, `appstream.rs`) come from ODRS, the service behind the
+ratings in GNOME Software and KDE Discover. It publishes one file with the star counts
+of every app. Bilby fetches that file at most once a day and keeps it on disk. Because
+everyone gets the same file, the service learns that this device uses ratings and
+nothing about which apps are looked at. Apps are matched by AppStream id: directly for
+Flathub; for pacman and apt packages, and GitHub projects, through the catalog the
+distribution already keeps on disk (`/usr/share/swcatalog` and its older locations),
+which costs no requests. An app with fewer than five ratings shows none. Ratings can
+be turned off in Settings, which also stops the download. In search order a rating
+counts as popularity, pulled towards the middle when few people gave one.
+[The file's shape was read from ODRS's source; the live service was unreachable. The
+catalog reader has only read files written for its tests.]
+
+**Why not written reviews.** They were looked at and left out, for four reasons:
+
+1. *Privacy.* Ratings arrive as one file for everybody. Reviews must be asked for one
+   app at a time, so each request tells the service which app this device is looking
+   at, and its privacy policy says addresses are logged and kept for five years
+   ([policy](https://github.com/GNOME/odrs-web/blob/master/odrs/templates/privacy.html)).
+   That is a different thing from what Bilby promises on its first screen.
+2. *Writing them needs an identity.* Posting or voting requires a stable id derived
+   from the user name and the machine id
+   ([GNOME Software's code](https://github.com/GNOME/gnome-software/blob/main/lib/gs-utils.c)).
+   A store with no accounts would be quietly creating one.
+3. *No permission.* ODRS has no terms for third-party clients; its front page says only
+   that it "will go away if it starts being misused". Reading a public file once a day
+   is plainly light use. Sending per-app requests from a new store should be asked
+   about first.
+4. *Coverage.* Reviews exist only for apps with an AppStream id, which is Flathub and
+   distribution packages. Most GitHub projects would show an empty reviews section.
+
+If reviews are wanted later, the smallest honest version is read-only, off by default,
+with the setting saying exactly what is sent, and after asking the ODRS maintainers.
 
 ### TV
 

@@ -537,10 +537,24 @@ impl App {
             let mut requested = self.pictures_requested.lock().unwrap();
             let urls = self.icon_urls.lock().unwrap();
             let mut wanted = Vec::new();
+            let icons = self.dirs.cache.join("icons");
             for id in shown.iter().filter_map(|id| AppId::parse(id)) {
                 let own = bilby_core::icons::app_key(&id);
-                if requested.insert(own.clone()) {
-                    wanted.push((own, id.clone(), Some(urls.get(&id.to_string()).cloned().unwrap_or_default())));
+                match urls.get(&id.to_string()) {
+                    Some(url) => {
+                        if requested.insert(own.clone()) {
+                            wanted.push((own, id.clone(), Some(url.clone())));
+                        }
+                    }
+                    // No address yet. A logo found on an earlier visit is used; otherwise
+                    // the question stays open, because the address may still arrive.
+                    None => {
+                        if !requested.contains(&own) && matches!(bilby_core::icons::cached(&icons, &own), Some(Some(_)))
+                        {
+                            requested.insert(own.clone());
+                            wanted.push((own, id.clone(), Some(String::new())));
+                        }
+                    }
                 }
                 if let Some(owner) = bilby_core::icons::icon_key(&id) {
                     if requested.insert(owner.clone()) {
@@ -639,6 +653,7 @@ impl App {
         // In the store's library, or already installed by the system's package manager.
         let installed = self.state.lock().unwrap().installed(&id).is_some() || app.installed_version.is_some();
         let has_update = matches!(self.updates.lock().unwrap().get(&id), Some(UpdateStatus::Available { .. }));
+        let rating = app.rating.or_else(|| self.catalog().rating_for(&app.id));
         AppCard {
             tint: tint_for(&id),
             icon: picture_for(&id),
@@ -653,6 +668,8 @@ impl App {
             popularity: popularity.into(),
             initials: initials(&app.name).into(),
             installed,
+            rating: rating.map(bilby_core::ratings::stars_text).unwrap_or_default().into(),
+            rating_count: rating.map(|r| plural(r.count as usize, "rating")).unwrap_or_default().into(),
             has_update: installed && has_update,
         }
     }
@@ -680,6 +697,8 @@ impl App {
             tint: tint_for(&app.id),
             icon: picture_for(&app.id),
             installed: true,
+            rating: SharedString::new(),
+            rating_count: SharedString::new(),
             has_update,
         }
     }
@@ -700,6 +719,8 @@ impl App {
             tint: tint_for(&favourite.id),
             icon: picture_for(&favourite.id),
             installed: installed.is_some(),
+            rating: SharedString::new(),
+            rating_count: SharedString::new(),
             has_update: false,
         }
     }
@@ -806,6 +827,7 @@ impl App {
         let settings = self.state().settings;
         store.set_theme_mode(theme_mode(&settings.theme));
         store.set_include_prereleases(settings.include_prereleases);
+        store.set_show_ratings(!settings.hide_ratings);
         store.set_check_updates_on_start(!settings.skip_update_check_on_start);
         store.set_has_token(!settings.github_token.trim().is_empty());
         store.set_downloads_dir(self.dirs.downloads.display().to_string().into());
@@ -821,7 +843,43 @@ impl App {
 
     fn rebuild_catalog(&self) {
         let settings = self.state().settings;
-        *self.catalog.write().unwrap() = (self.catalog_factory)(&self.platform, &settings, &self.dirs);
+        let fresh = (self.catalog_factory)(&self.platform, &settings, &self.dirs);
+        // Ratings fetched earlier stay; the factory hands back a shared catalog, so the
+        // old one's are passed on only where that is possible.
+        let old = self.catalog();
+        let fresh = match Arc::try_unwrap(fresh) {
+            Ok(mut catalog) => {
+                catalog.share_ratings_with(&old);
+                Arc::new(catalog)
+            }
+            Err(shared) => shared,
+        };
+        *self.catalog.write().unwrap() = fresh;
+    }
+
+    /// Fetch star ratings in the background (at most once a day), unless turned off.
+    pub fn load_ratings(self: &Arc<Self>, ui: &AppWindow) {
+        let _ = ui;
+        if self.state().settings.hide_ratings {
+            return;
+        }
+        self.job(
+            |app| app.catalog().load_ratings(&app.dirs.cache),
+            |app, ui, loaded| {
+                if loaded {
+                    app.refresh(ui);
+                    let store = ui.global::<Store>();
+                    if let Some(id) = AppId::parse(store.get_app().id.as_str()) {
+                        let rating = app.catalog().rating_for(&id);
+                        let mut card = store.get_app();
+                        card.rating = rating.map(bilby_core::ratings::stars_text).unwrap_or_default().into();
+                        card.rating_count =
+                            rating.map(|r| plural(r.count as usize, "rating")).unwrap_or_default().into();
+                        store.set_app(card);
+                    }
+                }
+            },
+        );
     }
 
     // ---- search ----
@@ -1087,7 +1145,12 @@ impl App {
         store.set_versions(ModelRc::new(VecModel::from(
             details.versions.iter().map(|r| SharedString::from(&r.version)).collect::<Vec<_>>(),
         )));
-        store.set_is_package(!details.summary.id.source.is_forge());
+        // Installed with a command the person runs: AUR and repository packages. Flathub
+        // apps are installed for them, so they read like any other app.
+        store.set_is_package(matches!(
+            details.summary.id.source,
+            SourceKind::Aur | SourceKind::Pacman | SourceKind::Apt | SourceKind::Web
+        ));
         store.set_is_website(details.summary.id.source == SourceKind::Web);
         // What the system's package manager has, when the store's own library has nothing.
         if store.get_installed_version().is_empty() {
@@ -1770,6 +1833,16 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         app.rebuild_catalog();
         app.refresh_settings(ui);
     });
+    on!(on_set_ratings, |app, ui, enabled| {
+        app.update_state(ui, |state| state.settings.hide_ratings = !enabled);
+        if enabled {
+            app.load_ratings(ui);
+        } else {
+            app.catalog().drop_ratings();
+            app.refresh(ui);
+        }
+        app.refresh_settings(ui);
+    });
     on!(on_set_check_on_start, |app, ui, enabled| {
         app.update_state(ui, |state| state.settings.skip_update_check_on_start = !enabled);
         app.refresh_settings(ui);
@@ -1850,6 +1923,7 @@ pub fn run(options: Options) -> Result<(), Box<dyn std::error::Error>> {
         let id = AppId::from_user_input(target).map(|id| id.to_string()).unwrap_or_else(|| target.clone());
         app.open(&ui, &id);
     }
+    app.load_ratings(&ui);
     // Quietly look for updates at start-up (unless turned off): it is the reason to open
     // the store again.
     if !app.state().settings.skip_update_check_on_start {

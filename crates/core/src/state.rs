@@ -22,6 +22,8 @@ pub struct Settings {
     pub welcomed: bool,
     /// Do not look for updates when the store starts (saves requests on a tight allowance).
     pub skip_update_check_on_start: bool,
+    /// Do not fetch or show star ratings.
+    pub hide_ratings: bool,
 }
 
 /// An app obtained through the store.

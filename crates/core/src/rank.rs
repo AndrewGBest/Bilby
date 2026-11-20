@@ -103,6 +103,30 @@ fn closeness(query: &str, app: &AppSummary) -> f32 {
 /// Stars and votes on a 0..1 scale. Each source has its own sense of "a lot": a
 /// thousand stars is modest on GitHub and remarkable on Codeberg.
 fn popularity(app: &AppSummary) -> f32 {
+    let counted = usage(app);
+    match app.rating {
+        // What people think of it. A handful of ratings is pulled towards the middle,
+        // so three five-star votes do not outrank a well-loved app.
+        Some(rating) => {
+            let trust = rating.count as f32 / (rating.count as f32 + 30.0);
+            let rated = UNKNOWN_POPULARITY * (1.0 - trust) + (rating.stars / 5.0).clamp(0.0, 1.0) * trust;
+            // With both a rating and a count of users, each tells half the story.
+            if has_usage(app) {
+                (rated + counted) / 2.0
+            } else {
+                rated
+            }
+        }
+        None => counted,
+    }
+}
+
+fn has_usage(app: &AppSummary) -> bool {
+    app.popularity.is_some() && !matches!(app.id.source, SourceKind::Pacman | SourceKind::Apt | SourceKind::Web)
+}
+
+/// How many people use it, on the source's own scale.
+fn usage(app: &AppSummary) -> f32 {
     let a_lot = match app.id.source {
         SourceKind::GitHub => 50_000.0_f32,
         SourceKind::Codeberg => 3_000.0,
@@ -213,6 +237,26 @@ mod tests {
         let unknown = popularity(&app("github:x/y", "y", "", None));
         assert!(unknown > popularity(&app("github:x/y", "y", "", Some(50))));
         assert!(unknown < popularity(&app("github:x/y", "y", "", Some(20_000))));
+    }
+
+    #[test]
+    fn a_good_rating_from_many_people_lifts_an_app_and_a_few_votes_barely_count() {
+        use crate::model::Rating;
+        let plain = app("apt:calc", "calc", "", None);
+        let rated = |stars: f32, count: u32| {
+            let mut a = plain.clone();
+            a.rating = Some(Rating { stars, count });
+            popularity(&a)
+        };
+        assert!(rated(4.7, 900) > popularity(&plain), "well loved beats unknown");
+        assert!(rated(1.8, 900) < popularity(&plain), "widely disliked sinks below unknown");
+        assert!(rated(4.7, 900) > rated(5.0, 5), "five perfect votes are not much evidence");
+        assert!((rated(5.0, 5) - popularity(&plain)).abs() < 0.1);
+        // With stars on GitHub as well, both count.
+        let mut both = app("github:a/b", "b", "", Some(40_000));
+        let stars_only = popularity(&both);
+        both.rating = Some(Rating { stars: 2.0, count: 500 });
+        assert!(popularity(&both) < stars_only);
     }
 
     #[test]

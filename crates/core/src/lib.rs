@@ -12,6 +12,7 @@
 //! * [`version`]  – is this release newer than the installed one?
 //! * [`demo`]     – fictional offline catalog for demos and tests
 
+pub mod appstream;
 pub mod asset;
 pub mod catalog;
 pub mod compat;
@@ -24,6 +25,7 @@ pub mod install;
 pub mod model;
 pub mod platform;
 pub mod rank;
+pub mod ratings;
 pub mod screenshots;
 pub mod source;
 pub mod state;

@@ -34,6 +34,16 @@ pub struct Catalog {
     pub check_limit: usize,
     /// Treat pre-releases like stable releases (a user setting).
     pub include_prereleases: bool,
+    /// Star ratings, once loaded, and the catalog that links packages to rated ids.
+    /// Shared, so a rebuilt catalog keeps what an earlier one fetched.
+    ratings: Arc<std::sync::RwLock<Option<Rated>>>,
+    /// Where the distribution's AppStream catalog is (empty in the demo and tests).
+    pub appstream_dirs: Vec<std::path::PathBuf>,
+}
+
+struct Rated {
+    ratings: crate::ratings::Ratings,
+    components: crate::appstream::Components,
 }
 
 /// One line for the search page: which source failed and why, without stuttering
@@ -81,7 +91,16 @@ impl Catalog {
             Arc::new(Aur::new(http.clone())),
             Arc::new(crate::source::web::Websites),
         ];
-        Catalog { platform, sources, index, http, check_limit: 8, include_prereleases: false }
+        Catalog {
+            platform,
+            sources,
+            index,
+            http,
+            check_limit: 8,
+            include_prereleases: false,
+            ratings: Arc::default(),
+            appstream_dirs: Vec::new(),
+        }
     }
 
     /// Tell the catalog where Flatpak keeps installed apps, so Flathub apps that are
@@ -100,7 +119,16 @@ impl Catalog {
         sources: Vec<Arc<dyn Source>>,
         index: Index,
     ) -> Catalog {
-        Catalog { platform, sources, index, http, check_limit: 8, include_prereleases: false }
+        Catalog {
+            platform,
+            sources,
+            index,
+            http,
+            check_limit: 8,
+            include_prereleases: false,
+            ratings: Arc::default(),
+            appstream_dirs: Vec::new(),
+        }
     }
 
     /// Talks to the real GitHub and AUR, caching responses under `cache_dir`.
@@ -120,6 +148,7 @@ impl Catalog {
             catalog.check_limit = 20;
         }
         catalog.use_flatpak_roots(crate::install::Dirs::for_current_user().flatpak_roots);
+        catalog.appstream_dirs = crate::appstream::system_dirs();
         catalog
     }
 
@@ -269,6 +298,43 @@ impl Catalog {
         self.source(id.source)?.about(&id.key)
     }
 
+    /// Fetch star ratings (at most once a day; see `ratings`) and read the system's
+    /// catalog that links packages to rated apps. Returns whether ratings are now known.
+    pub fn load_ratings(&self, cache_dir: &std::path::Path) -> bool {
+        if self.ratings.read().unwrap().is_some() {
+            return true;
+        }
+        let Ok(ratings) = crate::ratings::Ratings::load(self.http.as_ref(), cache_dir) else { return false };
+        let components = crate::appstream::Components::load(&self.appstream_dirs);
+        *self.ratings.write().unwrap() = Some(Rated { ratings, components });
+        true
+    }
+
+    /// Forget the ratings (the person turned them off).
+    pub fn drop_ratings(&self) {
+        *self.ratings.write().unwrap() = None;
+    }
+
+    /// Keep using the ratings another catalog already loaded.
+    pub fn share_ratings_with(&mut self, other: &Catalog) {
+        self.ratings = other.ratings.clone();
+    }
+
+    /// The star rating of an app, when ratings are loaded and the app can be matched to
+    /// a rated id: directly for Flathub, through the system's catalog for packages and
+    /// GitHub projects.
+    pub fn rating_for(&self, id: &AppId) -> Option<crate::model::Rating> {
+        let guard = self.ratings.read().unwrap();
+        let rated = guard.as_ref()?;
+        let appstream_id = match id.source {
+            SourceKind::Flathub => id.key.as_str(),
+            SourceKind::Pacman | SourceKind::Apt => rated.components.id_of_package(&id.key)?,
+            SourceKind::GitHub => rated.components.id_of_repo(&id.key)?,
+            SourceKind::Codeberg | SourceKind::Aur | SourceKind::Web => return None,
+        };
+        rated.ratings.get(appstream_id)
+    }
+
     /// Screenshots the source publishes for the app (Flathub does; release pages do not).
     pub fn pictures(&self, id: &AppId) -> Vec<String> {
         self.source(id.source).map(|s| s.pictures(&id.key)).unwrap_or_default()
@@ -390,7 +456,8 @@ impl Catalog {
         let mut hits = Vec::new();
         for list in per_source {
             let of = list.len();
-            for (position, app) in list.into_iter().enumerate() {
+            for (position, mut app) in list.into_iter().enumerate() {
+                app.rating = app.rating.or_else(|| self.rating_for(&app.id));
                 let context = crate::rank::Context { position, of, featured: featured.contains(&app.id) };
                 hits.push((app, context));
             }

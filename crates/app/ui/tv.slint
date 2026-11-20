@@ -40,7 +40,7 @@ component TvTile inherits Rectangle {
                     spacing: 1 * u;
                     Text { text: app.name; color: Theme.text; font-size: 14 * u; font-weight: 700; overflow: elide; }
                     Text {
-                        text: app.has-update ? "Update available" : app.installed ? "Installed" : app.popularity != "" ? app.popularity : app.author;
+                        text: app.has-update ? "Update available" : app.installed ? "Installed" : app.rating != "" ? "★ " + app.rating : app.popularity != "" ? app.popularity : app.author;
                         color: app.has-update || app.installed ? Theme.accent : Theme.text-dim;
                         font-size: 11 * u;
                         font-weight: app.has-update || app.installed ? 700 : 400;
@@ -399,6 +399,7 @@ export component TvShell inherits Rectangle {
                 HorizontalLayout {
                     spacing: 24 * u;
                     alignment: start;
+                    if Store.app.rating != "" : TvStat { u: root.u; value: "★ " + Store.app.rating; caption: Store.app.rating-count; }
                     if Store.app.popularity != "" : TvStat { u: root.u; value: Store.app.popularity; caption: "on " + Store.app.source; }
                     if Store.options.length > 0 && Store.options[0].size != "" : TvStat { u: root.u; value: Store.options[0].size; caption: "download"; }
                     if Store.release-age != "" : TvStat { u: root.u; value: Store.release-age; caption: "last updated"; }
