@@ -721,12 +721,14 @@ export component TvShell inherits Rectangle {
                     clicked => { Store.check-updates(); }
                 }
             }
-            if Store.search-note != "" && !root.on-library : Text {
+            // A search that failed says why (GitHub's allowance used up, no connection)
+            // in place of the note about what was found.
+            if (Store.search-note != "" || Store.search-error != "") && !root.on-library : Text {
                 x: margin;
                 y: 212 * u;
                 width: parent.width - 2 * margin;
-                text: Store.search-note;
-                color: Theme.text-dim;
+                text: Store.search-error != "" && !Store.searching ? Store.search-error : Store.search-note;
+                color: Store.search-error != "" && !Store.searching ? Theme.warn : Theme.text-dim;
                 font-size: 12 * u;
                 overflow: elide;
             }
