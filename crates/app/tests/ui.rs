@@ -1961,7 +1961,7 @@ fn signing_in_to_github_shows_a_code_and_keeps_the_token_it_is_given() {
     tv.press(Key::RightArrow);
     tv.press(Key::RightArrow);
     tv.press(Key::Return);
-    for _ in 0..5 {
+    for _ in 0..6 {
         tv.press(Key::DownArrow);
     }
     tv.press(Key::Return);
@@ -2266,7 +2266,7 @@ fn the_tv_has_a_settings_tab_with_every_setting_reachable_by_remote() {
     // Sources can be switched off from the sofa too: Down to the first of them, OK.
     let sources: Vec<SourceChoice> = s.store().get_sources().iter().collect();
     assert!(sources.len() >= 2 && sources.iter().all(|c| c.on) && s.has(sources[0].label.as_str()));
-    for _ in 0..8 {
+    for _ in 0..9 {
         s.press(Key::DownArrow);
     }
     s.press(Key::Return);
@@ -2384,4 +2384,33 @@ fn an_appimage_on_a_system_without_fuse_says_so_and_offers_to_install_it() {
     app.open(&ui, id);
     assert_eq!(ui.global::<Store>().get_need_note(), "");
     assert_eq!(ui.global::<Store>().get_helper_id(), "");
+}
+
+// ---- 18+ ----
+
+#[test]
+fn what_is_marked_18_plus_is_hidden_until_the_person_switches_it_on() {
+    let s = start("linux-tv", Shell::Tv);
+    let adult = bilby_core::source::web::sites().iter().find(|site| site.adult).unwrap();
+    assert!(!s.store().get_show_adult(), "off to begin with");
+
+    // Not in a search, even by its exact name or address, and the page says something was left out.
+    s.app.search(&s.ui, &adult.name);
+    assert!(!s.store().get_results().iter().any(|c| c.id == format!("web:{}", adult.host).as_str()));
+    assert!(s.store().get_search_note().contains("marked 18+"), "{}", s.store().get_search_note());
+    s.app.search(&s.ui, &adult.host);
+    assert!(!s.store().get_results().iter().any(|c| c.id.contains(adult.host.as_str())));
+    // Nor on the home page, nor by opening its link.
+    assert!(!s.store().get_tv_rows().iter().any(|row| row.apps.iter().any(|c| c.id.contains(adult.host.as_str()))));
+    s.app.open(&s.ui, &format!("web:{}", adult.host));
+    assert!(s.store().get_details_error().contains("18+"), "{}", s.store().get_details_error());
+    assert_eq!(s.store().get_options().row_count(), 0, "nothing to install");
+
+    // Switched on in Settings, it is found like anything else; and it is remembered.
+    s.store().set_details_open(false);
+    s.store().invoke_set_adult(true);
+    assert!(s.saved().settings.show_adult && s.store().get_show_adult());
+    s.app.search(&s.ui, &adult.name);
+    assert!(s.store().get_results().iter().any(|c| c.id == format!("web:{}", adult.host).as_str()));
+    assert!(!s.store().get_search_note().contains("18+"));
 }

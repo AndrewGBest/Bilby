@@ -114,6 +114,7 @@ impl Package {
             // The best-known packages sit at a few dozen; most are under one.
             momentum: Some(((self.popularity.max(0.0) + 1.0).ln() / 31.0_f32.ln()).clamp(0.0, 1.0)),
             price: None,
+            adult: false,
         }
     }
 }

@@ -34,6 +34,8 @@ pub struct Settings {
     pub reduce_motion: bool,
     /// Sources switched off, by their short names (`flathub`, `steam`, ...).
     pub disabled_sources: Vec<String>,
+    /// Show apps and sites marked 18+. Off until the person switches it on.
+    pub show_adult: bool,
 }
 
 /// An app obtained through the store.
@@ -379,6 +381,7 @@ mod tests {
             verified: false,
             momentum: None,
             price: None,
+            adult: false,
         }
     }
 

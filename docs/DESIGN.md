@@ -303,6 +303,39 @@ with a stand-in for the window's answer; the Longboard exchange end to end again
 an invented store. Not run for real: any of it signed in to Steam, and the window
 on Windows or macOS.]
 
+**Ranking, weighed towards use** (`rank.rs`). How many people use an app is the
+largest share of its score (0.45), ahead of how close its name is to what was typed
+(0.40). An app that is widely used and says in its description that it is about the
+thing outranks a little-used one with the word in its name; the app whose name is
+exactly what was typed gets a fixed bonus and stays first. Apps on record for a
+service (`related.json`) count as near matches for that service's name.
+
+**18+** (`AppSummary::adult`, `Settings::show_adult`). Off by default: what is marked
+is left out of searches and the home page, the search says how many were left out,
+and such a page will not open. Bilby does not judge content; it goes by its sources:
+
+- Steam's descriptors 3 and 4 ("adult only" and "gratuitous" sexual content), asked
+  for all of a search's games in one keyless request, and again on a game's own page.
+  [Tried live 2026-11-21: Portal 2 has none, Cyberpunk 2077 has 1, 2 and 5 and is not
+  marked, an adult-only title has all five and is. The meanings come from the
+  SteamDatabase project, not from a page Valve publishes.]
+- Flathub's content rating, where it works out to an age of 18. [Read in Flathub's
+  answers; no app that reaches 18 was found to try.]
+- The bundled list of sites (`data/web.json`), where a handful of the best-known adult
+  sites are listed precisely so that they are recognised.
+
+[Limits: if Steam's lookup fails the search's games are not marked, though each page
+still checks; a typed address Bilby has never heard of is not recognised; GitHub,
+GitLab, winget, Homebrew and the Snap Store say nothing about age at all. The Mac App
+Store's "17+" is not used: it covers ordinary browsers and social apps.]
+
+**Web apps** (`data/web.json`). About ninety well-known sites, written by hand with a
+name, a line on what each is, and what it is for; every address was checked to answer
+on 2026-11-21. Public "top sites" lists were looked at and not used: the best known
+(Tranco) states no licence and mixes in a non-commercial source, and all of them are
+bare domains, heavy with delivery networks and other things nobody visits. Any other
+address can still be typed and added.
+
 **Other stores, handed over to.** Some things can only be installed by the store that
 sells them. For those Bilby is the front door: it finds the app, shows its price,
 pictures and how well liked it is, and then opens that store's own app on it with

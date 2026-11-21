@@ -439,6 +439,7 @@ fn make_catalog(platform: &Platform, demo: bool, settings: &Settings, dirs: &Dir
     };
     catalog.include_prereleases = settings.include_prereleases;
     catalog.disabled = settings.disabled_sources.iter().filter_map(|name| source_named(name)).collect();
+    catalog.show_adult = settings.show_adult;
     catalog.use_flatpak_roots(dirs.flatpak_roots.clone());
     Arc::new(catalog)
 }
@@ -1159,6 +1160,7 @@ impl App {
         store.set_show_ratings(!settings.hide_ratings);
         store.set_check_updates_on_start(!settings.skip_update_check_on_start);
         store.set_has_token(!settings.github_token.trim().is_empty());
+        store.set_show_adult(settings.show_adult);
         let steam = self.steam.read().unwrap().clone();
         // Steam is a desktop program: its library is offered wherever it runs.
         let os = self.platform.read().unwrap().os;
@@ -1899,6 +1901,16 @@ impl App {
                 note.push(' ');
             }
             note.push_str(&format!("{} more matched but do not work on this device.", outcome.hidden));
+        }
+        if outcome.adult_hidden > 0 {
+            if !note.is_empty() {
+                note.push(' ');
+            }
+            let n = outcome.adult_hidden;
+            note.push_str(&format!(
+                "{n} marked 18+ {} not shown; Settings can change that.",
+                if n == 1 { "is" } else { "are" }
+            ));
         }
         store.set_search_note(note.into());
         store.set_search_error(outcome.errors.join("\n").into());
@@ -3061,6 +3073,20 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     on!(on_set_reduce_motion, |app, ui, on| {
         app.update_state(ui, |state| state.settings.reduce_motion = on);
         app.refresh_settings(ui);
+    });
+    on!(on_set_adult, |app, ui, on| {
+        app.update_state(ui, |state| state.settings.show_adult = on);
+        // What is listed depends on it: build the catalog again and redraw.
+        app.rebuild_catalog();
+        app.collections.lock().unwrap().clear();
+        app.load_collections(ui);
+        app.refresh_settings(ui);
+        app.refresh(ui);
+        app.toast(
+            ui,
+            if on { "Apps and sites marked 18+ are now shown" } else { "Apps and sites marked 18+ are hidden" },
+            false,
+        );
     });
     on!(on_set_source, |app, ui, name, on| {
         let name = name.to_string();

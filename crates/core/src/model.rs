@@ -273,6 +273,7 @@ impl AppSummary {
             verified: false,
             momentum: None,
             price: None,
+            adult: false,
         }
     }
 }
@@ -314,6 +315,10 @@ pub struct AppSummary {
     /// What it costs where it is sold, as that store words it: "Free", "$9.99". `None`
     /// for sources where everything is free of charge.
     pub price: Option<String>,
+    /// For people of 18 or over, by its source's own word (Steam's "adult only"
+    /// descriptors, an age rating of 18, a site listed as adult). Hidden unless the
+    /// person has said to show such things.
+    pub adult: bool,
 }
 
 /// An average star rating and how many people gave one.

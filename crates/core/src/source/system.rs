@@ -665,6 +665,7 @@ impl SystemRepos {
             verified: false,
             momentum: None,
             price: None,
+            adult: false,
         }
     }
 }

@@ -288,6 +288,7 @@ export global Store {
     in property <int> interface-mode;
     // Every source that applies to this device, and whether it is switched on.
     in property <[SourceChoice]> sources;
+    in property <bool> show-adult;
     // The store is running from a file it can add to the app menu, and whether it has.
     in property <bool> can-register;
     in property <bool> in-menu;
@@ -339,6 +340,8 @@ export global Store {
     callback check-store-update();
     callback set-interface(int);
     callback set-source(string, bool);
+    // Show or hide what is marked as for people of 18 or over.
+    callback set-adult(bool);
     callback filter-results(string);
     callback set-reduce-motion(bool);
     callback set-in-menu(bool);

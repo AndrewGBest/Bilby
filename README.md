@@ -81,8 +81,12 @@ There is no Android package yet, and no Flatpak
 - Different apps for the same service (YouTube has several) are gathered on one
   page, so you can pick the version that suits your device.
 - Narrow a search to one source, or switch off in Settings the sources you never
-  want. The best match comes first: the app with the name you typed, then the ones
-  most people use.
+  want. The app with exactly the name you typed comes first; after that, how many
+  people use an app counts for more than how its name is spelt. On a TV a search
+  fills the page: top results, then rows for apps, games, web apps and packages.
+- Apps and sites marked 18+ are hidden until you switch them on in Settings. Bilby
+  goes by what sources say (Steam's adult-only marks, an app's own age rating, its
+  list of well-known adult sites), so a site it has never heard of is not recognised.
 - See what you are getting: pictures and a description, and, where the source provides
   them, the price, download counts, star ratings, written reviews and whether the
   developer is verified. What is shown depends on the source: Flathub, Steam and the
@@ -148,7 +152,7 @@ Each source only appears on devices it applies to. A Windows user never sees the
 | **Steam** | Windows, macOS, Linux | Games and apps, free and paid, with their prices. Bilby hands over to the Steam app, which sells, installs and runs them |
 | **Mac App Store** | macOS | Its catalog, free and paid, with prices and ratings. Bilby hands over to the App Store app |
 | **Codeberg** | Windows, macOS, Linux | Projects by link and from the home page. Codeberg is turning away searches at the moment |
-| **Web apps** | Linux TVs | Websites that open like apps in Longboard |
+| **Web apps** | Linux TVs | About ninety well-known websites, and any other address you type, opened like apps in Longboard |
 
 ## Your privacy
 

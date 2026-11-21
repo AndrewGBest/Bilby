@@ -23,6 +23,8 @@ pub const STEAM_API: &str = "https://store.steampowered.com/api";
 pub struct Steam {
     http: Arc<dyn Http>,
     api: String,
+    /// Where Steam answers questions about many apps at once.
+    browse: String,
     os: Os,
     /// Steam's `steamapps` folders on this machine.
     libraries: Vec<PathBuf>,
@@ -126,7 +128,49 @@ impl Steam {
         libraries: Vec<PathBuf>,
         present: bool,
     ) -> Steam {
-        Steam { http, api: api.trim_end_matches('/').to_string(), os: platform.os, libraries, present }
+        let api = api.trim_end_matches('/').to_string();
+        // The lookup of descriptors lives on another of Steam's addresses.
+        let browse =
+            if api == STEAM_API { "https://api.steampowered.com".to_string() } else { format!("{api}/browse") };
+        Steam { http, api, browse, os: platform.os, libraries, present }
+    }
+
+    /// Which of these apps Steam marks as adult only. One request for the lot; if it
+    /// fails, none are marked, and each is still checked when its page is opened.
+    fn adult_among(&self, ids: &[u64]) -> Vec<u64> {
+        #[derive(Deserialize, Default)]
+        #[serde(default)]
+        struct Items {
+            store_items: Vec<Item>,
+        }
+        #[derive(Deserialize, Default)]
+        #[serde(default)]
+        struct Item {
+            appid: u64,
+            content_descriptorids: Vec<u32>,
+        }
+        #[derive(Deserialize)]
+        struct Answer {
+            response: Items,
+        }
+        if ids.is_empty() {
+            return Vec::new();
+        }
+        let wanted: Vec<String> = ids.iter().map(|id| format!("{{\"appid\":{id}}}")).collect();
+        let input = format!(
+            "{{\"ids\":[{}],\"context\":{{\"language\":\"english\",\"country_code\":\"US\"}},\"data_request\":{{\"include_basic_info\":true}}}}",
+            wanted.join(",")
+        );
+        let url = format!("{}/IStoreBrowseService/GetItems/v1?input_json={}", self.browse, url_encode(&input));
+        let Ok(text) = self.http.get(&url) else { return Vec::new() };
+        let Ok(answer) = serde_json::from_str::<Answer>(&text) else { return Vec::new() };
+        answer
+            .response
+            .store_items
+            .into_iter()
+            .filter(|item| adult_only(&item.content_descriptorids))
+            .map(|item| item.appid)
+            .collect()
     }
 
     fn details(&self, key: &str) -> Result<Details> {
@@ -226,8 +270,28 @@ struct Details {
     release_date: Option<ReleaseDate>,
     header_image: Option<String>,
     recommendations: Option<Recommendations>,
+    /// Steam's own notes on what is in it; see [`adult_only`].
+    #[serde(default)]
+    content_descriptors: Descriptors,
     #[serde(default)]
     screenshots: Vec<Screenshot>,
+}
+
+#[derive(Deserialize, Default)]
+struct Descriptors {
+    #[serde(default)]
+    ids: Vec<u32>,
+}
+
+/// Steam marks what is in a game with numbered descriptors. 3 is "adult only sexual
+/// content" and 4 "gratuitous sexual content"; either makes it something for people of
+/// 18 or over. The others (nudity, violence, mature themes in general) do not: they
+/// cover half the catalog. [The meanings are from the SteamDatabase project's reading
+/// of Steam's own definitions, not a page Valve publishes. Checked 2026-11-21 against
+/// three games: Portal 2 has none, Cyberpunk 2077 has 1, 2 and 5, and an adult-only
+/// title has all five.]
+pub fn adult_only(descriptors: &[u32]) -> bool {
+    descriptors.iter().any(|id| matches!(id, 3 | 4))
 }
 
 #[derive(Deserialize)]
@@ -287,13 +351,18 @@ impl Source for Steam {
         }
         let url = format!("{}/storesearch/?term={}&l=english&cc=US", self.api, url_encode(query.trim()));
         let found: Found = serde_json::from_str(&self.http.get(&url)?)?;
-        Ok(found
+        let hits: Vec<_> = found
             .items
             .into_iter()
             .filter(|hit| hit.kind == "app" && self.runs_here(&hit.platforms).is_some())
             .take(limit)
+            .collect();
+        let adult = self.adult_among(&hits.iter().map(|hit| hit.id).collect::<Vec<u64>>());
+        Ok(hits
+            .into_iter()
             .map(|hit| {
                 let mut app = AppSummary::new(AppId::new(SourceKind::Steam, hit.id.to_string()), hit.name);
+                app.adult = adult.contains(&hit.id);
                 app.homepage = format!("https://store.steampowered.com/app/{}", hit.id);
                 // A search hit's price being absent means free to play.
                 app.price = price_text(hit.price.as_ref(), true);
@@ -334,6 +403,7 @@ impl Source for Steam {
         app.popularity = d.recommendations.as_ref().map(|r| r.total).filter(|n| *n > 0);
         app.price = price_text(d.price_overview.as_ref(), d.is_free);
         app.icon_url = own_picture(d.header_image.clone());
+        app.adult = adult_only(&d.content_descriptors.ids);
         // What the person should know before pressing the button, most important first.
         let mut notices = Vec::new();
         if d.release_date.as_ref().is_some_and(|r| r.coming_soon) {

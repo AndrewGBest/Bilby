@@ -117,9 +117,18 @@ struct Appstream {
     urls: Option<Urls>,
     /// Extra facts Flathub adds, among them whether the developer is verified.
     metadata: Option<serde_json::Value>,
+    /// The app's own statement of what is in it, worked out by Flathub into a
+    /// youngest suitable age, per language.
+    content_rating_details: Option<serde_json::Value>,
 }
 
 impl Appstream {
+    /// For people of 18 or over, by the app's own content rating.
+    fn adult(&self) -> bool {
+        let Some(details) = self.content_rating_details.as_ref().and_then(|d| d.as_object()) else { return false };
+        details.values().any(|language| language["minimumAge"].as_u64().is_some_and(|age| age >= 18))
+    }
+
     fn verified(&self) -> bool {
         let value = self.metadata.as_ref().map(|m| &m["flathub::verification::verified"]);
         value.is_some_and(|v| v.as_bool() == Some(true) || v.as_str() == Some("true"))
@@ -199,6 +208,7 @@ impl Flathub {
             verified: false,
             momentum: None,
             price: None,
+            adult: false,
             id: AppId::new(SourceKind::Flathub, id),
         }
     }
@@ -289,8 +299,10 @@ impl Source for Flathub {
     fn summary(&self, key: &str) -> Result<AppSummary> {
         let a = self.appstream(key)?;
         let verified = a.verified();
+        let adult = a.adult();
         let mut app = self.summary_from(a.id, a.name, a.summary, a.developer_name);
         app.verified = verified;
+        app.adult = adult;
         // How much it is installed comes from a separate small document. Without it the
         // page simply has no such figures.
         let stats = self.http.get(&format!("{}/stats/{key}", self.api)).ok();

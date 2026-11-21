@@ -115,6 +115,7 @@ impl Index {
                         verified: false,
                         momentum: None,
                         price: None,
+                        adult: false,
                     },
                 ))
             })

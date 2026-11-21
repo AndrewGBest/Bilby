@@ -18,39 +18,56 @@ use crate::platform::{FormFactor, Os, Platform};
 /// Where Longboard is published; the store installs it like any other app.
 pub const LONGBOARD: &str = "AndrewGBest/Longboard";
 
-struct Site {
-    host: &'static str,
-    name: &'static str,
-    summary: &'static str,
+/// A well-known site, from the list kept in `data/web.json`.
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct Site {
+    pub host: String,
+    pub name: String,
+    pub summary: String,
+    /// What it is for: watch, listen, play, read, social, shop, tools, adult.
+    #[serde(default)]
+    pub kind: String,
+    /// For people of 18 or over.
+    #[serde(default)]
+    pub adult: bool,
+    /// Shown on the home page.
+    #[serde(default)]
+    pub featured: bool,
 }
 
-/// Free, public sites that make sense on a TV. Written by hand, from memory: the
-/// addresses were not checked from where this was written.
-const SITES: &[Site] = &[
-    Site { host: "wikipedia.org", name: "Wikipedia", summary: "The free encyclopedia." },
-    Site {
-        host: "archive.org",
-        name: "Internet Archive",
-        summary: "Films, music, books and old software, free to watch and read.",
-    },
-    Site { host: "openstreetmap.org", name: "OpenStreetMap", summary: "The free map of the world." },
-    Site { host: "gutenberg.org", name: "Project Gutenberg", summary: "Tens of thousands of free books." },
-    Site { host: "somafm.com", name: "SomaFM", summary: "Listener-supported internet radio, with no adverts." },
-    Site { host: "lichess.org", name: "Lichess", summary: "Free, open-source chess." },
-    Site { host: "sepiasearch.org", name: "Sepia Search", summary: "Find videos across PeerTube sites." },
-    Site { host: "plus.nasa.gov", name: "NASA+", summary: "NASA's free video service." },
-];
+/// The bundled list. A broken file means no list, not a store that will not start;
+/// an address that could not be opened is dropped.
+pub fn sites() -> &'static [Site] {
+    #[derive(serde::Deserialize)]
+    struct File {
+        #[serde(default)]
+        sites: Vec<Site>,
+    }
+    static LIST: std::sync::OnceLock<Vec<Site>> = std::sync::OnceLock::new();
+    LIST.get_or_init(|| {
+        let mut sites =
+            serde_json::from_str::<File>(include_str!("../../data/web.json")).map(|f| f.sites).unwrap_or_default();
+        sites.retain(|site| valid_key(SourceKind::Web, &site.host) && !site.name.trim().is_empty());
+        sites
+    })
+}
+
+/// The listed site at this address, with or without a leading "www.".
+pub fn listed(host: &str) -> Option<&'static Site> {
+    let bare = host.trim_start_matches("www.");
+    sites().iter().find(|site| site.host == host || site.host == bare)
+}
 
 pub struct Websites;
 
 fn summary_of(host: &str) -> AppSummary {
-    let known = SITES.iter().find(|s| s.host == host);
+    let known = listed(host);
     AppSummary {
         id: AppId::new(SourceKind::Web, host),
-        name: known.map(|s| s.name.to_string()).unwrap_or_else(|| host.trim_start_matches("www.").to_string()),
+        name: known.map(|s| s.name.clone()).unwrap_or_else(|| host.trim_start_matches("www.").to_string()),
         author: host.to_string(),
         summary: known
-            .map(|s| s.summary.to_string())
+            .map(|s| s.summary.clone())
             .unwrap_or_else(|| format!("Open {host} like an app, driven with the remote.")),
         popularity: None,
         homepage: format!("https://{host}/"),
@@ -67,12 +84,13 @@ fn summary_of(host: &str) -> AppSummary {
         verified: false,
         momentum: None,
         price: None,
+        adult: known.is_some_and(|s| s.adult),
     }
 }
 
 /// The featured websites, for the Discover rows.
 pub fn featured() -> Vec<AppSummary> {
-    SITES.iter().map(|s| summary_of(s.host)).collect()
+    sites().iter().filter(|s| s.featured && !s.adult).map(|s| summary_of(&s.host)).collect()
 }
 
 impl Source for Websites {
@@ -87,13 +105,14 @@ impl Source for Websites {
 
     fn search(&self, query: &str, limit: usize) -> Result<Vec<AppSummary>> {
         let words: Vec<String> = query.split_whitespace().map(str::to_lowercase).collect();
-        let mut hits: Vec<AppSummary> = SITES
+        // A site is found by its name, its address or what it is for ("watch", "music").
+        let mut hits: Vec<AppSummary> = sites()
             .iter()
             .filter(|s| {
-                let text = format!("{} {} {}", s.name, s.host, s.summary).to_lowercase();
+                let text = format!("{} {} {} {}", s.name, s.host, s.summary, s.kind).to_lowercase();
                 !words.is_empty() && words.iter().all(|w| text.contains(w.as_str()))
             })
-            .map(|s| summary_of(s.host))
+            .map(|s| summary_of(&s.host))
             .collect();
         // Someone typed an address: offer exactly that site.
         let typed = query.trim().trim_start_matches("https://").trim_start_matches("http://").trim_end_matches('/');
@@ -168,7 +187,7 @@ mod tests {
     fn a_site_is_found_by_name_or_by_typing_its_address() {
         let ids =
             |q: &str| -> Vec<String> { Websites.search(q, 8).unwrap().into_iter().map(|a| a.id.to_string()).collect() };
-        assert_eq!(ids("chess"), ["web:lichess.org"]);
+        assert_eq!(ids("chess"), ["web:lichess.org", "web:chess.com"]);
         assert_eq!(ids("free books"), ["web:archive.org", "web:gutenberg.org"]);
         assert_eq!(ids("https://Example.org/"), ["web:example.org"], "any address can be added");
         assert_eq!(ids("wikipedia.org"), ["web:wikipedia.org"], "a listed site is not offered twice");
@@ -187,5 +206,34 @@ mod tests {
         assert!(!desktop.usable(), "on a desktop a website is opened in the browser already there");
         assert!(Websites.releases("../etc").is_err());
         assert!(Websites.summary("no-dot").is_err());
+    }
+}
+
+#[cfg(test)]
+mod list_tests {
+    use super::*;
+
+    #[test]
+    fn the_bundled_list_is_sound_and_keeps_adult_sites_off_the_home_page() {
+        let all = sites();
+        assert!(all.len() >= 80, "{}", all.len());
+        let mut hosts: Vec<&str> = all.iter().map(|s| s.host.as_str()).collect();
+        hosts.sort_unstable();
+        hosts.dedup();
+        assert_eq!(hosts.len(), all.len(), "each site once");
+        assert!(all.iter().all(|s| !s.summary.is_empty() && !s.kind.is_empty()));
+        // Sites for adults are on the list so that they can be recognised, marked as such.
+        let adult: Vec<&Site> = all.iter().filter(|s| s.adult).collect();
+        assert!(!adult.is_empty() && adult.iter().all(|s| s.kind == "adult" && !s.featured));
+        assert!(Websites.summary(&adult[0].host).unwrap().adult);
+        assert!(Websites.summary(&format!("www.{}", adult[0].host)).unwrap().adult, "with or without www");
+        assert!(!Websites.summary("wikipedia.org").unwrap().adult);
+        // The home page's row is the featured ones, none of them adult.
+        let home = featured();
+        assert!(home.len() >= 8 && home.iter().all(|app| !app.adult));
+        assert!(home.iter().any(|app| app.name == "YouTube"));
+        // Found by what they are for, too.
+        let music: Vec<String> = Websites.search("listen", 50).unwrap().into_iter().map(|a| a.name).collect();
+        assert!(music.contains(&"Spotify".to_string()), "{music:?}");
     }
 }
