@@ -53,7 +53,7 @@ jobs:
         with:
           targets: ${{ matrix.target }}
       - if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev libxkbcommon-dev libwebkit2gtk-4.1-dev libgtk-3-dev
+        run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev libxkbcommon-dev libwebkit2gtk-4.1-dev libgtk-3-dev libasound2-dev
       - run: cargo build --release --target ${{ matrix.target }} -p bilby -p bilby-cli
       # The sign-in window. On Windows and macOS it is part of bilby itself; on Linux it
       # is its own program, so bilby starts on systems without WebKitGTK.

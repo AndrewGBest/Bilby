@@ -34,6 +34,8 @@ pub struct Settings {
     pub reduce_motion: bool,
     /// Sources switched off, by their short names (`flathub`, `steam`, ...).
     pub disabled_sources: Vec<String>,
+    /// No sounds as the person moves about. They are on, and quiet, unless this is set.
+    pub mute_sounds: bool,
     /// Lists of apps on the person's own servers or storage, added by address.
     pub own_sources: Vec<OwnSource>,
     /// Where downloaded files go, when the person chose somewhere other than the

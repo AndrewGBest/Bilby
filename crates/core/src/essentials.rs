@@ -11,7 +11,7 @@
 //! switched off in Settings, which leaves only what the sources themselves say.
 
 use crate::model::{AppId, AppSummary, SourceKind};
-use crate::platform::Platform;
+use crate::platform::{FormFactor, Platform};
 use serde::Deserialize;
 use std::sync::OnceLock;
 
@@ -23,9 +23,21 @@ pub struct Essential {
     pub kind: String,
     /// The ids it goes by, best first.
     pub ids: Vec<String>,
-    /// In the first row.
+    /// The kinds of device it suits (`desktop`, `tv`, `mobile`). Empty for all of them.
+    #[serde(default, rename = "for")]
+    pub suits: Vec<String>,
+    /// The kinds of device where it is in the first row.
     #[serde(default)]
-    pub top: bool,
+    pub top: Vec<String>,
+}
+
+/// What the lists call this kind of device.
+fn form(platform: &Platform) -> &'static str {
+    match platform.form_factor {
+        FormFactor::Desktop => "desktop",
+        FormFactor::Mobile => "mobile",
+        FormFactor::Tv => "tv",
+    }
 }
 
 /// The bundled list. A broken file means no list, not a store that will not start;
@@ -48,13 +60,22 @@ pub fn all() -> &'static [Essential] {
     })
 }
 
-/// Is this app one of them, at any of its sources?
-pub fn is_essential(id: &AppId) -> bool {
+/// Is this app one of them, at any of its sources, and one that suits this kind of
+/// device? An office suite is not lifted in a search on a TV.
+pub fn is_essential(id: &AppId, platform: &Platform) -> bool {
     let text = id.to_string();
-    all().iter().any(|app| app.ids.iter().any(|known| known.eq_ignore_ascii_case(&text)))
+    all().iter().any(|app| app.suits_device(platform) && app.ids.iter().any(|known| known.eq_ignore_ascii_case(&text)))
 }
 
 impl Essential {
+    pub fn suits_device(&self, platform: &Platform) -> bool {
+        self.suits.is_empty() || self.suits.iter().any(|kind| kind == form(platform))
+    }
+
+    fn leads_on(&self, platform: &Platform) -> bool {
+        self.top.iter().any(|kind| kind == form(platform))
+    }
+
     /// The version of it this device can use: the first id whose source applies here.
     pub fn here(&self, sources: &[SourceKind]) -> Option<AppSummary> {
         let id = self.ids.iter().filter_map(|id| AppId::parse(id)).find(|id| sources.contains(&id.source))?;
@@ -66,19 +87,46 @@ impl Essential {
 
 /// Rows for the home page: the ones nearly everyone wants first, then by kind. Only
 /// what this device can use; a row with a single thing in it is left out.
-pub fn rows(sources: &[SourceKind], _platform: &Platform) -> Vec<(String, Vec<AppSummary>)> {
+pub fn rows(sources: &[SourceKind], platform: &Platform) -> Vec<(String, Vec<AppSummary>)> {
+    // Only what suits this kind of device: a TV is for watching and playing, not for
+    // spreadsheets.
     let pick = |wanted: &dyn Fn(&Essential) -> bool| -> Vec<AppSummary> {
-        all().iter().filter(|app| wanted(app)).filter_map(|app| app.here(sources)).collect()
+        all()
+            .iter()
+            .filter(|app| app.suits_device(platform) && wanted(app))
+            .filter_map(|app| app.here(sources))
+            .collect()
     };
-    let mut rows = vec![("Essentials".to_string(), pick(&|app| app.top))];
-    for (kind, title) in [
-        ("browse", "Web browsers"),
-        ("media", "Music and video"),
-        ("chat", "Chat, calls and mail"),
-        ("games", "Games"),
-        ("work", "Work and create"),
-        ("tools", "Handy tools"),
-    ] {
+    let mut rows = vec![("Essentials".to_string(), pick(&|app| app.leads_on(platform)))];
+    // The rows in the order that suits the device: things to watch and play first on
+    // a TV, a browser first on a computer.
+    let kinds: [(&str, &str); 6] = match platform.form_factor {
+        FormFactor::Tv => [
+            ("media", "Music and video"),
+            ("games", "Games"),
+            ("tools", "Handy tools"),
+            ("chat", "Chat, calls and mail"),
+            ("browse", "Web browsers"),
+            ("work", "Work and create"),
+        ],
+        FormFactor::Mobile => [
+            ("chat", "Chat, calls and mail"),
+            ("media", "Music and video"),
+            ("games", "Games"),
+            ("browse", "Web browsers"),
+            ("tools", "Handy tools"),
+            ("work", "Work and create"),
+        ],
+        FormFactor::Desktop => [
+            ("browse", "Web browsers"),
+            ("media", "Music and video"),
+            ("chat", "Chat, calls and mail"),
+            ("games", "Games"),
+            ("work", "Work and create"),
+            ("tools", "Handy tools"),
+        ],
+    };
+    for (kind, title) in kinds {
         // Everything of the kind, the best known included: a row of browsers without
         // the two most used would be an odd row.
         rows.push((title.to_string(), pick(&|app| app.kind == kind)));
@@ -91,31 +139,54 @@ pub fn rows(sources: &[SourceKind], _platform: &Platform) -> Vec<(String, Vec<Ap
 mod tests {
     use super::*;
 
+    fn device(preset: &str) -> Platform {
+        Platform::preset(preset).unwrap()
+    }
+
+    fn tv() -> Platform {
+        let mut p = device("linux-x64-debian");
+        p.form_factor = FormFactor::Tv;
+        p
+    }
+
+    fn touch() -> Platform {
+        let mut p = device("linux-x64-debian");
+        p.form_factor = FormFactor::Mobile;
+        p
+    }
+
     #[test]
     fn the_list_is_sound() {
         let list = all();
-        assert!(list.len() >= 50, "{}", list.len());
+        assert!(list.len() >= 120, "{}", list.len());
         let mut names: Vec<&str> = list.iter().map(|a| a.name.as_str()).collect();
         names.sort_unstable();
         names.dedup();
         assert_eq!(names.len(), list.len(), "each app once");
-        assert!(list.iter().all(|a| !a.summary.is_empty()
-            && ["browse", "media", "chat", "games", "work", "tools"].contains(&a.kind.as_str())));
+        let kinds = ["browse", "media", "chat", "games", "work", "tools"];
+        let forms = ["desktop", "tv", "mobile"];
+        for app in list {
+            assert!(!app.summary.is_empty() && kinds.contains(&app.kind.as_str()), "{}", app.name);
+            assert!(app.suits.iter().chain(&app.top).all(|f| forms.contains(&f.as_str())), "{}", app.name);
+            // It cannot lead on a kind of device it does not suit.
+            assert!(app.top.iter().all(|f| app.suits.is_empty() || app.suits.contains(f)), "{}", app.name);
+        }
         // Every website on it is one the store lists by hand, and none is for adults
         // or otherwise unfit to recommend.
         for id in list.iter().flat_map(|a| &a.ids).filter_map(|id| id.strip_prefix("web:")) {
             let site = crate::source::web::listed(id).unwrap_or_else(|| panic!("{id} is not in web.json"));
             assert!(!site.adult && !crate::source::web::restricted_host(id), "{id}");
         }
-        assert!(is_essential(&AppId::parse("flathub:org.videolan.VLC").unwrap()));
-        assert!(is_essential(&AppId::parse("winget:videolan.vlc").unwrap()), "at any of its sources");
-        assert!(!is_essential(&AppId::parse("github:someone/vlc").unwrap()));
+        let desk = device("linux-x64-debian");
+        assert!(is_essential(&AppId::parse("flathub:org.videolan.VLC").unwrap(), &desk));
+        assert!(is_essential(&AppId::parse("winget:videolan.vlc").unwrap(), &desk), "at any of its sources");
+        assert!(!is_essential(&AppId::parse("github:someone/vlc").unwrap(), &desk));
     }
 
     #[test]
     fn each_device_gets_the_version_it_can_use() {
         let on = |sources: &[SourceKind]| -> Vec<(String, Vec<String>)> {
-            rows(sources, &Platform::preset("linux-x64-debian").unwrap())
+            rows(sources, &device("linux-x64-debian"))
                 .into_iter()
                 .map(|(title, apps)| (title, apps.into_iter().map(|a| a.id.to_string()).collect()))
                 .collect()
@@ -136,5 +207,47 @@ mod tests {
         assert!(!linux.iter().any(|(_, ids)| ids.iter().any(|id| id.contains("7zip"))), "and nowhere else");
         // With no web apps and no package source, what is left is what there is.
         assert!(on(&[SourceKind::GitHub]).is_empty());
+    }
+
+    #[test]
+    fn what_leads_depends_on_the_kind_of_device() {
+        let sources = [SourceKind::Flathub, SourceKind::Web, SourceKind::GitHub];
+        let names = |platform: &Platform| -> Vec<(String, Vec<String>)> {
+            rows(&sources, platform)
+                .into_iter()
+                .map(|(t, apps)| (t, apps.into_iter().map(|a| a.name).collect()))
+                .collect()
+        };
+        let has = |row: &[String], name: &str| row.iter().any(|n| n == name);
+
+        // A computer leads with a browser and what everyone installs first.
+        let desk = names(&device("linux-x64-debian"));
+        assert!(has(&desk[0].1, "Firefox") && has(&desk[0].1, "LibreOffice") && has(&desk[0].1, "Zoom"));
+        assert_eq!(desk[1].0, "Web browsers");
+
+        // A TV leads with things to watch and play, and has no office suite at all.
+        let tv = names(&tv());
+        assert!(
+            has(&tv[0].1, "Netflix") && has(&tv[0].1, "Kodi") && has(&tv[0].1, "Prime Video") && has(&tv[0].1, "Steam")
+        );
+        assert!(!has(&tv[0].1, "Firefox") && !has(&tv[0].1, "Zoom"));
+        assert_eq!(tv[1].0, "Music and video");
+        assert!(!tv.iter().flat_map(|(_, row)| row).any(|n| n == "LibreOffice" || n == "Visual Studio Code"));
+        assert!(!tv.iter().any(|(title, _)| title == "Work and create"));
+
+        // A touch screen leads with what people use on phones.
+        let touch_rows = names(&touch());
+        assert!(
+            has(&touch_rows[0].1, "Instagram")
+                && has(&touch_rows[0].1, "WhatsApp")
+                && has(&touch_rows[0].1, "Google Maps")
+        );
+        assert_eq!(touch_rows[1].0, "Chat, calls and mail");
+
+        // The lift in a search follows the device too.
+        let office = AppId::parse("flathub:org.libreoffice.LibreOffice").unwrap();
+        assert!(is_essential(&office, &device("linux-x64-debian")) && !is_essential(&office, &self::tv()));
+        let kodi = AppId::parse("flathub:tv.kodi.Kodi").unwrap();
+        assert!(is_essential(&kodi, &self::tv()) && is_essential(&kodi, &device("linux-x64-debian")));
     }
 }

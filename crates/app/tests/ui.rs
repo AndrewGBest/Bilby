@@ -1973,7 +1973,7 @@ fn signing_in_to_github_shows_a_code_and_keeps_the_token_it_is_given() {
     tv.press(Key::RightArrow);
     tv.press(Key::RightArrow);
     tv.press(Key::Return);
-    for _ in 0..12 {
+    for _ in 0..13 {
         tv.press(Key::DownArrow);
     }
     tv.press(Key::Return);
@@ -2294,7 +2294,7 @@ fn the_tv_has_a_settings_tab_with_every_setting_reachable_by_remote() {
     // Sources can be switched off from the sofa too: Down to the first of them, OK.
     let sources: Vec<SourceChoice> = s.store().get_sources().iter().collect();
     assert!(sources.len() >= 2 && sources.iter().all(|c| c.on));
-    for _ in 0..15 {
+    for _ in 0..16 {
         s.press(Key::DownArrow);
     }
     s.press(Key::Return);
@@ -2868,4 +2868,55 @@ fn a_list_on_the_persons_own_server_can_be_added_and_its_apps_installed() {
     s.app.search(&s.ui, "gauge");
     assert!(!s.store().get_results().iter().any(|c| c.id.starts_with("own:")));
     assert!(s.saved().library.iter().any(|a| a.id == "own:workshop-apps/gauge"));
+}
+
+// ---- sounds ----
+
+#[test]
+fn moving_about_makes_quiet_sounds_that_can_be_switched_off() {
+    use bilby::sound::Sound;
+    init_backend();
+    let dirs = dirs_in(&temp_root());
+    std::fs::create_dir_all(&dirs.config).unwrap();
+    let state_file = dirs.config.join("demo-state.json");
+    std::fs::write(&state_file, r#"{"settings":{"welcomed":true}}"#).unwrap();
+    let heard: Arc<Mutex<Vec<Sound>>> = Arc::default();
+    let record = heard.clone();
+    let options = Options {
+        demo: true,
+        inline: true,
+        platform: Platform::preset("linux-tv"),
+        shell: Some(Shell::Tv),
+        dirs: Some(dirs),
+        heard: Some(Arc::new(move |sound| record.lock().unwrap().push(sound))),
+        ..Default::default()
+    };
+    let (ui, _app) = build(&options).unwrap();
+    ui.window().set_size(slint::LogicalSize::new(1280.0, 720.0));
+    let press = |key: Key| {
+        let text: SharedString = key.into();
+        ui.window().dispatch_event(WindowEvent::KeyPressed { text: text.clone() });
+        ui.window().dispatch_event(WindowEvent::KeyReleased { text });
+    };
+    let store = ui.global::<Store>();
+    assert!(store.get_sounds(), "on to begin with");
+
+    // The remote: a tick for each move, a pop for OK, a lower note for Back.
+    press(Key::RightArrow);
+    press(Key::DownArrow);
+    press(Key::Return);
+    press(Key::Escape);
+    assert_eq!(*heard.lock().unwrap(), [Sound::Move, Sound::Move, Sound::Select, Sound::Back]);
+
+    // Switched off, there is silence, and it is remembered.
+    store.invoke_set_sounds(false);
+    assert!(State::load(&state_file).settings.mute_sounds && !store.get_sounds());
+    heard.lock().unwrap().clear();
+    press(Key::RightArrow);
+    press(Key::Return);
+    press(Key::Escape);
+    assert!(heard.lock().unwrap().is_empty());
+    // Switching them back on is itself heard.
+    store.invoke_set_sounds(true);
+    assert_eq!(*heard.lock().unwrap(), [Sound::Toggle]);
 }

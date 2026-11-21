@@ -598,7 +598,7 @@ impl Catalog {
                 app.rating = app.rating.or_else(|| self.rating_for(&app.id));
                 let related =
                     family.is_some_and(|f| f.members.iter().any(|m| m.id.eq_ignore_ascii_case(&app.id.to_string())));
-                let essential = self.essentials && crate::essentials::is_essential(&app.id);
+                let essential = self.essentials && crate::essentials::is_essential(&app.id, &self.platform);
                 let context =
                     crate::rank::Context { position, of, featured: featured.contains(&app.id), related, essential };
                 hits.push((app, context));

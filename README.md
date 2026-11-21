@@ -75,8 +75,10 @@ There is no Android package yet, and no Flatpak
   distribution's repositories on Linux (tens of thousands of packages on a typical
   system), plus Steam and every project with releases on GitHub and GitLab.
 - Or browse the home page. It opens with the apps and sites nearly everyone looks for
-  (a browser, a video player, the big names), each in the version for your device:
-  a short list chosen by people, which you can switch off in Settings. Below it are
+  (a browser, a video player, the big names), each in the version for your device
+  and chosen for the kind of device it is: things to watch and play on a TV, a
+  browser and the usual first installs on a computer. It is a list of about 140,
+  chosen by people, which you can switch off in Settings. Below it are
   web apps by purpose and, on Linux, what is popular and trending on Flathub.
 - One app is one result, even when several sources have it. Its page shows which
   source the button uses and lets you switch.
@@ -212,6 +214,8 @@ out-of-date packages, but an app is only as trustworthy as whoever published it.
   ask each time. AppImages are then moved to `Applications` in your home folder;
   packages, Flatpaks and store apps go where your system puts them.
 - **Reduce motion.** Settings can turn animations off.
+- **Sounds.** A quiet tick or pop as you move about and press things. Settings can
+  turn them off.
 - **From a terminal.** `bilby-cli` can search, show, install and check for updates, and
   can export your library to move it to another device. It does not do everything the
   app does: system updates and signing in are in the app only.

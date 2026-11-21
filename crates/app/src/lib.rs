@@ -21,6 +21,8 @@ use std::sync::{Arc, Mutex, RwLock};
 
 slint::include_modules!();
 
+pub mod sound;
+
 const USAGE: &str = "\
 Bilby - app store for GitHub Releases, Codeberg and other repositories, filtered to your device
 
@@ -81,6 +83,8 @@ pub struct Options {
     /// browser's data, returns the line the browser handed back, or nothing when the
     /// window was closed. Defaults to the store's sign-in window; tests pass a stand-in.
     pub signin: Option<SignIn>,
+    /// Where the sounds of moving about go, instead of the speakers. For tests.
+    pub heard: Option<Heard>,
     /// How an address is opened in the person's browser. For tests.
     pub browser: Option<Browser>,
     /// How the person is asked for a folder. For tests.
@@ -174,6 +178,7 @@ fn system_picker(start: &std::path::Path) -> Picked {
     }
 }
 
+pub type Heard = Arc<dyn Fn(sound::Sound) + Send + Sync>;
 pub type Browser = Arc<dyn Fn(&str) -> bilby_core::Result<()> + Send + Sync>;
 pub type Runner = Arc<dyn Fn(&std::path::Path, &[String]) -> bilby_core::Result<()> + Send + Sync>;
 
@@ -629,6 +634,13 @@ pub struct App {
     steam: std::sync::RwLock<Option<bilby_core::steam_account::Account>>,
     /// Bumped whenever a Steam sign-in starts or is cancelled, so a late answer is dropped.
     steam_generation: AtomicU64,
+    /// Where the quiet sounds of moving about go. Tests record them; a run that draws
+    /// one picture and leaves makes none.
+    heard: Option<Heard>,
+    #[cfg(not(target_os = "android"))]
+    player: std::sync::OnceLock<sound::Player>,
+    /// Never play through the speakers: a test, or a run that only takes a picture.
+    silent: bool,
     /// How an address is opened in the person's browser. Tests record it instead.
     browser: Browser,
     /// How the person is asked for a folder. Tests answer for them.
@@ -1290,6 +1302,7 @@ impl App {
         store.set_show_ratings(!settings.hide_ratings);
         store.set_check_updates_on_start(!settings.skip_update_check_on_start);
         store.set_has_token(!settings.github_token.trim().is_empty());
+        store.set_sounds(!settings.mute_sounds);
         store.set_show_essentials(!settings.hide_essentials);
         store.set_own_sources(ModelRc::new(VecModel::from(
             settings
@@ -2942,6 +2955,21 @@ impl App {
         Ok(())
     }
 
+    /// Make one of the quiet sounds of moving about, unless they are switched off.
+    pub fn play(&self, sound: sound::Sound) {
+        if self.state.lock().unwrap().settings.mute_sounds {
+            return;
+        }
+        if let Some(heard) = &self.heard {
+            heard(sound);
+            return;
+        }
+        #[cfg(not(target_os = "android"))]
+        if !self.silent {
+            self.player.get_or_init(sound::Player::start).play(sound);
+        }
+    }
+
     /// On a Linux TV a website opens in Longboard; anywhere else in the usual browser.
     fn opens_sites_in_longboard(&self) -> bool {
         let platform = self.platform.read().unwrap();
@@ -3562,6 +3590,10 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         steam: std::sync::RwLock::new(None),
         steam_generation: AtomicU64::new(0),
         elsewhere: std::sync::RwLock::new(Elsewhere::default()),
+        heard: options.heard.clone(),
+        #[cfg(not(target_os = "android"))]
+        player: std::sync::OnceLock::new(),
+        silent: options.inline || options.screenshot.is_some(),
         browser: options.browser.clone().unwrap_or_else(|| Arc::new(install::open_url)),
         picker: options.picker.clone().unwrap_or_else(|| Arc::new(system_picker)),
         asked_folder: Mutex::new(None),
@@ -3722,6 +3754,17 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     on!(on_set_reduce_motion, |app, ui, on| {
         app.update_state(ui, |state| state.settings.reduce_motion = on);
         app.refresh_settings(ui);
+    });
+    on!(on_play, |app, _ui, kind| {
+        if let Some(sound) = sound::Sound::from_number(kind) {
+            app.play(sound);
+        }
+    });
+    on!(on_set_sounds, |app, ui, on| {
+        app.update_state(ui, |state| state.settings.mute_sounds = !on);
+        app.refresh_settings(ui);
+        // Switching them on is heard at once; switching them off, of course, is not.
+        app.play(sound::Sound::Toggle);
     });
     on!(on_add_own_source, |app, ui, url| { app.add_own_source(ui, &url) });
     on!(on_remove_own_source, |app, ui, url| { app.remove_own_source(ui, &url) });

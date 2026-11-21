@@ -186,7 +186,10 @@ export component ChoiceChip inherits Rectangle {
         }
         ta := TouchArea {
             mouse-cursor: pointer;
-            clicked => { root.clicked(); }
+            clicked => {
+                Store.play(1);
+                root.clicked();
+            }
         }
     }
     HorizontalLayout {
@@ -249,7 +252,10 @@ export component Button inherits Rectangle {
         ta := TouchArea {
             enabled: root.enabled;
             mouse-cursor: pointer;
-            clicked => { root.clicked(); }
+            clicked => {
+                Store.play(1);
+                root.clicked();
+            }
         }
     }
     HorizontalLayout {
@@ -392,7 +398,10 @@ export component Toggle inherits Rectangle {
         }
         TouchArea {
             mouse-cursor: pointer;
-            clicked => { root.toggled(!root.checked); }
+            clicked => {
+                Store.play(3);
+                root.toggled(!root.checked);
+            }
         }
     }
     Rectangle {
@@ -499,7 +508,10 @@ export component AppTile inherits Rectangle {
         }
         ta := TouchArea {
             mouse-cursor: pointer;
-            clicked => { root.clicked(); }
+            clicked => {
+                Store.play(1);
+                root.clicked();
+            }
         }
     }
     VerticalLayout {
@@ -2259,6 +2271,25 @@ export component SettingsBody inherits Rectangle {
                     ChoiceChip { text: "Match system"; selected: Store.theme-mode == 0; clicked => { Store.set-theme(0); } }
                     ChoiceChip { text: "Light"; selected: Store.theme-mode == 1; clicked => { Store.set-theme(1); } }
                     ChoiceChip { text: "Dark"; selected: Store.theme-mode == 2; clicked => { Store.set-theme(2); } }
+                }
+                HorizontalLayout {
+                    spacing: 12px;
+                    Text {
+                        horizontal-stretch: 1;
+                        text: "Sounds: a quiet tick or pop as you move about and press things.";
+                        color: Theme.text-dim;
+                        font-size: 13px;
+                        wrap: word-wrap;
+                        vertical-alignment: center;
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle {
+                            label: "Sounds";
+                            checked: Store.sounds;
+                            toggled(on) => { Store.set-sounds(on); }
+                        }
+                    }
                 }
                 HorizontalLayout {
                     spacing: 12px;

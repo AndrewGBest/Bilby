@@ -25,6 +25,9 @@ image = { version = "0.25", default-features = false, features = ["png", "jpeg"]
 # to the window system's own events so they can be translated.
 [target.'cfg(not(target_os = "android"))'.dependencies]
 slint = { version = "1.19", default-features = false, features = ["unstable-winit-030"] }
+# The quiet sounds that go with moving about. Playback only: the sounds are made in
+# code, so no decoders are needed.
+rodio = { version = "0.21", default-features = false, features = ["playback"] }
 
 # The window for signing in to another store on its own page. On Linux it is a separate
 # program (bilby-signin), so the store starts without the web engine being installed.

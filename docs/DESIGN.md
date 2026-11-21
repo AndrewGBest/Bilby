@@ -314,13 +314,25 @@ service (`related.json`) count as near matches for that service's name.
 figures say what is popular on each source. They do not say that someone setting up a
 computer wants a browser, a video player and the names everybody knows, whichever
 source carries them. That is a human judgement, so it is a hand-kept list: some sixty
-apps and sites, each with the ids it goes by at every source (every one checked to
-exist). The home page opens with them, each in the first version this device can use,
-then a row per kind; in a search they get a fixed lift, enough to put the real Firefox
+apps and sites (about 140 now), each with the ids it goes by at every source (every
+one checked to exist). Each also says which kinds of device it suits and on which it
+leads: a TV opens with things to watch and play and has no office suite at all, a
+computer opens with a browser and what people install first, a touch screen with
+what people use on phones. The home page opens with them, each in the first version
+this device can use, then a row per kind in an order that suits the device; in a search they get a fixed lift, enough to put the real Firefox
 above its look-alikes and not enough to beat an exact name. One switch in Settings
 turns both off, leaving only what the sources say. [The list is one person's view of
 what "everyone" wants, and leans towards what is popular in the English-speaking
 world.]
+
+**Sounds** (`app/src/sound.rs`). A tick as the highlight moves, a soft pop on a press,
+a lower note on the way back, a blip for a switch. They are made in code from sine
+waves that die away within a few hundredths of a second; nothing is recorded or
+copied from any other system. The loudest starts at a twentieth of full volume. They
+play from a thread of their own, the sound device is opened on the first sound and
+not before, and a device that is missing or will not open means silence, not an
+error. One switch turns them off. [Played through a real sound device here without
+error; how they sound to a person has not been judged by one yet.]
 
 **Adult content, Family mode and the PIN** (`parental.rs`). Things meant for adults
 are part of the catalog, kept apart rather than hidden:

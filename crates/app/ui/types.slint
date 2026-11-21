@@ -297,6 +297,8 @@ export global Store {
     // Family mode: nothing for adults anywhere. Adult things on the home page only
     // where asked for. A PIN, where set, guards these and adult content.
     // Recommend the hand-kept list of apps nearly everyone expects.
+    // The quiet sounds of moving about.
+    in property <bool> sounds;
     in property <bool> show-essentials;
     // Lists of apps on the person's own servers: `id` is the list's address.
     in property <[SourceChoice]> own-sources;
@@ -371,6 +373,9 @@ export global Store {
     // Add a list of apps by its address, or take one away.
     callback add-own-source(string);
     callback remove-own-source(string);
+    // Make a sound: 0 the highlight moved, 1 a press, 2 stepping back, 3 a switch.
+    callback play(int);
+    callback set-sounds(bool);
     callback set-essentials(bool);
     callback set-family-mode(bool);
     callback set-adult-on-home(bool);
