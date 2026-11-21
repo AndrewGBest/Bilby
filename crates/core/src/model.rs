@@ -36,6 +36,8 @@ pub enum SourceKind {
     Steam,
     /// The Mac App Store, handed over to in the same way.
     MacAppStore,
+    /// A list of apps on the person's own server or storage, added in Settings.
+    Own,
 }
 
 impl SourceKind {
@@ -61,6 +63,7 @@ impl SourceKind {
             SourceKind::FDroid => "F-Droid",
             SourceKind::Steam => "Steam",
             SourceKind::MacAppStore => "Mac App Store",
+            SourceKind::Own => "Your own sources",
         }
     }
     pub fn prefix(self) -> &'static str {
@@ -81,6 +84,7 @@ impl SourceKind {
             SourceKind::FDroid => "fdroid",
             SourceKind::Steam => "steam",
             SourceKind::MacAppStore => "mas",
+            SourceKind::Own => "own",
         }
     }
 }
@@ -116,6 +120,7 @@ impl AppId {
             "fdroid" => SourceKind::FDroid,
             "steam" => SourceKind::Steam,
             "mas" => SourceKind::MacAppStore,
+            "own" => SourceKind::Own,
             _ => return None,
         };
         (!key.is_empty()).then(|| AppId::new(source, key))
@@ -202,6 +207,10 @@ pub fn valid_key(source: SourceKind, key: &str) -> bool {
     match source {
         SourceKind::GitHub | SourceKind::Codeberg => {
             matches!(key.split_once('/'), Some((owner, repo)) if ok(owner, &[]) && ok(repo, &[]))
+        }
+        // The person's source, then the app's id within it.
+        SourceKind::Own => {
+            matches!(key.split_once('/'), Some((source, app)) if ok(source, &[]) && ok(app, &[]) && key.len() <= 120)
         }
         // group/project, or group/subgroup/.../project.
         SourceKind::GitLab => {

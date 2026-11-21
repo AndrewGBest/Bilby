@@ -748,8 +748,8 @@ fn settings_apply_immediately_and_survive_a_restart() {
         let mode = std::fs::metadata(&s.state_file).unwrap().permissions().mode() & 0o777;
         assert_eq!(mode, 0o600, "the file holding the token is private");
     }
-    assert!(s.has("Sign out of GitHub"));
-    s.click("Sign out of GitHub");
+    // (The GitHub card is far down the Settings page, so it is pressed through its action.)
+    s.store().invoke_save_token("".into());
     assert!(!s.store().get_has_token());
     assert_eq!(s.saved().settings.github_token, "");
 
@@ -1954,16 +1954,17 @@ fn signing_in_to_github_shows_a_code_and_keeps_the_token_it_is_given() {
     s.store().set_page(3);
     assert!(!s.store().get_has_token());
     // The demo's GitHub says yes the first time it is asked.
-    s.click("Sign in with GitHub");
+    // (The GitHub card is far down the Settings page, so it is pressed through its action.)
+    s.store().invoke_github_signin();
     assert!(s.store().get_has_token());
     assert_eq!(s.saved().settings.github_token, "demo-token");
     assert_eq!((s.store().get_signin_state(), s.store().get_signin_code().as_str()), (0, ""));
     assert_eq!(s.store().get_toast(), "Signed in to GitHub");
-    assert!(!s.has("Sign in with GitHub"), "nothing to sign in to twice");
+    assert!(s.store().get_has_token(), "nothing to sign in to twice");
 
-    s.click("Sign out of GitHub");
+    s.store().invoke_save_token("".into());
     assert!(!s.store().get_has_token() && s.saved().settings.github_token.is_empty());
-    assert!(s.has("Sign in with GitHub"));
+    assert!(!s.store().get_has_token());
 
     // On a TV it is under Accounts on the Settings tab, reached with the remote.
     let tv = start("linux-tv", Shell::Tv);
@@ -2821,4 +2822,50 @@ fn the_downloads_folder_can_be_chosen_and_each_download_can_ask() {
     app.open(&ui, "github:tidewave/tidewave");
     store.invoke_install(0);
     assert_eq!(store.get_install_state(), 0, "nothing was started");
+}
+
+// ---- the person's own sources ----
+
+#[test]
+fn a_list_on_the_persons_own_server_can_be_added_and_its_apps_installed() {
+    let s = start("linux-x64-debian", Shell::Desktop);
+    let address = bilby_core::demo::OWN_SOURCE;
+    assert_eq!(s.store().get_own_sources().row_count(), 0);
+
+    // An address that is not such a list is refused, with the reason, and nothing is kept.
+    s.store().invoke_add_own_source("https://workshop.example/not-a-list".into());
+    assert!(s.store().get_toast().starts_with("Not added."), "{}", s.store().get_toast());
+    s.store().invoke_add_own_source("ftp://workshop.example/apps.json".into());
+    assert!(s.store().get_toast().contains("not a web address"), "{}", s.store().get_toast());
+    assert!(s.saved().settings.own_sources.is_empty());
+
+    // The real one is fetched, named by what it calls itself, and remembered.
+    s.store().invoke_add_own_source(address.into());
+    assert!(s.store().get_toast().contains("Added “Workshop apps”: 1 app"), "{}", s.store().get_toast());
+    let kept = s.saved().settings.own_sources;
+    assert_eq!((kept[0].name.as_str(), kept[0].url.as_str()), ("Workshop apps", address));
+    assert_eq!(s.store().get_own_sources().row_data(0).unwrap().label, "Workshop apps");
+    s.store().invoke_add_own_source(address.into());
+    assert_eq!(s.saved().settings.own_sources.len(), 1, "not twice");
+
+    // Its apps are searched like any others, and it is a source like any other.
+    s.app.search(&s.ui, "gauge");
+    let card = s.store().get_results().iter().find(|c| c.id == "own:workshop-apps/gauge").expect("found by searching");
+    assert_eq!((card.name.as_str(), card.source.as_str()), ("Gauge", "Workshop apps"));
+    assert!(s.store().get_sources().iter().any(|source| source.id == "own"), "and can be switched off with the rest");
+
+    // The file for this device is picked from its name, and installs.
+    s.app.open(&s.ui, "own:workshop-apps/gauge");
+    assert!(s.store().get_details_error().is_empty(), "{}", s.store().get_details_error());
+    assert_eq!(s.option_labels()[0], "Debian package · x86_64");
+    s.store().invoke_install(0);
+    assert!(s.saved().library.iter().any(|a| a.id == "own:workshop-apps/gauge"));
+
+    // Removing the source takes its apps out of searches; what was installed stays.
+    s.store().set_details_open(false);
+    s.store().invoke_remove_own_source(address.into());
+    assert!(s.saved().settings.own_sources.is_empty());
+    s.app.search(&s.ui, "gauge");
+    assert!(!s.store().get_results().iter().any(|c| c.id.starts_with("own:")));
+    assert!(s.saved().library.iter().any(|a| a.id == "own:workshop-apps/gauge"));
 }

@@ -298,6 +298,8 @@ export global Store {
     // where asked for. A PIN, where set, guards these and adult content.
     // Recommend the hand-kept list of apps nearly everyone expects.
     in property <bool> show-essentials;
+    // Lists of apps on the person's own servers: `id` is the list's address.
+    in property <[SourceChoice]> own-sources;
     in property <bool> family-mode;
     in property <bool> adult-on-home;
     // Adult things shown as they are: no cover, no question.
@@ -366,6 +368,9 @@ export global Store {
     callback choose-downloads();
     callback set-downloads(string);
     callback set-ask-where(bool);
+    // Add a list of apps by its address, or take one away.
+    callback add-own-source(string);
+    callback remove-own-source(string);
     callback set-essentials(bool);
     callback set-family-mode(bool);
     callback set-adult-on-home(bool);

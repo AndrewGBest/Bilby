@@ -34,6 +34,8 @@ pub struct Settings {
     pub reduce_motion: bool,
     /// Sources switched off, by their short names (`flathub`, `steam`, ...).
     pub disabled_sources: Vec<String>,
+    /// Lists of apps on the person's own servers or storage, added by address.
+    pub own_sources: Vec<OwnSource>,
     /// Where downloaded files go, when the person chose somewhere other than the
     /// usual folder. Empty for the usual one.
     pub downloads_dir: String,
@@ -57,6 +59,14 @@ pub struct Settings {
     pub pin_salt: String,
     /// Ask for the PIN before installing or removing anything.
     pub pin_for_installs: bool,
+}
+
+/// A source the person added themselves: what it calls itself and where its list is.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct OwnSource {
+    pub name: String,
+    pub url: String,
 }
 
 /// An app obtained through the store.

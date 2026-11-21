@@ -106,8 +106,8 @@ There is no Android package yet, and no Flatpak
   a terminal on the build, and shows the command only if it cannot find a terminal.
 - Downloads are checked against the checksum the source publishes, when there is one.
 - Bilby checks what an app needs before you download it. An AppImage on a Linux system
-  without FUSE 2 says so on its page, with a button that installs the missing piece
-  from your distribution. An app that closes the moment it starts is reported with
+  without FUSE 2 says so on its page, and Bilby installs the missing piece from your
+  distribution along with the app. An app that closes the moment it starts is reported with
   the reason.
 - Every other file and every older version is one press away, never hidden for good.
 - For things only another store can install (Steam, the Mac App Store), Bilby opens
@@ -155,6 +155,7 @@ Each source only appears on devices it applies to. A Windows user never sees the
 | **Steam** | Windows, macOS, Linux | Games and apps, free and paid, with their prices. Bilby hands over to the Steam app, which sells, installs and runs them |
 | **Mac App Store** | macOS | Its catalog, free and paid, with prices and ratings. Bilby hands over to the App Store app |
 | **Codeberg** | Windows, macOS, Linux | Projects by link and from the home page. Codeberg is turning away searches at the moment |
+| **Your own sources** | Everywhere | A list of apps on your own server or storage, added by its address ([how to publish one](docs/OWN-SOURCES.md)) |
 | **Web apps** | Windows, macOS, Linux | Websites added like apps: about ninety well-known ones recommended, a thousand more found by name, and any address you type. They open in your own browser, or in Longboard on a Linux TV |
 
 ## Your privacy

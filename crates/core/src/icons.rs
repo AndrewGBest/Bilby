@@ -38,7 +38,8 @@ pub fn icon_key(id: &AppId) -> Option<String> {
         | SourceKind::Snap
         | SourceKind::FDroid
         | SourceKind::Steam
-        | SourceKind::MacAppStore => None,
+        | SourceKind::MacAppStore
+        | SourceKind::Own => None,
     }
 }
 

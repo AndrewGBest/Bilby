@@ -2070,6 +2070,64 @@ export component SettingsBody inherits Rectangle {
             }
 
             SettingsCard {
+                title: "Your own sources";
+                Text {
+                    text: "Apps can also come from a list on your own server or storage: a small file saying what the apps are and where their files live. Add its address and its apps are searched, shown on the home page and installed like any others. Nobody but its owner vouches for what is on such a list, so add only ones you trust.";
+                    color: Theme.text-dim;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                }
+                for own in Store.own-sources : HorizontalLayout {
+                    spacing: 12px;
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        alignment: center;
+                        spacing: 2px;
+                        Text { text: own.label; color: Theme.text; font-size: 14px; overflow: elide; }
+                        Text { text: own.id; color: Theme.text-dim; font-size: 12px; overflow: elide; }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Button { text: "Remove"; primary: false; accessible-label: "Remove the source " + own.label; clicked => { Store.remove-own-source(own.id); } }
+                    }
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        height: 36px;
+                        border-radius: 8px;
+                        background: Theme.bg;
+                        border-width: 1px;
+                        border-color: own-input.has-focus ? Theme.focus : Theme.stroke;
+                        own-input := TextInput {
+                            x: 10px;
+                            width: parent.width - 20px;
+                            height: 100%;
+                            color: Theme.text;
+                            font-size: 13px;
+                            single-line: true;
+                            vertical-alignment: center;
+                            accessible-label: "Address of a list of apps";
+                            accepted => {
+                                Store.add-own-source(self.text);
+                                self.text = "";
+                            }
+                        }
+                        if own-input.text == "" : Text { x: 10px; text: "https://your-server/apps.json"; color: Theme.text-dim; font-size: 13px; vertical-alignment: center; }
+                    }
+                    Button {
+                        text: "Add";
+                        accessible-label: "Add this source";
+                        clicked => {
+                            Store.add-own-source(own-input.text);
+                            own-input.text = "";
+                        }
+                    }
+                }
+            }
+
+            SettingsCard {
                 title: "Recommendations";
                 HorizontalLayout {
                     spacing: 12px;

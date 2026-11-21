@@ -9,6 +9,7 @@ pub mod forgejo;
 pub mod github;
 pub mod gitlab;
 pub mod homebrew;
+pub mod own;
 pub mod snap;
 pub mod steam;
 pub mod system;

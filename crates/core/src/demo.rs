@@ -740,8 +740,26 @@ pub static DOWNLOAD_STEP_MS: std::sync::atomic::AtomicU64 = std::sync::atomic::A
 
 pub struct DemoHttp;
 
+/// Where the demo's made-up "own source" lives, for trying that feature offline.
+pub const OWN_SOURCE: &str = "https://workshop.example/apps/index.json";
+
 impl Http for DemoHttp {
     fn get(&self, url: &str) -> Result<String> {
+        if url == OWN_SOURCE {
+            return Ok(json!({
+                "name": "Workshop apps",
+                "apps": [{
+                    "id": "gauge", "name": "Gauge", "summary": "Reads the workshop's sensors.", "author": "The workshop",
+                    "releases": [{ "version": "2.1.0", "date": "2026-11-01", "notes": "Faster.", "files": [
+                        { "url": "gauge-2.1.0-x86_64.AppImage" },
+                        { "url": "gauge-2.1.0-setup-x64.exe" },
+                        { "url": "gauge-2.1.0-universal.dmg" },
+                        { "url": "gauge_2.1.0_amd64.deb" }
+                    ]}]
+                }]
+            })
+            .to_string());
+        }
         let not_found = || Error::NotFound(url.to_string());
         if let Some(rest) = url.strip_prefix("https://api.github.com/search/repositories?q=") {
             let q = url_decode(rest.split('&').next().unwrap_or(""));

@@ -501,6 +501,13 @@ fn make_catalog(platform: &Platform, demo: bool, settings: &Settings, dirs: &Dir
     };
     catalog.include_prereleases = settings.include_prereleases;
     catalog.disabled = settings.disabled_sources.iter().filter_map(|name| source_named(name)).collect();
+    catalog.use_own_sources(
+        settings
+            .own_sources
+            .iter()
+            .map(|own| bilby_core::source::own::Added { name: own.name.clone(), url: own.url.clone() })
+            .collect(),
+    );
     // (The made-up demo catalog has it off already: the list names real apps.)
     catalog.essentials = catalog.essentials && !settings.hide_essentials;
     catalog.parental =
@@ -963,7 +970,11 @@ impl App {
             popularity: SharedString::new(),
             initials: initials(&app.name).into(),
             tint: tint_for(&app.id),
-            icon: picture_for(&app.id),
+            icon: if self.store_app.as_ref().is_some_and(|own| own.to_string().eq_ignore_ascii_case(&app.id)) {
+                own_icon()
+            } else {
+                picture_for(&app.id)
+            },
             installed: true,
             rating: SharedString::new(),
             rating_count: SharedString::new(),
@@ -1255,7 +1266,9 @@ impl App {
                     apps: ModelRc::new(VecModel::from(top)),
                 });
             }
-            for kind in ["Apps", "Games", "Web apps", "From developers", "System packages", "Adult"] {
+            for kind in
+                ["Apps", "Games", "Web apps", "From your own sources", "From developers", "System packages", "Adult"]
+            {
                 let of_kind: Vec<AppCard> = if kind == "Adult" {
                     adult.clone()
                 } else {
@@ -1278,6 +1291,18 @@ impl App {
         store.set_check_updates_on_start(!settings.skip_update_check_on_start);
         store.set_has_token(!settings.github_token.trim().is_empty());
         store.set_show_essentials(!settings.hide_essentials);
+        store.set_own_sources(ModelRc::new(VecModel::from(
+            settings
+                .own_sources
+                .iter()
+                .map(|own| SourceChoice {
+                    id: own.url.as_str().into(),
+                    label: own.name.as_str().into(),
+                    on: true,
+                    count: 0,
+                })
+                .collect::<Vec<_>>(),
+        )));
         store.set_family_mode(settings.family_mode);
         store.set_adult_on_home(settings.adult_on_home);
         store.set_adult_uncovered(settings.adult_uncovered);
@@ -2797,6 +2822,65 @@ impl App {
         }
     }
 
+    /// Add a list of apps on the person's own server or storage, by its address. It
+    /// is fetched first: something that is not such a list is refused with the reason.
+    pub fn add_own_source(self: &Arc<Self>, ui: &AppWindow, url: &str) {
+        let url = url.trim().to_string();
+        if url.is_empty() {
+            return;
+        }
+        if self.state().settings.own_sources.iter().any(|own| own.url == url) {
+            self.toast(ui, "That source is already among yours.", true);
+            return;
+        }
+        self.toast(ui, "Looking at that address…", false);
+        let address = url.clone();
+        self.job(
+            move |app| bilby_core::source::own::look(app.catalog().http().as_ref(), &address),
+            move |app, ui, found| match found {
+                Ok((name, apps)) => {
+                    // Two sources may not go by the same short name: their apps' ids would clash.
+                    let taken = |candidate: &str| {
+                        let slug = bilby_core::source::own::slug(candidate);
+                        app.state()
+                            .settings
+                            .own_sources
+                            .iter()
+                            .any(|own| bilby_core::source::own::slug(&own.name) == slug)
+                    };
+                    let mut called = name.clone();
+                    let mut n = 2;
+                    while taken(&called) {
+                        called = format!("{name} {n}");
+                        n += 1;
+                    }
+                    let own = bilby_core::state::OwnSource { name: called.clone(), url: url.clone() };
+                    app.update_state(ui, |state| state.settings.own_sources.push(own));
+                    app.rebuild_catalog();
+                    app.collections.lock().unwrap().clear();
+                    app.load_collections(ui);
+                    app.refresh_settings(ui);
+                    app.refresh(ui);
+                    let apps = if apps == 1 { "1 app".to_string() } else { format!("{apps} apps") };
+                    app.toast(ui, &format!("Added “{called}”: {apps}"), false);
+                }
+                Err(e) => app.toast(ui, &format!("Not added. {e}"), true),
+            },
+        );
+    }
+
+    /// Take one of the person's own sources away. What was installed from it stays.
+    pub fn remove_own_source(self: &Arc<Self>, ui: &AppWindow, url: &str) {
+        let url = url.to_string();
+        self.update_state(ui, |state| state.settings.own_sources.retain(|own| own.url != url));
+        self.rebuild_catalog();
+        self.collections.lock().unwrap().clear();
+        self.load_collections(ui);
+        self.refresh_settings(ui);
+        self.refresh(ui);
+        self.toast(ui, "Source removed", false);
+    }
+
     /// Choose the folder downloads go to, with the system's own dialog.
     pub fn choose_downloads(&self, ui: &AppWindow) {
         match (self.picker)(&self.downloads_folder()) {
@@ -3639,6 +3723,8 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         app.update_state(ui, |state| state.settings.reduce_motion = on);
         app.refresh_settings(ui);
     });
+    on!(on_add_own_source, |app, ui, url| { app.add_own_source(ui, &url) });
+    on!(on_remove_own_source, |app, ui, url| { app.remove_own_source(ui, &url) });
     on!(on_choose_downloads, |app, ui| { app.choose_downloads(ui) });
     on!(on_set_downloads, |app, ui, path| { app.set_downloads(ui, &path) });
     on!(on_set_ask_where, |app, ui, on| {
@@ -3997,6 +4083,7 @@ fn kind_of(id: &str) -> &'static str {
         "web" => "Web apps",
         "github" | "gitlab" | "codeberg" => "From developers",
         "apt" | "pacman" | "dnf" | "zypper" | "aur" => "System packages",
+        "own" => "From your own sources",
         _ => "Apps",
     }
 }
