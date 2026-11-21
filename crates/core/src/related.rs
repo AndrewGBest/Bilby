@@ -101,6 +101,24 @@ impl Family {
     }
 }
 
+impl Family {
+    /// The app to start from on this device, and the apps that are its children. The
+    /// parent is the service's own version when this device can use it (YouTube's
+    /// website, in a browser), else the first that it can. Each child is listed once,
+    /// however many sources have it, and a child is never listed under another child.
+    pub fn parent_and_children(&self, sources: &[SourceKind], platform: &Platform) -> (Option<&Member>, Vec<&Member>) {
+        let mut here: Vec<&Member> = Vec::new();
+        for member in self.here(sources, platform) {
+            if !here.iter().any(|m| m.label == member.label) {
+                here.push(member);
+            }
+        }
+        let parent = here.iter().copied().find(|m| m.official).or_else(|| here.first().copied());
+        let children = here.into_iter().filter(|m| parent.is_none_or(|p| p.label != m.label)).collect();
+        (parent, children)
+    }
+}
+
 impl Member {
     /// "VacuumTube · Flathub · unofficial": which version, from where, and whose.
     pub fn describe(&self) -> String {
@@ -124,6 +142,22 @@ mod tests {
         assert_eq!(family_of(list, "flathub:rocks.shy.vacuumtube").map(|f| f.name.as_str()), Some("YouTube"));
         assert!(family_of(list, "github:lumen-labs/lumen").is_none());
         assert!(family_named(list, "yo").is_none() && family_named(list, "tube").is_none());
+    }
+
+    #[test]
+    fn the_official_version_is_the_parent_and_the_rest_are_its_children() {
+        let list = families();
+        let youtube = family_named(list, "youtube").unwrap();
+        let platform = Platform::preset("linux-tv").unwrap();
+        let (parent, children) =
+            youtube.parent_and_children(&[SourceKind::Web, SourceKind::Flathub, SourceKind::GitHub], &platform);
+        assert_eq!(parent.map(|p| p.id.as_str()), Some("web:youtube.com"));
+        let names: Vec<&str> = children.iter().map(|m| m.label.as_str()).collect();
+        assert_eq!(names, ["VacuumTube", "FreeTube"], "each child once, and none of them is the parent");
+        assert_eq!(children[0].id, "flathub:rocks.shy.VacuumTube", "the source first in the list is the one kept");
+        // Where the service's own site cannot be used, the first that can is the parent.
+        let (parent, _) = youtube.parent_and_children(&[SourceKind::Flathub], &platform);
+        assert_eq!(parent.map(|p| p.label.as_str()), Some("VacuumTube"));
     }
 
     #[test]

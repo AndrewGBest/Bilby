@@ -2079,15 +2079,15 @@ fn a_service_with_several_apps_is_one_result_and_its_page_offers_the_versions() 
     let tiles = s.store().get_results().iter().filter(|c| c.name == "YouTube").count();
     assert_eq!(tiles, 1);
 
+    // The service's own app is the parent: its child apps are listed under it, each
+    // once, and the parent is not listed among them.
     s.app.open(&s.ui, "web:youtube.com");
     assert_eq!(s.store().get_app_family_name(), "YouTube");
-    // One line per app, however many sources have it, each saying what it is and whose.
-    let versions: Vec<VersionChoice> = s.store().get_app_family().iter().collect();
-    let names: Vec<&str> = versions.iter().map(|v| v.name.as_str()).collect();
-    assert_eq!(names, ["YouTube website", "VacuumTube", "FreeTube"], "only what this device can use, each once");
-    assert_eq!(versions.iter().filter(|v| v.on).count(), 1);
-    assert!(versions[0].on && versions[0].official);
-    let vacuum = &versions[1];
+    assert_eq!(s.store().get_app_parent().row_count(), 0, "the parent has no parent");
+    let kids: Vec<VersionChoice> = s.store().get_app_family().iter().collect();
+    let names: Vec<&str> = kids.iter().map(|v| v.name.as_str()).collect();
+    assert_eq!(names, ["VacuumTube", "FreeTube"], "only what this device can use, each once, none of them the parent");
+    let vacuum = &kids[0];
     assert_eq!(
         (vacuum.id.as_str(), vacuum.official),
         ("flathub:rocks.shy.VacuumTube", false),
@@ -2095,20 +2095,19 @@ fn a_service_with_several_apps_is_one_result_and_its_page_offers_the_versions() 
     );
     assert_eq!(vacuum.note, "YouTube's TV interface, as an app");
 
-    // Choosing one shows it, with its other sources beside the button.
+    // A child app names its parent, once, and lists no siblings.
     s.app.open(&s.ui, "flathub:rocks.shy.VacuumTube");
-    let now: Vec<VersionChoice> = s.store().get_app_family().iter().collect();
-    assert_eq!(now.iter().find(|v| v.on).unwrap().name, "VacuumTube");
+    let parents: Vec<VersionChoice> = s.store().get_app_parent().iter().collect();
+    assert_eq!(parents.len(), 1);
+    assert_eq!((parents[0].name.as_str(), parents[0].id.as_str()), ("YouTube website", "web:youtube.com"));
+    assert_eq!(s.store().get_app_family().row_count(), 0, "no sibling child apps under a child");
+    // Its sources beside the button, as before.
     let sources: Vec<(String, bool)> =
         s.store().get_app_sources().iter().map(|c| (c.label.to_string(), c.on)).collect();
     assert_eq!(sources, [("Flathub".to_string(), true), ("GitHub".to_string(), false)]);
     s.app.open(&s.ui, "github:shy1132/VacuumTube");
-    let now: Vec<VersionChoice> = s.store().get_app_family().iter().collect();
-    assert_eq!(
-        now.iter().find(|v| v.on).map(|v| v.id.as_str()),
-        Some("github:shy1132/VacuumTube"),
-        "the list follows the source in use"
-    );
+    assert_eq!(s.store().get_app_parent().row_count(), 1, "the same parent from another source");
+    assert_eq!(s.store().get_app_family().row_count(), 0);
 
     // On a phone the same family leads with the website and offers the Android apps.
     let phone = start("android-arm64", Shell::Mobile);
@@ -2122,6 +2121,7 @@ fn a_service_with_several_apps_is_one_result_and_its_page_offers_the_versions() 
     // An app that belongs to no family shows no such choice.
     s.app.open(&s.ui, "github:lumen-labs/lumen");
     assert_eq!(s.store().get_app_family().row_count(), 0);
+    assert_eq!(s.store().get_app_parent().row_count(), 0);
 }
 
 #[test]
@@ -2129,7 +2129,7 @@ fn a_tv_remote_can_switch_version_from_the_versions_list() {
     let s = start("linux-tv", Shell::Tv);
     s.app.open(&s.ui, "web:youtube.com");
     let choices: Vec<SourceChoice> = s.store().get_tv_choices().iter().collect();
-    assert!(choices.len() >= 2 && choices.iter().all(|c| c.label.starts_with("Switch to ")), "{}", choices.len());
+    assert!(choices.len() >= 2 && choices.iter().all(|c| c.label.starts_with("Child app: ")), "{}", choices.len());
     let first = choices[0].clone();
     // Main button, star, then Versions: OK opens the list with the choices on top.
     s.press(Key::RightArrow);

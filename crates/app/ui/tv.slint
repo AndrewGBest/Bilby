@@ -4,7 +4,7 @@
 // surface and a 1080p or 4K desktop window.
 import { Theme } from "theme.slint";
 import { AppCard, Section, Store } from "types.slint";
-import { AppIcon, FadeIn, ProgressBar } from "components.slint";
+import { AppIcon, Busy, FadeIn, ProgressBar } from "components.slint";
 
 // Sizes follow Android TV's guidance: content stays inside a 48dp side and 27dp
 // top/bottom margin, body text is 12dp or larger, and the focused item grows a little
@@ -216,6 +216,9 @@ export component TvShell inherits Rectangle {
     // whether the list of every file is open.
     property <int> act: 0;
     property <bool> files: false;
+    // Where the highlight sits in the list of versions and files, from its top: the
+    // list moves up so that it stays on the screen.
+    property <length> files-at: 0;
     // Where the remote's focus is: 0 the grid of apps, 1 the top bar, 2 the library's
     // own buttons. `tab` is the focused entry of the top bar: Home, Library, Search,
     // This TV.
@@ -1248,6 +1251,10 @@ export component TvShell inherits Rectangle {
                     color: current.has-update || current.installed ? Theme.accent : Theme.text-dim;
                     font-size: 12 * u;
                 }
+                if rows.length == 0 && Store.searching : Busy {
+                    width: 360 * u;
+                    height: 4 * u;
+                }
                 if rows.length == 0 : Text {
                     text: Store.searching ? "Searching…" : root.on-library ? "Apps you install with Bilby show up here, and so do your favourites." : "Nothing for this TV yet. Press Up to search.";
                     wrap: word-wrap;
@@ -1790,7 +1797,8 @@ export component TvShell inherits Rectangle {
             }
             if root.files : VerticalLayout {
                 x: 496 * u;
-                y: 70 * u;
+                y: 70 * u - max(0, root.files-at + 82 * u - parent.height);
+                animate y { duration: Theme.quick; easing: ease-out; }
                 width: parent.width - self.x - margin;
                 spacing: 8 * u;
                 alignment: start;
@@ -1835,6 +1843,7 @@ export component TvShell inherits Rectangle {
                 }
                 for choice[i] in Store.tv-choices : Rectangle {
                     property <bool> focused: i == root.opt;
+                    changed focused => { if (self.focused) { root.files-at = self.y + self.height; } }
                     visible: !root.ver-open;
                     height: root.ver-open ? 0 : 34 * u;
                     accessible-role: button;
@@ -1867,6 +1876,7 @@ export component TvShell inherits Rectangle {
                 // Which release the files below belong to; OK opens the list of releases.
                 if root.vrow == 1 && !root.ver-open : Rectangle {
                     property <bool> focused: root.opt == root.choices;
+                    changed focused => { if (self.focused) { root.files-at = self.y + self.height; } }
                     height: 34 * u;
                     border-radius: 10 * u;
                     background: focused ? Theme.surface-2 : Theme.surface;
@@ -1892,6 +1902,7 @@ export component TvShell inherits Rectangle {
                 for option[j] in Store.options : Rectangle {
                     property <int> i: j + root.pre;
                     property <bool> focused: i == root.opt;
+                    changed focused => { if (self.focused) { root.files-at = self.y + self.height; } }
                     property <bool> mine: Store.install-index == j && Store.install-state != 0;
                     visible: !root.ver-open;
                     height: root.ver-open ? 0 : 54 * u;

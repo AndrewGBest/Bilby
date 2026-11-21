@@ -1481,21 +1481,24 @@ impl App {
         let device = self.platform.read().unwrap().clone();
         let here = family.map(|family| family.here(&available, &device)).unwrap_or_default();
         let showing = here.iter().find(|m| m.id.eq_ignore_ascii_case(&id)).map(|m| m.label.as_str());
-        let mut versions: Vec<VersionChoice> = Vec::new();
-        for member in &here {
-            let on = showing == Some(member.label.as_str());
-            if versions.iter().any(|v| v.name == member.label.as_str()) || (on && !member.id.eq_ignore_ascii_case(&id))
-            {
-                continue;
-            }
-            versions.push(VersionChoice {
-                id: member.id.as_str().into(),
-                name: member.label.as_str().into(),
-                note: member.note.as_str().into(),
-                official: member.official,
-                on,
-            });
-        }
+        // The service's own app lists its child apps. A child names its parent, once,
+        // and lists no siblings: they are reached from the parent.
+        let (parent, children) =
+            family.map(|family| family.parent_and_children(&available, &device)).unwrap_or((None, Vec::new()));
+        let on_parent = parent.is_some_and(|p| p.id.eq_ignore_ascii_case(&id));
+        let as_choice = |member: &bilby_core::related::Member| VersionChoice {
+            id: member.id.as_str().into(),
+            name: member.label.as_str().into(),
+            note: member.note.as_str().into(),
+            official: member.official,
+            on: false,
+        };
+        let versions: Vec<VersionChoice> =
+            if on_parent { children.iter().map(|m| as_choice(m)).collect() } else { Vec::new() };
+        let parents: Vec<VersionChoice> = match parent {
+            Some(p) if family.is_some() && !on_parent => vec![as_choice(p)],
+            _ => Vec::new(),
+        };
         // The other sources of the app being shown, when a search has not already said.
         if store.get_app_sources().row_count() == 0 {
             let same: Vec<SourceChoice> = here
@@ -1517,6 +1520,7 @@ impl App {
         }
         store.set_app_family_name(family.map(|f| f.name.as_str()).unwrap_or_default().into());
         store.set_app_family(ModelRc::new(VecModel::from(versions)));
+        store.set_app_parent(ModelRc::new(VecModel::from(parents)));
 
         // A Steam game without Steam: offer Steam itself, from wherever this device gets it.
         let mut helper = (String::new(), String::new());
@@ -1567,11 +1571,20 @@ impl App {
         *self.needed.lock().unwrap() = needed;
         // The same choices as rows for the TV, without the one already showing.
         let mut rows: Vec<SourceChoice> = Vec::new();
-        for version in store.get_app_family().iter().filter(|v| !v.on) {
-            let whose = if version.official { "" } else { "  ·  unofficial" };
+        for parent in store.get_app_parent().iter() {
+            let whose = if parent.official { "" } else { "  ·  unofficial" };
             rows.push(SourceChoice {
-                id: version.id,
-                label: format!("Switch to {}{whose}", version.name).into(),
+                id: parent.id,
+                label: format!("Parent app: {}{whose}", parent.name).into(),
+                on: false,
+                count: 0,
+            });
+        }
+        for child in store.get_app_family().iter() {
+            let whose = if child.official { "" } else { "  ·  unofficial" };
+            rows.push(SourceChoice {
+                id: child.id,
+                label: format!("Child app: {}{whose}", child.name).into(),
                 on: false,
                 count: 0,
             });
@@ -2079,6 +2092,10 @@ impl App {
         self.close_details(ui);
         store.set_page(1);
         store.set_searching(true);
+        // What was on screen before (the home page's rows) goes now: the search page
+        // waits, with its own animation, until the results come.
+        store.set_results(ModelRc::default());
+        store.set_tv_rows(ModelRc::default());
         store.set_search_note(SharedString::new());
         store.set_search_error(SharedString::new());
         self.update_state(ui, |state| state.add_search(&query));
