@@ -172,12 +172,10 @@ export global Store {
     // Every source that has this app, when more than one does. `id` is the app's id at
     // that source and `on` marks the one this page is showing.
     in property <[SourceChoice]> app-sources;
-    // Other versions of the same service that work on this device ("YouTube":
-    // VacuumTube, FreeTube, ...), when the app belongs to such a family.
-    // The child apps of the service this app belongs to, listed on its parent's page.
+    // The other ways to use the service this app belongs to, that work on this device
+    // ("YouTube": VacuumTube, FreeTube, ...). On the service's own app, everything
+    // else; on an app someone else made, the service's own.
     in property <[VersionChoice]> app-family;
-    // The parent of the service this app belongs to, shown on a child app's page.
-    in property <[VersionChoice]> app-parent;
     in property <string> app-family-name;
     // An app that is needed first (Steam, for a Steam game), which this store can
     // install: its id and what to call it. "" when nothing is missing.

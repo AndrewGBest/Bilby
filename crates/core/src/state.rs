@@ -161,8 +161,11 @@ impl State {
         let Ok(text) = std::fs::read_to_string(path) else {
             return State::default();
         };
-        match serde_json::from_str(&text) {
-            Ok(state) => state,
+        match serde_json::from_str::<State>(&text) {
+            Ok(mut state) => {
+                state.merge_duplicates();
+                state
+            }
             Err(_) => {
                 let _ = std::fs::rename(path, corrupt_path(path));
                 State::default()
@@ -187,20 +190,42 @@ impl State {
         Ok(())
     }
 
+    /// An app's entry. Ids are compared without regard to capitals: the sources do
+    /// not tell `owner/App` from `owner/app`, and an app must not be in the library
+    /// twice because two places spelt it differently.
     pub fn installed(&self, id: &str) -> Option<&InstalledApp> {
-        self.library.iter().find(|a| a.id == id)
+        self.library.iter().find(|a| a.id.eq_ignore_ascii_case(id))
     }
 
     /// Add or replace the library entry for an app; newest first.
     pub fn record_install(&mut self, app: InstalledApp) {
-        self.library.retain(|a| a.id != app.id);
+        self.library.retain(|a| !a.id.eq_ignore_ascii_case(&app.id));
         self.library.insert(0, app);
     }
 
     /// Forget an app. Returns the entry so the caller can delete a store-managed file.
     pub fn remove(&mut self, id: &str) -> Option<InstalledApp> {
-        let index = self.library.iter().position(|a| a.id == id)?;
+        let index = self.library.iter().position(|a| a.id.eq_ignore_ascii_case(id))?;
         Some(self.library.remove(index))
+    }
+
+    /// One entry per app. A library written by an earlier version could hold the same
+    /// app twice, under two spellings of its id (the store itself, after updating):
+    /// the copy the store placed is the one kept, else the first.
+    fn merge_duplicates(&mut self) {
+        let mut kept: Vec<InstalledApp> = Vec::new();
+        for app in std::mem::take(&mut self.library) {
+            match kept.iter_mut().find(|k| k.id.eq_ignore_ascii_case(&app.id)) {
+                Some(have) => {
+                    let placed = |a: &InstalledApp| a.store_managed && a.path.is_some();
+                    if placed(&app) && !placed(have) {
+                        *have = app;
+                    }
+                }
+                None => kept.push(app),
+            }
+        }
+        self.library = kept;
     }
 
     pub fn is_favourite(&self, id: &str) -> bool {
@@ -219,7 +244,7 @@ impl State {
 
     /// Stop announcing `version` of a library app. Returns false if it is not installed.
     pub fn skip_version(&mut self, id: &str, version: &str) -> bool {
-        match self.library.iter_mut().find(|a| a.id == id) {
+        match self.library.iter_mut().find(|a| a.id.eq_ignore_ascii_case(id)) {
             Some(app) => {
                 app.skipped_version = version.to_string();
                 true
@@ -314,6 +339,34 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("bilby-state-{tag}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         dir.join("nested").join("state.json")
+    }
+
+    /// The store listed itself as `owner/bilby` and recorded its own update as
+    /// `owner/Bilby`: two entries, the old one for ever "waiting for an update".
+    #[test]
+    fn an_app_is_in_the_library_once_however_its_id_is_spelt() {
+        let mut state = State::default();
+        state.record_install(app("github:AndrewGBest/bilby", "v0.1.24"));
+        let mut updated = app("github:AndrewGBest/Bilby", "v0.1.25");
+        updated.store_managed = true;
+        updated.path = Some("/home/me/Applications/bilby.AppImage".to_string());
+        state.record_install(updated.clone());
+        assert_eq!(state.library.len(), 1, "the update replaces the entry");
+        assert_eq!(state.installed("github:andrewgbest/BILBY").unwrap().version, "v0.1.25");
+        assert!(state.skip_version("github:AndrewGBest/bilby", "v0.1.26"));
+
+        // A file an earlier version wrote, with both: the copy the store placed is kept,
+        // whichever came first.
+        for order in [[0, 1], [1, 0]] {
+            let both = [app("github:AndrewGBest/bilby", "v0.1.24"), updated.clone()];
+            let file = temp(&format!("twice-{}", order[0]));
+            let written = State { library: order.iter().map(|n| both[*n].clone()).collect(), ..State::default() };
+            written.save(&file).unwrap();
+            let read = State::load(&file);
+            assert_eq!(read.library.len(), 1);
+            assert_eq!(read.library[0].version, "v0.1.25");
+        }
+        assert!(state.remove("GITHUB:andrewgbest/bilby").is_some() && state.library.is_empty());
     }
 
     fn app(id: &str, version: &str) -> InstalledApp {

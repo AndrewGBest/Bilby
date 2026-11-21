@@ -545,6 +545,26 @@ fn make_catalog(platform: &Platform, demo: bool, settings: &Settings, dirs: &Dir
 
 // ---- application state ------------------------------------------------------------
 
+/// What the last look for updates found, per app. Ids are matched without regard to
+/// capitals, as the library does: a list may spell an app `owner/app` where its source
+/// says `owner/App`, and both mean the one app.
+#[derive(Default, Clone)]
+struct UpdateTable(HashMap<String, UpdateStatus>);
+
+impl UpdateTable {
+    fn get(&self, id: &str) -> Option<&UpdateStatus> {
+        self.0.get(&id.to_ascii_lowercase())
+    }
+
+    fn insert(&mut self, id: String, status: UpdateStatus) {
+        self.0.insert(id.to_ascii_lowercase(), status);
+    }
+
+    fn remove(&mut self, id: &str) {
+        self.0.remove(&id.to_ascii_lowercase());
+    }
+}
+
 thread_local! {
     /// Decoded app pictures by owner. Images belong to the UI thread, so they live here
     /// rather than in `App`, which worker threads share.
@@ -624,7 +644,7 @@ pub struct App {
     state_path: PathBuf,
     state: Mutex<State>,
     results: Mutex<(String, Vec<AppSummary>)>,
-    updates: Mutex<HashMap<String, UpdateStatus>>,
+    updates: Mutex<UpdateTable>,
     last_checked: AtomicU64,
     current: Mutex<Current>,
     /// Bumped per request so a slow, superseded answer is dropped instead of shown.
@@ -1571,24 +1591,20 @@ impl App {
         let device = self.platform.read().unwrap().clone();
         let here = family.map(|family| family.here(&available, &device)).unwrap_or_default();
         let showing = here.iter().find(|m| m.id.eq_ignore_ascii_case(&id)).map(|m| m.label.as_str());
-        // The service's own app lists its child apps. A child names its parent, once,
-        // and lists no siblings: they are reached from the parent.
-        let (parent, children) =
-            family.map(|family| family.parent_and_children(&available, &device)).unwrap_or((None, Vec::new()));
-        let on_parent = parent.is_some_and(|p| p.id.eq_ignore_ascii_case(&id));
-        let as_choice = |member: &bilby_core::related::Member| VersionChoice {
-            id: member.id.as_str().into(),
-            name: member.label.as_str().into(),
-            note: member.note.as_str().into(),
-            official: member.official,
-            on: false,
-        };
-        let versions: Vec<VersionChoice> =
-            if on_parent { children.iter().map(|m| as_choice(m)).collect() } else { Vec::new() };
-        let parents: Vec<VersionChoice> = match parent {
-            Some(p) if family.is_some() && !on_parent => vec![as_choice(p)],
-            _ => Vec::new(),
-        };
+        // The other ways to use the service: on the service's own app, everything
+        // else; on an app someone else made, the service's own.
+        let versions: Vec<VersionChoice> = family
+            .map(|family| family.others(&id, &available, &device))
+            .unwrap_or_default()
+            .into_iter()
+            .map(|member| VersionChoice {
+                id: member.id.as_str().into(),
+                name: member.label.as_str().into(),
+                note: member.note.as_str().into(),
+                official: member.official,
+                on: false,
+            })
+            .collect();
         // The other sources of the app being shown, when a search has not already said.
         if store.get_app_sources().row_count() == 0 {
             let same: Vec<SourceChoice> = here
@@ -1610,7 +1626,6 @@ impl App {
         }
         store.set_app_family_name(family.map(|f| f.name.as_str()).unwrap_or_default().into());
         store.set_app_family(ModelRc::new(VecModel::from(versions)));
-        store.set_app_parent(ModelRc::new(VecModel::from(parents)));
 
         // A Steam game without Steam: offer Steam itself, from wherever this device gets it.
         let mut helper = (String::new(), String::new());
@@ -1674,20 +1689,11 @@ impl App {
         *self.needed.lock().unwrap() = needed;
         // The same choices as rows for the TV, without the one already showing.
         let mut rows: Vec<SourceChoice> = Vec::new();
-        for parent in store.get_app_parent().iter() {
-            let whose = if parent.official { "" } else { "  ·  unofficial" };
+        for other in store.get_app_family().iter() {
+            let whose = if other.official { "" } else { "  ·  unofficial" };
             rows.push(SourceChoice {
-                id: parent.id,
-                label: format!("Parent app: {}{whose}", parent.name).into(),
-                on: false,
-                count: 0,
-            });
-        }
-        for child in store.get_app_family().iter() {
-            let whose = if child.official { "" } else { "  ·  unofficial" };
-            rows.push(SourceChoice {
-                id: child.id,
-                label: format!("Child app: {}{whose}", child.name).into(),
+                id: other.id,
+                label: format!("Use {} instead{whose}", other.name).into(),
                 on: false,
                 count: 0,
             });
@@ -2508,7 +2514,7 @@ impl App {
             card.verified |= shown.verified;
         }
         store.set_app(card);
-        store.set_license(details.summary.license.clone().unwrap_or_default().into());
+        store.set_license(plain_licence(details.summary.license.as_deref().unwrap_or_default()).into());
         store.set_homepage(details.summary.homepage.as_str().into());
         store.set_unavailable(details.unavailable_reason.clone().unwrap_or_default().into());
         store.set_versions(ModelRc::new(VecModel::from(
@@ -3555,7 +3561,14 @@ impl App {
         let Some(id) = self.store_app.clone() else { return };
         let running = format!("v{}", env!("CARGO_PKG_VERSION"));
         let program = self.self_program.as_ref().map(|path| path.display().to_string());
-        let unchanged = self.state.lock().unwrap().installed(&id.to_string()).is_some_and(|own| own.version == running);
+        // Nothing to note when the record already says this version, or names a newer
+        // copy the store placed that is still there: then an older copy is running
+        // (the update was put off until later) and the record of the newer one stands.
+        let unchanged = self.state.lock().unwrap().installed(&id.to_string()).is_some_and(|own| {
+            let placed =
+                own.store_managed && own.path.as_deref().is_some_and(|path| std::path::Path::new(path).is_file());
+            own.version == running || (placed && bilby_core::version::is_newer(&own.version, &running))
+        });
         if unchanged {
             return;
         }
@@ -4006,7 +4019,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         state_path,
         state: Mutex::new(state),
         results: Mutex::new((String::new(), Vec::new())),
-        updates: Mutex::new(HashMap::new()),
+        updates: Mutex::new(UpdateTable::default()),
         last_checked: AtomicU64::new(0),
         current: Mutex::new(Current::default()),
         search_generation: AtomicU64::new(0),
@@ -4675,6 +4688,16 @@ fn own_icon() -> slint::Image {
 }
 
 /// In place of an address: this picture is the website's own, found at the site.
+/// A licence as a person would say it. Flathub writes one that is not open as
+/// "LicenseRef-proprietary=<address of the terms>", which is for machines.
+fn plain_licence(licence: &str) -> String {
+    match licence.strip_prefix("LicenseRef-") {
+        Some(rest) if rest.to_ascii_lowercase().starts_with("proprietary") => "Proprietary".to_string(),
+        Some(rest) => rest.split('=').next().unwrap_or(rest).to_string(),
+        None => licence.to_string(),
+    }
+}
+
 const SITE_ICON: &str = "site:";
 /// Stands for "ask the project itself for its logo" (a GitHub project's README).
 const PROJECT_LOGO: &str = "project:";

@@ -98,33 +98,21 @@ component FamilyRow inherits Rectangle {
     }
 }
 
-// The service an app belongs to. On a child app: its parent, the service's own app
-// where this device has it. On the parent: its child apps, each its own line.
+// The other ways to use the service an app belongs to, each its own line.
 export component FamilyPanel inherits VerticalLayout {
     in property <string> service;
-    in property <[VersionChoice]> parents;
-    in property <[VersionChoice]> kids;
+    in property <[VersionChoice]> others;
     callback chosen(string);
     spacing: 8px;
-    if parents.length > 0 : Text {
-        text: "Part of " + service;
+    Text {
+        text: "Other ways to use " + service;
         color: Theme.text-dim;
         font-size: 13px;
         font-weight: 600;
     }
-    for up in parents : FamilyRow {
-        choice: up;
-        clicked => { root.chosen(up.id); }
-    }
-    if kids.length > 0 : Text {
-        text: "Child apps of " + service;
-        color: Theme.text-dim;
-        font-size: 13px;
-        font-weight: 600;
-    }
-    for kid in kids : FamilyRow {
-        choice: kid;
-        clicked => { root.chosen(kid.id); }
+    for other in others : FamilyRow {
+        choice: other;
+        clicked => { root.chosen(other.id); }
     }
 }
 
@@ -1192,10 +1180,9 @@ export component DetailsBody inherits Rectangle {
                 }
             }
             // A service with several apps: which one this is, as a list to choose from.
-            if Store.app-family.length > 0 || Store.app-parent.length > 0 : FamilyPanel {
+            if Store.app-family.length > 0 : FamilyPanel {
                 service: Store.app-family-name;
-                parents: Store.app-parent;
-                kids: Store.app-family;
+                others: Store.app-family;
                 chosen(id) => { Store.open(id); }
             }
             // Which source the button installs from, right beside it, and the others to

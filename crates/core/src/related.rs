@@ -102,20 +102,27 @@ impl Family {
 }
 
 impl Family {
-    /// The app to start from on this device, and the apps that are its children. The
-    /// parent is the service's own version when this device can use it (YouTube's
-    /// website, in a browser), else the first that it can. Each child is listed once,
-    /// however many sources have it, and a child is never listed under another child.
-    pub fn parent_and_children(&self, sources: &[SourceKind], platform: &Platform) -> (Option<&Member>, Vec<&Member>) {
-        let mut here: Vec<&Member> = Vec::new();
-        for member in self.here(sources, platform) {
-            if !here.iter().any(|m| m.label == member.label) {
-                here.push(member);
+    /// The other ways to use the service, for the page of the member `id`. Each app
+    /// is listed once, however many sources have it, and never the one being shown.
+    ///
+    /// The service's own apps (its website, its own program) list everything else:
+    /// their other forms first, then the apps others made for it. An app someone
+    /// else made lists only the service's own, which is where the rest are reached
+    /// from; where this device has none of those, it lists the others instead.
+    pub fn others(&self, id: &str, sources: &[SourceKind], platform: &Platform) -> Vec<&Member> {
+        let here = self.here(sources, platform);
+        let shown = self.members.iter().find(|m| m.id.eq_ignore_ascii_case(id));
+        let mut others: Vec<&Member> = Vec::new();
+        for member in here {
+            let same_app = shown.is_some_and(|s| s.label == member.label);
+            if !same_app && !others.iter().any(|m| m.label == member.label) {
+                others.push(member);
             }
         }
-        let parent = here.iter().copied().find(|m| m.official).or_else(|| here.first().copied());
-        let children = here.into_iter().filter(|m| parent.is_none_or(|p| p.label != m.label)).collect();
-        (parent, children)
+        if shown.is_some_and(|s| !s.official) && others.iter().any(|m| m.official) {
+            others.retain(|m| m.official);
+        }
+        others
     }
 }
 
@@ -145,19 +152,36 @@ mod tests {
     }
 
     #[test]
-    fn the_official_version_is_the_parent_and_the_rest_are_its_children() {
+    fn a_services_own_app_lists_the_rest_and_another_makers_app_lists_the_services_own() {
         let list = families();
-        let youtube = family_named(list, "youtube").unwrap();
         let platform = Platform::preset("linux-tv").unwrap();
-        let (parent, children) =
-            youtube.parent_and_children(&[SourceKind::Web, SourceKind::Flathub, SourceKind::GitHub], &platform);
-        assert_eq!(parent.map(|p| p.id.as_str()), Some("web:youtube.com"));
-        let names: Vec<&str> = children.iter().map(|m| m.label.as_str()).collect();
-        assert_eq!(names, ["VacuumTube", "FreeTube"], "each child once, and none of them is the parent");
-        assert_eq!(children[0].id, "flathub:rocks.shy.VacuumTube", "the source first in the list is the one kept");
-        // Where the service's own site cannot be used, the first that can is the parent.
-        let (parent, _) = youtube.parent_and_children(&[SourceKind::Flathub], &platform);
-        assert_eq!(parent.map(|p| p.label.as_str()), Some("VacuumTube"));
+        let sources = [SourceKind::Web, SourceKind::Flathub, SourceKind::GitHub];
+        let names = |family: &str, id: &str, sources: &[SourceKind]| -> Vec<String> {
+            let family = family_named(list, family).unwrap();
+            family.others(id, sources, &platform).iter().map(|m| format!("{} ({})", m.label, m.id)).collect()
+        };
+        // YouTube's own site: the apps others made, each once, from the first source that has it.
+        assert_eq!(
+            names("youtube", "web:youtube.com", &sources),
+            ["VacuumTube (flathub:rocks.shy.VacuumTube)", "FreeTube (flathub:io.freetubeapp.FreeTube)"]
+        );
+        // One of those: YouTube's own site, and not the other players.
+        assert_eq!(names("youtube", "github:shy1132/VacuumTube", &sources), ["YouTube website (web:youtube.com)"]);
+        // A service with a program of its own as well as a site: each lists the other,
+        // and the apps others made.
+        assert_eq!(
+            names("discord", "flathub:com.discordapp.Discord", &sources),
+            ["Discord website (web:discord.com)", "Vesktop (flathub:dev.vencord.Vesktop)"]
+        );
+        assert_eq!(
+            names("discord", "web:discord.com", &sources),
+            ["Discord (flathub:com.discordapp.Discord)", "Vesktop (flathub:dev.vencord.Vesktop)"]
+        );
+        // Where the service's own cannot be used here, the others are still reachable.
+        assert_eq!(
+            names("youtube", "flathub:rocks.shy.VacuumTube", &[SourceKind::Flathub]),
+            ["FreeTube (flathub:io.freetubeapp.FreeTube)"]
+        );
     }
 
     #[test]

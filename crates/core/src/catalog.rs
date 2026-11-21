@@ -96,7 +96,7 @@ fn report(errors: &mut Vec<String>, offline: &mut bool, source: SourceKind, erro
 
 /// Where the store itself is published. Its own releases are found, filtered and
 /// installed exactly like any other app's.
-pub const STORE_REPOSITORY: &str = "AndrewGBest/bilby";
+pub const STORE_REPOSITORY: &str = "AndrewGBest/Bilby";
 
 /// Result of checking one library entry for a newer release.
 #[derive(Debug, Clone, PartialEq, Eq)]

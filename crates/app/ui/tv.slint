@@ -1450,9 +1450,12 @@ export component TvShell inherits Rectangle {
                             Store.toggle-favourite();
                         }
                     }
-                    if Store.options.length > 0 && !Store.is-website : TvButton {
+                    // The list it opens holds the other ways to use the service and the
+                    // other sources, then this release's files. A website has no files,
+                    // and still has the button when there is another way to use it.
+                    if root.has-files : TvButton {
                         u: root.u;
-                        text: "Versions";
+                        text: Store.app-family.length == 0 ? "Versions" : Store.is-website || Store.options.length == 0 ? "Other ways to use " + Store.app-family-name : "Versions and other apps";
                         focused: root.act == 2 && !root.files && !root.reading && root.sec == 0;
                         clicked => {
                             root.act = 2;
@@ -1824,7 +1827,7 @@ export component TvShell inherits Rectangle {
                 spacing: 8 * u;
                 alignment: start;
                 Text {
-                    text: root.ver-open ? "Choose a version" : "Versions and files";
+                    text: root.ver-open ? "Choose a version" : Store.app-family.length > 0 && (Store.is-website || Store.options.length == 0) ? "Other ways to use " + Store.app-family-name : "Versions and files";
                     color: Theme.text;
                     font-size: 13 * u;
                     font-weight: 700;
