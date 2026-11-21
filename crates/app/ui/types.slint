@@ -183,6 +183,8 @@ export global Store {
     in property <string> release-age;
     in property <string> license;
     in property <string> notes;
+    // Web addresses found in the description and notes, for a remote to pick from.
+    in property <[string]> about-links;
     // The start of the project's README as plain text, "" when there is none.
     in property <string> about;
     // Pictures of the app found in its README.

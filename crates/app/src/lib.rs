@@ -1875,7 +1875,9 @@ impl App {
         store.set_unavailable(SharedString::new());
         store.set_warning(SharedString::new());
         store.set_notes(SharedString::new());
+        show_links(&store);
         store.set_about(SharedString::new());
+        show_links(&store);
         store.set_screenshots(ModelRc::default());
         store.set_reviews(ModelRc::default());
         store.set_release_date(SharedString::new());
@@ -2020,6 +2022,7 @@ impl App {
                 if app.details_generation.load(Ordering::SeqCst) == generation {
                     let store = ui.global::<Store>();
                     store.set_about(about.into());
+                    show_links(&store);
                     let images: Vec<slint::Image> = pictures.into_iter().map(slint::Image::from_rgba8).collect();
                     store.set_screenshots(ModelRc::new(VecModel::from(images)));
                     let rows: Vec<ReviewRow> = reviews
@@ -2131,6 +2134,7 @@ impl App {
                 .collect::<Vec<_>>(),
         )));
         store.set_notes(notes.into());
+        show_links(&store);
         // Things worth knowing before installing, most important first.
         let age = age_label(&date, now_unix());
         let mut warnings: Vec<String> = details.summary.warning.clone().into_iter().collect();
@@ -3292,6 +3296,31 @@ fn code_image(text: &str) -> slint::Image {
         *pixel = slint::Rgba8Pixel { r: shade, g: shade, b: shade, a: 255 };
     }
     slint::Image::from_rgba8(pixels)
+}
+
+/// Web addresses in a piece of text, in the order they appear: each once, at most six,
+/// without the full stop or bracket that happened to follow.
+pub fn links_in(text: &str) -> Vec<String> {
+    let mut links: Vec<String> = Vec::new();
+    for word in text.split(|c: char| c.is_whitespace() || matches!(c, '<' | '>' | '"' | '(' | '[' | ']')) {
+        let Some(start) = word.find("https://").or_else(|| word.find("http://")) else { continue };
+        let link = word[start..].trim_end_matches(['.', ',', ';', ':', '!', '?', ')', '\'', '*', '`']);
+        let host = link.split("://").nth(1).unwrap_or("").split('/').next().unwrap_or("");
+        if host.contains('.') && link.len() <= 300 && !links.iter().any(|seen| seen == link) {
+            links.push(link.to_string());
+        }
+        if links.len() == 6 {
+            break;
+        }
+    }
+    links
+}
+
+/// Put the links of what is being shown where a remote can pick them.
+fn show_links(store: &Store) {
+    let text = format!("{}\n{}", store.get_about(), store.get_notes());
+    let links: Vec<SharedString> = links_in(&text).into_iter().map(SharedString::from).collect();
+    store.set_about_links(ModelRc::new(VecModel::from(links)));
 }
 
 /// The store's own picture, for its card in the Library.

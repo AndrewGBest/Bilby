@@ -2185,29 +2185,54 @@ fn on_a_tv_steam_sign_in_happens_in_longboard_which_hands_the_list_back() {
 }
 
 #[test]
-fn on_a_tv_down_scrolls_the_rest_of_an_apps_page_into_view() {
+fn a_tv_app_page_is_sections_to_move_down_through_and_open() {
     // Without motion, so the page is where it is going at once: the test's clock stands still.
     let s = start_with("linux-tv", Shell::Tv, Some(r#"{"settings":{"welcomed":true,"reduce_motion":true}}"#));
     s.app.open(&s.ui, "github:lumen-labs/lumen");
-    // Everything a desktop shows is on the page: the description, what is new and the details.
-    // (A key press lets the page finish appearing.)
     s.press(Key::RightArrow);
     s.press(Key::LeftArrow);
-    // It is taller than the screen, which is said, and Down moves through it to the end.
-    assert!(s.has("More below: press Down"));
-    assert!(!s.has("C library: glibc"), "the app's details, not the device's");
+    assert!(s.has("Description"), "the description is a thing to select, below the buttons");
+
+    // OK on the description opens it to read; Back closes it and the page stays.
+    s.activate("Description");
+    assert!(!s.has("Description") || s.store().get_details_open());
+    s.press(Key::DownArrow);
+    s.press(Key::Escape);
+    assert!(s.store().get_details_open(), "Back closes the description, not the page");
+    s.press(Key::Escape);
+    assert!(!s.store().get_details_open(), "and Back again closes the page");
+    s.app.open(&s.ui, "github:lumen-labs/lumen");
+    s.press(Key::RightArrow);
+    s.press(Key::LeftArrow);
+
+    // Further down are the app's own details, not the device's.
     let from = format!("From: {}", s.store().get_app().source);
     let mut seen = s.has(&from);
-    for _ in 0..30 {
+    for _ in 0..6 {
         s.press(Key::DownArrow);
         seen |= s.has(&from);
     }
-    assert!(seen, "the app's own details come into view on the way down: {from}");
-    assert!(!s.has("More below: press Down"), "at the end the mark goes");
-    // Up comes back, and the buttons were never left.
-    s.press(Key::UpArrow);
-    assert!(s.has("More below: press Down"));
-    assert!(s.store().get_details_open());
+    assert!(seen, "{from}");
+    assert!(!s.has("C library: glibc"));
+    // And Up comes all the way back to the buttons, which still work.
+    for _ in 0..8 {
+        s.press(Key::UpArrow);
+    }
+    s.press(Key::Return);
+    assert!(
+        s.store().get_install_state() != 0 || s.store().get_in_library() || s.store().get_can_open(),
+        "OK presses the main button again"
+    );
+}
+
+#[test]
+fn links_in_a_description_are_found_for_the_remote() {
+    let text = "Docs at https://example.org/docs. Chat (https://chat.example.org/room), again https://example.org/docs and http://old.example.net; not a link: https://nodot or ftp://x.y";
+    assert_eq!(
+        bilby::links_in(text),
+        ["https://example.org/docs", "https://chat.example.org/room", "http://old.example.net"]
+    );
+    assert!(bilby::links_in("nothing here").is_empty());
 }
 
 #[test]

@@ -296,9 +296,35 @@ export component TvShell inherits Rectangle {
             root.reading = false;
         }
     }
-    // The app page's right-hand side is taller than the screen: Down and Up move it.
-    property <length> info-scroll: 0;
-    property <length> info-max: 0;
+    // The app page is a column of sections the highlight moves down through:
+    // 0 the buttons, 1 pictures, 2 the description, 3 reviews, 4 the details.
+    property <int> sec: 0;
+    property <bool> has-pics: Store.screenshots.length > 0;
+    property <bool> has-about: Store.about != "" || Store.notes != "";
+    // Which picture and which review the highlight is on in their rows.
+    property <int> pic: 0;
+    // A picture shown large, and the description opened to read and follow its links.
+    property <bool> viewer: false;
+    property <bool> about-open: false;
+    property <length> about-scroll: 0;
+    property <length> about-max: 0;
+    // In the opened description: 0 is the text, 1 and up its links.
+    property <int> link: 0;
+    function sec-exists(n: int) -> bool {
+        return n == 0 || (n == 1 && root.has-pics) || (n == 2 && root.has-about) || (n == 3 && root.has-reviews) || n == 4;
+    }
+    function sec-down() {
+        if (root.sec < 1 && root.sec-exists(1)) { root.sec = 1; }
+        else if (root.sec < 2 && root.sec-exists(2)) { root.sec = 2; }
+        else if (root.sec < 3 && root.sec-exists(3)) { root.sec = 3; }
+        else if (root.sec < 4) { root.sec = 4; }
+    }
+    function sec-up() {
+        if (root.sec > 3 && root.sec-exists(3)) { root.sec = 3; }
+        else if (root.sec > 2 && root.sec-exists(2)) { root.sec = 2; }
+        else if (root.sec > 1 && root.sec-exists(1)) { root.sec = 1; }
+        else { root.sec = 0; }
+    }
     // Remove asks twice: the first OK only arms it.
     property <bool> remove-armed: false;
     changed act => { root.remove-armed = false; }
@@ -311,7 +337,12 @@ export component TvShell inherits Rectangle {
         root.act = 0;
         root.files = false;
         root.opt = 0;
-        root.info-scroll = 0;
+        root.sec = 0;
+        root.pic = 0;
+        root.viewer = false;
+        root.about-open = false;
+        root.about-scroll = 0;
+        root.link = 0;
     }
     function press-main() {
         if (Store.details-error != "") {
@@ -486,13 +517,44 @@ export component TvShell inherits Rectangle {
             }
             if (Store.details-open) {
                 if (event.text == Key.Escape || event.text == Key.Back || event.text == Key.Backspace) {
-                    // Back closes the list of files or the reviews first, then the page.
-                    if (root.files) {
+                    // Back closes whatever is open on top first, then the page.
+                    if (root.viewer) {
+                        root.viewer = false;
+                    } else if (root.about-open) {
+                        root.about-open = false;
+                    } else if (root.files) {
                         root.files = false;
                     } else if (root.reading) {
                         root.reading = false;
                     } else {
                         Store.close-details();
+                    }
+                } else if (root.viewer) {
+                    // A picture, large: sideways for the others, OK to go back.
+                    if (event.text == Key.RightArrow || event.text == Key.DownArrow) {
+                        root.pic = min(Store.screenshots.length - 1, root.pic + 1);
+                    } else if (event.text == Key.LeftArrow || event.text == Key.UpArrow) {
+                        root.pic = max(0, root.pic - 1);
+                    } else if (event.text == Key.Return || event.text == " ") {
+                        root.viewer = false;
+                    }
+                } else if (root.about-open) {
+                    // The description: Up and Down read through it, sideways picks a
+                    // link, OK opens the link picked (or closes when none is).
+                    if (event.text == Key.DownArrow) {
+                        root.about-scroll = min(root.about-max, root.about-scroll + 150 * root.u);
+                    } else if (event.text == Key.UpArrow) {
+                        root.about-scroll = max(0, root.about-scroll - 150 * root.u);
+                    } else if (event.text == Key.RightArrow) {
+                        root.link = min(Store.about-links.length, root.link + 1);
+                    } else if (event.text == Key.LeftArrow) {
+                        root.link = max(0, root.link - 1);
+                    } else if (event.text == Key.Return || event.text == " ") {
+                        if (root.link > 0) {
+                            Store.open-url(Store.about-links[root.link - 1]);
+                        } else {
+                            root.about-open = false;
+                        }
                     }
                 } else if (root.files) {
                     if (event.text == Key.UpArrow) {
@@ -536,10 +598,35 @@ export component TvShell inherits Rectangle {
                         root.reading = false;
                     }
                 } else if (event.text == Key.DownArrow) {
-                    // More of the pictures, the description and the details.
-                    root.info-scroll = min(root.info-max, root.info-scroll + 170 * root.u);
+                    root.sec-down();
                 } else if (event.text == Key.UpArrow) {
-                    root.info-scroll = max(0, root.info-scroll - 170 * root.u);
+                    root.sec-up();
+                } else if (root.sec == 1) {
+                    // The row of pictures: sideways along it, OK for the one highlighted, large.
+                    if (event.text == Key.RightArrow) {
+                        root.pic = min(Store.screenshots.length - 1, root.pic + 1);
+                    } else if (event.text == Key.LeftArrow) {
+                        root.pic = max(0, root.pic - 1);
+                    } else if (event.text == Key.Return || event.text == " ") {
+                        root.viewer = true;
+                    }
+                } else if (root.sec == 2) {
+                    if (event.text == Key.Return || event.text == " ") {
+                        root.about-scroll = 0;
+                        root.link = 0;
+                        root.about-open = true;
+                    }
+                } else if (root.sec == 3) {
+                    // The row of reviews: sideways along it, OK to read the one highlighted.
+                    if (event.text == Key.RightArrow) {
+                        root.rev = min(Store.reviews.length - 1, root.rev + 1);
+                    } else if (event.text == Key.LeftArrow) {
+                        root.rev = max(0, root.rev - 1);
+                    } else if (event.text == Key.Return || event.text == " ") {
+                        root.reading = true;
+                    }
+                } else if (root.sec == 4) {
+                    // The details: nothing to press.
                 } else if (event.text == Key.LeftArrow) {
                     if (root.act == 0) {
                         Store.close-details();
@@ -1067,10 +1154,29 @@ export component TvShell inherits Rectangle {
 
         // ---- app page: what it is and one button on the left, pictures on the right ----
         if Store.details-open : FadeIn {
-            VerticalLayout {
-                x: margin;
-                y: 70 * u;
-                width: 400 * u;
+          page := Rectangle {
+            x: 0;
+            y: 66 * u;
+            width: parent.width;
+            height: parent.height - self.y;
+            clip: true;
+            // How far down each section starts, so the one highlighted is brought up.
+            property <length> head-h: head.preferred-height + 14 * u;
+            property <length> pics-h: root.has-pics ? 156 * u : 0;
+            property <length> about-h: root.has-about ? 158 * u : 0;
+            property <length> revs-h: root.has-reviews ? 176 * u : 0;
+            property <length> wanted: root.sec == 0 || root.files ? 0 : (root.sec == 1 ? self.head-h : root.sec == 2 ? self.head-h + self.pics-h : root.sec == 3 ? self.head-h + self.pics-h + self.about-h : self.head-h + self.pics-h + self.about-h + self.revs-h) - 56 * u;
+            property <length> shift: max(0, min(self.wanted, column.preferred-height - self.height + 20 * u));
+           column := VerticalLayout {
+            x: margin;
+            y: 4 * u - page.shift;
+            width: parent.width - 2 * margin;
+            height: self.preferred-height;
+            spacing: 14 * u;
+            alignment: start;
+            animate y { duration: Theme.smooth; easing: ease-out; }
+            head := VerticalLayout {
+                width: 420 * u;
                 spacing: 9 * u;
                 alignment: start;
                 HorizontalLayout {
@@ -1113,7 +1219,7 @@ export component TvShell inherits Rectangle {
                         text: Store.details-error != "" ? "Try again" : root.main-action;
                         progress: root.busy ? Store.install-progress : -1;
                         primary: true;
-                        focused: root.act == 0 && !root.files && !root.reading;
+                        focused: root.act == 0 && !root.files && !root.reading && root.sec == 0;
                         clicked => {
                             root.act = 0;
                             root.press-main();
@@ -1123,7 +1229,7 @@ export component TvShell inherits Rectangle {
                         u: root.u;
                         // A star alone, so five buttons fit; the corner says what it does.
                         text: Store.is-favourite ? "★" : "☆";
-                        focused: (root.act == 1 || (root.act == 0 && root.main-action == "" && Store.details-error == "")) && !root.files && !root.reading;
+                        focused: (root.act == 1 || (root.act == 0 && root.main-action == "" && Store.details-error == "")) && !root.files && !root.reading && root.sec == 0;
                         clicked => {
                             root.act = 1;
                             Store.toggle-favourite();
@@ -1132,7 +1238,7 @@ export component TvShell inherits Rectangle {
                     if Store.options.length > 0 && !Store.is-website : TvButton {
                         u: root.u;
                         text: "Versions";
-                        focused: root.act == 2 && !root.files && !root.reading;
+                        focused: root.act == 2 && !root.files && !root.reading && root.sec == 0;
                         clicked => {
                             root.act = 2;
                             root.opt = 0;
@@ -1143,7 +1249,7 @@ export component TvShell inherits Rectangle {
                     if root.has-reviews : TvButton {
                         u: root.u;
                         text: "Reviews";
-                        focused: root.act == root.reviews-idx && !root.files && !root.reading;
+                        focused: root.act == root.reviews-idx && !root.files && !root.reading && root.sec == 0;
                         clicked => {
                             root.act = root.reviews-idx;
                             root.rev = 0;
@@ -1154,7 +1260,7 @@ export component TvShell inherits Rectangle {
                     if Store.in-library : TvButton {
                         u: root.u;
                         text: root.remove-armed ? "Confirm" : "Remove";
-                        focused: root.act == root.remove-idx && !root.files && !root.reading;
+                        focused: root.act == root.remove-idx && !root.files && !root.reading && root.sec == 0;
                         clicked => {
                             root.act = root.remove-idx;
                             if (root.remove-armed) {
@@ -1168,7 +1274,283 @@ export component TvShell inherits Rectangle {
                 }
             }
 
-            // Right: pictures and the description, or every file when asked for.
+            // ---- pictures: a row of small ones; OK shows the highlighted one large ----
+            if root.has-pics && !root.files : VerticalLayout {
+                spacing: 8 * u;
+                Text { text: "Pictures"; color: root.sec == 1 ? Theme.text : Theme.text-dim; font-size: 13 * u; font-weight: 700; }
+                Rectangle {
+                    height: 118 * u;
+                    clip: true;
+                    Rectangle {
+                        x: -max(0, root.pic - 3) * 212 * u;
+                        width: Store.screenshots.length * 212 * u;
+                        animate x { duration: Theme.smooth; easing: ease-out; }
+                        for shot[i] in Store.screenshots : Rectangle {
+                            property <bool> focused: root.sec == 1 && root.pic == i;
+                            x: i * 212 * u + 3 * u;
+                            y: 3 * u;
+                            width: 200 * u;
+                            height: 112 * u;
+                            border-radius: 8 * u;
+                            clip: true;
+                            background: Theme.surface;
+                            accessible-role: button;
+                            accessible-label: "Picture " + (i + 1) + " of " + Store.screenshots.length;
+                            accessible-action-default => {
+                                root.sec = 1;
+                                root.pic = i;
+                                root.viewer = true;
+                            }
+                            Image { width: parent.width; height: parent.height; source: shot; image-fit: cover; }
+                            Rectangle { border-radius: 8 * u; border-width: parent.focused ? 3 * u : 0.5 * u; border-color: parent.focused ? white : Theme.stroke; }
+                            TouchArea {
+                                clicked => {
+                                    root.sec = 1;
+                                    root.pic = i;
+                                    root.viewer = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // ---- the description: a few lines; OK opens it to read and follow links ----
+            if root.has-about && !root.files : Rectangle {
+                property <bool> focused: root.sec == 2;
+                // As tall as its words, up to five lines of them.
+                height: about-box.height + 48 * u;
+                border-radius: 10 * u;
+                background: self.focused ? Theme.surface-2 : Theme.surface;
+                border-width: self.focused ? 2 * u : 0.5 * u;
+                border-color: self.focused ? white : Theme.stroke;
+                accessible-role: button;
+                accessible-label: "Description";
+                accessible-action-default => {
+                    root.sec = 2;
+                    root.about-scroll = 0;
+                    root.link = 0;
+                    root.about-open = true;
+                }
+                TouchArea {
+                    clicked => {
+                        root.sec = 2;
+                        root.about-scroll = 0;
+                        root.link = 0;
+                        root.about-open = true;
+                    }
+                }
+                Text { x: 14 * u; y: 10 * u; text: "About"; color: Theme.text; font-size: 13 * u; font-weight: 700; }
+                Text {
+                    x: parent.width - self.width - 14 * u;
+                    y: 10 * u;
+                    text: Store.about-links.length > 0 ? (Store.about-links.length == 1 ? "1 link" : Store.about-links.length + " links") + "   ›" : "›";
+                    color: parent.focused ? Theme.accent : Theme.text-dim;
+                    font-size: 12 * u;
+                    font-weight: 600;
+                }
+                about-box := Rectangle {
+                    about-line := Text { text: "X"; font-size: 13 * u; visible: false; }
+                    x: 14 * u;
+                    y: 34 * u;
+                    width: parent.width - 28 * u;
+                    height: min(about-words.preferred-height, floor(100 * u / about-line.preferred-height) * about-line.preferred-height);
+                    clip: true;
+                    about-words := Text {
+                        y: 0;
+                        width: parent.width;
+                        text: Store.about != "" ? Store.about : Store.notes;
+                        color: Theme.text;
+                        font-size: 13 * u;
+                        wrap: word-wrap;
+                        vertical-alignment: TextVerticalAlignment.top;
+                    }
+                }
+            }
+            // ---- reviews: a row of them; OK reads the highlighted one in full ----
+            if root.has-reviews && !root.files : VerticalLayout {
+                spacing: 8 * u;
+                Text { text: "Reviews" + (Store.app.rating != "" ? "   ★ " + Store.app.rating + "   " + Store.app.rating-count : ""); color: root.sec == 3 ? Theme.text : Theme.text-dim; font-size: 13 * u; font-weight: 700; }
+                Rectangle {
+                    height: 138 * u;
+                    clip: true;
+                    Rectangle {
+                        x: -max(0, root.rev - 2) * 292 * u;
+                        width: Store.reviews.length * 292 * u;
+                        animate x { duration: Theme.smooth; easing: ease-out; }
+                        for review[i] in Store.reviews : Rectangle {
+                            property <bool> focused: root.sec == 3 && root.rev == i;
+                            x: i * 292 * u + 3 * u;
+                            y: 3 * u;
+                            width: 280 * u;
+                            height: 132 * u;
+                            border-radius: 10 * u;
+                            background: self.focused ? Theme.surface-2 : Theme.surface;
+                            border-width: self.focused ? 2 * u : 0.5 * u;
+                            border-color: self.focused ? white : Theme.stroke;
+                            clip: true;
+                            accessible-role: button;
+                            accessible-label: "Review: " + review.title;
+                            accessible-action-default => {
+                                root.sec = 3;
+                                root.rev = i;
+                                root.reading = true;
+                            }
+                            TouchArea {
+                                clicked => {
+                                    root.sec = 3;
+                                    root.rev = i;
+                                    root.reading = true;
+                                }
+                            }
+                            VerticalLayout {
+                                padding: 12 * u;
+                                spacing: 4 * u;
+                                alignment: start;
+                                Text { text: review.stars; color: Theme.warn; font-size: 12 * u; }
+                                Text { text: review.title; color: Theme.text; font-size: 13 * u; font-weight: 700; overflow: elide; }
+                                Rectangle {
+                                    height: 52 * u;
+                                    clip: true;
+                                    Text { y: 0; width: parent.width; text: review.text; color: Theme.text; font-size: 12 * u; wrap: word-wrap; vertical-alignment: TextVerticalAlignment.top; }
+                                }
+                                Text { text: review.meta; color: Theme.text-dim; font-size: 11 * u; overflow: elide; }
+                            }
+                        }
+                    }
+                }
+            }
+            // ---- the details ----
+            if !root.files : VerticalLayout {
+                spacing: 6 * u;
+                Text { text: "Information"; color: root.sec == 4 ? Theme.text : Theme.text-dim; font-size: 13 * u; font-weight: 700; }
+                if Store.app.source != "" : TvFact { u: root.u; name: "From"; value: Store.app.source; }
+                if Store.app.author != "" && Store.app.author != Store.app.source : TvFact { u: root.u; name: "Made by"; value: Store.app.author + (Store.app.verified ? " (confirmed by " + Store.app.source + ")" : ""); }
+                if Store.app.price != "" : TvFact { u: root.u; name: "Price"; value: Store.app.price + " on " + Store.app.source; }
+                if Store.app.downloads != "" : TvFact { u: root.u; name: "Downloads"; value: Store.app.downloads + " " + Store.app.downloads-note; }
+                if Store.app.popularity != "" : TvFact { u: root.u; name: "Popularity"; value: Store.app.popularity + " on " + Store.app.source; }
+                if Store.app.version != "" : TvFact { u: root.u; name: "Version"; value: Store.app.version; }
+                if Store.release-date != "" : TvFact { u: root.u; name: "Released"; value: Store.release-date; }
+                if Store.license != "" : TvFact { u: root.u; name: "Licence"; value: Store.license; }
+                if Store.options.length > 0 : TvFact { u: root.u; name: "Works on"; value: Store.platform-title; }
+                if Store.options.length > 0 : TvFact { u: root.u; name: "Kind of file"; value: Store.options[0].label; }
+                if Store.options.length > 0 && Store.options[0].size != "" : TvFact { u: root.u; name: "Download size"; value: Store.options[0].size; }
+                Rectangle { height: 20 * u; }
+            }
+           }
+          }
+
+            // ---- on top of the page: a review in full, a picture large, the description opened ----
+            if root.reading || root.viewer || root.about-open : Rectangle {
+                x: 0;
+                y: 0;
+                width: parent.width;
+                height: parent.height;
+                background: Theme.bg;
+                TouchArea { }
+            }
+            if root.reading : VerticalLayout {
+                x: margin;
+                y: 70 * u;
+                width: 300 * u;
+                spacing: 6 * u;
+                alignment: start;
+                Text { text: Store.app.name; color: Theme.text; font-size: 28 * u; font-weight: 800; wrap: word-wrap; }
+                Text { text: "What people wrote" + (Store.app.rating != "" ? "   ★ " + Store.app.rating : ""); color: Theme.text-dim; font-size: 13 * u; }
+            }
+            if root.viewer && root.pic < Store.screenshots.length : Rectangle {
+                x: 0;
+                y: 0;
+                width: parent.width;
+                height: parent.height;
+                accessible-role: AccessibleRole.image;
+                accessible-label: "Picture " + (root.pic + 1) + " of " + Store.screenshots.length + ", large";
+                TouchArea { clicked => { root.viewer = false; } }
+                Image {
+                    x: margin;
+                    y: 30 * u;
+                    width: parent.width - 2 * margin;
+                    height: parent.height - 74 * u;
+                    source: Store.screenshots[root.pic];
+                    image-fit: contain;
+                }
+                Text {
+                    y: parent.height - 36 * u;
+                    width: parent.width;
+                    text: (root.pic > 0 ? "‹      " : "") + (root.pic + 1) + " of " + Store.screenshots.length + (root.pic < Store.screenshots.length - 1 ? "      ›" : "");
+                    color: Theme.text;
+                    font-size: 14 * u;
+                    font-weight: 700;
+                    horizontal-alignment: center;
+                }
+            }
+            if root.about-open : Rectangle {
+                x: margin;
+                y: 30 * u;
+                width: parent.width - 2 * margin;
+                height: parent.height - 54 * u;
+                Text { x: 0; y: 0; text: Store.app.name; color: Theme.text; font-size: 26 * u; font-weight: 800; }
+                // The links found in the text, to pick with Left and Right.
+                if Store.about-links.length > 0 : HorizontalLayout {
+                    x: 0;
+                    y: 44 * u;
+                    height: 30 * u;
+                    spacing: 8 * u;
+                    alignment: start;
+                    Rectangle {
+                        width: reading-label.preferred-width + 24 * u;
+                        border-radius: 15 * u;
+                        background: root.link == 0 ? Theme.surface-2 : transparent;
+                        border-width: root.link == 0 ? 2 * u : 0.5 * u;
+                        border-color: root.link == 0 ? white : Theme.stroke;
+                        reading-label := Text { text: "Reading"; color: Theme.text; font-size: 12 * u; font-weight: 600; }
+                    }
+                    for address[i] in Store.about-links : Rectangle {
+                        property <bool> focused: root.link == i + 1;
+                        width: min(260 * u, link-label.preferred-width + 24 * u);
+                        border-radius: 15 * u;
+                        background: self.focused ? Theme.surface-2 : transparent;
+                        border-width: self.focused ? 2 * u : 0.5 * u;
+                        border-color: self.focused ? white : Theme.stroke;
+                        accessible-role: button;
+                        accessible-label: "Open link " + address;
+                        accessible-action-default => { Store.open-url(address); }
+                        TouchArea { clicked => { Store.open-url(address); } }
+                        link-label := Text { width: parent.width - 24 * u; text: "↗  " + address; color: Theme.accent; font-size: 12 * u; font-weight: 600; overflow: elide; }
+                    }
+                }
+                reader := Rectangle {
+                    x: 0;
+                    y: (Store.about-links.length > 0 ? 88 : 48) * u;
+                    width: parent.width;
+                    height: parent.height - self.y;
+                    clip: true;
+                    property <length> further: max(0, words.preferred-height - self.height);
+                    changed further => { root.about-max = self.further; }
+                    init => { root.about-max = self.further; }
+                    words := VerticalLayout {
+                        x: 0;
+                        y: -min(root.about-scroll, parent.further);
+                        width: min(parent.width - 20 * u, 760 * u);
+                        height: self.preferred-height;
+                        spacing: 12 * u;
+                        alignment: start;
+                        animate y { duration: Theme.smooth; easing: ease-out; }
+                        if Store.about != "" : Text { text: Store.about; color: Theme.text; font-size: 15 * u; wrap: word-wrap; }
+                        if Store.notes != "" : Text { text: Store.is-website ? "About this website" : Store.is-package ? "About this package" : "What's new in " + Store.app.version; color: Theme.text; font-size: 15 * u; font-weight: 700; }
+                        if Store.notes != "" : Text { text: Store.notes; color: Theme.text-dim; font-size: 14 * u; wrap: word-wrap; }
+                    }
+                    if root.about-max > 0 : Rectangle {
+                        x: parent.width - 4 * u;
+                        y: (parent.height - self.height) * min(root.about-scroll, parent.further) / max(1px, parent.further);
+                        width: 4 * u;
+                        height: max(30 * u, parent.height * parent.height / (parent.height + parent.further));
+                        border-radius: 2 * u;
+                        background: Theme.text-dim.with-alpha(0.55);
+                        animate y { duration: Theme.smooth; easing: ease-out; }
+                    }
+                }
+            }
+
             if root.reading && root.rev < Store.reviews.length : VerticalLayout {
                 x: 496 * u;
                 y: 70 * u;
@@ -1218,131 +1600,6 @@ export component TvShell inherits Rectangle {
                     color: Theme.text-dim;
                     font-size: 11 * u;
                     wrap: word-wrap;
-                }
-            }
-            if !root.files && !root.reading : Rectangle {
-                x: 496 * u;
-                y: 70 * u;
-                width: parent.width - self.x - margin;
-                height: parent.height - self.y - 24 * u;
-                clip: true;
-                // How far there is to go, kept where the keys can see it.
-                property <length> further: max(0, column.preferred-height - self.height);
-                changed further => { root.info-max = self.further; }
-                init => { root.info-max = self.further; }
-                column := VerticalLayout {
-                    x: 0;
-                    y: -min(root.info-scroll, parent.further);
-                    width: parent.width - 14 * u;
-                    height: self.preferred-height;
-                    spacing: 12 * u;
-                    alignment: start;
-                    animate y { duration: Theme.smooth; easing: ease-out; }
-                    if Store.screenshots.length > 0 : Rectangle {
-                        height: 236 * u;
-                        border-radius: 10 * u;
-                        clip: true;
-                        border-width: 0.5 * u;
-                        border-color: Theme.stroke;
-                        Image {
-                            width: parent.width;
-                            height: parent.height;
-                            source: Store.screenshots[0];
-                            image-fit: cover;
-                        }
-                    }
-                    if Store.about != "" : Text {
-                        text: Store.about;
-                        color: Theme.text;
-                        font-size: 13 * u;
-                        wrap: word-wrap;
-                    }
-                    if Store.notes != "" : VerticalLayout {
-                        padding-top: 6 * u;
-                        spacing: 4 * u;
-                        Text { text: Store.is-website ? "About this website" : Store.is-package ? "About this package" : "What's new in " + Store.app.version; color: Theme.text; font-size: 14 * u; font-weight: 700; }
-                        Text { text: Store.notes; color: Theme.text-dim; font-size: 12 * u; wrap: word-wrap; }
-                    }
-                    VerticalLayout {
-                        padding-top: 6 * u;
-                        spacing: 6 * u;
-                        Text { text: "Information"; color: Theme.text; font-size: 14 * u; font-weight: 700; }
-                        if Store.app.source != "" : TvFact { u: root.u; name: "From"; value: Store.app.source; }
-                        if Store.app.author != "" && Store.app.author != Store.app.source : TvFact { u: root.u; name: "Made by"; value: Store.app.author + (Store.app.verified ? " (confirmed by " + Store.app.source + ")" : ""); }
-                        if Store.app.price != "" : TvFact { u: root.u; name: "Price"; value: Store.app.price + " on " + Store.app.source; }
-                        if Store.app.downloads != "" : TvFact { u: root.u; name: "Downloads"; value: Store.app.downloads + " " + Store.app.downloads-note; }
-                        if Store.app.popularity != "" : TvFact { u: root.u; name: "Popularity"; value: Store.app.popularity + " on " + Store.app.source; }
-                        if Store.app.version != "" : TvFact { u: root.u; name: "Version"; value: Store.app.version; }
-                        if Store.release-date != "" : TvFact { u: root.u; name: "Released"; value: Store.release-date; }
-                        if Store.license != "" : TvFact { u: root.u; name: "Licence"; value: Store.license; }
-                        if Store.options.length > 0 : TvFact { u: root.u; name: "Works on"; value: Store.platform-title; }
-                        if Store.options.length > 0 : TvFact { u: root.u; name: "Kind of file"; value: Store.options[0].label; }
-                        if Store.options.length > 0 && Store.options[0].size != "" : TvFact { u: root.u; name: "Download size"; value: Store.options[0].size; }
-                    }
-                    // What people wrote, on the page itself; the Reviews button reads them one at a time.
-                    if Store.reviews.length > 0 : VerticalLayout {
-                        padding-top: 6 * u;
-                        spacing: 8 * u;
-                        Text { text: "Reviews" + (Store.app.rating != "" ? "   ★ " + Store.app.rating : ""); color: Theme.text; font-size: 14 * u; font-weight: 700; }
-                        for review[i] in Store.reviews : Rectangle {
-                            visible: i < 6;
-                            height: i < 6 ? box.preferred-height : 0;
-                            border-radius: 10 * u;
-                            background: Theme.surface;
-                            border-width: 0.5 * u;
-                            border-color: Theme.stroke;
-                            accessible-role: text;
-                            accessible-label: "Review: " + review.title;
-                            box := VerticalLayout {
-                                width: parent.width;
-                                padding: 12 * u;
-                                spacing: 4 * u;
-                                Text { text: review.stars; color: Theme.warn; font-size: 12 * u; }
-                                Text { text: review.title; color: Theme.text; font-size: 13 * u; font-weight: 700; wrap: word-wrap; }
-                                Text { text: review.text; color: Theme.text; font-size: 12 * u; wrap: word-wrap; }
-                                Text { text: review.meta; color: Theme.text-dim; font-size: 11 * u; overflow: elide; }
-                            }
-                        }
-                        if Store.reviews.length > 6 : Text { text: "Press Reviews, beside Install, to read all " + Store.reviews.length + "."; color: Theme.text-dim; font-size: 12 * u; }
-                    }
-                    // The rest of the pictures, one after another.
-                    for shot[i] in Store.screenshots : Rectangle {
-                        visible: i > 0;
-                        height: i > 0 ? 236 * u : 0;
-                        border-radius: 10 * u;
-                        clip: true;
-                        if i > 0 : Image {
-                            width: parent.width;
-                            height: parent.height;
-                            source: shot;
-                            image-fit: contain;
-                        }
-                    }
-                }
-                // Where you are in it: a bar at the edge, and the page fading out below
-                // while there is more to come.
-                if root.info-max > 0 : Rectangle {
-                    x: parent.width - 4 * u;
-                    y: (parent.height - self.height) * min(root.info-scroll, parent.further) / parent.further;
-                    width: 4 * u;
-                    height: max(30 * u, parent.height * parent.height / (parent.height + parent.further));
-                    border-radius: 2 * u;
-                    background: Theme.text-dim.with-alpha(0.55);
-                    animate y { duration: Theme.smooth; easing: ease-out; }
-                }
-                // More below: a small mark at the foot, gone at the end.
-                if root.info-scroll < root.info-max : Rectangle {
-                    x: (parent.width - 14 * u - self.width) / 2;
-                    y: parent.height - self.height - 4 * u;
-                    width: 44 * u;
-                    height: 26 * u;
-                    border-radius: 13 * u;
-                    background: Theme.surface-2;
-                    border-width: 0.5 * u;
-                    border-color: Theme.stroke;
-                    accessible-role: text;
-                    accessible-label: "More below: press Down";
-                    Text { text: "▾"; color: Theme.text; font-size: 15 * u; horizontal-alignment: center; vertical-alignment: center; }
                 }
             }
             if root.files : VerticalLayout {
