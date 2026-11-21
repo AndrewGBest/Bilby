@@ -2341,9 +2341,18 @@ fn the_library_shows_the_device_the_store_and_what_was_installed_some_other_way(
 
     // The store is in its own library, and asking for a newer one always answers.
     let own = start_as_store("linux-x64-debian", "github:kestrel-sh/kestrel");
-    let names: Vec<String> =
-        own.store().get_tv_library_rows().row_data(0).unwrap().apps.iter().map(|c| c.name.to_string()).collect();
-    assert_eq!(names.last().map(String::as_str), Some("Bilby"), "{names:?}");
+    let own_id = "github:kestrel-sh/kestrel";
+    let running = format!("v{}", env!("CARGO_PKG_VERSION"));
+    let noted = own.saved().library.into_iter().find(|a| a.id == own_id).expect("the store is in its own library");
+    assert_eq!((noted.name.as_str(), noted.version.as_str()), ("Bilby", running.as_str()));
+    assert!(own.store().get_library().iter().any(|row| row.card.id == own_id), "listed on the Library page");
+    assert!(own.store().get_tv_library_rows().iter().any(|row| row.apps.iter().any(|c| c.id == own_id)));
+    // It is marked installed wherever it is shown, and cannot be removed from its own library.
+    own.app.open(&own.ui, own_id);
+    assert!(own.store().get_in_library());
+    own.store().invoke_remove_from_library(own_id.into());
+    assert!(own.saved().library.iter().any(|a| a.id == own_id));
+    assert!(own.store().get_toast().contains("Bilby itself"), "{}", own.store().get_toast());
     own.store().invoke_check_store_update();
     assert!(own.store().get_toast().contains("Bilby"), "{}", own.store().get_toast());
 }
@@ -2366,51 +2375,72 @@ fn down_from_a_tab_goes_into_the_page_showing_and_only_ok_changes_page() {
 // ---- what an app needs before it will run ----
 
 #[test]
-fn an_appimage_on_a_system_without_fuse_says_so_and_offers_to_install_it() {
+fn an_appimage_on_a_system_without_fuse_has_it_installed_along_with_the_app() {
     use bilby_core::needs::Fuse;
-    let start_with_fuse = |fuse: Fuse, preset: &str| {
+    let start_with_fuse = |fuse: Fuse| {
         init_backend();
+        bilby_core::demo::DOWNLOAD_STEP_MS.store(0, Ordering::Relaxed);
         let dirs = dirs_in(&temp_root());
         std::fs::create_dir_all(&dirs.config).unwrap();
         std::fs::write(dirs.config.join("demo-state.json"), r#"{"settings":{"welcomed":true}}"#).unwrap();
+        // A stand-in for the password prompt: it notes what it was asked to run and succeeds.
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::create_dir_all(dirs.elevate.parent().unwrap()).unwrap();
+            let log = dirs.elevate.with_extension("log");
+            std::fs::write(&dirs.elevate, format!("#!/bin/sh\necho \"$@\" >> '{}'\n", log.display())).unwrap();
+            std::fs::set_permissions(&dirs.elevate, std::fs::Permissions::from_mode(0o755)).unwrap();
+        }
         let options = Options {
             demo: true,
             inline: true,
-            platform: Platform::preset(preset),
+            // An Arch system: its repositories have the package that provides FUSE 2.
+            platform: Platform::preset("linux-x64-arch"),
             shell: Some(Shell::Desktop),
-            dirs: Some(dirs),
+            dirs: Some(dirs.clone()),
+            opener: Some(Arc::new(|_: &std::path::Path| Ok(()))),
             fuse: Some(fuse),
             ..Default::default()
         };
-        build(&options).unwrap()
+        let (ui, app) = build(&options).unwrap();
+        (ui, app, dirs)
     };
-    // A system and a demo app where the best file is an AppImage.
+    // A demo app whose best file on this system is an AppImage.
     let without = Fuse { library: false, mounter: true };
-    let (preset, id) = ["linux-x64-arch", "linux-x64-fedora", "linux-x64-debian"]
-        .into_iter()
-        .flat_map(|preset| ["github:tidewave/tidewave", "github:lumen-labs/lumen"].map(|id| (preset, id)))
-        .find(|(preset, id)| {
-            let (ui, app) = start_with_fuse(without, preset);
-            app.open(&ui, id);
-            ui.global::<Store>().get_options().row_data(0).is_some_and(|o| o.label.contains("AppImage"))
-        })
-        .expect("the demo has an app that comes as an AppImage somewhere");
-    let (ui, app) = start_with_fuse(without, preset);
-    app.open(&ui, id);
+    let (ui, app, dirs) = start_with_fuse(without);
     let store = ui.global::<Store>();
-    assert!(store.get_need_note().contains("FUSE 2"), "said before anything is downloaded: {}", store.get_need_note());
-    // The demo's repositories have no such package, so no button is offered: only advice.
-    if store.get_helper_id().is_empty() {
-        assert!(store.get_need_note().contains("libfuse2 or fuse2"), "{}", store.get_need_note());
-    } else {
-        assert!(store.get_helper_label().contains("FUSE"), "{}", store.get_helper_label());
-    }
+    let id = ["github:tidewave/tidewave", "github:lumen-labs/lumen", "github:kestrel-sh/kestrel"]
+        .into_iter()
+        .find(|id| {
+            app.open(&ui, id);
+            store.get_options().row_data(0).is_some_and(|o| o.label.contains("AppImage"))
+        })
+        .expect("the demo has an app that comes as an AppImage on Arch");
 
-    // With FUSE in place nothing is said.
-    let (ui, app) = start_with_fuse(Fuse { library: true, mounter: true }, preset);
+    // Before anything is downloaded the page says what is needed and that the store
+    // will see to it. There is no errand to run: no button leading elsewhere.
+    let note = store.get_need_note();
+    assert!(note.contains("needs FUSE 2") && note.contains("Bilby will install it for you"), "{note}");
+    assert_eq!(store.get_helper_id(), "");
+
+    // Installing the app installs FUSE first, through the system's package manager.
+    #[cfg(unix)]
+    {
+        store.invoke_install(0);
+        let ran = std::fs::read_to_string(dirs.elevate.with_extension("log")).unwrap_or_default();
+        assert!(ran.contains("pacman") && ran.contains("fuse2"), "the package was installed first: {ran:?}");
+        assert_eq!(store.get_install_state(), 2, "and then the app: {}", store.get_install_message());
+        assert_eq!(store.get_need_note(), "", "with it in place, nothing more is said");
+    }
+    let _ = (&dirs, id);
+
+    // With FUSE in place to begin with, nothing is said and nothing extra is run.
+    let (ui, app, dirs) = start_with_fuse(Fuse { library: true, mounter: true });
     app.open(&ui, id);
     assert_eq!(ui.global::<Store>().get_need_note(), "");
-    assert_eq!(ui.global::<Store>().get_helper_id(), "");
+    ui.global::<Store>().invoke_install(0);
+    assert!(!dirs.elevate.with_extension("log").exists(), "no package manager was called");
 }
 
 // ---- adult content, Family mode and the PIN ----

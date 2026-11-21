@@ -1013,6 +1013,8 @@ pub fn system_repos() -> Vec<crate::source::system::Backend> {
                 // Also on GitHub in this catalog: one app, two sources.
                 package("relay", "2.1.0-1", "Send files between nearby devices without the cloud.", "extra", "x86_64"),
                 package("mistral-fonts", "4.1-1", "A family of clear interface typefaces.", "extra", "any"),
+                // What AppImages need to start, for a system that lacks it.
+                package("fuse2", "2.9.9-5", "Lets programs mount their own file systems.", "extra", "x86_64"),
                 package("coreshell", "5.3-1", "The standard command interpreter.", "core", "x86_64"),
             ],
             // One current, one with a newer version waiting in the repository.

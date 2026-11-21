@@ -114,16 +114,13 @@ pub fn for_appimage(
         return None;
     }
     let package = fuse_packages(platform).into_iter().find(|id| offered(id));
-    let lead = if sure {
-        "This app is an AppImage and will not start here: it needs FUSE 2, which this system does not have."
-    } else {
-        "This app comes as an AppImage. Most of those need FUSE 2 to start, which this system does not have."
+    let _ = sure;
+    let why = match &package {
+        // The store takes care of it: say what will happen, not what to go and do.
+        Some(_) => "This app needs FUSE 2 to run, which this system does not have. Bilby will install it for you along with the app; your system will ask for your password.".to_string(),
+        None => "This app needs FUSE 2 to run, which this system does not have, and Bilby could not find it in your system's repositories. Install your system's FUSE 2 package (often called libfuse2 or fuse2), then open the app again.".to_string(),
     };
-    let then = match &package {
-        Some(_) => " Bilby can install it from your system's own repository.",
-        None => " Install your system's FUSE 2 package (often called libfuse2 or fuse2), then open the app again.",
-    };
-    Some(Need { action: "Install FUSE, which it needs".to_string(), why: format!("{lead}{then}"), package })
+    Some(Need { action: "Install FUSE".to_string(), why, package })
 }
 
 /// The AppImage the store placed for an app, when its path says it is one.
@@ -145,7 +142,7 @@ mod tests {
         let modern = Fuse { library: false, mounter: true };
         // Before downloading: a warning in "most of those" words, with the package to install.
         let before = for_appimage(&debian, modern, None, &all).unwrap();
-        assert!(before.why.contains("Most of those need FUSE 2") && before.why.contains("Bilby can install it"));
+        assert!(before.why.contains("needs FUSE 2") && before.why.contains("Bilby will install it for you"));
         assert_eq!(before.package.unwrap().to_string(), "apt:libfuse2t64");
         // An older Debian has it under the plain name.
         let older = for_appimage(&debian, modern, None, &|id| id.key == "libfuse2").unwrap();
@@ -175,7 +172,7 @@ mod tests {
         let debian = Platform::preset("linux-x64-debian").unwrap();
         let modern = Fuse { library: false, mounter: true };
         let need = for_appimage(&debian, modern, Some(&old), &all).unwrap();
-        assert!(need.why.contains("will not start here"), "{}", need.why);
+        assert!(need.why.contains("needs FUSE 2"), "{}", need.why);
         assert!(for_appimage(&debian, modern, Some(&new), &all).is_none(), "the newer kind runs on FUSE 3");
         assert!(for_appimage(&debian, Fuse { library: false, mounter: false }, Some(&new), &all).is_some());
         assert!(as_appimage(&old).is_some() && as_appimage(&dir.join("app.deb")).is_none());

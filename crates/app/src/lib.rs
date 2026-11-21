@@ -612,7 +612,12 @@ pub struct App {
     runner: Runner,
     signin: SignIn,
     /// What this system has of FUSE, which AppImages need to start.
-    fuse: bilby_core::needs::Fuse,
+    fuse: std::sync::RwLock<bilby_core::needs::Fuse>,
+    /// That was given rather than looked up (a test, or the made-up demo device).
+    fuse_given: bool,
+    /// A package the app on screen needs before it will run, which the store installs
+    /// along with it.
+    needed: Mutex<Option<AppId>>,
     /// The Steam account signed in to, kept beside the saved state for quick lookups.
     steam: std::sync::RwLock<Option<bilby_core::steam_account::Account>>,
     /// Bumped whenever a Steam sign-in starts or is cancelled, so a late answer is dropped.
@@ -1197,24 +1202,6 @@ impl App {
                 ..Default::default()
             });
         }
-        if let Some(own) = self.store_app.as_ref().map(|id| id.to_string()) {
-            let newer = store.get_store_update();
-            device.push(AppCard {
-                id: own.as_str().into(),
-                name: "Bilby".into(),
-                author: "This store".into(),
-                summary: if newer.is_empty() {
-                    format!("Version {}. Open it to look for a newer one.", env!("CARGO_PKG_VERSION")).into()
-                } else {
-                    format!("Version {newer} is available. You have {}.", env!("CARGO_PKG_VERSION")).into()
-                },
-                has_update: !newer.is_empty(),
-                installed: true,
-                tint: tint_for(&own),
-                icon: own_icon(),
-                ..Default::default()
-            });
-        }
         if !device.is_empty() {
             tv_library.push(section(&store.get_device_name(), device));
         }
@@ -1475,6 +1462,7 @@ impl App {
         // An AppImage on a system that lacks what AppImages need to start: said before
         // it is downloaded, with the package that provides it one press away.
         let mut need_note = String::new();
+        let mut needed = None;
         if helper.0.is_empty() {
             let placed = self.launchable(&id).and_then(|path| bilby_core::needs::as_appimage(&path));
             let offered = store.get_options().row_data(0).is_some_and(|option| option.label.contains("AppImage"));
@@ -1482,17 +1470,21 @@ impl App {
                 let platform = self.platform.read().unwrap().clone();
                 let catalog = self.catalog();
                 let in_repositories = |package: &AppId| catalog.source_summary(package).is_ok();
-                if let Some(need) =
-                    bilby_core::needs::for_appimage(&platform, self.fuse, placed.as_deref(), &in_repositories)
-                {
+                if let Some(need) = bilby_core::needs::for_appimage(
+                    &platform,
+                    *self.fuse.read().unwrap(),
+                    placed.as_deref(),
+                    &in_repositories,
+                ) {
                     need_note = need.why;
-                    if let Some(package) = need.package {
-                        helper = (package.to_string(), need.action);
-                    }
+                    // Installed along with the app, or just before it is opened: the
+                    // person is told, not sent to fetch it.
+                    needed = need.package;
                 }
             }
         }
         store.set_need_note(need_note.into());
+        *self.needed.lock().unwrap() = needed;
         // The same choices as rows for the TV, without the one already showing.
         let mut rows: Vec<SourceChoice> = Vec::new();
         for version in store.get_app_family().iter().filter(|v| !v.on) {
@@ -2568,8 +2560,14 @@ impl App {
         let inline = self.inline;
         let weak = self.ui.clone();
         let work_option = option.clone();
+        // What it needs first (FUSE, for an AppImage) is installed first, as part of this.
+        let requirement =
+            if option.plan.action == Action::PlaceAppImage { self.needed.lock().unwrap().clone() } else { None };
         self.job(
             move |app| {
+                if let Some(package) = &requirement {
+                    app.install_requirement(package)?;
+                }
                 let mut last_percent = 0u64;
                 let mut progress = |done: u64, total: Option<u64>| {
                     if let Some(total) = total.filter(|t| *t > 0) {
@@ -2837,6 +2835,29 @@ impl App {
         self.toast(ui, &format!("Downloads now go to {}", self.downloads_folder().display()), false);
     }
 
+    /// Install a package an app needs before it will run, from the system's own
+    /// repository, the way any package is installed (the system asks for the password).
+    fn install_requirement(&self, package: &AppId) -> bilby_core::Result<()> {
+        let details = self.catalog().details(package)?;
+        let option = details.release.as_ref().and_then(|release| release.options.first()).ok_or_else(|| {
+            Error::Unsupported(format!("{} could not be installed: nothing to install was found.", package.key))
+        })?;
+        let http = self.catalog().http();
+        install::execute(&option.plan, &option.asset, http.as_ref(), &self.dirs, self.opener.as_ref(), &mut |_, _| {
+            true
+        })
+        .map_err(|e| {
+            Error::Unsupported(format!("What this app needs ({}) could not be installed: {e}", package.key))
+        })?;
+        // Look again at what the system has, so the notice goes once it is there.
+        let now = match self.fuse_given {
+            true => bilby_core::needs::Fuse { library: true, mounter: true },
+            false => bilby_core::needs::fuse_here(),
+        };
+        *self.fuse.write().unwrap() = now;
+        Ok(())
+    }
+
     /// On a Linux TV a website opens in Longboard; anywhere else in the usual browser.
     fn opens_sites_in_longboard(&self) -> bool {
         let platform = self.platform.read().unwrap();
@@ -3059,6 +3080,37 @@ impl App {
         self.refresh(ui);
     }
 
+    /// The store is an app like any other and is, plainly, installed: it is kept in
+    /// the library at the version that is running, so that it is listed, marked
+    /// installed wherever it is shown, and offered updates like the rest.
+    fn note_self(&self, ui: &AppWindow) {
+        let Some(id) = self.store_app.clone() else { return };
+        let running = format!("v{}", env!("CARGO_PKG_VERSION"));
+        let program = self.self_program.as_ref().map(|path| path.display().to_string());
+        let unchanged = self.state.lock().unwrap().installed(&id.to_string()).is_some_and(|own| own.version == running);
+        if unchanged {
+            return;
+        }
+        self.update_state(ui, |state| {
+            let text = id.to_string();
+            match state.library.iter_mut().find(|app| app.id.eq_ignore_ascii_case(&text)) {
+                // A newer copy is running than the one last noted.
+                Some(own) => {
+                    own.version = running.clone();
+                    own.skipped_version.clear();
+                }
+                None => {
+                    let mut summary = AppSummary::new(id.clone(), "Bilby");
+                    summary.author = "This store".to_string();
+                    summary.summary = "The app store you are using.".to_string();
+                    let mut own = InstalledApp::new(&summary, &running, "", "", now_unix());
+                    own.path = program.clone();
+                    state.library.push(own);
+                }
+            }
+        });
+    }
+
     /// Look for a newer Bilby because the person asked, and say what was found.
     pub fn check_store_update_now(self: &Arc<Self>, ui: &AppWindow) {
         let Some(id) = self.store_app.clone() else { return };
@@ -3193,10 +3245,20 @@ impl App {
         } else {
             // A program is watched for a moment as it starts, away from the interface:
             // one that closes straight away says why.
-            self.toast(ui, &format!("Opening {}…", store.get_app().name), false);
+            let requirement = self.needed.lock().unwrap().clone();
+            let said = match requirement {
+                Some(_) => format!("Installing what {} needs, then opening it…", store.get_app().name),
+                None => format!("Opening {}…", store.get_app().name),
+            };
+            self.toast(ui, &said, false);
             let launcher = self.launcher.clone();
             self.job(
-                move |_| launcher(&path),
+                move |app| {
+                    if let Some(package) = &requirement {
+                        app.install_requirement(package)?;
+                    }
+                    launcher(&path)
+                },
                 |app, ui, started: bilby_core::Result<()>| {
                     if let Err(e) = started {
                         app.toast(ui, &format!("Couldn't open it. {e}"), true);
@@ -3231,6 +3293,10 @@ impl App {
     }
 
     pub fn remove_from_library(&self, ui: &AppWindow, id: &str) {
+        if self.store_app.as_ref().is_some_and(|own| own.to_string().eq_ignore_ascii_case(id)) {
+            self.toast(ui, "That is Bilby itself, which you are using. To remove it, delete its file.", true);
+            return;
+        }
         if self.needs_pin_to_install() {
             let why = "A PIN is needed to install or remove apps on this device.";
             self.ask(ui, 2, "Enter the PIN", why, Guarded::Remove(id.to_string()));
@@ -3403,10 +3469,12 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         alternates: Mutex::new(HashMap::new()),
         signin: options.signin.clone().unwrap_or_else(|| Arc::new(signin_window)),
         // The demo is a made-up device with everything in place, unless told otherwise.
-        fuse: options.fuse.unwrap_or_else(|| match options.demo {
+        fuse: std::sync::RwLock::new(options.fuse.unwrap_or_else(|| match options.demo {
             true => bilby_core::needs::Fuse { library: true, mounter: true },
             false => bilby_core::needs::fuse_here(),
-        }),
+        })),
+        fuse_given: options.fuse.is_some() || options.demo,
+        needed: Mutex::new(None),
         steam: std::sync::RwLock::new(None),
         steam_generation: AtomicU64::new(0),
         elsewhere: std::sync::RwLock::new(Elsewhere::default()),
@@ -3419,6 +3487,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         adult_unlocked: std::sync::atomic::AtomicBool::new(false),
         install_cleared: std::sync::atomic::AtomicBool::new(false),
     });
+    app.note_self(&ui);
     app.scan_installed(&ui);
     *app.steam.write().unwrap() = app.state().steam;
     app.apply_menu_entry(&ui);
