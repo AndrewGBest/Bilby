@@ -197,9 +197,21 @@ export component MobileShell inherits Rectangle {
                                                 vertical-alignment: center;
                                             }
                                         }
-                                        for app in section.apps : AppRow {
-                                            app: app;
-                                            clicked => { Store.open(app.id); }
+                                        // The start of each section; the rest is one press away.
+                                        for i in (Store.category == "" && section.apps.length > 8 ? 5 : section.apps.length) : AppRow {
+                                            app: section.apps[i];
+                                            clicked => { Store.open(section.apps[i].id); }
+                                        }
+                                        if Store.category == "" && section.apps.length > 8 : HorizontalLayout {
+                                            padding-left: 16px;
+                                            padding-bottom: 8px;
+                                            alignment: start;
+                                            ChoiceChip {
+                                                text: "Show all " + section.apps.length;
+                                                selected: false;
+                                                accessible-label: "Show all " + section.apps.length + " in " + section.title;
+                                                clicked => { Store.category = section.title; }
+                                            }
                                         }
                                     }
                                 }

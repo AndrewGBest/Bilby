@@ -315,6 +315,9 @@ pub struct Outcome {
     pub file: Option<PathBuf>,
     /// The store placed the app itself (AppImage), so deleting `file` uninstalls it.
     pub store_managed: bool,
+    /// The Flatpak app a downloaded bundle became (`org.example.App`): Flatpak keeps it
+    /// from here on, and this is the name it is started and removed by.
+    pub flatpak_app: Option<String>,
 }
 
 fn menu_entry_path(dirs: &Dirs, id: &str) -> PathBuf {
@@ -411,17 +414,68 @@ fn appimage_icon(dirs: &Dirs, id: &str, appimage: &Path) -> Option<PathBuf> {
     kept
 }
 
-/// Longboard, when it is on this device: the copy the store placed, or one on the PATH.
-pub fn find_longboard(dirs: &Dirs) -> Option<PathBuf> {
-    let placed =
-        std::fs::read_dir(&dirs.applications).ok().into_iter().flatten().flatten().map(|e| e.path()).find(|p| {
-            let name = p.file_name().unwrap_or_default().to_string_lossy().to_lowercase();
-            name.starts_with("longboard") && name.ends_with(".appimage")
+/// The name Longboard's Flatpak goes by.
+pub const LONGBOARD_FLATPAK: &str = "io.github.andrewgbest.Longboard";
+
+/// How Longboard is started on this device: the program, and what goes before
+/// anything it is told (nothing for a file of its own; "run" and its name for Flatpak).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Longboard {
+    pub program: PathBuf,
+    pub before: Vec<String>,
+}
+
+impl Longboard {
+    /// The whole argument list for starting it with `args`.
+    pub fn args(&self, args: &[String]) -> Vec<String> {
+        self.before.iter().chain(args).cloned().collect()
+    }
+
+    /// The same, when it has to write into `folder`: a Flatpak is shut off from the
+    /// person's files unless a folder is opened to it for this one run.
+    pub fn args_writing(&self, args: &[String], folder: &Path) -> Vec<String> {
+        let mut all = self.args(args);
+        if self.before.first().is_some_and(|first| first == "run") {
+            all.insert(1, format!("--filesystem={}", folder.display()));
+        }
+        all
+    }
+}
+
+/// Longboard, when it is on this device, however it got there: the AppImage the store
+/// placed (or the folder it was unpacked into), its Flatpak, or one on the PATH.
+pub fn find_longboard(dirs: &Dirs) -> Option<Longboard> {
+    let own = |program: PathBuf| Longboard { program, before: Vec::new() };
+    let placed = std::fs::read_dir(&dirs.applications)
+        .ok()
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter_map(|e| {
+            let path = e.path();
+            let name = path.file_name().unwrap_or_default().to_string_lossy().to_lowercase();
+            if !name.starts_with("longboard") {
+                return None;
+            }
+            if name.ends_with(".appimage") && path.is_file() {
+                return Some(path);
+            }
+            // Unpacked, on a system where AppImages cannot start as they are.
+            let unpacked = path.join("AppRun");
+            (name.ends_with(".appdir") && unpacked.is_file()).then_some(unpacked)
+        })
+        .next();
+    if let Some(program) = placed {
+        return Some(own(program));
+    }
+    if flatpak_app_installed(dirs, LONGBOARD_FLATPAK) {
+        return Some(Longboard {
+            program: dirs.flatpak.clone(),
+            before: vec!["run".to_string(), LONGBOARD_FLATPAK.to_string()],
         });
-    placed.or_else(|| {
-        let path = std::env::var_os("PATH")?;
-        std::env::split_paths(&path).map(|dir| dir.join("longboard")).find(|p| p.is_file())
-    })
+    }
+    let path = std::env::var_os("PATH")?;
+    std::env::split_paths(&path).map(|dir| dir.join("longboard")).find(|p| p.is_file()).map(own)
 }
 
 /// An app-menu entry that starts `program` with `args`.
@@ -838,6 +892,90 @@ pub fn run_program(
     }
 }
 
+/// [`run_program`], also returning what the program printed. It is written to `log`
+/// as the program runs (a pipe nobody reads would stop it), and the file is removed.
+fn run_program_said(
+    program: &Path,
+    args: &[&str],
+    name: &str,
+    log: &Path,
+    keep_going: &mut dyn FnMut(u64, Option<u64>) -> bool,
+) -> Result<String> {
+    use std::process::{Command, Stdio};
+    let mut command = Command::new(program);
+    command.args(args).stdin(Stdio::null()).stdout(std::fs::File::create(log)?).stderr(Stdio::piped());
+    let finish = |result: Result<()>| {
+        let said = std::fs::read_to_string(log).unwrap_or_default();
+        let _ = std::fs::remove_file(log);
+        result.map(|()| said)
+    };
+    let mut child = match command.spawn() {
+        Ok(child) => child,
+        Err(e) => {
+            return finish(Err(Error::Unsupported(format!("{name} could not be started ({e}). Is it installed?"))))
+        }
+    };
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) if status.success() => return finish(Ok(())),
+            Ok(Some(_)) => {
+                let mut said = String::new();
+                if let Some(mut stderr) = child.stderr.take() {
+                    let _ = std::io::Read::read_to_string(&mut stderr, &mut said);
+                }
+                let why =
+                    said.lines().rev().find(|l| !l.trim().is_empty()).unwrap_or("it gave no reason").trim().to_string();
+                return finish(Err(Error::Unsupported(format!("{name} could not do it: {why}"))));
+            }
+            Ok(None) => {
+                if !keep_going(0, None) {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    return finish(Err(Error::Cancelled));
+                }
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            }
+            Err(e) => return finish(Err(e.into())),
+        }
+    }
+}
+
+/// Is this a name Flatpak would give an app: `org.example.App`, nothing that could be
+/// taken for an option or a path?
+pub fn flatpak_app_id_ok(id: &str) -> bool {
+    id.len() <= 255
+        && id.split('.').count() >= 2
+        && id.split('.').all(|part| {
+            !part.is_empty()
+                && !part.starts_with('-')
+                && part.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+        })
+}
+
+/// The app Flatpak said it was installing: the id out of "app/<id>/<arch>/<branch>".
+fn flatpak_app_named(said: &str) -> Option<String> {
+    said.split_whitespace()
+        .filter_map(|word| word.strip_prefix("app/"))
+        .filter_map(|rest| rest.split('/').next())
+        .find(|id| flatpak_app_id_ok(id))
+        .map(str::to_string)
+}
+
+/// The Flatpak apps on the device, by id.
+fn flatpak_app_ids(roots: &[PathBuf]) -> Vec<String> {
+    let mut ids = Vec::new();
+    for root in roots {
+        let Ok(entries) = std::fs::read_dir(root.join("app")) else { continue };
+        ids.extend(entries.flatten().map(|e| e.file_name().to_string_lossy().to_string()));
+    }
+    ids
+}
+
+/// Is this Flatpak app on the device, in any of Flatpak's installations?
+pub fn flatpak_app_installed(dirs: &Dirs, id: &str) -> bool {
+    flatpak_app_id_ok(id) && dirs.flatpak_roots.iter().any(|root| root.join("app").join(id).is_dir())
+}
+
 /// Start a program the store placed (an AppImage), without waiting for it.
 pub fn launch(path: &Path) -> Result<()> {
     launch_watched(path, &[], std::time::Duration::from_millis(2500))
@@ -971,7 +1109,12 @@ pub fn execute(
 ) -> Result<Outcome> {
     if plan.action == Action::ShowCommand {
         let command = plan.command.clone().unwrap_or_default();
-        return Ok(Outcome { message: format!("Run in a terminal: {command}"), file: None, store_managed: false });
+        return Ok(Outcome {
+            message: format!("Run in a terminal: {command}"),
+            file: None,
+            store_managed: false,
+            flatpak_app: None,
+        });
     }
     if plan.action == Action::RunCommand {
         // The command is one this store built from a checked name: words, no quoting.
@@ -985,7 +1128,7 @@ pub fn execute(
         };
         let what = rest.first().copied().unwrap_or("it");
         run_program(&program, &rest, if command.starts_with("sudo ") { what } else { "The installer" }, progress)?;
-        return Ok(Outcome { message: "Installed.".to_string(), file: None, store_managed: false });
+        return Ok(Outcome { message: "Installed.".to_string(), file: None, store_managed: false, flatpak_app: None });
     }
     if plan.action == Action::RunInTerminal {
         let command = plan.command.clone().unwrap_or_default();
@@ -995,6 +1138,7 @@ pub fn execute(
                 message: format!("No terminal was found. Run this in one: {command}"),
                 file: None,
                 store_managed: false,
+                flatpak_app: None,
             });
         };
         // Keep the window open afterwards, so the result can be read.
@@ -1009,6 +1153,7 @@ pub fn execute(
             message: "A terminal has opened to build it. Come back when it has finished.".to_string(),
             file: None,
             store_managed: false,
+            flatpak_app: None,
         });
     }
 
@@ -1028,6 +1173,7 @@ pub fn execute(
             message: format!("{store} is taking it from here. Come back when it has finished."),
             file: None,
             store_managed: false,
+            flatpak_app: None,
         });
     }
 
@@ -1038,6 +1184,7 @@ pub fn execute(
             message: "Installed from Flathub. It is in your app menu.".to_string(),
             file: None,
             store_managed: false,
+            flatpak_app: None,
         });
     }
     // On a computer or phone a web app is a shortcut to the site in the usual browser.
@@ -1048,25 +1195,32 @@ pub fn execute(
             message: format!("{} is among your apps. It opens in your browser.", asset.name),
             file: Some(entry),
             store_managed: false,
+            flatpak_app: None,
         });
     }
     if plan.action == Action::WebApp {
         let host = asset.url.trim_start_matches("https://").trim_end_matches('/');
+        // The store installs Longboard itself before it gets here; this is for a caller
+        // that did not.
         let longboard = find_longboard(dirs).ok_or_else(|| {
             Error::Unsupported(
-                "Web apps open in Longboard, a browser for TVs, and it is not installed yet. Install Longboard from this store, then add this again.".to_string(),
+                "Web apps open in Longboard, a browser for TVs, which is not on this device.".to_string(),
             )
         })?;
-        let args = [format!("--url={}", asset.url)];
-        let entry = write_menu_entry(dirs, &format!("web:{host}"), &asset.name, &longboard, &args, "Network;")?;
+        let args = longboard.args(&[format!("--url={}", asset.url)]);
+        let entry = write_menu_entry(dirs, &format!("web:{host}"), &asset.name, &longboard.program, &args, "Network;")?;
         return Ok(Outcome {
             message: format!("{} is in this TV's app list. It opens in Longboard.", asset.name),
             file: Some(entry),
             store_managed: false,
+            flatpak_app: None,
         });
     }
 
-    let dest = dirs.downloads.join(safe_file_name(&asset.name));
+    // A Flatpak bundle is only a parcel: Flatpak copies the app out of it into its own
+    // place, so it is kept out of the downloads folder and thrown away afterwards.
+    let folder = if plan.action == Action::FlatpakBundle { dirs.cache.join("bundles") } else { dirs.downloads.clone() };
+    let dest = folder.join(safe_file_name(&asset.name));
     let actual = http.download(&asset.url, &dest, progress)?;
     let expected = checkable_digest(asset);
     if let Some(expected) = expected {
@@ -1092,7 +1246,7 @@ pub fn execute(
                 std::fs::copy(&dest, &target)?;
                 std::fs::remove_file(&dest)?;
             }
-            Ok(Outcome { message: format!("{verified}Installed to {}", target.display()), file: Some(target), store_managed: true })
+            Ok(Outcome { message: format!("{verified}Installed to {}", target.display()), file: Some(target), store_managed: true, flatpak_app: None })
         }
         Action::OpenFile => {
             // The download succeeded either way; a missing handler is not a failure.
@@ -1100,12 +1254,12 @@ pub fn execute(
                 Ok(()) => format!("{verified}Opened {} with your system installer", dest.display()),
                 Err(_) => format!("{verified}Saved to {}. Open it to finish installing.", dest.display()),
             };
-            Ok(Outcome { message, file: Some(dest), store_managed: false })
+            Ok(Outcome { message, file: Some(dest), store_managed: false, flatpak_app: None })
         }
         Action::Reveal => {
             // Failing to open a file manager is not a failed download.
             let _ = open(&dirs.downloads);
-            Ok(Outcome { message: format!("{verified}Saved to {}", dest.display()), file: Some(dest), store_managed: false })
+            Ok(Outcome { message: format!("{verified}Saved to {}", dest.display()), file: Some(dest), store_managed: false, flatpak_app: None })
         }
         Action::AndroidInstaller => Err(Error::Unsupported(format!(
             "{verified}Saved to {}. Handing APKs to Android's installer is not implemented in this build yet; open the file to install it.",
@@ -1113,9 +1267,27 @@ pub fn execute(
         ))),
         Action::FlatpakBundle => {
             let file = dest.display().to_string();
-            run_flatpak(dirs, &["install", "--user", "--noninteractive", "--assumeyes", &file], progress)?;
+            let before = flatpak_app_ids(&dirs.flatpak_roots);
+            // "--reinstall" so that installing again, or a newer version over an older
+            // one, goes through: without it Flatpak refuses what is already installed.
+            let args = ["install", "--user", "--noninteractive", "--assumeyes", "--reinstall", &file];
+            let said = run_program_said(&dirs.flatpak, &args, "Flatpak", &dest.with_extension("log"), progress);
+            // Whether or not it went through, the bundle has done its work.
             let _ = std::fs::remove_file(&dest);
-            Ok(Outcome { message: format!("{verified}Installed with Flatpak. It is in your app menu."), file: None, store_managed: false })
+            let said = said?;
+            // Which app it was: Flatpak names it as it installs ("app/<id>/<arch>/<branch>").
+            // Failing that, the one app that is there now and was not before.
+            let flatpak_app = flatpak_app_named(&said).or_else(|| {
+                let mut new = flatpak_app_ids(&dirs.flatpak_roots);
+                new.retain(|id| !before.contains(id));
+                (new.len() == 1).then(|| new.remove(0))
+            });
+            Ok(Outcome {
+                message: format!("{verified}Installed with Flatpak. It is in your app menu."),
+                file: None,
+                store_managed: false,
+                flatpak_app,
+            })
         }
         Action::ShowCommand
         | Action::RunCommand

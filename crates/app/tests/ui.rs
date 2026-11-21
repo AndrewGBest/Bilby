@@ -1351,23 +1351,27 @@ fn on_a_linux_tv_a_website_is_added_and_opened_like_an_app() {
     let websites = rows.iter().find(|r| r.title == "Web apps").expect("a Web apps row on a Linux TV");
     assert!(websites.apps.iter().any(|a| a.id == "web:lichess.org"));
 
-    // Without Longboard the page says what is needed, and adding fails with the same advice.
+    // Without Longboard the page says the store will fetch it, and adding the site does:
+    // nobody is sent to install it themselves.
     s.app.open(&s.ui, "web:lichess.org");
     assert_eq!(s.store().get_app().name, "Lichess");
-    assert!(s.store().get_warning().contains("Longboard"), "{}", s.store().get_warning());
+    assert!(s.store().get_warning().contains("Bilby installs it along with this"), "{}", s.store().get_warning());
     s.press(Key::Return);
-    assert_eq!(s.store().get_install_state(), 3);
-    assert!(s.store().get_install_message().contains("Install Longboard"));
-    assert!(s.saved().library.is_empty());
-
-    // With Longboard on the device (here: a stand-in file where the store puts AppImages).
-    std::fs::create_dir_all(&s.dirs.applications).unwrap();
+    assert_eq!(s.store().get_install_state(), 2, "{}", s.store().get_install_message());
+    assert!(s.store().get_install_message().contains("Longboard was installed for it"));
     let longboard = s.dirs.applications.join("Longboard-x86_64.AppImage");
-    std::fs::write(&longboard, b"stand-in").unwrap();
+    assert!(longboard.is_file(), "Longboard was fetched and placed");
+    let library: Vec<String> = s.saved().library.iter().map(|a| a.id.clone()).collect();
+    assert_eq!(library, ["web:lichess.org", "github:AndrewGBest/Longboard"], "both are in the library");
+    assert!(s.dirs.menu.join("bilby-github-andrewgbest-longboard.desktop").exists());
+
+    // With Longboard there the page has nothing to warn about, and nothing more is fetched.
+    s.app.remove_from_library(&s.ui, "web:lichess.org");
     s.app.open(&s.ui, "web:lichess.org");
     assert_eq!(s.store().get_warning(), "");
     s.press(Key::Return);
     assert_eq!(s.store().get_install_state(), 2, "{}", s.store().get_install_message());
+    assert!(!s.store().get_install_message().contains("Longboard was installed"));
     assert_eq!(s.saved().library[0].id, "web:lichess.org");
     let entry = std::fs::read_to_string(s.dirs.menu.join("bilby-web-lichess-org.desktop")).unwrap();
     assert!(entry.contains("Name=Lichess\n"), "{entry}");
@@ -1385,6 +1389,45 @@ fn on_a_linux_tv_a_website_is_added_and_opened_like_an_app() {
     s.app.remove_from_library(&s.ui, "web:lichess.org");
     assert!(!s.dirs.menu.join("bilby-web-lichess-org.desktop").exists());
     assert_eq!(s.store().get_toast(), "Lichess removed from this TV's app list");
+}
+
+/// Longboard is Longboard however it was installed: its Flatpak, or an AppImage that
+/// had to be unpacked, is used as it is and nothing is downloaded.
+#[test]
+fn a_longboard_installed_another_way_is_used_for_websites() {
+    // As a Flatpak: started through Flatpak.
+    let s = start("linux-tv", Shell::Tv);
+    std::fs::create_dir_all(s.dirs.flatpak_roots[0].join("app").join("io.github.andrewgbest.Longboard")).unwrap();
+    s.app.open(&s.ui, "web:lichess.org");
+    assert_eq!(s.store().get_warning(), "");
+    s.press(Key::Return);
+    assert_eq!(s.store().get_install_state(), 2, "{}", s.store().get_install_message());
+    assert_eq!(s.saved().library.len(), 1, "no second Longboard was fetched");
+    assert!(!s.dirs.applications.exists());
+    let entry = std::fs::read_to_string(s.dirs.menu.join("bilby-web-lichess-org.desktop")).unwrap();
+    assert!(
+        entry
+            .contains("flatpak-program\" \"run\" \"io.github.andrewgbest.Longboard\" \"--url=https://lichess.org/\"\n"),
+        "{entry}"
+    );
+    assert!(s.store().get_can_open());
+    s.press(Key::Return);
+    assert_eq!(
+        s.web_opened.lock().unwrap().as_slice(),
+        [(s.dirs.flatpak.clone(), "run io.github.andrewgbest.Longboard --url=https://lichess.org/".to_string())]
+    );
+
+    // Unpacked into a folder, as on a system without FUSE: its AppRun is the program.
+    let s = start("linux-tv", Shell::Tv);
+    let folder = s.dirs.applications.join("Longboard-x86_64.AppDir");
+    std::fs::create_dir_all(&folder).unwrap();
+    std::fs::write(folder.join("AppRun"), b"stand-in").unwrap();
+    s.app.open(&s.ui, "web:lichess.org");
+    assert_eq!(s.store().get_warning(), "");
+    s.press(Key::Return);
+    assert_eq!(s.saved().library.len(), 1);
+    s.press(Key::Return);
+    assert_eq!(s.web_opened.lock().unwrap().last().unwrap().0, folder.join("AppRun"));
 }
 
 #[test]
@@ -1460,6 +1503,67 @@ fn a_flathub_app_is_found_installed_opened_and_removed() {
         "uninstall --noninteractive --assumeyes io.quillpad.Quillpad"
     );
     assert_eq!(s.store().get_toast(), "Uninstalling Quillpad…");
+}
+
+/// A Flatpak bundle from a developer's own release page: Flatpak takes the app out of
+/// it, so the page must offer Open afterwards, nothing may be left in the downloads
+/// folder, and installing it again must go through.
+#[test]
+#[cfg(unix)]
+fn a_flatpak_bundle_is_opened_installed_again_and_removed() {
+    use std::os::unix::fs::PermissionsExt;
+    let s = start("linux-x64-debian", Shell::Tv);
+    // A stand-in for Flatpak that says what the real one says, and does what it does.
+    let log = s.dirs.cache.join("flatpak-calls.txt");
+    let apps = s.dirs.flatpak_roots[0].join("app");
+    let script = format!(
+        "#!/bin/sh\necho \"$@\" >> '{log}'\nif [ \"$1\" = install ]; then echo 'Installing app/org.driftnotes.Drift/x86_64/stable'; mkdir -p '{apps}/org.driftnotes.Drift'; fi\nexit 0\n",
+        log = log.display(),
+        apps = apps.display(),
+    );
+    std::fs::create_dir_all(s.dirs.flatpak.parent().unwrap()).unwrap();
+    std::fs::create_dir_all(&s.dirs.cache).unwrap();
+    std::fs::write(&s.dirs.flatpak, script).unwrap();
+    std::fs::set_permissions(&s.dirs.flatpak, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+    s.app.open(&s.ui, "github:driftnotes/drift");
+    let bundle = s.option_labels().iter().position(|l| l.contains("Flatpak")).expect("the bundle is offered") as i32;
+    assert!(!s.store().get_can_open());
+    for round in 0..2 {
+        s.app.install(&s.ui, bundle);
+        assert_eq!(s.store().get_install_state(), 2, "round {round}: {}", s.store().get_install_message());
+    }
+    let calls = std::fs::read_to_string(&log).unwrap();
+    assert_eq!(calls.lines().count(), 2);
+    assert!(
+        calls.lines().all(|l| l.starts_with("install --user --noninteractive --assumeyes --reinstall ")),
+        "{calls}"
+    );
+
+    // The bundle was a parcel: it is not in the downloads folder, nor kept anywhere.
+    assert!(!s.dirs.downloads.join("Drift-2.2.0.flatpak").exists());
+    assert_eq!(std::fs::read_dir(s.dirs.cache.join("bundles")).unwrap().count(), 0);
+
+    // The library knows which Flatpak it became, so the page opens it instead of
+    // offering to install it again.
+    assert_eq!(s.saved().library[0].flatpak, "org.driftnotes.Drift");
+    assert!(s.store().get_can_open());
+    assert!(!s.has("Install again"));
+    s.app.launch(&s.ui);
+    assert_eq!(s.web_opened.lock().unwrap().last().unwrap().1, "run org.driftnotes.Drift");
+
+    // Removed outside the store: the page goes back to offering it.
+    std::fs::remove_dir_all(apps.join("org.driftnotes.Drift")).unwrap();
+    s.app.open(&s.ui, "github:driftnotes/drift");
+    assert!(!s.store().get_can_open());
+    std::fs::create_dir_all(apps.join("org.driftnotes.Drift")).unwrap();
+
+    // Removing it from the library has Flatpak uninstall it.
+    s.app.remove_from_library(&s.ui, "github:driftnotes/drift");
+    assert_eq!(
+        s.web_opened.lock().unwrap().last().unwrap().1,
+        "uninstall --noninteractive --assumeyes org.driftnotes.Drift"
+    );
 }
 
 #[test]
@@ -2191,15 +2295,12 @@ fn signing_in_to_steam_with_a_code_shows_it_and_keeps_only_the_list() {
 #[test]
 fn on_a_tv_steam_sign_in_happens_in_longboard_which_hands_the_list_back() {
     let s = start("linux-tv", Shell::Tv);
-    // Without Longboard there is nowhere to sign in: say so, and what to do.
-    s.store().invoke_steam_signin();
-    assert!(s.store().get_toast().contains("Install Longboard"), "{}", s.store().get_toast());
-    assert!(!s.store().get_steam_signed_in() && s.store().get_steam_state() == 0);
-
-    std::fs::create_dir_all(&s.dirs.applications).unwrap();
+    // Without Longboard the store fetches it first, then signs in through it.
     let longboard = s.dirs.applications.join("Longboard-x86_64.AppImage");
-    std::fs::write(&longboard, b"stand-in").unwrap();
+    assert!(!longboard.exists());
     s.store().invoke_steam_signin();
+    assert!(longboard.is_file(), "{}", s.store().get_toast());
+    assert_eq!(s.saved().library[0].id, "github:AndrewGBest/Longboard");
     let (program, args) = s.web_opened.lock().unwrap().last().cloned().expect("Longboard was started");
     assert_eq!(program, longboard);
     assert!(args.starts_with("--hand-back=steam-library --hand-back-to="), "{args}");
@@ -2374,6 +2475,59 @@ fn down_from_a_tab_goes_into_the_page_showing_and_only_ok_changes_page() {
 }
 
 // ---- what an app needs before it will run ----
+
+/// The notice about FUSE is about AppImages. An app that is here as something else
+/// (its Flatpak) says nothing about it, even though it also comes as an AppImage.
+#[test]
+#[cfg(unix)]
+fn the_fuse_notice_is_only_for_an_appimage() {
+    use bilby_core::needs::Fuse;
+    use std::os::unix::fs::PermissionsExt;
+    init_backend();
+    bilby_core::demo::DOWNLOAD_STEP_MS.store(0, Ordering::Relaxed);
+    let dirs = dirs_in(&temp_root());
+    std::fs::create_dir_all(&dirs.config).unwrap();
+    std::fs::write(dirs.config.join("demo-state.json"), r#"{"settings":{"welcomed":true}}"#).unwrap();
+    // A stand-in for Flatpak that installs the bundle as the real one does.
+    let apps = dirs.flatpak_roots[0].join("app");
+    std::fs::create_dir_all(dirs.flatpak.parent().unwrap()).unwrap();
+    std::fs::write(
+        &dirs.flatpak,
+        format!(
+            "#!/bin/sh\nif [ \"$1\" = install ]; then echo 'Installing app/org.driftnotes.Drift/x86_64/stable'; mkdir -p '{}/org.driftnotes.Drift'; fi\n",
+            apps.display()
+        ),
+    )
+    .unwrap();
+    std::fs::set_permissions(&dirs.flatpak, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let options = Options {
+        demo: true,
+        inline: true,
+        platform: Platform::preset("linux-x64-arch"),
+        shell: Some(Shell::Desktop),
+        dirs: Some(dirs.clone()),
+        opener: Some(Arc::new(|_: &std::path::Path| Ok(()))),
+        fuse: Some(Fuse { library: false, mounter: true }),
+        ..Default::default()
+    };
+    let (ui, app) = build(&options).unwrap();
+    let store = ui.global::<Store>();
+
+    // Not installed, and the AppImage is what Install would fetch: the notice is there.
+    app.open(&ui, "github:driftnotes/drift");
+    let labels: Vec<String> = store.get_options().iter().map(|o| o.label.to_string()).collect();
+    assert!(labels[0].contains("AppImage"), "{labels:?}");
+    assert!(store.get_need_note().contains("FUSE 2"), "{}", store.get_need_note());
+
+    // Installed as its Flatpak instead: nothing about FUSE, here or on coming back.
+    let bundle = labels.iter().position(|l| l.contains("Flatpak")).expect("the bundle is offered") as i32;
+    app.install(&ui, bundle);
+    assert_eq!(store.get_install_state(), 2, "{}", store.get_install_message());
+    assert!(store.get_can_open());
+    assert_eq!(store.get_need_note(), "");
+    app.open(&ui, "github:driftnotes/drift");
+    assert_eq!(store.get_need_note(), "");
+}
 
 #[test]
 fn an_appimage_on_a_system_without_fuse_has_it_installed_along_with_the_app() {
@@ -2561,7 +2715,16 @@ fn on_a_computer_a_web_app_opens_in_the_persons_own_browser() {
     app.search(&ui, "lichess");
     assert!(store.get_results().iter().any(|c| c.id == "web:lichess.org"));
     assert!(store.get_sections().iter().any(|row| row.title == "Web apps"));
-    assert!(store.get_sections().iter().any(|row| row.title == "Web apps to watch"));
+    // One row is only websites; the rest sit among the apps of their kind.
+    let titles: Vec<String> = store.get_sections().iter().map(|row| row.title.to_string()).collect();
+    assert_eq!(titles.iter().filter(|title| title.contains("Web apps")).count(), 1, "{titles:?}");
+    // Nothing is shown twice in the rows the store composes itself.
+    let mut seen = std::collections::HashSet::new();
+    for row in store.get_sections().iter().filter(|row| row.title != "Web apps") {
+        for app in row.apps.iter() {
+            assert!(seen.insert(app.id.to_string()), "{} is in two rows (again in {})", app.name, row.title);
+        }
+    }
 
     // Adding one puts an entry among the apps that opens the address.
     app.open(&ui, "web:lichess.org");

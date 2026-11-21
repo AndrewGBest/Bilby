@@ -48,13 +48,23 @@ component TvTile inherits Rectangle {
                     }
                 }
             }
-            Text {
+            // In a box of its own: a long summary ends with "…" on the last line that
+            // fits, instead of running out through the bottom of the tile.
+            Rectangle {
                 vertical-stretch: 1;
-                text: app.summary;
-                color: Theme.text-dim;
-                font-size: 11.5 * u;
-                wrap: word-wrap;
-                overflow: elide;
+                min-height: 0px;
+                Text {
+                    x: 0;
+                    y: 0;
+                    width: parent.width;
+                    height: floor(parent.height / (14 * u)) * 14 * u;
+                    text: app.summary;
+                    color: Theme.text-dim;
+                    font-size: 11.5 * u;
+                    wrap: word-wrap;
+                    overflow: elide;
+                    vertical-alignment: top;
+                }
             }
         }
     }
@@ -197,6 +207,9 @@ component TvStat inherits VerticalLayout {
 export component TvShell inherits Rectangle {
     property <length> u: root.height / 540;
     property <bool> on-library: Store.page == 2 && !Store.details-open;
+    // Home and a page of search results both have the search bar: it stays where it
+    // is when a search has been made, so the next one is one press away.
+    property <bool> has-search: Store.page == 0 || Store.page == 1;
     property <[Section]> rows: Store.page == 2 ? Store.tv-library-rows : Store.tv-rows;
     property <int> cur-row: 0;
     property <int> cur-col: 0;
@@ -247,7 +260,9 @@ export component TvShell inherits Rectangle {
             root.lib-act = 0;
             root.zone = Store.library.length > 0 ? 2 : Store.tv-library-rows.length > 0 ? 0 : 1;
         } else if (root.tab == 2) {
-            Store.page = 0;
+            if (!root.has-search) {
+                Store.page = 0;
+            }
             root.zone = 0;
             search.focus();
         } else if (root.tab == 3) {
@@ -499,7 +514,7 @@ export component TvShell inherits Rectangle {
                         if (rows.length > 0) {
                             root.zone = 0;
                         }
-                    } else if (Store.page == 0) {
+                    } else if (root.has-search) {
                         // On Home, down from any tab is search. Only OK changes page.
                         root.tab = 2;
                     } else if (Store.page == 2) {
@@ -878,7 +893,7 @@ export component TvShell inherits Rectangle {
         // ---- search: the first thing on Home, wide and plain, one press above the apps ----
         Rectangle {
             property <bool> pointed: root.zone == 1 && root.tab == 2 && !Store.details-open;
-            property <bool> shown: Store.page == 0 && !Store.details-open;
+            property <bool> shown: root.has-search && !Store.details-open;
             visible: self.shown;
             x: margin;
             y: 64 * u;
@@ -1239,12 +1254,12 @@ export component TvShell inherits Rectangle {
         if !Store.details-open && !root.on-system && !root.on-settings : FadeIn {
             VerticalLayout {
                 x: margin;
-                y: (Store.page == 0 ? 110 : 74) * u;
+                y: (root.has-search ? 110 : 74) * u;
                 width: 520 * u;
-                height: (Store.page == 0 ? 106 : 140) * u;
+                height: (root.has-search ? 106 : 140) * u;
                 spacing: 5 * u;
                 alignment: start;
-                Text { text: current.name; color: Theme.text; font-size: (Store.page == 0 ? 28 : 36) * u; font-weight: 800; overflow: elide; }
+                Text { text: current.name; color: Theme.text; font-size: (root.has-search ? 28 : 36) * u; font-weight: 800; overflow: elide; }
                 Text { text: current.summary; color: Theme.text; font-size: 14 * u; wrap: word-wrap; }
                 Text {
                     text: current.id == "" ? "" : (current.has-update ? "Update available  ·  " : current.installed ? "Installed  ·  " : "") + (current.rating != "" ? "★ " + current.rating + " (" + current.rating-count + ")  ·  " : current.headline != "" ? current.headline + "  ·  " : "") + current.author;
@@ -1332,6 +1347,11 @@ export component TvShell inherits Rectangle {
                                 height: tile-h;
                                 u: root.u;
                                 app: app;
+                                // Only the tiles on or beside the screen are drawn. A long
+                                // row would otherwise be drawn in full, most of it far off
+                                // to the right, which is slow and, past some seventy
+                                // tiles, further than the software renderer can count.
+                                visible: c >= shift - 3 && c <= shift + 8;
                                 focused: root.zone == 0 && r == root.cur-row && c == root.cur-col && !search.has-focus;
                                 clicked => {
                                     root.cur-row = r;
@@ -1604,7 +1624,8 @@ export component TvShell inherits Rectangle {
                                 Rectangle {
                                     height: 52 * u;
                                     clip: true;
-                                    Text { y: 0; width: parent.width; text: review.text; color: Theme.text; font-size: 12 * u; wrap: word-wrap; vertical-alignment: TextVerticalAlignment.top; }
+                                    // Three whole lines, the last ending in "…" when there is more.
+                                    Text { y: 0; width: parent.width; height: 44 * u; text: review.text; color: Theme.text; font-size: 12 * u; wrap: word-wrap; overflow: elide; vertical-alignment: TextVerticalAlignment.top; }
                                 }
                                 Text { text: review.meta; color: Theme.text-dim; font-size: 11 * u; overflow: elide; }
                             }

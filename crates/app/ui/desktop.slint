@@ -70,15 +70,21 @@ component CardGrid inherits Rectangle {
     property <int> cols: max(1, floor((self.width + gap) / (264px + gap)));
     property <length> tile-w: (self.width - (cols - 1) * gap) / cols;
     property <length> tile-h: 176px;
-    property <int> rows: ceil(apps.length / cols);
+    // How many lines of tiles to show at most; 0 for all of them. A page of many
+    // sections shows the start of each, and the section's own page the whole of it.
+    in property <int> max-rows: 0;
+    // A section only a line longer than that is shown whole: hiding two tiles behind
+    // a button saves nothing.
+    out property <int> shown: max-rows > 0 && apps.length > cols * (max-rows + 1) ? cols * max-rows : apps.length;
+    property <int> rows: ceil(shown / cols);
     height: max(0px, rows * (tile-h + gap) - gap);
-    for app[i] in apps : AppTile {
+    for i in shown : AppTile {
         x: mod(i, cols) * (tile-w + gap);
         y: floor(i / cols) * (tile-h + gap);
         width: tile-w;
         height: tile-h;
-        app: app;
-        clicked => { Store.open(app.id); }
+        app: apps[i];
+        clicked => { Store.open(apps[i].id); }
     }
 }
 
@@ -350,12 +356,32 @@ export component DesktopShell inherits Rectangle {
                                         }
                                     }
                                 }
-                                for section in Store.sections : VerticalLayout {
+                                // In a layout of their own without spacing: a section that is
+                                // filtered out must take no room at all, and the page's spacing
+                                // around each of a dozen hidden ones adds up to a hole.
+                                VerticalLayout {
+                                    spacing: 0px;
+                                    for section in Store.sections : VerticalLayout {
                                     if Store.category == "" || Store.category == section.title : VerticalLayout {
                                         spacing: 14px;
-                                        padding-bottom: 10px;
-                                        Heading { text: section.title; }
-                                        CardGrid { apps: section.apps; }
+                                        padding-bottom: 28px;
+                                        HorizontalLayout {
+                                            spacing: 12px;
+                                            Heading { text: section.title; vertical-alignment: center; }
+                                            Rectangle { horizontal-stretch: 1; }
+                                            // The start of each section; the rest is one press away.
+                                            // (Hidden rather than left out: whether it is needed depends on
+                                            // how many tiles fit, which the layout must not depend on.)
+                                            ChoiceChip {
+                                                visible: Store.category == "" && section.apps.length > grid.shown;
+                                                text: "Show all " + section.apps.length;
+                                                selected: false;
+                                                accessible-label: "Show all " + section.apps.length + " in " + section.title;
+                                                clicked => { Store.category = section.title; }
+                                            }
+                                        }
+                                        grid := CardGrid { apps: section.apps; max-rows: Store.category == "" ? 2 : 0; }
+                                    }
                                     }
                                 }
                                 if Store.sections.length == 0 : EmptyState {

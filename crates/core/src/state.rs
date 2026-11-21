@@ -97,6 +97,10 @@ pub struct InstalledApp {
     /// system installer are not ours to remove.
     #[serde(default)]
     pub store_managed: bool,
+    /// The Flatpak app this became, when it was installed from a downloaded bundle:
+    /// Flatpak runs and removes it by this name.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub flatpak: String,
     /// Seconds since the Unix epoch.
     #[serde(default)]
     pub installed_at: u64,
@@ -291,6 +295,7 @@ impl InstalledApp {
             file: file.to_string(),
             path: None,
             store_managed: false,
+            flatpak: String::new(),
             installed_at: now,
             skipped_version: String::new(),
         }
@@ -322,6 +327,7 @@ mod tests {
             file: "a.AppImage".to_string(),
             path: None,
             store_managed: false,
+            flatpak: String::new(),
             installed_at: 1,
             skipped_version: String::new(),
         }

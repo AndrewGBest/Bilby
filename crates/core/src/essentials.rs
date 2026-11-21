@@ -85,8 +85,20 @@ impl Essential {
     }
 }
 
+/// The row a listed website belongs in, by what the site is for: websites sit among
+/// the apps of their kind, not in rows of their own.
+fn kind_of_site(site: &crate::source::web::Site) -> &'static str {
+    match site.kind.as_str() {
+        "watch" | "listen" => "media",
+        "play" => "games",
+        "social" => "chat",
+        _ => "tools",
+    }
+}
+
 /// Rows for the home page: the ones nearly everyone wants first, then by kind. Only
-/// what this device can use; a row with a single thing in it is left out.
+/// what this device can use; a row with a single thing in it is left out. Nothing is
+/// in two rows: what leads is not repeated in the row of its kind beside it.
 pub fn rows(sources: &[SourceKind], platform: &Platform) -> Vec<(String, Vec<AppSummary>)> {
     // Only what suits this kind of device: a TV is for watching and playing, not for
     // spreadsheets.
@@ -126,10 +138,18 @@ pub fn rows(sources: &[SourceKind], platform: &Platform) -> Vec<(String, Vec<App
             ("tools", "Handy tools"),
         ],
     };
+    // Websites the list does not name go in the row of their kind too, after the apps.
+    let named: std::collections::HashSet<&str> =
+        all().iter().flat_map(|app| &app.ids).filter_map(|id| id.strip_prefix("web:")).collect();
+    let sites: Vec<&crate::source::web::Site> = match sources.contains(&SourceKind::Web) {
+        true => crate::source::web::sites().iter().filter(|s| !s.adult && !named.contains(s.host.as_str())).collect(),
+        false => Vec::new(),
+    };
     for (kind, title) in kinds {
-        // Everything of the kind, the best known included: a row of browsers without
-        // the two most used would be an odd row.
-        rows.push((title.to_string(), pick(&|app| app.kind == kind)));
+        // What already leads the page is not shown a second time just below it.
+        let mut row = pick(&|app| app.kind == kind && !app.leads_on(platform));
+        row.extend(sites.iter().filter(|s| kind_of_site(s) == kind).map(|s| crate::source::web::summary_of(&s.host)));
+        rows.push((title.to_string(), row));
     }
     rows.retain(|(_, apps)| apps.len() >= 2);
     rows
@@ -181,6 +201,34 @@ mod tests {
         assert!(is_essential(&AppId::parse("flathub:org.videolan.VLC").unwrap(), &desk));
         assert!(is_essential(&AppId::parse("winget:videolan.vlc").unwrap(), &desk), "at any of its sources");
         assert!(!is_essential(&AppId::parse("github:someone/vlc").unwrap(), &desk));
+    }
+
+    #[test]
+    fn nothing_is_in_two_rows_and_websites_sit_with_the_apps_of_their_kind() {
+        let sources = [SourceKind::Flathub, SourceKind::Apt, SourceKind::GitHub, SourceKind::Web];
+        for platform in [device("linux-x64-debian"), tv(), touch()] {
+            let rows = rows(&sources, &platform);
+            assert_eq!(rows[0].0, "Essentials");
+            let mut seen = std::collections::HashSet::new();
+            for (title, apps) in &rows {
+                for app in apps {
+                    assert!(seen.insert(app.name.to_lowercase()), "{} is shown twice (again in {title})", app.name);
+                }
+            }
+            // No row is only websites, and none is called after them.
+            assert!(rows.iter().all(|(title, _)| !title.contains("Web apps")));
+            let row = |title: &str| &rows.iter().find(|(t, _)| t == title).unwrap_or_else(|| panic!("{title}")).1;
+            // A site the essentials do not name is in the row of its kind, after the apps.
+            let media = row("Music and video");
+            let vimeo =
+                media.iter().position(|a| a.id.to_string() == "web:vimeo.com").expect("Vimeo with the video apps");
+            assert!(media.iter().position(|a| a.id.source != SourceKind::Web).is_some_and(|app| app < vimeo));
+            assert!(row("Games").iter().any(|a| a.id.to_string() == "web:lichess.org"));
+            assert!(row("Handy tools").iter().any(|a| a.id.to_string() == "web:duckduckgo.com"));
+        }
+        // Without the websites source there are none.
+        let without = rows(&[SourceKind::Flathub], &device("linux-x64-debian"));
+        assert!(without.iter().flat_map(|(_, apps)| apps).all(|a| a.id.source != SourceKind::Web));
     }
 
     #[test]

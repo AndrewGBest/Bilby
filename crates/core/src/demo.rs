@@ -322,6 +322,20 @@ const APPS: &[DemoApp] = &[
 /// Projects that exist in the demo "GitHub" but are not featured: an abandoned one and
 /// one that has only ever published pre-releases.
 const UNLISTED: &[DemoApp] = &[
+    // The browser websites open in on a TV. The store fetches it by name when a
+    // website is added and it is not there, so the demo "GitHub" has it too.
+    DemoApp {
+        owner: "AndrewGBest",
+        repo: "Longboard",
+        name: "Longboard",
+        summary: "A web browser for the TV, driven with a remote.",
+        stars: 1,
+        license: "GPL-3.0",
+        category: "Utilities",
+        tv: true,
+        os: &["linux"],
+        releases: &[("v0.3.16", "2026-11-21", &["Longboard-x86_64.AppImage", "Longboard-arm64.AppImage"])],
+    },
     DemoApp {
         owner: "oldtimer",
         repo: "relic",

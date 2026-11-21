@@ -49,6 +49,17 @@ pub struct Catalog {
     ratings: Arc<std::sync::RwLock<Option<Rated>>>,
     /// Where the distribution's AppStream catalog is (empty in the demo and tests).
     pub appstream_dirs: Vec<std::path::PathBuf>,
+    /// The home page's rows as last worked out, with what they were worked out from
+    /// (the sources in use, and whether the essentials are shown). The page is redrawn
+    /// often and a search looks at it too; the rows only change when those do.
+    featured_cache: std::sync::Mutex<Option<FeaturedRows>>,
+}
+
+/// The home page's rows, and what they were worked out from.
+struct FeaturedRows {
+    sources: Vec<SourceKind>,
+    essentials: bool,
+    rows: Vec<Section>,
 }
 
 struct Rated {
@@ -119,6 +130,7 @@ impl Catalog {
             essentials: true,
             prefer: Default::default(),
             parental: crate::parental::Policy::default(),
+            featured_cache: std::sync::Mutex::new(None),
             ratings: Arc::default(),
             appstream_dirs: Vec::new(),
         }
@@ -151,6 +163,7 @@ impl Catalog {
             essentials: true,
             prefer: Default::default(),
             parental: crate::parental::Policy::default(),
+            featured_cache: std::sync::Mutex::new(None),
             ratings: Arc::default(),
             appstream_dirs: Vec::new(),
         }
@@ -242,6 +255,18 @@ impl Catalog {
     /// The Discover page. Costs no network requests.
     pub fn featured(&self) -> Vec<Section> {
         let active = self.active_sources();
+        let mut cache = self.featured_cache.lock().unwrap();
+        if let Some(kept) = cache.as_ref() {
+            if kept.sources == active && kept.essentials == self.essentials {
+                return kept.rows.clone();
+            }
+        }
+        let rows = self.featured_from(&active);
+        *cache = Some(FeaturedRows { sources: active, essentials: self.essentials, rows: rows.clone() });
+        rows
+    }
+
+    fn featured_from(&self, active: &[SourceKind]) -> Vec<Section> {
         let mut sections = self.index.sections(&self.platform);
         for s in &mut sections {
             s.apps.retain(|a| active.contains(&a.id.source));
@@ -249,20 +274,31 @@ impl Catalog {
         sections.retain(|s| !s.apps.is_empty());
         // The names everyone knows come first, in the version this device can use.
         if self.essentials {
-            let rows = crate::essentials::rows(&active, &self.platform);
+            let rows = crate::essentials::rows(active, &self.platform);
             let picked: Vec<Section> = rows.into_iter().map(|(title, apps)| Section { title, apps }).collect();
             // On a TV, what was made for TVs stays on top.
             let at = usize::from(sections.first().is_some_and(|s| s.title == "Made for TV"));
             sections.splice(at..at, picked);
         }
-        // Websites sit beside the apps: the best-known first, then by what they are for.
+        // Websites are among the apps of their kind above; one row is only websites.
         if active.contains(&SourceKind::Web) {
             sections.push(Section { title: "Web apps".to_string(), apps: crate::source::web::featured() });
-            for (title, apps) in crate::source::web::rows() {
-                sections.push(Section { title, apps });
+        }
+        // One row per name: the starter list's apps join the row of the same name.
+        let mut merged: Vec<Section> = Vec::new();
+        for section in sections {
+            match merged.iter_mut().find(|m| m.title == section.title) {
+                Some(row) => {
+                    for app in section.apps {
+                        if !row.apps.iter().any(|a| a.id == app.id || a.name.eq_ignore_ascii_case(&app.name)) {
+                            row.apps.push(app);
+                        }
+                    }
+                }
+                None => merged.push(section),
             }
         }
-        sections
+        merged
     }
 
     /// Lists the sources themselves keep, such as what is popular on Flathub. Unlike
@@ -552,8 +588,18 @@ impl Catalog {
         }
         let mut per_source: Vec<Vec<AppSummary>> = Vec::new();
         let mut offline = false;
-        for source in self.sources.iter().filter(|s| self.uses(s.as_ref())) {
-            let hits = match source.search(query, self.check_limit) {
+        // Every source is asked at the same time: the search takes as long as the
+        // slowest of them, not as long as all of them one after another.
+        let sources: Vec<&Arc<dyn Source>> = self.sources.iter().filter(|s| self.uses(s.as_ref())).collect();
+        let answers: Vec<Result<Vec<AppSummary>>> = std::thread::scope(|scope| {
+            let handles: Vec<_> =
+                sources.iter().map(|source| scope.spawn(move || source.search(query, self.check_limit))).collect();
+            handles.into_iter().map(|h| h.join().expect("search thread panicked")).collect()
+        });
+        // The answers are then gone through in the sources' own order, so the list
+        // and what is reported come out the same every time.
+        for (source, answer) in sources.into_iter().zip(answers) {
+            let hits = match answer {
                 Ok(hits) => hits,
                 Err(e) => {
                     report(&mut outcome.errors, &mut offline, source.kind(), &e);

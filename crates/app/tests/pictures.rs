@@ -28,6 +28,11 @@ impl Http for WithPictures {
         DemoHttp.get(url)
     }
     fn download(&self, url: &str, dest: &Path, progress: &mut dyn FnMut(u64, Option<u64>) -> bool) -> Result<String> {
+        // Two projects have no logo of their own either.
+        let bare = ["lumen-labs", "kestrel-sh"];
+        if bare.iter().any(|owner| url.starts_with(&format!("https://raw.githubusercontent.com/{owner}/"))) {
+            return Err(Error::NotFound(url.to_string()));
+        }
         let Some(owner) = url.strip_prefix("https://github.com/").and_then(|rest| rest.strip_suffix(".png?size=128"))
         else {
             return DemoHttp.download(url, dest, progress);
@@ -109,21 +114,21 @@ fn pictures_appear_are_cached_and_their_absence_is_harmless() {
     let _ = std::fs::remove_dir_all(&root);
 
     let s = start(&root);
-    // Featured apps got their owners' pictures as soon as the store opened.
-    assert_eq!(icon_width(&s, "Tidewave"), 8);
-    assert_eq!(icon_width(&s, "Relay"), 8);
-    // No picture, or not an image: the initials stay, nothing breaks.
+    // Featured apps got their own logos as soon as the store opened, without anyone
+    // opening their pages: what each project's README shows (128 pixels in the demo),
+    // in place of its owner's picture (8 pixels here).
+    assert_eq!(icon_width(&s, "Tidewave"), 128);
+    assert_eq!(icon_width(&s, "Relay"), 128);
+    // No logo and no picture, or not an image: the initials stay, nothing breaks.
     assert_eq!(icon_width(&s, "Lumen"), 0);
     assert_eq!(icon_width(&s, "Kestrel"), 0);
     let first_round = s.downloads.load(Ordering::SeqCst);
     assert_eq!(first_round, 8, "one request per owner on screen");
 
-    // An app's page finds the project's own logo in its README (128 pixels in the demo),
-    // which replaces the owner's picture (8 pixels here) everywhere the app is shown.
+    // An app's page shows the same logo.
     s.app.open(&s.ui, "github:tidewave/tidewave");
     assert_eq!(s.ui.global::<Store>().get_app().icon.size().width, 128);
-    assert_eq!(icon_width(&s, "Tidewave"), 128, "lists use the logo too");
-    assert_eq!(icon_width(&s, "Relay"), 8, "an app whose page was not opened keeps its owner's picture");
+    assert_eq!(icon_width(&s, "Tidewave"), 128);
     s.app.search(&s.ui, "editor");
     assert_eq!(s.downloads.load(Ordering::SeqCst), first_round, "nothing is fetched twice in a session");
 
@@ -142,7 +147,7 @@ fn pictures_appear_are_cached_and_their_absence_is_harmless() {
     // A second launch reads the cache: no requests at all, pictures still there.
     let again = start(&root);
     assert_eq!(icon_width(&again, "Tidewave"), 128, "the logo found last time is still used");
-    assert_eq!(icon_width(&again, "Relay"), 8);
+    assert_eq!(icon_width(&again, "Relay"), 128);
     assert_eq!(icon_width(&again, "Lumen"), 0);
     assert_eq!(again.downloads.load(Ordering::SeqCst), 0);
 

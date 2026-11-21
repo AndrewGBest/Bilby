@@ -539,7 +539,8 @@ export component AppTile inherits Rectangle {
             if !app.installed || app.has-update : Button {
                 font-size: 12px;
                 min-width: 76px;
-                text: app.has-update ? "Update" : "Install";
+                // A website is added, not installed: nothing is downloaded.
+                text: app.has-update ? "Update" : app.source == "Web apps" ? "Add" : "Install";
                 primary: app.has-update;
                 accessible-label: (app.has-update ? "Update " : "Install ") + app.name + " now";
                 clicked => { Store.quick-install(app.id); }
@@ -588,7 +589,8 @@ export component AppRow inherits Rectangle {
             Button {
                 font-size: 12px;
                 width: 72px;
-                text: app.has-update ? "Update" : "Install";
+                // A website is added, not installed: nothing is downloaded.
+                text: app.has-update ? "Update" : app.source == "Web apps" ? "Add" : "Install";
                 primary: app.has-update;
                 accessible-label: (app.has-update ? "Update " : "Install ") + app.name + " now";
                 clicked => { Store.quick-install(app.id); }
@@ -897,7 +899,7 @@ export component Welcome inherits Rectangle {
 // Under a search: show everything, or only what one source gave.
 export component SourceFilter inherits Flickable {
     height: 36px;
-    viewport-width: chips.preferred-width;
+    content-width: chips.preferred-width;
     HorizontalLayout {
         alignment: start;
         chips := HorizontalLayout {

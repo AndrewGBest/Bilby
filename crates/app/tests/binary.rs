@@ -37,7 +37,9 @@ fn run(seed: &str, args: &[&str]) -> Run {
     let screenshot = home.join("shot.png");
     let report = home.join("report.txt");
     let output = Command::new("xvfb-run")
-        .args(["-a", "-s", "-screen 0 1600x1000x24"])
+        // Each run starts looking for a free display at its own number: tests run side by
+        // side, and two that both find the same number free take each other's display down.
+        .args(["-n", &(99 + n).to_string(), "-a", "-s", "-screen 0 1600x1000x24"])
         .arg(env!("CARGO_BIN_EXE_bilby"))
         .args(["--demo", "--theme", "dark", "--state"])
         .arg(&state)

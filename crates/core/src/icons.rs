@@ -62,6 +62,51 @@ pub fn icon_url(id: &AppId) -> Option<String> {
     }
 }
 
+/// Where an app's own logo is, when that follows from its name alone: nothing has to
+/// be asked of the source first, so a list can show it before the app's page was ever
+/// opened. Flathub publishes every app's icon at an address made from its id.
+pub fn own_logo_url(id: &AppId) -> Option<String> {
+    match id.source {
+        SourceKind::Flathub if crate::model::valid_key(SourceKind::Flathub, &id.key) => {
+            Some(format!("https://dl.flathub.org/repo/appstream/x86_64/icons/{SIZE}x{SIZE}/{}.png", id.key))
+        }
+        _ => None,
+    }
+}
+
+/// A project's own logo, for a project on GitHub: the picture its README leads with,
+/// else one of the usual files. Read as ordinary files from the project, which does
+/// not count against GitHub's hourly allowance. Kept under `key`; "it has none" is
+/// remembered too.
+pub fn fetch_project_logo(http: &dyn Http, dir: &Path, key: &str, id: &AppId) -> Result<Option<PathBuf>> {
+    if let Some(known) = cached(dir, key) {
+        return Ok(known);
+    }
+    if id.source != SourceKind::GitHub {
+        return Ok(None);
+    }
+    let readme = match http.get(&format!("https://raw.githubusercontent.com/{}/HEAD/README.md", id.key)) {
+        Ok(text) => text,
+        Err(Error::NotFound(_)) | Err(Error::Status { .. }) => String::new(),
+        // Offline, or the like: not remembered, so it is tried again another time.
+        Err(e) => return Err(e),
+    };
+    let places =
+        crate::screenshots::logo_from_readme(&readme, id).into_iter().chain(crate::screenshots::usual_logo_places(id));
+    for (n, url) in places.enumerate() {
+        // Each place is remembered separately, so a miss is not asked again.
+        if let Some(path) = fetch_picture(http, dir, &format!("{key}-try{n}"), &url, 2 * 1024 * 1024)? {
+            let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("png").to_string();
+            let kept = dir.join(format!("{key}.{ext}"));
+            std::fs::copy(&path, &kept)?;
+            return Ok(Some(kept));
+        }
+    }
+    std::fs::create_dir_all(dir)?;
+    std::fs::write(dir.join(format!("{key}.none")), b"")?;
+    Ok(None)
+}
+
 /// The kind of image, from its first bytes. The URL's `.png` is not to be trusted:
 /// avatars are frequently JPEGs.
 fn sniff(bytes: &[u8]) -> Option<&'static str> {

@@ -641,6 +641,8 @@ pub struct App {
     update_queue: Mutex<std::collections::VecDeque<String>>,
     /// Owners whose picture has been asked for in this session (found or not).
     pictures_requested: Mutex<HashSet<String>>,
+    /// How often fetching a picture failed for want of a network, by its key.
+    picture_failures: Mutex<HashMap<String, u8>>,
     opener: Opener,
     launcher: Opener,
     runner: Runner,
@@ -681,6 +683,9 @@ pub struct App {
     asked_folder: Mutex<Option<PathBuf>>,
     /// A newer copy of the store itself, placed and ready to be restarted into.
     self_new: Mutex<Option<PathBuf>>,
+    /// Longboard, just installed on the way to something that needs it, waiting to be
+    /// written into the library.
+    fetched: Mutex<Option<InstalledApp>>,
     /// What is waiting on an answer at the gate (an age question or the PIN).
     pending: Mutex<Option<Guarded>>,
     /// Ids learnt to be for adults, so that opening one again asks before loading it.
@@ -780,13 +785,16 @@ impl App {
         for section in store.get_sections().iter() {
             shown.extend(section.apps.iter().map(|c| c.id.to_string()));
         }
-        shown.extend(store.get_results().iter().map(|c| c.id.to_string()));
-        shown.extend(store.get_suggestions().iter().map(|c| c.id.to_string()));
         shown.extend(store.get_library().iter().map(|r| r.card.id.to_string()));
         for section in store.get_tv_library_rows().iter() {
             shown.extend(section.apps.iter().map(|c| c.id.to_string()));
         }
         shown.push(store.get_app().id.to_string());
+        // The home page, the library and the open app: few enough that a project's
+        // own logo is looked for. A page of search results is not.
+        let few: HashSet<String> = shown.iter().cloned().collect();
+        shown.extend(store.get_results().iter().map(|c| c.id.to_string()));
+        shown.extend(store.get_suggestions().iter().map(|c| c.id.to_string()));
 
         // For each app: its own logo (an address the source gave, or one found earlier
         // and kept on disk), and its owner's picture to fall back on.
@@ -811,11 +819,24 @@ impl App {
                             wanted.push((own, id.clone(), Some(SITE_ICON.to_string())));
                         }
                     }
+                    None if requested.contains(&own) => {}
                     None => {
-                        if !requested.contains(&own) && matches!(bilby_core::icons::cached(&icons, &own), Some(Some(_)))
-                        {
+                        let kept = bilby_core::icons::cached(&icons, &own);
+                        // Where the address follows from the app's name, or the project
+                        // can be asked for its logo, a list shows it without the app's
+                        // page having been opened first.
+                        let how = if matches!(kept, Some(Some(_))) {
+                            Some(String::new())
+                        } else if let Some(url) = bilby_core::icons::own_logo_url(&id) {
+                            Some(url)
+                        } else if id.source == SourceKind::GitHub && kept.is_none() && few.contains(&id.to_string()) {
+                            Some(PROJECT_LOGO.to_string())
+                        } else {
+                            None
+                        };
+                        if let Some(how) = how {
                             requested.insert(own.clone());
-                            wanted.push((own, id.clone(), Some(String::new())));
+                            wanted.push((own, id.clone(), Some(how)));
                         }
                     }
                 }
@@ -840,19 +861,34 @@ impl App {
                     group
                         .into_iter()
                         .filter_map(|(key, id, own)| {
-                            let path = match own {
+                            let fetched = match own {
                                 // No address: only what an earlier visit to its page left on disk.
-                                Some(url) if url.is_empty() => bilby_core::icons::cached(&dir, &key).flatten(),
+                                Some(url) if url.is_empty() => Ok(bilby_core::icons::cached(&dir, &key).flatten()),
                                 Some(url) if url == SITE_ICON => {
-                                    bilby_core::icons::fetch_site(http.as_ref(), &dir, &key, &id.key).ok()?
+                                    bilby_core::icons::fetch_site(http.as_ref(), &dir, &key, &id.key)
+                                }
+                                Some(url) if url == PROJECT_LOGO => {
+                                    bilby_core::icons::fetch_project_logo(http.as_ref(), &dir, &key, &id)
                                 }
                                 Some(url) => {
                                     bilby_core::icons::fetch_picture(http.as_ref(), &dir, &key, &url, 2 * 1024 * 1024)
-                                        .ok()?
                                 }
-                                None => bilby_core::icons::fetch(http.as_ref(), &dir, &id).ok()?,
+                                None => bilby_core::icons::fetch(http.as_ref(), &dir, &id),
                             };
-                            Some((key, path?))
+                            match fetched {
+                                Ok(path) => Some((key, path?)),
+                                // The network let it down, which says nothing about the
+                                // picture: it is asked for again later, a couple of times.
+                                Err(_) => {
+                                    let mut failures = app.picture_failures.lock().unwrap();
+                                    let count = failures.entry(key.clone()).or_insert(0);
+                                    *count += 1;
+                                    if *count <= 2 {
+                                        app.pictures_requested.lock().unwrap().remove(&key);
+                                    }
+                                    None
+                                }
+                            }
                         })
                         .collect::<Vec<_>>()
                 },
@@ -868,22 +904,58 @@ impl App {
                             }
                         }
                     });
-                    app.refresh(ui);
-                    let store = ui.global::<Store>();
-                    let mut card = store.get_app();
-                    card.icon = picture_for(&card.id);
-                    store.set_app(card);
-                    let suggestions: Vec<AppCard> = store
-                        .get_suggestions()
-                        .iter()
-                        .map(|mut c| {
-                            c.icon = picture_for(&c.id);
-                            c
-                        })
-                        .collect();
-                    store.set_suggestions(ModelRc::new(VecModel::from(suggestions)));
+                    app.repaint_pictures(ui);
                 },
             );
+        }
+    }
+
+    /// Put pictures that have just arrived into the tiles already on screen. Only the
+    /// tiles whose picture changed are touched: the lists stay as they are, where a
+    /// full redraw would work every list out again and build every tile anew, once
+    /// for each handful of pictures.
+    fn repaint_pictures(&self, ui: &AppWindow) {
+        let store = ui.global::<Store>();
+        let own = self.store_app.as_ref().map(|id| id.to_string());
+        // The store's own tile keeps the picture it was built with.
+        let fresh = |card: &AppCard| -> Option<slint::Image> {
+            if own.as_ref().is_some_and(|own| own.eq_ignore_ascii_case(card.id.as_str())) {
+                return None;
+            }
+            let icon = picture_for(&card.id);
+            (icon != card.icon).then_some(icon)
+        };
+        let repaint = |cards: ModelRc<AppCard>| {
+            for row in 0..cards.row_count() {
+                let Some(mut card) = cards.row_data(row) else { continue };
+                if let Some(icon) = fresh(&card) {
+                    card.icon = icon;
+                    cards.set_row_data(row, card);
+                }
+            }
+        };
+        for rows in [store.get_sections(), store.get_tv_rows(), store.get_tv_library_rows()] {
+            for section in rows.iter() {
+                repaint(section.apps);
+            }
+        }
+        repaint(store.get_results());
+        repaint(store.get_suggestions());
+        let library = store.get_library();
+        for row in 0..library.row_count() {
+            let Some(mut entry) = library.row_data(row) else { continue };
+            if let Some(icon) = fresh(&entry.card) {
+                entry.card.icon = icon;
+                library.set_row_data(row, entry);
+            }
+        }
+        for (card, set) in [
+            (store.get_app(), Box::new(|c| store.set_app(c)) as Box<dyn Fn(AppCard)>),
+            (store.get_spotlight(), Box::new(|c| store.set_spotlight(c))),
+        ] {
+            if let Some(icon) = fresh(&card) {
+                set(AppCard { icon, ..card });
+            }
         }
     }
 
@@ -1076,18 +1148,23 @@ impl App {
         let store = ui.global::<Store>();
         // The bundled starter list first, then the lists the sources keep themselves.
         let mut featured = self.catalog().featured();
-        featured.extend(self.collections.lock().unwrap().iter().cloned());
+        // What a row above already shows is not shown again further down: the same
+        // few well-known apps would otherwise fill the start of every list.
+        let mut seen: HashSet<String> = featured.iter().flat_map(|s| &s.apps).map(|a| a.id.to_string()).collect();
+        for mut section in self.collections.lock().unwrap().iter().cloned() {
+            section.apps.retain(|app| seen.insert(app.id.to_string()));
+            if !section.apps.is_empty() {
+                featured.push(section);
+            }
+        }
         let to_sections = |list: &[CoreSection]| -> Vec<Section> {
             list.iter().map(|s| Section { title: s.title.clone().into(), apps: self.cards(&s.apps) }).collect()
         };
-        store.set_sections(ModelRc::new(VecModel::from(to_sections(&featured))));
+        // Built once and shared with the TV's rows below: the same tiles, not a second set.
+        let home = to_sections(&featured);
+        store.set_sections(ModelRc::new(VecModel::from(home.clone())));
         store.set_categories(ModelRc::new(VecModel::from(
-            // The rows of web apps by purpose are rows, not filters: one chip stands for them.
-            featured
-                .iter()
-                .filter(|s| !s.title.starts_with("Web apps "))
-                .map(|s| SharedString::from(&s.title))
-                .collect::<Vec<_>>(),
+            featured.iter().map(|s| SharedString::from(&s.title)).collect::<Vec<_>>(),
         )));
         if !featured.iter().any(|s| s.title == store.get_category().as_str()) {
             store.set_category(SharedString::new());
@@ -1256,6 +1333,13 @@ impl App {
                 has_update: store.get_system_state() == 3,
                 installed: true,
                 tint: tint_for(SYSTEM_CARD),
+                // No picture of its own: its initials, like any app without one.
+                initials: initials(&if store.get_system_name().is_empty() {
+                    store.get_device_name()
+                } else {
+                    store.get_system_name()
+                })
+                .into(),
                 ..Default::default()
             });
         }
@@ -1298,8 +1382,11 @@ impl App {
         // TV: a search is the whole page. The likeliest few first, then the rest by
         // kind, so a game is not buried under packages or the other way round.
         let mut tv = Vec::new();
-        if found.is_empty() {
-            tv.extend(to_sections(&featured));
+        if store.get_searching() {
+            // A search is under way: the page waits for it, empty, however often the
+            // rest of the store is redrawn meanwhile (a picture arriving does that).
+        } else if found.is_empty() {
+            tv.extend(home);
         } else {
             const TOP: usize = 6;
             // Things for adults are never among the top results or the other rows:
@@ -1544,8 +1631,13 @@ impl App {
         // The store's own page: it is running, so its kind of file starts here. It is
         // never unpacked or given a requirement on the way to updating itself.
         let own_page = self.store_app.as_ref().is_some_and(|own| own.to_string().eq_ignore_ascii_case(&id));
+        // Installed here as something other than an AppImage (its Flatpak, or already
+        // unpacked): what runs needs no FUSE, so there is nothing to say about it.
+        let mut another_kind = false;
         if helper.0.is_empty() && !own_page {
-            let placed = self.launchable(&id).and_then(|path| bilby_core::needs::as_appimage(&path));
+            let running = self.launchable(&id);
+            let placed = running.as_ref().and_then(|path| bilby_core::needs::as_appimage(path));
+            another_kind = running.is_some() && placed.is_none();
             let offered = store.get_options().row_data(0).is_some_and(|option| option.label.contains("AppImage"));
             if placed.is_some() || offered {
                 let platform = self.platform.read().unwrap().clone();
@@ -1572,7 +1664,12 @@ impl App {
                 }
             }
         }
+        // Kept for installing: choosing the AppImage from the list of files still gets
+        // what it needs. The notice itself is only for when the AppImage is the choice.
         self.lacks_fuse.store(!need_note.is_empty(), Ordering::SeqCst);
+        if another_kind {
+            need_note.clear();
+        }
         store.set_need_note(need_note.into());
         *self.needed.lock().unwrap() = needed;
         // The same choices as rows for the TV, without the one already showing.
@@ -1706,6 +1803,7 @@ impl App {
         self.job(
             move |app| app.steam_ask(via_longboard, generation),
             move |app, ui, result| {
+                app.record_fetched(ui);
                 if app.steam_generation.load(Ordering::SeqCst) != generation {
                     return;
                 }
@@ -1831,11 +1929,15 @@ impl App {
                 })
                 .transpose();
         }
-        let longboard = install::find_longboard(&self.dirs).ok_or_else(|| {
-            Error::Unsupported(
-                "On a TV you sign in to Steam in Longboard, a browser for TVs, which is not installed yet. Install Longboard from this store, then try again.".into(),
-            )
-        })?;
+        let going = || self.steam_generation.load(Ordering::SeqCst) == generation;
+        // Installing is behind the PIN where one is set, and nobody was asked for it here.
+        if install::find_longboard(&self.dirs).is_none() && self.needs_pin_to_install() {
+            return Err(Error::Unsupported(
+                "On a TV you sign in to Steam in Longboard, a browser for TVs. Installing it needs this device's PIN: open Longboard's page, install it there, then sign in.".into(),
+            ));
+        }
+        // Not there yet: fetched first, without the person having to go and get it.
+        let longboard = self.ensure_longboard(&mut |_, _| going())?;
         // The answer comes back as a file only this user can read, removed once read.
         let dir = self.dirs.cache.join("hand-back");
         std::fs::create_dir_all(&dir)?;
@@ -1846,8 +1948,7 @@ impl App {
         }
         let file = dir.join("steam.json");
         let _ = std::fs::remove_file(&file);
-        (self.runner)(&longboard, &steam_account::longboard_args(&file))?;
-        let going = || self.steam_generation.load(Ordering::SeqCst) == generation;
+        (self.runner)(&longboard.program, &longboard.args_writing(&steam_account::longboard_args(&file), &dir))?;
         let answer = steam_account::await_hand_back(&file, std::time::Duration::from_secs(600), &going);
         let _ = std::fs::remove_file(&file);
         answer
@@ -2341,7 +2442,7 @@ impl App {
             )| {
                 if let Some(image) = logo.as_deref().and_then(decode_picture) {
                     PICTURES.with(|p| p.borrow_mut().insert(key.clone(), image));
-                    app.refresh(ui);
+                    app.repaint_pictures(ui);
                 }
                 if app.details_generation.load(Ordering::SeqCst) == generation {
                     let store = ui.global::<Store>();
@@ -2476,7 +2577,7 @@ impl App {
             && self.opens_sites_in_longboard()
             && install::find_longboard(&self.dirs).is_none()
         {
-            warnings.push("Websites open in Longboard, a browser for TVs, which is not installed yet. Install Longboard first: it is under Made for TV.".to_string());
+            warnings.push("Websites open in Longboard, a browser for TVs. It is not on this TV yet, so Bilby installs it along with this.".to_string());
         }
         let newest = details.versions.first().map(|r| r.version.as_str());
         let is_newest = release.map(|r| r.version.as_str()) == newest;
@@ -2703,6 +2804,11 @@ impl App {
                     }
                     !cancel.load(Ordering::SeqCst)
                 };
+                // A website on a TV opens in Longboard: fetched first when it is not there.
+                let on_a_tv = work_option.asset.info.as_ref().is_some_and(|info| info.tv);
+                if work_option.plan.action == Action::WebApp && on_a_tv {
+                    app.ensure_longboard(&mut progress)?;
+                }
                 let http = app.catalog().http();
                 let mut outcome = install::execute(
                     &work_option.plan,
@@ -2746,11 +2852,15 @@ impl App {
                     app.ask_restart(ui);
                 }
                 let store = ui.global::<Store>();
+                let fetched = app.record_fetched(ui);
                 // Started from the Library page rather than an app page?
                 let updating_in_place = !store.get_updating_id().is_empty();
                 store.set_updating_id(SharedString::new());
                 match result {
-                    Ok(outcome) => {
+                    Ok(mut outcome) => {
+                        if fetched {
+                            outcome.message = format!("{} Longboard was installed for it.", outcome.message);
+                        }
                         store.set_install_state(2);
                         store.set_install_message(outcome.message.as_str().into());
                         // A command to run, or another store taking over: nothing was
@@ -2781,6 +2891,7 @@ impl App {
                         entry.name = name.clone();
                         entry.path = outcome.file.as_ref().map(|p| p.display().to_string());
                         entry.store_managed = outcome.store_managed;
+                        entry.flatpak = outcome.flatpak_app.clone().unwrap_or_default();
                         let id = entry.id.clone();
                         let is_self = app.store_app.as_ref().is_some_and(|own| own.to_string().eq_ignore_ascii_case(&id));
                         if let (true, true, Some(file)) = (is_self, outcome.store_managed, outcome.file.as_ref()) {
@@ -3076,6 +3187,76 @@ impl App {
         };
         *self.fuse.write().unwrap() = now;
         Ok(())
+    }
+
+    /// Longboard, ready to start: the copy on this device, or, when there is none, one
+    /// the store fetches and installs here and now. The person is never sent to get it.
+    /// What was installed waits in `fetched` for [`App::record_fetched`].
+    fn ensure_longboard(
+        &self,
+        progress: &mut dyn FnMut(u64, Option<u64>) -> bool,
+    ) -> bilby_core::Result<install::Longboard> {
+        if let Some(found) = install::find_longboard(&self.dirs) {
+            return Ok(found);
+        }
+        let cannot = |why: String| {
+            Error::Unsupported(format!(
+                "This opens in Longboard, a browser for TVs, which Bilby tried to install for you and could not: {why}"
+            ))
+        };
+        let id = AppId::new(SourceKind::GitHub, bilby_core::source::web::LONGBOARD);
+        let details = self.catalog().details(&id).map_err(|e| cannot(e.to_string()))?;
+        let release = details.release.as_ref().ok_or_else(|| cannot("it has no release yet.".into()))?;
+        // The kinds the store can finish on its own, in the order it prefers them here.
+        let option = release
+            .options
+            .iter()
+            .find(|o| matches!(o.plan.action, Action::PlaceAppImage | Action::FlatpakBundle))
+            .ok_or_else(|| cannot("none of its files suits this device.".into()))?;
+        let http = self.catalog().http();
+        let mut outcome =
+            install::execute(&option.plan, &option.asset, http.as_ref(), &self.dirs, self.opener.as_ref(), progress)
+                .map_err(|e| match e {
+                    Error::Cancelled => Error::Cancelled,
+                    e => cannot(e.to_string()),
+                })?;
+        // An AppImage on a system that cannot start one as it is: unpacked, which needs
+        // nothing more and no password.
+        if let Some(file) = outcome.file.clone().filter(|_| outcome.store_managed) {
+            let fuse = *self.fuse.read().unwrap();
+            let starts = match bilby_core::needs::wants_fuse_library(&file) {
+                Some(false) => fuse.mounter,
+                _ => fuse.library,
+            };
+            if !starts {
+                if let Ok(program) = install::unpack_appimage(&file) {
+                    outcome.file = Some(program);
+                }
+            }
+            let _ = install::add_menu_entry(
+                &self.dirs,
+                &id.to_string(),
+                &details.summary.name,
+                outcome.file.as_ref().unwrap_or(&file),
+            );
+        }
+        let mut entry =
+            InstalledApp::new(&details.summary, &release.version, &option.label(), &option.asset.name, now_unix());
+        entry.path = outcome.file.as_ref().map(|p| p.display().to_string());
+        entry.store_managed = outcome.store_managed;
+        entry.flatpak = outcome.flatpak_app.clone().unwrap_or_default();
+        *self.fetched.lock().unwrap() = Some(entry);
+        install::find_longboard(&self.dirs).ok_or_else(|| cannot("it was installed but cannot be found.".into()))
+    }
+
+    /// Write the Longboard that [`App::ensure_longboard`] installed into the library.
+    /// Says whether there was one.
+    fn record_fetched(&self, ui: &AppWindow) -> bool {
+        let Some(entry) = self.fetched.lock().unwrap().take() else { return false };
+        self.updates.lock().unwrap().insert(entry.id.clone(), UpdateStatus::UpToDate);
+        self.update_state(ui, |state| state.record_install(entry));
+        self.refresh(ui);
+        true
     }
 
     /// Make one of the quiet sounds of moving about, unless they are switched off.
@@ -3501,12 +3682,16 @@ impl App {
             if !self.opens_sites_in_longboard() {
                 return Some(PathBuf::from("browser"));
             }
-            return install::find_longboard(&self.dirs);
+            return install::find_longboard(&self.dirs).map(|longboard| longboard.program);
         }
         // A Flatpak is run by Flatpak, whoever installed it.
         if let Some(app_id) = id.strip_prefix("flathub:") {
             return bilby_core::source::flathub::is_installed(&self.dirs.flatpak_roots, app_id)
                 .then(|| self.dirs.flatpak.clone());
+        }
+        // So is one that arrived as a bundle from the developer's own page.
+        if let Some(app_id) = state.installed(id).map(|a| a.flatpak.as_str()).filter(|f| !f.is_empty()) {
+            return install::flatpak_app_installed(&self.dirs, app_id).then(|| self.dirs.flatpak.clone());
         }
         // Something Steam has installed is started by asking Steam.
         if let Some(number) = id.strip_prefix("steam:") {
@@ -3518,6 +3703,16 @@ impl App {
         let app = state.installed(id).filter(|a| a.store_managed)?;
         let path = PathBuf::from(app.path.as_deref()?);
         (path.starts_with(&self.dirs.applications) && path.is_file()).then_some(path)
+    }
+
+    /// The Flatpak app behind this entry, when Flatpak is what runs it: one from Flathub,
+    /// or one the store installed from a downloaded bundle.
+    fn flatpak_app(&self, id: &str) -> Option<String> {
+        if let Some(app_id) = id.strip_prefix("flathub:") {
+            return Some(app_id.to_string());
+        }
+        let state = self.state.lock().unwrap();
+        state.installed(id).map(|a| a.flatpak.clone()).filter(|f| install::flatpak_app_id_ok(f))
     }
 
     /// Start the newer copy of the store that was just placed, and leave.
@@ -3562,9 +3757,14 @@ impl App {
         let started = if let Some(host) = id.strip_prefix("web:").filter(|_| !self.opens_sites_in_longboard()) {
             (self.browser)(&format!("https://{host}/"))
         } else if let Some(host) = id.strip_prefix("web:") {
-            (self.runner)(&path, &[format!("--url=https://{host}/")])
-        } else if let Some(app_id) = id.strip_prefix("flathub:") {
-            (self.runner)(&path, &["run".to_string(), app_id.to_string()])
+            match install::find_longboard(&self.dirs) {
+                Some(longboard) => {
+                    (self.runner)(&longboard.program, &longboard.args(&[format!("--url=https://{host}/")]))
+                }
+                None => Err(Error::Unsupported("Longboard is no longer on this device.".into())),
+            }
+        } else if let Some(app_id) = self.flatpak_app(&id) {
+            (self.runner)(&path, &["run".to_string(), app_id])
         } else if id.starts_with("steam:") {
             // A link, handed to the system, which passes it to Steam.
             (self.opener)(&path)
@@ -3572,7 +3772,8 @@ impl App {
             // A program is watched for a moment as it starts, away from the interface:
             // one that closes straight away says why.
             let requirement = self.needed.lock().unwrap().clone();
-            let lacks_fuse = self.lacks_fuse.load(Ordering::SeqCst);
+            // Only an AppImage needs FUSE; one already unpacked starts as it is.
+            let lacks_fuse = self.lacks_fuse.load(Ordering::SeqCst) && bilby_core::needs::as_appimage(&path).is_some();
             let layering = if lacks_fuse { self.layering.clone() } else { None };
             // Already added and waiting on a restart: starting it now would only fail.
             if layering.is_some() && self.fuse_staged.load(Ordering::SeqCst) {
@@ -3686,7 +3887,8 @@ impl App {
             message = format!("{} removed from this TV's app list", entry.name);
         }
         // A Flatpak is removed by Flatpak; it carries on after this returns.
-        if let Some(app_id) = id.strip_prefix("flathub:") {
+        let bundled = Some(entry.flatpak.as_str()).filter(|f| install::flatpak_app_id_ok(f));
+        if let Some(app_id) = id.strip_prefix("flathub:").or(bundled) {
             let args = ["uninstall", "--noninteractive", "--assumeyes", app_id].map(String::from);
             message = match (self.runner)(&self.dirs.flatpak, &args) {
                 Ok(()) => format!("Uninstalling {}…", entry.name),
@@ -3819,6 +4021,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         },
         update_queue: Mutex::new(std::collections::VecDeque::new()),
         pictures_requested: Mutex::new(HashSet::new()),
+        picture_failures: Mutex::new(HashMap::new()),
         opener: options.opener.clone().unwrap_or_else(|| Arc::new(install::open_with_system)),
         launcher: options.launcher.clone().unwrap_or_else(|| Arc::new(install::launch)),
         runner: options.runner.clone().unwrap_or_else(|| Arc::new(install::launch_with)),
@@ -3860,6 +4063,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         picker: options.picker.clone().unwrap_or_else(|| Arc::new(system_picker)),
         asked_folder: Mutex::new(None),
         self_new: Mutex::new(None),
+        fetched: Mutex::new(None),
         pending: Mutex::new(None),
         known_adult: Mutex::new(HashSet::new()),
         new_pin: Mutex::new(None),
@@ -4472,6 +4676,8 @@ fn own_icon() -> slint::Image {
 
 /// In place of an address: this picture is the website's own, found at the site.
 const SITE_ICON: &str = "site:";
+/// Stands for "ask the project itself for its logo" (a GitHub project's README).
+const PROJECT_LOGO: &str = "project:";
 
 /// The id of the Library's card for the device itself, which opens its page.
 const SYSTEM_CARD: &str = "bilby:this-device";

@@ -128,7 +128,8 @@ fn on_list(list: &Hosts, host: &str) -> bool {
     (0..labels.len().saturating_sub(1)).any(|from| list.contains(&labels[from..].join(".")))
 }
 
-fn summary_of(host: &str) -> AppSummary {
+/// A website as the lists show it: the hand-written name and summary where there is one.
+pub fn summary_of(host: &str) -> AppSummary {
     let known = listed(host);
     AppSummary {
         id: AppId::new(SourceKind::Web, host),
@@ -155,32 +156,11 @@ fn summary_of(host: &str) -> AppSummary {
     }
 }
 
-/// The featured websites, for the Discover rows.
+/// Every listed website, for the one row that is only websites: the best known first,
+/// then the rest in the list's order. Nothing for adults.
 pub fn featured() -> Vec<AppSummary> {
-    sites().iter().filter(|s| s.featured && !s.adult).map(|s| summary_of(&s.host)).collect()
-}
-
-/// The listed sites as rows for the home page, by what they are for. Nothing for
-/// adults, and only sites written into the list by hand.
-pub fn rows() -> Vec<(String, Vec<AppSummary>)> {
-    let titles = [
-        ("watch", "Web apps to watch"),
-        ("listen", "Web apps to listen to"),
-        ("play", "Web apps to play"),
-        ("social", "Web apps to keep in touch"),
-        ("read", "Web apps to read and look things up"),
-        ("tools", "Web apps for getting things done"),
-        ("shop", "Web apps to shop"),
-    ];
-    titles
-        .iter()
-        .map(|(kind, title)| {
-            let of_kind: Vec<AppSummary> =
-                sites().iter().filter(|s| s.kind == *kind && !s.adult).map(|s| summary_of(&s.host)).collect();
-            (title.to_string(), of_kind)
-        })
-        .filter(|(_, sites)| !sites.is_empty())
-        .collect()
+    let fit = || sites().iter().filter(|s| !s.adult);
+    fit().filter(|s| s.featured).chain(fit().filter(|s| !s.featured)).map(|s| summary_of(&s.host)).collect()
 }
 
 impl Source for Websites {
@@ -360,10 +340,7 @@ mod list_tests {
             "{:?}",
             sites().iter().find(|s| restricted_host(&s.host)).map(|s| &s.host)
         );
-        assert!(featured()
-            .iter()
-            .chain(rows().iter().flat_map(|(_, row)| row))
-            .all(|app| !app.restricted && !app.adult));
+        assert!(featured().iter().all(|app| !app.restricted && !app.adult));
         // The ones people most expect are there to be promoted.
         let home: Vec<String> = featured().into_iter().map(|app| app.name).collect();
         for name in ["YouTube", "Netflix", "Twitch", "Spotify", "Disney+"] {
@@ -381,11 +358,12 @@ mod list_tests {
         let word = only_there.split('.').next().unwrap();
         let found: Vec<String> = ON_TV.search(word, 20).unwrap().into_iter().map(|a| a.id.key).collect();
         assert!(found.iter().any(|h| h == only_there), "{word}: {found:?}");
-        // The home page's rows come only from the hand-written list.
-        let rows = rows();
-        assert!(rows.len() >= 5);
-        assert!(rows.iter().flat_map(|(_, sites)| sites).all(|site| !site.adult && listed(&site.id.key).is_some()));
-        assert!(rows[0].0.contains("watch") && rows[0].1.iter().any(|s| s.name == "YouTube"));
+        // The home page's row of websites comes only from the hand-written list: all
+        // of it that is fit to recommend, the best known first.
+        let row = featured();
+        assert_eq!(row.len(), sites().iter().filter(|s| !s.adult).count());
+        assert!(row.iter().all(|site| !site.adult && listed(&site.id.key).is_some()));
+        assert_eq!(row[0].name, "YouTube");
     }
 
     #[test]
