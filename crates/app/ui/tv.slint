@@ -170,6 +170,21 @@ component TvButton inherits Rectangle {
     }
 }
 
+// One line of an app's details: what it is on the left, the value beside it.
+component TvFact inherits Rectangle {
+    in property <string> name;
+    in property <string> value;
+    in property <length> u;
+    min-height: 16 * root.u;
+    accessible-role: text;
+    accessible-label: root.name + ": " + root.value;
+    HorizontalLayout {
+        spacing: 12 * root.u;
+        Text { width: 130 * root.u; text: root.name; color: Theme.text-dim; font-size: 12 * root.u; }
+        Text { horizontal-stretch: 1; text: root.value; color: Theme.text; font-size: 12 * root.u; wrap: word-wrap; }
+    }
+}
+
 component TvStat inherits VerticalLayout {
     in property <string> value;
     in property <string> caption;
@@ -214,7 +229,7 @@ export component TvShell inherits Rectangle {
     property <int> sys-row: 0;
     function enter-bar() {
         // From Home, Up lands on Search: it is what people go up there for.
-        root.tab = Store.page == 2 ? 1 : Store.page == 4 ? 3 : 2;
+        root.tab = Store.page == 2 ? 1 : Store.page == 3 ? 3 : Store.page == 4 ? 4 : 2;
         root.zone = 1;
     }
     // Go where the focused entry of the top bar leads.
@@ -232,6 +247,10 @@ export component TvShell inherits Rectangle {
             Store.page = 0;
             root.zone = 0;
             search.focus();
+        } else if (root.tab == 3) {
+            Store.page = 3;
+            root.sys-row = 1;
+            root.zone = 0;
         } else {
             Store.page = 4;
             root.sys-row = 0;
@@ -240,6 +259,15 @@ export component TvShell inherits Rectangle {
         }
     }
     property <bool> on-system: Store.page == 4 && !Store.details-open;
+    // Settings: `sys-row` is the focused one, from 1. The first five are fixed, then
+    // Steam's (two while there is a choice of how to sign in), then a switch per source.
+    property <bool> on-settings: Store.page == 3 && !Store.details-open;
+    property <int> steam-rows: !Store.steam-available ? 0 : Store.steam-signed-in || Store.steam-state != 0 ? 1 : 2;
+    property <int> src-first: 6 + root.steam-rows;
+    property <int> set-last: root.src-first + Store.sources.length - 1;
+    changed set-last => { root.sys-row = min(root.sys-row, root.set-last); }
+    // Rows below the eighth push the list up, so the focused one is always on screen.
+    property <length> set-shift: max(0, root.sys-row - 8) * 33 * root.u;
     property <bool> sys-can-update: Store.system-state == 3;
     // Buttons on that page: Update (when there is one), Check again (where updates are
     // handled), and always last, the way out of the TV layout.
@@ -268,6 +296,9 @@ export component TvShell inherits Rectangle {
             root.reading = false;
         }
     }
+    // The app page's right-hand side is taller than the screen: Down and Up move it.
+    property <length> info-scroll: 0;
+    property <length> info-max: 0;
     // Remove asks twice: the first OK only arms it.
     property <bool> remove-armed: false;
     changed act => { root.remove-armed = false; }
@@ -280,6 +311,7 @@ export component TvShell inherits Rectangle {
         root.act = 0;
         root.files = false;
         root.opt = 0;
+        root.info-scroll = 0;
     }
     function press-main() {
         if (Store.details-error != "") {
@@ -327,10 +359,32 @@ export component TvShell inherits Rectangle {
             }
             if (root.zone == 1 && !Store.details-open) {
                 if (event.text == Key.LeftArrow) {
-                    root.tab = max(0, root.tab - 1);
+                    // Search is its own row under the tabs, so sideways steps over it.
+                    if (root.tab != 2) {
+                        root.tab = root.tab == 3 ? 1 : max(0, root.tab - 1);
+                    }
                 } else if (event.text == Key.RightArrow) {
-                    root.tab = min(3, root.tab + 1);
-                } else if (event.text == Key.Return || event.text == " " || event.text == Key.DownArrow) {
+                    if (root.tab != 2) {
+                        root.tab = root.tab == 1 ? 3 : min(4, root.tab + 1);
+                    }
+                } else if (event.text == Key.UpArrow) {
+                    // From search, up to the tabs.
+                    if (root.tab == 2) {
+                        root.tab = 0;
+                    }
+                } else if (event.text == Key.DownArrow) {
+                    if (root.tab == 2) {
+                        // From search, down to the apps.
+                        if (rows.length > 0) {
+                            root.zone = 0;
+                        }
+                    } else if (Store.page == 0 && root.tab == 0) {
+                        // From the Home tab, down to search.
+                        root.tab = 2;
+                    } else {
+                        root.activate-tab();
+                    }
+                } else if (event.text == Key.Return || event.text == " ") {
                     root.activate-tab();
                 } else if (event.text == Key.Escape || event.text == Key.Back || event.text == Key.Backspace) {
                     // Back from anywhere but Home goes Home; on Home there is nowhere
@@ -343,7 +397,7 @@ export component TvShell inherits Rectangle {
                 }
                 return accept;
             }
-            if (root.on-system) {
+            if (root.on-settings) {
                 if (Store.steam-state == 3) {
                     // The code fills the screen: Back or OK takes it down.
                     if (event.text == Key.Escape || event.text == Key.Back || event.text == Key.Backspace || event.text == Key.Return || event.text == " ") {
@@ -353,42 +407,55 @@ export component TvShell inherits Rectangle {
                     root.tab = 0;
                     root.activate-tab();
                 } else if (event.text == Key.UpArrow) {
-                    if (root.sys-row == 0) {
+                    if (root.sys-row <= 1) {
                         root.enter-bar();
                     } else {
                         root.sys-row -= 1;
                     }
                 } else if (event.text == Key.DownArrow) {
-                    root.sys-row = min(!Store.steam-available ? 4 : Store.steam-signed-in || Store.steam-state != 0 ? 5 : 6, root.sys-row + 1);
-                } else if (root.sys-row > 0) {
-                    // A setting: OK, Left or Right switches it.
-                    if (event.text == Key.Return || event.text == " " || event.text == Key.LeftArrow || event.text == Key.RightArrow) {
-                        if (root.sys-row == 1) {
-                            Store.set-ratings(!Store.show-ratings);
-                        } else if (root.sys-row == 2) {
-                            Store.set-check-on-start(!Store.check-updates-on-start);
-                        } else if (root.sys-row == 3) {
-                            Store.set-prereleases(!Store.include-prereleases);
-                        } else if (root.sys-row == 5) {
-                            if (Store.steam-state != 0) {
-                                Store.steam-cancel();
-                            } else if (Store.steam-signed-in) {
-                                Store.steam-signout();
-                            } else {
-                                Store.steam-signin-qr();
-                            }
-                        } else if (root.sys-row == 6) {
-                            // The row goes away while signing in; the highlight moves to the one that stays.
-                            root.sys-row = 5;
-                            Store.steam-signin();
-                        } else if (Store.has-token) {
+                    root.sys-row = min(root.set-last, root.sys-row + 1);
+                } else if (event.text == Key.Return || event.text == " " || event.text == Key.LeftArrow || event.text == Key.RightArrow) {
+                    // OK, Left or Right switches the focused setting.
+                    if (root.sys-row == 1) {
+                        Store.set-ratings(!Store.show-ratings);
+                    } else if (root.sys-row == 2) {
+                        Store.set-check-on-start(!Store.check-updates-on-start);
+                    } else if (root.sys-row == 3) {
+                        Store.set-prereleases(!Store.include-prereleases);
+                    } else if (root.sys-row == 4) {
+                        Store.set-interface(1);
+                    } else if (root.sys-row == 5) {
+                        if (Store.has-token) {
                             Store.save-token("");
                         } else if (Store.signin-state == 0) {
                             Store.github-signin();
                         } else {
                             Store.github-cancel();
                         }
+                    } else if (root.sys-row == 6 && root.steam-rows > 0) {
+                        if (Store.steam-state != 0) {
+                            Store.steam-cancel();
+                        } else if (Store.steam-signed-in) {
+                            Store.steam-signout();
+                        } else {
+                            Store.steam-signin-qr();
+                        }
+                    } else if (root.sys-row == 7 && root.steam-rows > 1) {
+                        // The row goes away while signing in; the highlight moves to the one that stays.
+                        root.sys-row = 6;
+                        Store.steam-signin();
+                    } else if (root.sys-row >= root.src-first) {
+                        Store.set-source(Store.sources[root.sys-row - root.src-first].id, !Store.sources[root.sys-row - root.src-first].on);
                     }
+                }
+                return accept;
+            }
+            if (root.on-system) {
+                if (event.text == Key.Escape || event.text == Key.Back || event.text == Key.Backspace) {
+                    root.tab = 0;
+                    root.activate-tab();
+                } else if (event.text == Key.UpArrow) {
+                    root.enter-bar();
                 } else if (event.text == Key.RightArrow) {
                     root.sys-act = min(root.sys-last, root.sys-act + 1);
                 } else if (event.text == Key.LeftArrow) {
@@ -455,6 +522,11 @@ export component TvShell inherits Rectangle {
                     } else if (event.text == Key.Return || event.text == " ") {
                         root.reading = false;
                     }
+                } else if (event.text == Key.DownArrow) {
+                    // More of the pictures, the description and the details.
+                    root.info-scroll = min(root.info-max, root.info-scroll + 170 * root.u);
+                } else if (event.text == Key.UpArrow) {
+                    root.info-scroll = max(0, root.info-scroll - 170 * root.u);
                 } else if (event.text == Key.LeftArrow) {
                     if (root.act == 0) {
                         Store.close-details();
@@ -561,52 +633,74 @@ export component TvShell inherits Rectangle {
                 attention: Store.updates-count > 0;
             }
             Rectangle { horizontal-stretch: 1; }
-            Rectangle {
-                property <bool> pointed: root.zone == 1 && root.tab == 2 && !Store.details-open;
-                width: 230 * u;
-                border-radius: 14 * u;
-                background: Theme.surface;
-                border-width: search.has-focus || self.pointed ? 2 * u : 0.5 * u;
-                border-color: search.has-focus || self.pointed ? white : Theme.stroke;
-                Image {
-                    x: 11 * u;
-                    source: @image-url("icons/search.svg");
-                    colorize: Theme.text-dim;
-                    width: 12 * u;
-                    height: 12 * u;
-                }
-                if search.text == "" : Text {
-                    x: 30 * u;
-                    text: search.has-focus ? "Type, then press OK" : "Search";
-                    color: Theme.text-dim;
-                    font-size: 12 * u;
-                    vertical-alignment: center;
-                }
-                search := TextInput {
-                    x: 30 * u;
-                    width: parent.width - 40 * u;
-                    height: 100%;
-                    text <=> Store.query;
-                    color: Theme.text;
-                    font-size: 12 * u;
-                    single-line: true;
-                    vertical-alignment: center;
-                    accepted => {
-                        Store.search(self.text);
-                        root.cur-row = 0;
-                        root.cur-col = 0;
-                        root.zone = 0;
-                        scope.focus();
-                    }
-                }
+            TvTab {
+                u: root.u;
+                text: "Settings";
+                current: root.on-settings;
+                focused: root.zone == 1 && root.tab == 3 && !Store.details-open && !search.has-focus;
             }
             // The device, its updates, and the way back to the desktop layout.
             TvTab {
                 u: root.u;
                 text: Store.device-name + (Store.system-state == 3 ? "  ·  " + Store.system-headline : "");
                 current: root.on-system;
-                focused: root.zone == 1 && root.tab == 3 && !Store.details-open && !search.has-focus;
+                focused: root.zone == 1 && root.tab == 4 && !Store.details-open && !search.has-focus;
                 attention: Store.system-state == 3;
+            }
+        }
+
+        // ---- search: the first thing on Home, wide and plain, one press above the apps ----
+        Rectangle {
+            property <bool> pointed: root.zone == 1 && root.tab == 2 && !Store.details-open;
+            property <bool> shown: Store.page == 0 && !Store.details-open;
+            visible: self.shown;
+            x: margin;
+            y: 64 * u;
+            width: parent.width - 2 * margin;
+            height: 38 * u;
+            border-radius: 19 * u;
+            background: search.has-focus || self.pointed ? Theme.surface-2 : Theme.surface;
+            border-width: search.has-focus || self.pointed ? 2 * u : 0.5 * u;
+            border-color: search.has-focus || self.pointed ? white : Theme.stroke;
+            accessible-role: button;
+            accessible-label: "Search";
+            animate background, border-color { duration: Theme.quick; }
+            TouchArea {
+                clicked => {
+                    root.tab = 2;
+                    root.activate-tab();
+                }
+            }
+            Image {
+                x: 16 * u;
+                source: @image-url("icons/search.svg");
+                colorize: search.has-focus || parent.pointed ? Theme.text : Theme.text-dim;
+                width: 16 * u;
+                height: 16 * u;
+            }
+            if search.text == "" : Text {
+                x: 44 * u;
+                text: search.has-focus ? "Type a name, then press OK" : parent.pointed ? "Press OK to search for apps and games" : "Search for apps and games";
+                color: Theme.text-dim;
+                font-size: 15 * u;
+                vertical-alignment: center;
+            }
+            search := TextInput {
+                x: 44 * u;
+                width: parent.width - 60 * u;
+                height: 100%;
+                text <=> Store.query;
+                color: Theme.text;
+                font-size: 15 * u;
+                single-line: true;
+                vertical-alignment: center;
+                accepted => {
+                    Store.search(self.text);
+                    root.cur-row = 0;
+                    root.cur-col = 0;
+                    root.zone = 0;
+                    scope.focus();
+                }
             }
         }
 
@@ -683,76 +777,120 @@ export component TvShell inherits Rectangle {
                 width: parent.width - 2 * margin - 432 * u;
                 spacing: 7 * u;
                 alignment: start;
-                // The facts make way once the highlight is well into the settings, so the
-                // last rows and the sign-in code under them are on screen.
-                if root.sys-row < 3 : VerticalLayout {
+                Text { text: "Information"; color: Theme.text; font-size: 14 * u; font-weight: 700; }
+                for fact in Store.system-facts : HorizontalLayout {
+                    spacing: 12 * u;
+                    accessible-role: text;
+                    accessible-label: fact.name + ": " + fact.value;
+                    Text { width: 130 * u; text: fact.name; color: Theme.text-dim; font-size: 12 * u; }
+                    Text { horizontal-stretch: 1; text: fact.value; color: Theme.text; font-size: 12 * u; wrap: word-wrap; }
+                }
+            }
+        }
+
+        // ---- settings: one list, top to bottom, the focused row always in view ----
+        if root.on-settings : FadeIn {
+            Text { x: margin; y: 70 * u; text: "Settings"; color: Theme.text; font-size: 36 * u; font-weight: 800; }
+            Text {
+                x: margin;
+                y: 124 * u;
+                width: 330 * u;
+                text: "Up and Down move through the list. OK changes the highlighted setting.";
+                color: Theme.text-dim;
+                font-size: 13 * u;
+                wrap: word-wrap;
+            }
+            Rectangle {
+                x: margin + 380 * u;
+                y: 70 * u;
+                width: parent.width - self.x - margin;
+                height: parent.height - self.y - 24 * u;
+                clip: true;
+                VerticalLayout {
+                    x: 4 * u;
+                    y: -root.set-shift;
+                    width: parent.width - 8 * u;
+                    height: self.preferred-height;
                     spacing: 7 * u;
-                    Text { text: "Information"; color: Theme.text; font-size: 14 * u; font-weight: 700; }
-                    for fact in Store.system-facts : HorizontalLayout {
-                        spacing: 12 * u;
-                        accessible-role: text;
-                        accessible-label: fact.name + ": " + fact.value;
-                        Text { width: 130 * u; text: fact.name; color: Theme.text-dim; font-size: 12 * u; }
-                        Text { horizontal-stretch: 1; text: fact.value; color: Theme.text; font-size: 12 * u; wrap: word-wrap; }
+                    alignment: start;
+                    animate y { duration: Theme.smooth; easing: ease-out; }
+                    Text { text: "General"; color: Theme.text; font-size: 14 * u; font-weight: 700; }
+                    TvSetting {
+                        u: root.u;
+                        label: "Ratings and reviews";
+                        on: Store.show-ratings;
+                        focused: root.zone == 0 && root.sys-row == 1;
+                        clicked => { Store.set-ratings(!Store.show-ratings); }
                     }
-                    Rectangle { height: 6 * u; }
-                }
-                Text { text: "Settings"; color: Theme.text; font-size: 14 * u; font-weight: 700; }
-                TvSetting {
-                    u: root.u;
-                    label: "Ratings and reviews";
-                    on: Store.show-ratings;
-                    focused: root.zone == 0 && root.sys-row == 1;
-                    clicked => { Store.set-ratings(!Store.show-ratings); }
-                }
-                TvSetting {
-                    u: root.u;
-                    label: "Check for updates when Bilby opens";
-                    on: Store.check-updates-on-start;
-                    focused: root.zone == 0 && root.sys-row == 2;
-                    clicked => { Store.set-check-on-start(!Store.check-updates-on-start); }
-                }
-                TvSetting {
-                    u: root.u;
-                    label: "Offer test versions of apps";
-                    on: Store.include-prereleases;
-                    focused: root.zone == 0 && root.sys-row == 3;
-                    clicked => { Store.set-prereleases(!Store.include-prereleases); }
-                }
-                TvSetting {
-                    u: root.u;
-                    label: Store.has-token ? "Signed in to GitHub" : Store.signin-state != 0 ? "Signing in to GitHub…" : "Sign in to GitHub for more searches an hour";
-                    value: Store.has-token ? "Sign out" : Store.signin-state != 0 ? "Cancel" : "Sign in";
-                    on: Store.has-token;
-                    focused: root.zone == 0 && root.sys-row == 4;
-                }
-                if Store.steam-available : TvSetting {
-                    u: root.u;
-                    label: Store.steam-signed-in ? "Signed in to Steam  ·  " + Store.steam-summary : Store.steam-state == 3 ? "Scan the code with the Steam app on your phone" : Store.steam-state != 0 ? "Sign in on Steam's page in Longboard, then share your library" : "Sign in to Steam with a QR code, to see what you own";
-                    value: Store.steam-state != 0 ? "Cancel" : Store.steam-signed-in ? "Sign out" : "Show code";
-                    on: Store.steam-signed-in;
-                    focused: root.zone == 0 && root.sys-row == 5;
-                }
-                if Store.steam-available && !Store.steam-signed-in && Store.steam-state == 0 : TvSetting {
-                    u: root.u;
-                    label: "Or sign in to Steam in a browser (Longboard)";
-                    value: "Open";
-                    on: false;
-                    focused: root.zone == 0 && root.sys-row == 6;
-                }
-                // The code to enter at GitHub, on a phone or computer.
-                if Store.signin-state == 2 : VerticalLayout {
-                    padding-top: 6 * u;
-                    spacing: 4 * u;
-                    Text { text: "On your phone or computer, open github.com/login/device and enter:"; color: Theme.text; font-size: 12 * u; wrap: word-wrap; }
-                    Text {
-                        text: Store.signin-code;
-                        color: Theme.text;
-                        font-size: 30 * u;
-                        font-weight: 800;
-                        letter-spacing: 3 * u;
-                        accessible-label: "Sign-in code " + Store.signin-code;
+                    TvSetting {
+                        u: root.u;
+                        label: "Check for updates when Bilby opens";
+                        on: Store.check-updates-on-start;
+                        focused: root.zone == 0 && root.sys-row == 2;
+                        clicked => { Store.set-check-on-start(!Store.check-updates-on-start); }
                     }
+                    TvSetting {
+                        u: root.u;
+                        label: "Offer test versions of apps";
+                        on: Store.include-prereleases;
+                        focused: root.zone == 0 && root.sys-row == 3;
+                        clicked => { Store.set-prereleases(!Store.include-prereleases); }
+                    }
+                    TvSetting {
+                        u: root.u;
+                        label: "Use the desktop layout, for a mouse and keyboard";
+                        value: "Switch";
+                        on: false;
+                        focused: root.zone == 0 && root.sys-row == 4;
+                        clicked => { Store.set-interface(1); }
+                    }
+                    Rectangle { height: 4 * u; }
+                    Text { text: "Accounts"; color: Theme.text; font-size: 14 * u; font-weight: 700; }
+                    TvSetting {
+                        u: root.u;
+                        label: Store.has-token ? "Signed in to GitHub" : Store.signin-state != 0 ? "Signing in to GitHub…" : "Sign in to GitHub for more searches an hour";
+                        value: Store.has-token ? "Sign out" : Store.signin-state != 0 ? "Cancel" : "Sign in";
+                        on: Store.has-token;
+                        focused: root.zone == 0 && root.sys-row == 5;
+                    }
+                    // The code to enter at GitHub, on a phone or computer.
+                    if Store.signin-state == 2 : VerticalLayout {
+                        padding-left: 10 * u;
+                        spacing: 4 * u;
+                        Text { text: "On your phone or computer, open github.com/login/device and enter:"; color: Theme.text; font-size: 12 * u; wrap: word-wrap; }
+                        Text {
+                            text: Store.signin-code;
+                            color: Theme.text;
+                            font-size: 30 * u;
+                            font-weight: 800;
+                            letter-spacing: 3 * u;
+                            accessible-label: "Sign-in code " + Store.signin-code;
+                        }
+                    }
+                    if root.steam-rows > 0 : TvSetting {
+                        u: root.u;
+                        label: Store.steam-signed-in ? "Signed in to Steam  ·  " + Store.steam-summary : Store.steam-state == 3 ? "Scan the code with the Steam app on your phone" : Store.steam-state != 0 ? "Sign in on Steam's page in Longboard, then share your library" : "Sign in to Steam with a QR code, to see what you own";
+                        value: Store.steam-state != 0 ? "Cancel" : Store.steam-signed-in ? "Sign out" : "Show code";
+                        on: Store.steam-signed-in;
+                        focused: root.zone == 0 && root.sys-row == 6;
+                    }
+                    if root.steam-rows > 1 : TvSetting {
+                        u: root.u;
+                        label: "Or sign in to Steam in a browser (Longboard)";
+                        value: "Open";
+                        on: false;
+                        focused: root.zone == 0 && root.sys-row == 7;
+                    }
+                    Rectangle { height: 4 * u; }
+                    Text { text: "Where apps come from"; color: Theme.text; font-size: 14 * u; font-weight: 700; }
+                    for source[i] in Store.sources : TvSetting {
+                        u: root.u;
+                        label: source.label;
+                        on: source.on;
+                        focused: root.zone == 0 && root.sys-row == root.src-first + i;
+                        clicked => { Store.set-source(source.id, !source.on); }
+                    }
+                    Rectangle { height: 8 * u; }
                 }
             }
             // Signing in to Steam with a code: the whole screen, so a phone across the
@@ -799,15 +937,15 @@ export component TvShell inherits Rectangle {
         }
 
         // ---- home: the focused app in large type, rows of apps below ----
-        if !Store.details-open && !root.on-system : FadeIn {
+        if !Store.details-open && !root.on-system && !root.on-settings : FadeIn {
             VerticalLayout {
                 x: margin;
-                y: 74 * u;
+                y: (Store.page == 0 ? 110 : 74) * u;
                 width: 520 * u;
-                height: 140 * u;
-                spacing: 6 * u;
+                height: (Store.page == 0 ? 106 : 140) * u;
+                spacing: 5 * u;
                 alignment: start;
-                Text { text: current.name; color: Theme.text; font-size: 36 * u; font-weight: 800; overflow: elide; }
+                Text { text: current.name; color: Theme.text; font-size: (Store.page == 0 ? 28 : 36) * u; font-weight: 800; overflow: elide; }
                 Text { text: current.summary; color: Theme.text; font-size: 14 * u; wrap: word-wrap; }
                 Text {
                     text: current.id == "" ? "" : (current.has-update ? "Update available  ·  " : current.installed ? "Installed  ·  " : "") + (current.rating != "" ? "★ " + current.rating + " (" + current.rating-count + ")  ·  " : current.headline != "" ? current.headline + "  ·  " : "") + current.author;
@@ -846,7 +984,7 @@ export component TvShell inherits Rectangle {
             // in place of the note about what was found.
             if (Store.search-note != "" || Store.search-error != "") && !root.on-library : Text {
                 x: margin;
-                y: 212 * u;
+                y: 218 * u;
                 width: parent.width - 2 * margin;
                 text: Store.search-error != "" && !Store.searching ? Store.search-error : Store.search-note;
                 color: Store.search-error != "" && !Store.searching ? Theme.warn : Theme.text-dim;
@@ -854,7 +992,7 @@ export component TvShell inherits Rectangle {
                 overflow: elide;
             }
             Rectangle {
-                y: 236 * u;
+                y: 240 * u;
                 height: parent.height - self.y;
                 clip: true;
                 Rectangle {
@@ -1007,25 +1145,6 @@ export component TvShell inherits Rectangle {
                         }
                     }
                 }
-                if !root.files && Store.notes != "" : VerticalLayout {
-                    padding-top: 8 * u;
-                    spacing: 4 * u;
-                    Text { text: Store.is-website ? "About this website" : Store.is-package ? "About this package" : "What's new in " + Store.app.version; color: Theme.text; font-size: 13 * u; font-weight: 700; }
-                    Rectangle {
-                        notes-line := Text { text: "X"; font-size: 12 * u; visible: false; }
-                        height: floor(62 * u / notes-line.preferred-height) * notes-line.preferred-height;
-                        clip: true;
-                        Text {
-                            y: 0;
-                            width: parent.width;
-                            text: Store.notes;
-                            color: Theme.text-dim;
-                            font-size: 12 * u;
-                            wrap: word-wrap;
-                            vertical-alignment: TextVerticalAlignment.top;
-                        }
-                    }
-                }
             }
 
             // Right: pictures and the description, or every file when asked for.
@@ -1080,38 +1199,129 @@ export component TvShell inherits Rectangle {
                     wrap: word-wrap;
                 }
             }
-            if !root.files && !root.reading : VerticalLayout {
+            if !root.files && !root.reading : Rectangle {
                 x: 496 * u;
                 y: 70 * u;
                 width: parent.width - self.x - margin;
-                spacing: 12 * u;
-                alignment: start;
-                if Store.screenshots.length > 0 : Rectangle {
-                    height: 236 * u;
-                    border-radius: 10 * u;
-                    clip: true;
-                    border-width: 0.5 * u;
-                    border-color: Theme.stroke;
-                    Image {
-                        width: parent.width;
-                        height: parent.height;
-                        source: Store.screenshots[0];
-                        image-fit: cover;
+                height: parent.height - self.y - 24 * u;
+                clip: true;
+                // How far there is to go, kept where the keys can see it.
+                property <length> further: max(0, column.preferred-height - self.height);
+                changed further => { root.info-max = self.further; }
+                init => { root.info-max = self.further; }
+                column := VerticalLayout {
+                    x: 0;
+                    y: -min(root.info-scroll, parent.further);
+                    width: parent.width - 14 * u;
+                    height: self.preferred-height;
+                    spacing: 12 * u;
+                    alignment: start;
+                    animate y { duration: Theme.smooth; easing: ease-out; }
+                    if Store.screenshots.length > 0 : Rectangle {
+                        height: 236 * u;
+                        border-radius: 10 * u;
+                        clip: true;
+                        border-width: 0.5 * u;
+                        border-color: Theme.stroke;
+                        Image {
+                            width: parent.width;
+                            height: parent.height;
+                            source: Store.screenshots[0];
+                            image-fit: cover;
+                        }
                     }
-                }
-                if Store.about != "" : Rectangle {
-                    about-line := Text { text: "X"; font-size: 13 * u; visible: false; }
-                    height: floor((Store.screenshots.length > 0 ? 150 * u : 380 * u) / about-line.preferred-height) * about-line.preferred-height;
-                    clip: true;
-                    Text {
-                        y: 0;
-                        width: parent.width;
+                    if Store.about != "" : Text {
                         text: Store.about;
                         color: Theme.text;
                         font-size: 13 * u;
                         wrap: word-wrap;
-                        vertical-alignment: TextVerticalAlignment.top;
                     }
+                    if Store.notes != "" : VerticalLayout {
+                        padding-top: 6 * u;
+                        spacing: 4 * u;
+                        Text { text: Store.is-website ? "About this website" : Store.is-package ? "About this package" : "What's new in " + Store.app.version; color: Theme.text; font-size: 14 * u; font-weight: 700; }
+                        Text { text: Store.notes; color: Theme.text-dim; font-size: 12 * u; wrap: word-wrap; }
+                    }
+                    VerticalLayout {
+                        padding-top: 6 * u;
+                        spacing: 6 * u;
+                        Text { text: "Information"; color: Theme.text; font-size: 14 * u; font-weight: 700; }
+                        if Store.app.source != "" : TvFact { u: root.u; name: "From"; value: Store.app.source; }
+                        if Store.app.author != "" && Store.app.author != Store.app.source : TvFact { u: root.u; name: "Made by"; value: Store.app.author + (Store.app.verified ? " (confirmed by " + Store.app.source + ")" : ""); }
+                        if Store.app.price != "" : TvFact { u: root.u; name: "Price"; value: Store.app.price + " on " + Store.app.source; }
+                        if Store.app.downloads != "" : TvFact { u: root.u; name: "Downloads"; value: Store.app.downloads + " " + Store.app.downloads-note; }
+                        if Store.app.popularity != "" : TvFact { u: root.u; name: "Popularity"; value: Store.app.popularity + " on " + Store.app.source; }
+                        if Store.app.version != "" : TvFact { u: root.u; name: "Version"; value: Store.app.version; }
+                        if Store.release-date != "" : TvFact { u: root.u; name: "Released"; value: Store.release-date; }
+                        if Store.license != "" : TvFact { u: root.u; name: "Licence"; value: Store.license; }
+                        if Store.options.length > 0 : TvFact { u: root.u; name: "Works on"; value: Store.platform-title; }
+                        if Store.options.length > 0 : TvFact { u: root.u; name: "Kind of file"; value: Store.options[0].label; }
+                        if Store.options.length > 0 && Store.options[0].size != "" : TvFact { u: root.u; name: "Download size"; value: Store.options[0].size; }
+                    }
+                    // What people wrote, on the page itself; the Reviews button reads them one at a time.
+                    if Store.reviews.length > 0 : VerticalLayout {
+                        padding-top: 6 * u;
+                        spacing: 8 * u;
+                        Text { text: "Reviews" + (Store.app.rating != "" ? "   ★ " + Store.app.rating : ""); color: Theme.text; font-size: 14 * u; font-weight: 700; }
+                        for review[i] in Store.reviews : Rectangle {
+                            visible: i < 6;
+                            height: i < 6 ? box.preferred-height : 0;
+                            border-radius: 10 * u;
+                            background: Theme.surface;
+                            border-width: 0.5 * u;
+                            border-color: Theme.stroke;
+                            accessible-role: text;
+                            accessible-label: "Review: " + review.title;
+                            box := VerticalLayout {
+                                width: parent.width;
+                                padding: 12 * u;
+                                spacing: 4 * u;
+                                Text { text: review.stars; color: Theme.warn; font-size: 12 * u; }
+                                Text { text: review.title; color: Theme.text; font-size: 13 * u; font-weight: 700; wrap: word-wrap; }
+                                Text { text: review.text; color: Theme.text; font-size: 12 * u; wrap: word-wrap; }
+                                Text { text: review.meta; color: Theme.text-dim; font-size: 11 * u; overflow: elide; }
+                            }
+                        }
+                        if Store.reviews.length > 6 : Text { text: "Press Reviews, beside Install, to read all " + Store.reviews.length + "."; color: Theme.text-dim; font-size: 12 * u; }
+                    }
+                    // The rest of the pictures, one after another.
+                    for shot[i] in Store.screenshots : Rectangle {
+                        visible: i > 0;
+                        height: i > 0 ? 236 * u : 0;
+                        border-radius: 10 * u;
+                        clip: true;
+                        if i > 0 : Image {
+                            width: parent.width;
+                            height: parent.height;
+                            source: shot;
+                            image-fit: contain;
+                        }
+                    }
+                }
+                // Where you are in it: a bar at the edge, and the page fading out below
+                // while there is more to come.
+                if root.info-max > 0 : Rectangle {
+                    x: parent.width - 4 * u;
+                    y: (parent.height - self.height) * min(root.info-scroll, parent.further) / parent.further;
+                    width: 4 * u;
+                    height: max(30 * u, parent.height * parent.height / (parent.height + parent.further));
+                    border-radius: 2 * u;
+                    background: Theme.text-dim.with-alpha(0.55);
+                    animate y { duration: Theme.smooth; easing: ease-out; }
+                }
+                // More below: a small mark at the foot, gone at the end.
+                if root.info-scroll < root.info-max : Rectangle {
+                    x: (parent.width - 14 * u - self.width) / 2;
+                    y: parent.height - self.height - 4 * u;
+                    width: 44 * u;
+                    height: 26 * u;
+                    border-radius: 13 * u;
+                    background: Theme.surface-2;
+                    border-width: 0.5 * u;
+                    border-color: Theme.stroke;
+                    accessible-role: text;
+                    accessible-label: "More below: press Down";
+                    Text { text: "▾"; color: Theme.text; font-size: 15 * u; horizontal-alignment: center; vertical-alignment: center; }
                 }
             }
             if root.files : VerticalLayout {

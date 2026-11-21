@@ -117,7 +117,9 @@ There is no Android package yet, and no Flatpak
 
 **Use it from the sofa**
 
-- The TV layout is driven with a remote: arrows, OK and Back. Today that means a
+- The TV layout is driven with a remote: arrows, OK and Back. Home opens on a wide
+  search bar with the apps below it; Library, Settings and the device's own page are
+  tabs along the top; an app's page scrolls with Up and Down. Today that means a
   computer connected to a TV; Android TV comes with the Android package.
 - On a Linux TV, websites can be added like apps and open in
   [Longboard](https://github.com/AndrewGBest/Longboard), a browser made for remotes.

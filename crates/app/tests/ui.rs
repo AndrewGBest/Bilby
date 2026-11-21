@@ -1144,9 +1144,10 @@ fn the_tv_has_a_library_page_and_a_home_that_is_the_store() {
     assert_eq!(library, ["Updates available", "Installed with Bilby"]);
     assert!(s.has("Library  ·  1 update"), "the top bar says an update is waiting");
 
-    // With the remote: Up to the bar (Search), Left to Library, OK.
+    // With the remote: Up to search, Up to the tabs, Right to Library, OK.
     s.press(Key::UpArrow);
-    s.press(Key::LeftArrow);
+    s.press(Key::UpArrow);
+    s.press(Key::RightArrow);
     s.press(Key::Return);
     assert_eq!(s.store().get_page(), 2);
     assert!(s.has("Check for updates"));
@@ -1627,8 +1628,11 @@ fn a_tv_remote_reaches_the_system_page_and_updates_from_it() {
     let s = start("linux-tv", Shell::Tv);
     s.app.check_system(&s.ui, false);
     assert_eq!(s.store().get_system_state(), 3);
-    // Up to the search box, Right to the chip, OK.
+    // Up to search, Up to the tabs, Right along them to the device's, OK.
     s.press(Key::UpArrow);
+    s.press(Key::UpArrow);
+    s.press(Key::RightArrow);
+    s.press(Key::RightArrow);
     s.press(Key::RightArrow);
     s.press(Key::Return);
     assert_eq!(s.store().get_page(), 4);
@@ -1730,8 +1734,11 @@ fn the_tv_layout_has_a_way_back_that_a_remote_can_reach() {
         ui.window().dispatch_event(WindowEvent::KeyPressed { text: text.clone() });
         ui.window().dispatch_event(WindowEvent::KeyReleased { text });
     };
-    // Up to search, Right to the "This TV" chip, OK; then right to the last button.
+    // Up to search, Up to the tabs, Right along them to "This TV", OK; then right to the last button.
     press(Key::UpArrow);
+    press(Key::UpArrow);
+    press(Key::RightArrow);
+    press(Key::RightArrow);
     press(Key::RightArrow);
     press(Key::Return);
     assert_eq!(ui.global::<Store>().get_page(), 4);
@@ -1810,13 +1817,16 @@ fn a_tv_remote_reaches_settings_and_can_remove_an_app() {
         {"id":"github:tidewave/tidewave","name":"Tidewave","version":"v3.4.0"}]}"#;
     let s = start_with("linux-tv", Shell::Tv, Some(seed));
 
-    // Settings live on the This TV page: Up, Right to the chip, OK, then Down to a setting.
+    // Settings have a tab of their own: Up past search to the tabs, Right to it, OK, and
+    // the first setting is highlighted.
+    assert!(s.has("Settings"));
+    s.press(Key::UpArrow);
     s.press(Key::UpArrow);
     s.press(Key::RightArrow);
+    s.press(Key::RightArrow);
     s.press(Key::Return);
-    assert_eq!(s.store().get_page(), 4);
+    assert_eq!(s.store().get_page(), 3);
     assert!(s.store().get_show_ratings());
-    s.press(Key::DownArrow);
     s.press(Key::Return);
     assert!(!s.store().get_show_ratings(), "OK switches the focused setting");
     assert!(s.saved().settings.hide_ratings);
@@ -1828,8 +1838,6 @@ fn a_tv_remote_reaches_settings_and_can_remove_an_app() {
     s.press(Key::UpArrow);
     s.press(Key::UpArrow);
     s.press(Key::UpArrow);
-    s.press(Key::UpArrow);
-    s.press(Key::LeftArrow);
     s.press(Key::LeftArrow);
     s.press(Key::Return);
     assert_eq!(s.store().get_page(), 2, "Library, from the top bar");
@@ -1928,9 +1936,11 @@ fn signing_in_to_github_shows_a_code_and_keeps_the_token_it_is_given() {
     assert!(!s.store().get_has_token() && s.saved().settings.github_token.is_empty());
     assert!(s.has("Sign in with GitHub"));
 
-    // On a TV it is the last setting on the This TV page, reached with the remote.
+    // On a TV it is under Accounts on the Settings tab, reached with the remote.
     let tv = start("linux-tv", Shell::Tv);
     tv.press(Key::UpArrow);
+    tv.press(Key::UpArrow);
+    tv.press(Key::RightArrow);
     tv.press(Key::RightArrow);
     tv.press(Key::Return);
     for _ in 0..4 {
@@ -2165,4 +2175,70 @@ fn on_a_tv_steam_sign_in_happens_in_longboard_which_hands_the_list_back() {
     assert!(s.store().get_steam_signed_in());
     assert_eq!(s.saved().steam.unwrap().owned, [440, 570]);
     assert!(!s.dirs.cache.join("hand-back").join("steam.json").exists(), "the answer is removed once read");
+}
+
+#[test]
+fn on_a_tv_down_scrolls_the_rest_of_an_apps_page_into_view() {
+    // Without motion, so the page is where it is going at once: the test's clock stands still.
+    let s = start_with("linux-tv", Shell::Tv, Some(r#"{"settings":{"welcomed":true,"reduce_motion":true}}"#));
+    s.app.open(&s.ui, "github:lumen-labs/lumen");
+    // Everything a desktop shows is on the page: the description, what is new and the details.
+    // (A key press lets the page finish appearing.)
+    s.press(Key::RightArrow);
+    s.press(Key::LeftArrow);
+    // It is taller than the screen, which is said, and Down moves through it to the end.
+    assert!(s.has("More below: press Down"));
+    assert!(!s.has("C library: glibc"), "the app's details, not the device's");
+    let from = format!("From: {}", s.store().get_app().source);
+    let mut seen = s.has(&from);
+    for _ in 0..30 {
+        s.press(Key::DownArrow);
+        seen |= s.has(&from);
+    }
+    assert!(seen, "the app's own details come into view on the way down: {from}");
+    assert!(!s.has("More below: press Down"), "at the end the mark goes");
+    // Up comes back, and the buttons were never left.
+    s.press(Key::UpArrow);
+    assert!(s.has("More below: press Down"));
+    assert!(s.store().get_details_open());
+}
+
+#[test]
+fn the_tv_has_a_settings_tab_with_every_setting_reachable_by_remote() {
+    let s = start("linux-tv", Shell::Tv);
+    s.press(Key::UpArrow);
+    s.press(Key::UpArrow);
+    s.press(Key::RightArrow);
+    s.press(Key::RightArrow);
+    s.press(Key::Return);
+    assert_eq!(s.store().get_page(), 3);
+    for label in [
+        "Ratings and reviews",
+        "Use the desktop layout, for a mouse and keyboard",
+        "Sign in to Steam with a QR code, to see what you own",
+        "Or sign in to Steam in a browser (Longboard)",
+    ] {
+        assert!(s.has(label), "{label}");
+    }
+    // Sources can be switched off from the sofa too: Down to the first of them, OK.
+    let sources: Vec<SourceChoice> = s.store().get_sources().iter().collect();
+    assert!(sources.len() >= 2 && sources.iter().all(|c| c.on) && s.has(sources[0].label.as_str()));
+    for _ in 0..7 {
+        s.press(Key::DownArrow);
+    }
+    s.press(Key::Return);
+    assert!(!s.store().get_sources().row_data(0).unwrap().on, "OK on a source switches it off");
+    assert_eq!(s.saved().settings.disabled_sources, [sources[0].id.to_string()]);
+    // Down stops at the last row; Up from the first goes back to the tabs; This TV is the next tab along.
+    for _ in 0..40 {
+        s.press(Key::DownArrow);
+    }
+    s.press(Key::Return);
+    assert!(!s.store().get_sources().iter().last().unwrap().on);
+    for _ in 0..60 {
+        s.press(Key::UpArrow);
+    }
+    s.press(Key::RightArrow);
+    s.press(Key::Return);
+    assert_eq!(s.store().get_page(), 4);
 }
