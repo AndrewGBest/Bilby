@@ -2920,3 +2920,83 @@ fn moving_about_makes_quiet_sounds_that_can_be_switched_off() {
     store.invoke_set_sounds(true);
     assert_eq!(*heard.lock().unwrap(), [Sound::Toggle]);
 }
+
+// ---- the store updating itself ----
+
+// Placing an AppImage and pointing a menu entry at it is how Linux does it.
+#[cfg(target_os = "linux")]
+#[test]
+fn updating_bilby_itself_repoints_its_menu_entry_and_offers_to_restart() {
+    let start_as = |store_app: &str| {
+        init_backend();
+        bilby_core::demo::DOWNLOAD_STEP_MS.store(0, Ordering::Relaxed);
+        let dirs = dirs_in(&temp_root());
+        std::fs::create_dir_all(&dirs.config).unwrap();
+        std::fs::write(dirs.config.join("demo-state.json"), r#"{"settings":{"welcomed":true}}"#).unwrap();
+        let started: Arc<Mutex<Vec<PathBuf>>> = Arc::default();
+        let record = started.clone();
+        // The copy that is running, somewhere the person put it.
+        let running = dirs.downloads.join("bilby-old.AppImage");
+        std::fs::create_dir_all(&dirs.downloads).unwrap();
+        std::fs::write(&running, b"old").unwrap();
+        let options = Options {
+            demo: true,
+            inline: true,
+            platform: Platform::preset("linux-x64-arch"),
+            shell: Some(Shell::Desktop),
+            dirs: Some(dirs.clone()),
+            opener: Some(Arc::new(|_: &std::path::Path| Ok(()))),
+            launcher: Some(Arc::new(move |path: &std::path::Path| {
+                record.lock().unwrap().push(path.to_path_buf());
+                Ok(())
+            })),
+            store_app: Some(store_app.to_string()),
+            self_program: Some(running.clone()),
+            ..Default::default()
+        };
+        let (ui, app) = build(&options).unwrap();
+        (ui, app, dirs, started, running)
+    };
+    // A demo project standing in for Bilby whose file for this system is an AppImage.
+    let stand_in = ["github:tidewave/tidewave", "github:lumen-labs/lumen", "github:kestrel-sh/kestrel"]
+        .into_iter()
+        .find(|id| {
+            let (ui, app, ..) = start_as(id);
+            app.open(&ui, id);
+            ui.global::<Store>().get_options().row_data(0).is_some_and(|o| o.label.contains("AppImage"))
+        })
+        .expect("a demo app that comes as an AppImage");
+    let (ui, app, dirs, started, running) = start_as(stand_in);
+    let store = ui.global::<Store>();
+    let own_entry = dirs.menu.join("bilby.desktop");
+    assert!(
+        std::fs::read_to_string(&own_entry).unwrap().contains("bilby-old.AppImage"),
+        "the menu starts the running copy"
+    );
+
+    // Its own page knows it is installed, and there is nothing to "open": it is open.
+    app.open(&ui, stand_in);
+    assert!(store.get_in_library() && !store.get_can_open());
+
+    // Updating it places the new file and points Bilby's own menu entry at it.
+    store.invoke_install(0);
+    assert_eq!(store.get_install_state(), 2, "{}", store.get_install_message());
+    assert!(store.get_install_message().contains("restart into it"), "{}", store.get_install_message());
+    let entry = std::fs::read_to_string(&own_entry).unwrap();
+    assert!(!entry.contains("bilby-old.AppImage"), "the menu no longer starts the old copy: {entry}");
+    assert!(entry.contains(&dirs.applications.display().to_string()), "it starts the new one: {entry}");
+    let entries = std::fs::read_dir(&dirs.menu)
+        .unwrap()
+        .flatten()
+        .filter(|e| e.file_name().to_string_lossy().ends_with(".desktop"))
+        .count();
+    assert_eq!(entries, 1, "one entry for Bilby, not a second beside it");
+    assert!(running.exists(), "the copy the person put there themselves is left alone");
+
+    // Open now means: restart into the new copy.
+    assert!(store.get_can_open());
+    store.invoke_launch();
+    let launched = started.lock().unwrap().clone();
+    assert_eq!(launched.len(), 1);
+    assert!(launched[0].starts_with(&dirs.applications), "{launched:?}");
+}

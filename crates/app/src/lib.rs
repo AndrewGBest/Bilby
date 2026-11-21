@@ -647,6 +647,8 @@ pub struct App {
     picker: Picker,
     /// The folder just chosen for the one download about to start.
     asked_folder: Mutex<Option<PathBuf>>,
+    /// A newer copy of the store itself, placed and ready to be restarted into.
+    self_new: Mutex<Option<PathBuf>>,
     /// What is waiting on an answer at the gate (an age question or the PIN).
     pending: Mutex<Option<Guarded>>,
     /// Ids learnt to be for adults, so that opening one again asks before loading it.
@@ -2679,7 +2681,24 @@ impl App {
                         entry.path = outcome.file.as_ref().map(|p| p.display().to_string());
                         entry.store_managed = outcome.store_managed;
                         let id = entry.id.clone();
-                        if let (true, Some(file)) = (outcome.store_managed, outcome.file.as_ref()) {
+                        let is_self = app.store_app.as_ref().is_some_and(|own| own.to_string().eq_ignore_ascii_case(&id));
+                        if let (true, true, Some(file)) = (is_self, outcome.store_managed, outcome.file.as_ref()) {
+                            // A newer copy of the store itself. Its own menu entry is pointed
+                            // at the new file, so the next start is the new version, and it
+                            // offers to restart into it now. No second entry is made.
+                            let _ = install::register_self(&app.dirs, file, ICON_PNG);
+                            *app.self_new.lock().unwrap() = Some(file.clone());
+                            store.set_install_message(
+                                format!("Bilby {version} is on this device. Press Open to restart into it; it also starts next time you open Bilby from your app menu.").into(),
+                            );
+                            let previous =
+                                app.state().installed(&id).filter(|a| a.store_managed).and_then(|a| a.path.clone());
+                            if let Some(previous) = previous.map(PathBuf::from) {
+                                if previous != *file && previous.starts_with(&app.dirs.applications) {
+                                    let _ = std::fs::remove_file(previous);
+                                }
+                            }
+                        } else if let (true, Some(file)) = (outcome.store_managed, outcome.file.as_ref()) {
                             // Start it from the app menu like anything else that is installed.
                             if install::add_menu_entry(&app.dirs, &id, &name, file).is_ok() {
                                 store
@@ -3313,6 +3332,11 @@ impl App {
 
     /// The file to run for an app the store placed itself, if it is still there.
     fn launchable(&self, id: &str) -> Option<PathBuf> {
+        // The store itself is already open. Only a newer copy just placed can be
+        // "opened": that restarts into it.
+        if self.store_app.as_ref().is_some_and(|own| own.to_string().eq_ignore_ascii_case(id)) {
+            return self.self_new.lock().unwrap().clone();
+        }
         let state = self.state.lock().unwrap();
         // A web app is opened by starting Longboard on its address on a TV, and in
         // the person's own browser anywhere else.
@@ -3345,6 +3369,20 @@ impl App {
         let store = ui.global::<Store>();
         let id = store.get_app().id.to_string();
         let Some(path) = self.launchable(&id) else { return };
+        // The store's own newer copy: start it and leave, so the person is in the new
+        // version at once.
+        if self.store_app.as_ref().is_some_and(|own| own.to_string().eq_ignore_ascii_case(&id)) {
+            match (self.launcher)(&path) {
+                Ok(()) => {
+                    self.toast(ui, "Restarting into the new Bilby…", false);
+                    if !self.inline {
+                        let _ = slint::quit_event_loop();
+                    }
+                }
+                Err(e) => self.toast(ui, &format!("The new Bilby is installed but could not be started: {e}"), true),
+            }
+            return;
+        }
         let started = if let Some(host) = id.strip_prefix("web:").filter(|_| !self.opens_sites_in_longboard()) {
             (self.browser)(&format!("https://{host}/"))
         } else if let Some(host) = id.strip_prefix("web:") {
@@ -3597,6 +3635,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         browser: options.browser.clone().unwrap_or_else(|| Arc::new(install::open_url)),
         picker: options.picker.clone().unwrap_or_else(|| Arc::new(system_picker)),
         asked_folder: Mutex::new(None),
+        self_new: Mutex::new(None),
         pending: Mutex::new(None),
         known_adult: Mutex::new(HashSet::new()),
         new_pin: Mutex::new(None),
