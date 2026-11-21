@@ -325,6 +325,19 @@ turns both off, leaving only what the sources say. [The list is one person's vie
 what "everyone" wants, and leans towards what is popular in the English-speaking
 world.]
 
+**What an AppImage needs** (`needs.rs`). Most AppImages load FUSE 2 to start, and
+many current systems ship only FUSE 3. The store finds this out before the app is
+opened and deals with it, in this order: the system's own package where its package
+manager can install one; on a read-only system (`/run/ostree-booted` and
+`rpm-ostree` present) `rpm-ostree install --idempotent fuse fuse-libs`, followed by
+a "Restart now / Restart later" question because it works from the next restart;
+and where neither can be done, unpacking the AppImage into a folder and starting
+the program inside, which needs no FUSE. Packages from repositories the system does
+not vouch for are not used: FUSE includes a program that runs with the
+administrator's rights. [The package path was run on Debian; unpacking was run with
+a real AppImage; the read-only path follows Fedora's and rpm-ostree's documentation
+and has not been run on such a system.]
+
 **Sounds** (`app/src/sound.rs`). A tick as the highlight moves, a soft pop on a press,
 a lower note on the way back, a blip for a switch. They are made in code from sine
 waves that die away within a few hundredths of a second; nothing is recorded or

@@ -314,6 +314,9 @@ export global Store {
     in property <string> gate-title;
     in property <string> gate-text;
     in property <string> gate-error;
+    // The two answers to a yes-or-no question.
+    in property <string> gate-no: "No";
+    in property <string> gate-yes: "Yes, I am 18 or over";
     // The store is running from a file it can add to the app menu, and whether it has.
     in property <bool> can-register;
     in property <bool> in-menu;

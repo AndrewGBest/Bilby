@@ -105,3 +105,27 @@ installed the same way on a Debian 13 test machine, so it is something about the
 The next Bilby release reports why an app closed straight away (it recognises a
 missing FUSE, a sandbox that cannot start, and a missing library). When I send you
 that message, treat it as a bug report against the AppImage.
+
+## And one more: make the AppImage start without FUSE 2
+
+This turned out to be why Longboard did not start on my TV. The TV runs Fedora
+Kinoite 44. Fedora took FUSE 2 (`libfuse.so.2`, package `fuse-libs`) out of its
+Atomic Desktops on purpose
+(https://fedoraproject.org/wiki/Changes/AtomicDesktopDropFuse2), and Longboard's
+AppImage carries the older start-up code that loads it: the text `libfuse.so.2` is in
+the first megabyte of the released file, and without the library it prints
+"AppImages require FUSE to run" and closes.
+
+Bilby now works around it (it adds FUSE on such systems, or unpacks the AppImage),
+but anyone who downloads Longboard directly still hits it, on Kinoite, Silverblue,
+Bazzite and any other system that ships only FUSE 3.
+
+Please build the AppImage with the current AppImage runtime, the static one from
+https://github.com/AppImage/type2-runtime, which needs no `libfuse.so.2`. How to get
+electron-builder to use it (a setting, a newer electron-builder, or re-packing the
+AppDir with `appimagetool` after the build) I have not checked: find out and record
+what you chose in `docs/DECISIONS.md`.
+
+Check it this way: `grep -c libfuse.so.2` on the first two megabytes of the built
+file should find nothing, and the file should start on a system that has
+`fusermount3` and no `libfuse.so.2`. Say in `docs/STATUS.md` which of those you saw.

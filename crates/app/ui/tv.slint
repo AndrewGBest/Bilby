@@ -1949,8 +1949,8 @@ export component TvShell inherits Rectangle {
                 alignment: center;
                 spacing: 14 * u;
                 padding-top: 10 * u;
-                TvButton { u: root.u; text: "No"; focused: root.gate-choice == 0; clicked => { Store.gate-answer(false); } }
-                TvButton { u: root.u; text: "Yes, I am 18 or over"; primary: true; focused: root.gate-choice == 1; clicked => { Store.gate-answer(true); } }
+                TvButton { u: root.u; text: Store.gate-no; focused: root.gate-choice == 0; clicked => { Store.gate-answer(false); } }
+                TvButton { u: root.u; text: Store.gate-yes; primary: true; focused: root.gate-choice == 1; clicked => { Store.gate-answer(true); } }
             }
             if Store.gate >= 2 : HorizontalLayout {
                 alignment: center;

@@ -184,3 +184,98 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 }
+
+/// `rpm-ostree`, on a system that is one read-only image (Fedora Kinoite, Silverblue
+/// and their kin). Such a system has no package manager in the usual sense: a package
+/// is added on top of the image with `rpm-ostree install`, and is there from the next
+/// start. Fedora took FUSE 2 out of these images on purpose and names this as the way
+/// to put it back [https://fedoraproject.org/wiki/Changes/AtomicDesktopDropFuse2].
+pub fn layering_here() -> Option<PathBuf> {
+    if !Path::new("/run/ostree-booted").exists() {
+        return None;
+    }
+    let path = std::env::var_os("PATH")?;
+    std::env::split_paths(&path).map(|dir| dir.join("rpm-ostree")).find(|tool| tool.is_file())
+}
+
+/// Add FUSE 2 on top of the system's image. It takes effect at the next restart.
+///
+/// `fuse-libs` is the library older AppImages load and `fuse` the program it runs to
+/// mount; the library alone is tried if the pair cannot be had. `--idempotent` makes
+/// asking twice harmless. rpm-ostree asks for the password itself where one is
+/// needed. [Written from Fedora's and rpm-ostree's documentation; not run on such a
+/// system by the author.]
+pub fn layer_fuse(rpm_ostree: &Path) -> crate::Result<()> {
+    use std::process::{Command, Stdio};
+    let mut said = String::new();
+    for packages in [&["fuse", "fuse-libs"][..], &["fuse-libs"][..]] {
+        let ran = Command::new(rpm_ostree)
+            .args(["install", "-y", "--idempotent"])
+            .args(packages)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::piped())
+            .output();
+        match ran {
+            Ok(output) if output.status.success() => return Ok(()),
+            Ok(output) => {
+                said = String::from_utf8_lossy(&output.stderr)
+                    .lines()
+                    .rev()
+                    .find(|l| !l.trim().is_empty())
+                    .unwrap_or("")
+                    .trim()
+                    .to_string()
+            }
+            Err(e) => said = e.to_string(),
+        }
+    }
+    Err(crate::Error::Unsupported(format!("FUSE could not be added to this system. {said}")))
+}
+
+#[cfg(all(test, unix))]
+mod layering_tests {
+    use super::*;
+    use std::os::unix::fs::PermissionsExt;
+
+    #[test]
+    fn fuse_is_added_on_top_of_a_read_only_system_and_a_refusal_is_reported() {
+        let dir = std::env::temp_dir().join(format!("bilby-layer-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let tool = |name: &str, body: &str| {
+            let path = dir.join(name);
+            std::fs::write(&path, format!("#!/bin/sh\necho \"$@\" >> {}/asked\n{body}\n", dir.display())).unwrap();
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).unwrap();
+            path
+        };
+        // Tried a few times: another test starting a program at the same instant can
+        // make the system call this file busy for a moment.
+        let run = |tool: &Path| {
+            (0..40)
+                .find_map(|_| match layer_fuse(tool) {
+                    Err(e) if e.to_string().contains("busy") => {
+                        std::thread::sleep(std::time::Duration::from_millis(25));
+                        None
+                    }
+                    other => Some(other),
+                })
+                .unwrap()
+        };
+        assert!(run(&tool("works", "exit 0")).is_ok());
+        assert_eq!(
+            std::fs::read_to_string(dir.join("asked")).unwrap().lines().last(),
+            Some("install -y --idempotent fuse fuse-libs")
+        );
+        // Without the pair, the library alone.
+        std::fs::remove_file(dir.join("asked")).unwrap();
+        assert!(run(&tool("one", "case \"$*\" in *' fuse '*) exit 1;; esac; exit 0")).is_ok());
+        assert_eq!(
+            std::fs::read_to_string(dir.join("asked")).unwrap().lines().last(),
+            Some("install -y --idempotent fuse-libs")
+        );
+        let refused = run(&tool("refuses", "echo 'error: Not authorized' >&2; exit 1")).unwrap_err().to_string();
+        assert!(refused.contains("could not be added") && refused.contains("Not authorized"), "{refused}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}

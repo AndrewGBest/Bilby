@@ -3045,3 +3045,93 @@ fn where_fuse_cannot_be_installed_the_app_is_unpacked_instead_of_asking_the_pers
     assert!(!dirs.elevate.with_extension("log").exists(), "nothing was asked of the system");
     let _ = id;
 }
+
+// A read-only system (Fedora Kinoite and its kin) has FUSE added on top of its image.
+#[cfg(target_os = "linux")]
+#[test]
+fn on_a_read_only_system_fuse_is_added_and_a_restart_is_offered() {
+    use bilby_core::needs::Fuse;
+    use std::os::unix::fs::PermissionsExt;
+    init_backend();
+    bilby_core::demo::DOWNLOAD_STEP_MS.store(0, Ordering::Relaxed);
+    let dirs = dirs_in(&temp_root());
+    std::fs::create_dir_all(&dirs.config).unwrap();
+    std::fs::write(dirs.config.join("demo-state.json"), r#"{"settings":{"welcomed":true}}"#).unwrap();
+    // A stand-in for rpm-ostree that notes what it was asked and succeeds.
+    let tool = dirs.config.join("rpm-ostree");
+    let asked = dirs.config.join("asked");
+    std::fs::write(&tool, format!("#!/bin/sh\necho \"$@\" >> '{}'\n", asked.display())).unwrap();
+    std::fs::set_permissions(&tool, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let restarts: Arc<Mutex<u32>> = Arc::default();
+    let count = restarts.clone();
+    let started: Arc<Mutex<Vec<PathBuf>>> = Arc::default();
+    let record = started.clone();
+    let options = Options {
+        demo: true,
+        inline: true,
+        platform: Platform::preset("linux-x64-fedora"),
+        shell: Some(Shell::Desktop),
+        dirs: Some(dirs.clone()),
+        opener: Some(Arc::new(|_: &std::path::Path| Ok(()))),
+        launcher: Some(Arc::new(move |path: &std::path::Path| {
+            record.lock().unwrap().push(path.to_path_buf());
+            Ok(())
+        })),
+        fuse: Some(Fuse { library: false, mounter: true }),
+        layering: Some(tool),
+        restart: Some(Arc::new(move || {
+            *count.lock().unwrap() += 1;
+            Ok(())
+        })),
+        ..Default::default()
+    };
+    let (ui, app) = build(&options).unwrap();
+    let store = ui.global::<Store>();
+    let Some(id) =
+        ["github:tidewave/tidewave", "github:lumen-labs/lumen", "github:kestrel-sh/kestrel"].into_iter().find(|id| {
+            app.open(&ui, id);
+            store.get_options().row_data(0).is_some_and(|o| o.label.contains("AppImage"))
+        })
+    else {
+        return;
+    };
+    let note = store.get_need_note();
+    assert!(note.contains("Bilby will add it to your system") && note.contains("restart"), "{note}");
+    store.invoke_install(0);
+    assert_eq!(store.get_install_state(), 2, "{}", store.get_install_message());
+    // The made-up download is not a real AppImage. Make it one that asks for FUSE 2.
+    let placed = std::fs::read_dir(&dirs.applications)
+        .unwrap()
+        .flatten()
+        .map(|e| e.path())
+        .find(|p| p.extension().is_some_and(|x| x == "AppImage"))
+        .expect("the app was placed");
+    std::fs::write(&placed, b"\x7fELF....libfuse.so.2....").unwrap();
+    let _ = std::fs::remove_file(&asked);
+    app.open(&ui, id);
+    assert!(store.get_need_note().contains("Bilby will add it to your system"), "{}", store.get_need_note());
+
+    // Opening it adds FUSE through the system's own tool, and asks about restarting.
+    store.invoke_launch();
+    assert_eq!(std::fs::read_to_string(&asked).unwrap().trim(), "install -y --idempotent fuse fuse-libs");
+    assert_eq!(store.get_gate(), 1, "a question is on screen");
+    assert_eq!((store.get_gate_no().as_str(), store.get_gate_yes().as_str()), ("Restart later", "Restart now"));
+    assert!(store.get_gate_text().contains("after a restart"));
+    assert!(started.lock().unwrap().is_empty(), "it is not started only to fail");
+    assert!(placed.exists(), "and it is left as the file it is, not unpacked");
+
+    // Later: nothing restarts, and the page says where things stand.
+    store.invoke_gate_answer(false);
+    assert_eq!((store.get_gate(), *restarts.lock().unwrap()), (0, 0));
+    assert!(store.get_need_note().contains("has been added"), "{}", store.get_need_note());
+
+    // Opening it again before restarting asks again, without adding anything twice.
+    store.invoke_launch();
+    assert_eq!(store.get_gate(), 1);
+    assert_eq!(std::fs::read_to_string(&asked).unwrap().lines().count(), 1);
+    store.invoke_gate_answer(true);
+    assert_eq!((store.get_gate(), *restarts.lock().unwrap()), (0, 1), "Restart now restarts");
+
+    // The age question still has its own words afterwards.
+    assert!(started.lock().unwrap().is_empty());
+}

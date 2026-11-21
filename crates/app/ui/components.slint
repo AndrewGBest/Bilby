@@ -2774,8 +2774,8 @@ export component GateOverlay inherits Rectangle {
             if Store.gate == 1 : HorizontalLayout {
                 spacing: 10px;
                 alignment: end;
-                Button { text: "No"; primary: false; accessible-label: "No, I am not"; clicked => { Store.gate-answer(false); } }
-                Button { text: "Yes, I am 18 or over"; clicked => { Store.gate-answer(true); } }
+                Button { text: Store.gate-no; primary: false; accessible-label: Store.gate-no == "No" ? "No, I am not" : Store.gate-no; clicked => { Store.gate-answer(false); } }
+                Button { text: Store.gate-yes; clicked => { Store.gate-answer(true); } }
             }
             if Store.gate >= 2 : VerticalLayout {
                 spacing: 14px;

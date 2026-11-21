@@ -110,8 +110,11 @@ There is no Android package yet, and no Flatpak
 - Bilby checks what an app needs before you download it. An AppImage on a Linux system
   without FUSE 2 says so on its page, and Bilby deals with it: it installs the missing
   piece from your distribution along with the app, or, where that cannot be done,
-  unpacks the app so that it runs without it. Either way there is nothing for you to
-  do. An app that closes the moment it starts is reported with
+  unpacks the app so that it runs without it. On a read-only system such as Fedora
+  Kinoite or Silverblue, Bilby adds FUSE on top of the system image with the system's
+  own tool and offers to restart now or later, since it works from the next restart.
+  Either way there is nothing for you to go and do. [The read-only path is written
+  from Fedora's documentation and has not yet been run on such a system.] An app that closes the moment it starts is reported with
   the reason.
 - Every other file and every older version is one press away, never hidden for good.
 - For things only another store can install (Steam, the Mac App Store), Bilby opens

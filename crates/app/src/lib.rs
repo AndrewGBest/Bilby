@@ -91,6 +91,11 @@ pub struct Options {
     pub picker: Option<Picker>,
     /// What the system has of FUSE (looked up when not given). For tests.
     pub fuse: Option<bilby_core::needs::Fuse>,
+    /// `rpm-ostree`, on a system that is one read-only image. For tests; looked up
+    /// otherwise.
+    pub layering: Option<PathBuf>,
+    /// How the device is restarted. Tests record it instead.
+    pub restart: Option<Restart>,
     /// The machine whose system details and updates are shown. Defaults to this
     /// computer; the demo and previews of other devices get a made-up one.
     pub host: Option<Arc<dyn bilby_core::os::Host>>,
@@ -115,6 +120,8 @@ enum Guarded {
     Setting(Change),
     Install(i32),
     Remove(String),
+    /// Not a guard: FUSE was added and the question is whether to restart now.
+    Restart,
 }
 
 /// A change to the family and adult-content settings.
@@ -178,6 +185,17 @@ fn system_picker(start: &std::path::Path) -> Picked {
     }
 }
 
+/// Ask the system to restart, as its own menu would.
+fn restart_device() -> bilby_core::Result<()> {
+    let ran = std::process::Command::new("systemctl").arg("reboot").status();
+    match ran {
+        Ok(status) if status.success() => Ok(()),
+        Ok(_) => Err(Error::Unsupported("the system refused".into())),
+        Err(e) => Err(Error::Unsupported(e.to_string())),
+    }
+}
+
+pub type Restart = Arc<dyn Fn() -> bilby_core::Result<()> + Send + Sync>;
 pub type Heard = Arc<dyn Fn(sound::Sound) + Send + Sync>;
 pub type Browser = Arc<dyn Fn(&str) -> bilby_core::Result<()> + Send + Sync>;
 pub type Runner = Arc<dyn Fn(&std::path::Path, &[String]) -> bilby_core::Result<()> + Send + Sync>;
@@ -627,6 +645,14 @@ pub struct App {
     fuse: std::sync::RwLock<bilby_core::needs::Fuse>,
     /// That was given rather than looked up (a test, or the made-up demo device).
     fuse_given: bool,
+    /// `rpm-ostree`, where the system is one read-only image that packages are added
+    /// on top of.
+    layering: Option<PathBuf>,
+    /// FUSE has been added on top of the image and waits for a restart.
+    fuse_staged: std::sync::atomic::AtomicBool,
+    /// That has just happened, and the person has not been asked about restarting yet.
+    fuse_just_staged: std::sync::atomic::AtomicBool,
+    restart: Restart,
     /// A package the app on screen needs before it will run, which the store installs
     /// along with it.
     needed: Mutex<Option<AppId>>,
@@ -1522,6 +1548,14 @@ impl App {
                     // Installed along with the app, or just before it is opened: the
                     // person is told, not sent to fetch it.
                     needed = need.package;
+                    // A read-only system takes it on top of its image, from a restart on.
+                    if self.layering.is_some() {
+                        needed = None;
+                        need_note = match self.fuse_staged.load(Ordering::SeqCst) {
+                            true => "FUSE 2, which this app needs to run, has been added to this system and starts working after a restart.".to_string(),
+                            false => "This app needs FUSE 2 to run, which this system does not have. Bilby will add it to your system for you; it starts working after a restart, which Bilby will offer.".to_string(),
+                        };
+                    }
                 }
             }
         }
@@ -2607,13 +2641,14 @@ impl App {
         let placing = option.plan.action == Action::PlaceAppImage;
         let requirement = if placing { self.needed.lock().unwrap().clone() } else { None };
         let lacks_fuse = placing && self.lacks_fuse.load(Ordering::SeqCst);
+        let layering = if lacks_fuse { self.layering.clone() } else { None };
         self.job(
             move |app| {
                 // FUSE from the system's repositories where it can be had. Where it
                 // cannot (no such package, or the install did not go through), the app
                 // is unpacked instead, which needs none. Either way the person is not
                 // sent to do anything.
-                let mut unpack = lacks_fuse && requirement.is_none();
+                let mut unpack = lacks_fuse && requirement.is_none() && layering.is_none();
                 if let Some(package) = &requirement {
                     unpack = app.install_requirement(package).is_err();
                 }
@@ -2651,6 +2686,21 @@ impl App {
                     app.opener.as_ref(),
                     &mut progress,
                 )?;
+                // On a read-only system, once the file is here and is seen to need it:
+                // FUSE is added on top of the image, to work from the next restart.
+                if let (Some(tool), Some(file)) = (&layering, outcome.file.as_ref()) {
+                    if bilby_core::needs::wants_fuse_library(file) != Some(false) {
+                        match app.stage_fuse(tool) {
+                            true => {
+                                outcome.message = format!(
+                                    "{} FUSE, which it needs, has been added to this system and starts working after a restart.",
+                                    outcome.message
+                                )
+                            }
+                            false => unpack = true,
+                        }
+                    }
+                }
                 if unpack {
                     if let Some(file) = outcome.file.clone() {
                         match install::unpack_appimage(&file) {
@@ -2666,6 +2716,9 @@ impl App {
                 Ok(outcome)
             },
             move |app, ui, result| {
+                if app.fuse_just_staged.swap(false, Ordering::SeqCst) {
+                    app.ask_restart(ui);
+                }
                 let store = ui.global::<Store>();
                 // Started from the Library page rather than an app page?
                 let updating_in_place = !store.get_updating_id().is_empty();
@@ -3051,7 +3104,37 @@ impl App {
         store.set_gate_title(title.into());
         store.set_gate_text(text.into());
         store.set_gate_error(SharedString::new());
+        store.set_gate_no("No".into());
+        store.set_gate_yes("Yes, I am 18 or over".into());
         store.set_gate(kind);
+    }
+
+    /// Add FUSE on top of a read-only system's image, once. True when it is in place
+    /// and waiting for a restart.
+    fn stage_fuse(&self, tool: &std::path::Path) -> bool {
+        if self.fuse_staged.load(Ordering::SeqCst) {
+            return true;
+        }
+        let added = bilby_core::needs::layer_fuse(tool).is_ok();
+        if added {
+            self.fuse_staged.store(true, Ordering::SeqCst);
+            self.fuse_just_staged.store(true, Ordering::SeqCst);
+        }
+        added
+    }
+
+    /// FUSE has been added and works from the next restart: now, or later?
+    fn ask_restart(&self, ui: &AppWindow) {
+        self.ask(
+            ui,
+            1,
+            "Restart to finish",
+            "Bilby has added FUSE to this system, which this app needs to run. It starts working after a restart.",
+            Guarded::Restart,
+        );
+        let store = ui.global::<Store>();
+        store.set_gate_no("Restart later".into());
+        store.set_gate_yes("Restart now".into());
     }
 
     fn close_gate(&self, ui: &AppWindow) {
@@ -3070,6 +3153,18 @@ impl App {
 
     /// The answer to "are you 18 or over?". A yes is remembered; a no changes nothing.
     pub fn gate_answer(self: &Arc<Self>, ui: &AppWindow, yes: bool) {
+        if matches!(*self.pending.lock().unwrap(), Some(Guarded::Restart)) {
+            *self.pending.lock().unwrap() = None;
+            self.close_gate(ui);
+            match yes.then(|| (self.restart)()) {
+                Some(Ok(())) => self.toast(ui, "Restarting…", false),
+                Some(Err(e)) => {
+                    self.toast(ui, &format!("Couldn't restart from here ({e}). Restart from your system's menu."), true)
+                }
+                None => self.toast(ui, "It will run after the next restart.", false),
+            }
+            return;
+        }
         if ui.global::<Store>().get_gate() != 1 || !yes {
             self.gate_cancel(ui);
             return;
@@ -3144,6 +3239,7 @@ impl App {
                 self.remove_from_library(ui, &id);
             }
             Guarded::Setting(change) => self.apply_setting(ui, change),
+            Guarded::Restart => {}
         }
     }
 
@@ -3419,7 +3515,14 @@ impl App {
             // one that closes straight away says why.
             let requirement = self.needed.lock().unwrap().clone();
             let lacks_fuse = self.lacks_fuse.load(Ordering::SeqCst);
+            let layering = if lacks_fuse { self.layering.clone() } else { None };
+            // Already added and waiting on a restart: starting it now would only fail.
+            if layering.is_some() && self.fuse_staged.load(Ordering::SeqCst) {
+                self.ask_restart(ui);
+                return;
+            }
             let said = match (lacks_fuse, &requirement) {
+                _ if layering.is_some() => format!("Adding what {} needs to this system…", store.get_app().name),
                 (true, Some(_)) => format!("Installing what {} needs, then opening it…", store.get_app().name),
                 (true, None) => {
                     format!("Getting {} ready to run on this system, then opening it…", store.get_app().name)
@@ -3435,7 +3538,13 @@ impl App {
                     // As when installing: FUSE where it can be had, else unpack the app.
                     let mut program = path.clone();
                     let mut unpack = lacks_fuse && requirement.is_none();
-                    if let (true, Some(package)) = (lacks_fuse, &requirement) {
+                    if let Some(tool) = &layering {
+                        // Added: it runs after a restart, which is asked about next.
+                        if app.stage_fuse(tool) {
+                            return Ok(None);
+                        }
+                        unpack = true;
+                    } else if let (true, Some(package)) = (lacks_fuse, &requirement) {
                         unpack = app.install_requirement(package).is_err();
                     }
                     if unpack {
@@ -3445,6 +3554,10 @@ impl App {
                     Ok((program != path).then_some(program))
                 },
                 move |app, ui, started: bilby_core::Result<Option<PathBuf>>| match started {
+                    Ok(None) if app.fuse_just_staged.swap(false, Ordering::SeqCst) => {
+                        app.show_app_sources(ui);
+                        app.ask_restart(ui);
+                    }
                     // It runs from its folder now: the library and the menu follow.
                     Ok(Some(program)) => {
                         let now = program.display().to_string();
@@ -3669,6 +3782,13 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
             false => bilby_core::needs::fuse_here(),
         })),
         fuse_given: options.fuse.is_some() || options.demo,
+        layering: options.layering.clone().or_else(|| match options.demo {
+            true => None,
+            false => bilby_core::needs::layering_here(),
+        }),
+        fuse_staged: std::sync::atomic::AtomicBool::new(false),
+        fuse_just_staged: std::sync::atomic::AtomicBool::new(false),
+        restart: options.restart.clone().unwrap_or_else(|| Arc::new(restart_device)),
         needed: Mutex::new(None),
         lacks_fuse: std::sync::atomic::AtomicBool::new(false),
         steam: std::sync::RwLock::new(None),
