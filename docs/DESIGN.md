@@ -1,82 +1,65 @@
 # Bilby: design
 
-Statements here are marked by how well they are supported:
-
-- **[verified]** checked in this repository (a test, a build, a screenshot) or read in the
-  primary source linked next to it.
-- **[sourced]** stated by a linked source, but not independently tested. Most of these
-  were read as search-result extracts rather than full pages, so follow the link before
-  relying on one.
-- **[assumption]** the author's belief from memory. Not checked. Treat as a to-do.
+How Bilby is built, and why. For what it does, start with the [README](../README.md);
+for building and running it, see [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## 1. What it is
 
-A storefront for software that is distributed as files attached to releases (GitHub
-Releases first) and through community repositories (the AUR first), with one rule:
+An app store that brings every place software comes from into one window: package
+managers, other stores, and developers' own release pages. It keeps one rule:
 
-> If it cannot be installed on this machine, it is not shown.
+> If it cannot be installed on this device, it is not shown.
 
-One codebase, in Rust, with three interfaces: desktop (pointer and keyboard), mobile
-(touch) and TV (remote / D-pad).
+One codebase, in Rust, with three interfaces: desktop (pointer and keyboard), phone
+(touch) and TV (remote).
 
-### Entirely client-side
+### Entirely on the device
 
-There is no Bilby server, account, telemetry or hosted catalog, and the design
-must not grow one. The app talks only to the sources themselves (`api.github.com`,
-`github.com` downloads, `aur.archlinux.org`), and everything it remembers lives in one
-file on the device (`state.json`: settings, library, recent searches). Consequences that
-shape the rest of this document:
+Bilby has no server, no account, no telemetry and no hosted catalog, and the design
+keeps it that way. The app talks only to the sources themselves, and everything it
+remembers lives in one file on the device (`state.json`: settings, library, recent
+searches). That one decision shapes the rest:
 
-- The Discover catalog is compiled into the binary and updates with the app.
-- GitHub's per-device request allowance is the scarce resource, so the app caches,
-  bounds how much each search checks, and shows the remaining allowance in Settings.
-- Update checks, library and preferences are local; nothing syncs between devices.
-- **[verified]** by test: the GitHub token is sent to the API host and to no other
-  (`the_token_goes_to_the_api_and_nowhere_else`), and the state file is private to the
-  user (mode 600 on Unix).
+- The Discover catalog is compiled into the program and is updated with it.
+- GitHub's request allowance is treated as a budget: responses are cached, each search
+  checks a bounded number of projects, and Settings shows what is left.
+- Update checks, the library and preferences are local. Nothing is synchronised, so
+  there is nothing to leak.
+- Tests hold it to this. A GitHub token is sent to GitHub's API and to no other host
+  (`the_token_goes_to_the_api_and_nowhere_else`), and the state file is readable only
+  by its owner.
 
-### What was borrowed from existing stores
+### Built on what works elsewhere
 
-| Idea | Seen in | Here |
+Bilby takes the patterns people already know from the stores they use:
+
+| Idea | Familiar from | In Bilby |
 |---|---|---|
-| Library with update checks against the source | Obtainium, F-Droid | Library page, badge, start-up check |
-| "Update" and "Update all" that just do it | Play Store, F-Droid | One-click updates from the Library, queued one at a time |
-| Choosing an older version | F-Droid, Obtainium | Version picker on the app page |
-| Suggestions while typing | Most stores | Instant matches from the bundled catalog, no network |
-| The publisher's picture next to the app | GitHub itself | Owner avatars, cached on the device |
-| Paste a repository link to add an app | Obtainium | Search field accepts links and `owner/repo` |
-| One prominent install button, details below | Flathub, GNOME Software, Play Store | Best option first, the rest listed under it |
-| Say what a package can and cannot be trusted for | F-Droid's anti-features | First-run notice, checksum line, AUR warning |
-| Show the steps before doing them | Linux package managers | "What will happen?" on each option |
-| Focus-driven rows with a hero area | Android TV launcher, Steam Big Picture | TV interface |
-| Spotlight and category chips | Most stores | Discover page |
+| A library that checks its sources for updates | Obtainium, F-Droid | Library page, badge, check at start-up |
+| "Update" and "Update all" that simply do it | Play Store, F-Droid | One-press updates from the Library, queued one at a time |
+| Choosing an older version | F-Droid, Obtainium | Version picker on every app's page |
+| Suggestions while typing | Most stores | Instant matches from the bundled catalog, with no network |
+| Paste a project's link to add it | Obtainium | The search box accepts links and `owner/repo` |
+| One prominent button, details below | Flathub, GNOME Software, Play Store | The best file first, the rest one press away |
+| Say what a package can be trusted for | F-Droid's anti-features | First-run notice, checksum line, AUR notice |
+| Show the steps before taking them | Linux package managers | "What will happen?" on every option |
+| Rows you move through, with the focused app described large | Android TV, Steam Big Picture | The TV interface |
 
-These are **[assumption]**: attributions from the author's familiarity with those apps,
-not from a review of their current versions.
+### Where Bilby stands among other stores
 
-### Prior art, and whether this approach is the right one
+Komi Store and Obtainium showed that release pages can be a store. Bilby builds on
+that idea and takes it further in four directions:
 
-Two existing projects already cover much of this idea, and are worth trying before
-investing in a new one:
+- **Every source at once.** Release pages, Flathub, the Snap Store, the distribution's
+  own repositories, the AUR, winget, Homebrew, Steam, the Mac App Store, F-Droid and
+  websites, merged into one result per app.
+- **A real TV interface**, driven entirely by a remote.
+- **A compatibility engine that knows Linux**: deb or rpm or pacman, glibc or musl,
+  which processors a device can emulate, and a stated reason for every file it hides.
+- **Rust throughout**, with the engine free of any interface code, so it also drives
+  a command-line tool and compiles for Android and iOS.
 
-- **GitHub Store** (later renamed Komi Store): an open-source app store for GitHub,
-  Codeberg, Forgejo and Gitea releases, built with Kotlin and Compose Multiplatform for
-  Android and desktop. It lists a repository only if its latest release has installable
-  assets. One page of its GitHub organisation says it was archived in July 2026; that was
-  not confirmed elsewhere. **[sourced]**
-  ([F-Droid listing](https://f-droid.org/en/packages/zed.rainxch.githubstore),
-  [OpenHub-Store org](https://github.com/OpenHub-Store))
-- **Obtainium**: installs and updates Android apps straight from their release pages.
-  Android only. **[assumption]** on scope; it is referenced by the sources above.
-
-What this design adds: Rust throughout, a TV interface, package-manager awareness on
-Linux (deb vs rpm vs pacman vs AUR vs musl), and an explanation for every hidden file.
-
-If the goal is "an app store that filters by my device" and Rust is a preference rather
-than a requirement, forking or contributing to an existing project is the cheaper path.
-If Rust, a TV interface or the AUR are requirements, a new codebase is justified, and
-the compatibility engine below is the part worth getting right first: it is what the
-other stores do least thoroughly, and it has no UI dependencies.
+[COMPARISON.md](COMPARISON.md) sets Bilby beside the others feature by feature.
 
 ## 2. Architecture
 
@@ -86,1144 +69,773 @@ other stores do least thoroughly, and it has no UI dependencies.
             │        └──────────── global Store (types.slint) ─────────┘      │
             │              lib.rs: worker threads <-> Store                   │
             └───────────────────────────────┬──────────────────────────────────┘
-   crates/cli (bilby-cli) ─────────────────────┤
+   crates/cli (bilby-cli) ──────────────────┤        crates/signin (sign-in window)
                                             ▼
 ┌──────────────────────────────── crates/core ─────────────────────────────────┐
-│  catalog   browse / search / details, filtered to this machine               │
+│  catalog   browse / search / details, filtered to this device                │
 │     │                                                                        │
-│     ├── index      starter list for Discover (no API calls)                  │
-│     ├── source     trait Source ── github.rs, aur.rs  (add: gitlab, ...)     │
-│     ├── asset      file name ──► format, OS, CPU, libc, TV                   │
-│     ├── compat     (asset, platform) ──► Native / Compatible / Incompatible  │
-│     ├── install    (asset, platform) ──► plan; execute plan                  │
+│     ├── index, essentials   what the home page shows (no requests)           │
+│     ├── source     trait Source: one file per source                         │
+│     ├── merge, related      one app from several sources; versions of a      │
+│     │                       service                                          │
+│     ├── rank       search order                                              │
+│     ├── asset      file name ──► format, system, processor, libc, TV         │
+│     ├── compat     (file, device) ──► Native / Compatible / Incompatible     │
+│     ├── install, needs      plan an install; carry it out; what it requires  │
 │     ├── platform   Platform::detect() / Platform::preset(name)               │
-│     ├── state      settings, library, recent searches (one local JSON file)  │
+│     ├── state      settings, library, recent searches (one local file)       │
+│     ├── os         the operating system's own updates                        │
 │     └── version    is this release newer than the installed one?             │
 │  http      trait Http ── NetHttp (rustls), CachedHttp, DemoHttp              │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Rules that keep it honest:
+Four rules keep it sound:
 
-- **The UI holds no logic.** The three interfaces render one `Store` global and call its
-  callbacks (`search`, `open`, `install`, `check-updates`, ...). Anything a UI shows, the
-  CLI can print.
-- **One controller, two execution modes.** `App::job` runs catalog work on a worker
-  thread in the app and inline under test, so the UI tests exercise the real handlers.
-- **`Platform` is a value, not ambient state.** Every decision takes a `&Platform`, so
-  "what would an Android TV be offered?" is a function call (`--as android-tv`), and the
-  whole engine is testable on one machine. **[verified]** 14 presets, all exercised in tests.
-- **The network is behind one trait.** `DemoHttp` serves a fictional catalog in the real
-  GitHub and AUR JSON shapes, so demo mode runs the production parsing and filtering
-  code.
+- **The interface holds no logic.** The three interfaces draw one `Store` and call its
+  callbacks (`search`, `open`, `install`, `check-updates`, ...). Anything an interface
+  shows, the command-line tool can print.
+- **One controller, two ways to run it.** `App::job` runs catalog work on a worker
+  thread in the app and inline under test, so the interface tests drive the real
+  handlers.
+- **The device is a value.** Every decision takes a `&Platform`, so "what would an
+  Android TV be offered?" is a function call (`--as android-tv`) and the whole engine
+  is tested on one machine, across 14 device presets.
+- **The network is behind one trait.** `DemoHttp` serves a fictional catalog in the
+  sources' real formats, so the demo runs the same parsing and filtering code as the
+  real store.
 
-## 3. Knowing the machine (`platform.rs`)
+## 3. Knowing the device (`platform.rs`)
 
-| Fact | How it is detected | Confidence |
-|---|---|---|
-| OS | compile target | **[verified]** on Linux |
-| CPU | compile target; on Windows the `PROCESSOR_ARCHITEW6432` / `PROCESSOR_ARCHITECTURE` variables; on Android the device ABI list | Linux **[verified]**; Windows **[assumption]** and known to be wrong for an x64 build emulated on Arm, which needs `IsWow64Process2` |
-| Other CPUs it can run | Windows on Arm: x64 + x86; 64-bit Windows: x86; Apple silicon: x64 (Rosetta 2); Android: the rest of the ABI list; Linux: x86 only if the 32-bit loader exists | **[assumption]** for the emulation facts |
-| Linux distro family | `ID` / `ID_LIKE` in `/etc/os-release` | **[verified]** by tests for Ubuntu, Arch derivatives, openSUSE, RHEL clones, Alpine |
-| libc | musl loader present and no glibc loader | **[verified]** on glibc only |
-| Installable formats | `dpkg`, `rpm`, `pacman`, `flatpak`, `snap`, AUR helper on `PATH` | **[verified]** on Ubuntu |
-| Form factor | Android: `ro.build.characteristics` contains `tv`; desktop: gamescope session; otherwise window width | Android part **[assumption]**; `UiModeManager` is the authoritative API and needs JNI |
+| Fact | How it is known |
+|---|---|
+| System | The build target |
+| Processor | The build target; on Windows the `PROCESSOR_ARCHITEW6432` and `PROCESSOR_ARCHITECTURE` variables; on Android the device's ABI list |
+| Other processors it can run | Windows on Arm runs x64 and x86; 64-bit Windows runs x86; Apple silicon runs x64 through Rosetta 2; Android follows its ABI list; Linux runs x86 where the 32-bit loader is present |
+| Linux family | `ID` and `ID_LIKE` in `/etc/os-release`, tested for Ubuntu, Arch and its derivatives, openSUSE, RHEL clones and Alpine |
+| C library | The musl loader present without the glibc one |
+| Installable formats | `dpkg`, `rpm`, `pacman`, `flatpak`, `snap` and an AUR helper, found on the `PATH` |
+| Kind of device | See [Knowing it is a TV](#knowing-it-is-a-tv); otherwise the window's width |
+
+Detection runs for real on Debian, Fedora, openSUSE and Arch. `bilby-cli device`
+prints what was found.
 
 ## 4. Knowing the file (`asset.rs`) and deciding (`compat.rs`)
 
-GitHub releases carry no platform metadata, so the file name is the only signal. The
-name is lower-cased and every run of punctuation becomes `_`, so whole tokens can be
-matched (`_arm64_`, `_x86_64_`) without `darwin` matching `win`.
+A release page says nothing about which device a file is for, so Bilby reads the file
+name. The name is lower-cased and every run of punctuation becomes `_`, so whole
+tokens are matched (`_arm64_`, `_x86_64_`) and `darwin` is never mistaken for `win`.
 
-Decision order, each step able to reject with a reason shown to the user:
+The decision runs in a fixed order, and every rejection carries a reason that is
+shown to the person:
 
-1. **Not an app**: checksums, signatures, sources, debug symbols, update manifests.
-   Dropped silently.
-2. **Operating system**: from the format (`.apk`, `.msi`, `.dmg`, `.deb`...) or name
-   tokens. Unknown OS is rejected rather than guessed.
-3. **Form factor**: an Android TV build is hidden on phones. Debug-signed APKs are kept
-   (some projects publish nothing else) but ranked below release builds.
-4. **Package format**: `.deb` needs dpkg, `.rpm` needs rpm, pacman packages and the AUR
-   need Arch, AppImage needs glibc.
-5. **libc**: a glibc build is rejected on musl; a musl build is fine anywhere.
-6. **CPU**: native, or runnable through emulation (shown as "Compatible" with the reason),
-   or rejected. A name that states no CPU gets the common-case assumption for its format
-   and is ranked below one that does.
-7. **Rank**: native over emulated; the distro's own format first (deb on Debian, rpm on
-   Fedora, pacman on Arch), then AppImage, Flatpak, AUR build, archive, bare binary; TV
-   builds first on TVs.
+1. **Not an app.** Checksums, signatures, sources, debug symbols and update manifests
+   are set aside.
+2. **System.** From the format (`.apk`, `.msi`, `.dmg`, `.deb`...) or the name. A file
+   that names no system is held back, never guessed at.
+3. **Kind of device.** An Android TV build is for TVs. Debug-signed APKs are kept,
+   because some projects publish nothing else, and ranked below release builds.
+4. **Package format.** `.deb` needs dpkg, `.rpm` needs rpm, pacman packages and the
+   AUR need an Arch system, an AppImage needs glibc.
+5. **C library.** A glibc build is not offered on musl; a musl build runs anywhere.
+6. **Processor.** Native, or runnable through emulation (shown as "Compatible", with
+   the reason), or not offered.
+7. **Rank.** Native before emulated; the distribution's own format first (deb on
+   Debian, rpm on Fedora, pacman on Arch), then AppImage, Flatpak, AUR build, archive,
+   bare program; TV builds first on a TV. A read-only system such as Fedora Kinoite is
+   offered the Flatpak first. A setting lets the person choose which kind comes first.
 
-The top-ranked file becomes the Install button. **[verified]**: a made-up release of 17
-files resolves to the expected single file on all 14 presets
+The top-ranked file becomes the Install button. A made-up release of 17 files
+resolves to the one expected file on all 14 presets
 (`compat::tests::each_platform_gets_its_natural_package`), and the same holds through
-the whole catalog path, from API-shaped JSON to install option, on 7 of them
+the whole path from a source's answer to the install button
 (`catalog::tests::details_offer_the_right_file_per_machine`).
 
-Known limits of name-based detection: it is a heuristic. An APK's real ABIs and whether
-it declares a TV launcher are inside the file, not its name; reading the APK manifest
-after download would be exact.
+The classifier is held to a corpus of 169 file names in the styles of Rust target
+triples, GoReleaser, Electron and Tauri bundlers, Android ABI splits and distribution
+packages (`crates/core/tests/corpus.rs`). On top of it, a property test runs every
+corpus name and 20,000 generated names against every preset and checks two
+guarantees: nothing is ever offered for another system or processor, and every hidden
+file has a reason.
 
-The classifier is checked against a corpus of 169 file names in the styles of Rust
-target triples, GoReleaser, Electron and Tauri bundlers, Android ABI splits and distro
-packages (`crates/core/tests/corpus.rs`). Writing it found 14 misclassifications, since
-fixed, including `arm-64` being read as 32-bit Arm. The corpus was written from memory
-of those conventions **[assumption]**, not fetched from live releases, so it is a
-regression suite, not proof about any project's current files. Known misses it records:
-archives that name no system (`obsidian-1.6.7.tar.gz`, `MoonlightPortable-x64.zip`) are
-hidden rather than guessed. Running the classifier over a crawl of real releases and
-reviewing the misses remains the most valuable next step.
-
-A property test over every corpus name, every preset and 20,000 generated names checks
-that nothing is ever offered for another operating system or CPU, and that every hidden
-file has a reason. **[verified]**
+The engine is deliberately cautious: where a name does not say enough, the file is
+listed under "hidden" with the reason, where it can still be downloaded by choice.
+Reading an APK's own manifest after download is the natural next refinement.
 
 ## 5. Sources
 
-`trait Source { search, summary, releases, available_on }`. Each source is one file,
+`trait Source { search, summary, releases, available_on }`. Each source is one file
 and appears only on the systems it applies to:
 
 | Source | Windows | macOS | Linux | Android | How it installs |
 |---|:-:|:-:|:-:|:-:|---|
-| GitHub Releases | ✓ | ✓ | ✓ | ✓ | Bilby fetches the file and hands it to the system |
-| GitLab | ✓ | ✓ | ✓ | ✓ | The same |
-| Codeberg | ✓ | ✓ | ✓ | ✓ | The same (its search is turning clients away) |
-| winget | ✓ | | | | Shows the `winget install` command |
-| Homebrew casks | | ✓ | | | Bilby fetches the publisher's own download and checks it against the cask's SHA-256. Homebrew need not be installed |
+| GitHub Releases | ✓ | ✓ | ✓ | ✓ | Bilby fetches the file, checks it and installs it |
+| GitLab, Codeberg | ✓ | ✓ | ✓ | ✓ | The same |
+| Your own sources | ✓ | ✓ | ✓ | ✓ | The same, from a list on your own server |
 | Flathub | | | with Flatpak | | Bilby runs Flatpak |
-| pacman, apt repositories | | | Arch, Debian families | | Shows the command |
-| AUR | | | Arch family | | Shows the command |
-| Snap Store | | | with snapd | | Shows the `snap install` command |
+| The distribution's repositories | | | pacman, apt, dnf, zypper | | Bilby runs the package manager behind the system's password prompt |
+| AUR | | | Arch family | | Bilby opens a terminal on the build |
+| Snap Store | | | with snapd | | Bilby runs `snap install` |
+| winget | ✓ | | | | Bilby runs `winget install` |
+| Homebrew casks | | ✓ | | | Bilby fetches the publisher's own download and checks it against the cask's SHA-256; Homebrew itself is not needed |
 | F-Droid | | | | ✓ | Bilby fetches the APK |
-| Steam | ✓ | ✓ | ✓ | | Hands over to the Steam app |
-| Mac App Store | | ✓ | | | Hands over to the App Store app |
-| Websites | | | TV only | | Adds a launcher that opens Longboard |
-
-What was checked, and how:
-
-- **GitLab, Homebrew, F-Droid**: run against the live services from the command-line
-  tool (as a Linux machine, a Mac and an Android phone), and tested against answers
-  captured from them.
-- **Snap Store**: tested against answers captured from the live API; no machine with
-  snapd was to hand to try it end to end.
-- **winget**: written from memory of what the `winget` command prints and tested only
-  against that recollection. It has not run on Windows. On a Windows set to a
-  language other than English the headings differ and nothing will be found.
-- **Homebrew on Intel Macs** takes the first download listed under a macOS version
-  name rather than `arm64_...`; on the casks tried that is the Intel build, but the
-  rule is a reading of the data, not something Homebrew documents here.
+| Steam | ✓ | ✓ | ✓ | | Bilby hands over to the Steam app |
+| Mac App Store | | ✓ | | | Bilby hands over to the App Store app |
+| Web apps | ✓ | ✓ | ✓ | | Adds the site among the device's apps |
 
 **One press, no commands.** A package from a distribution's repository, a snap or a
-winget package is installed by the store when the button is pressed. What needs
-administrator rights runs through the desktop's own password prompt (`pkexec`), so
-the store never sees the password. Building from the AUR asks questions as it goes,
-so it opens a terminal on the build; only if no terminal can be found is the command
-shown instead. [Run for real: the unattended `dnf` and `zypper` commands, as root in
-Fedora and openSUSE containers. Not run for real: the same through the password
-prompt, `apt`, `pacman`, `snap`, `winget`, and opening a terminal.]
+winget package is installed when the button is pressed. What needs administrator
+rights runs through the desktop's own password prompt (`pkexec`), so Bilby never
+sees the password. An AUR build asks questions as it goes, so Bilby opens a terminal
+on it.
 
-**Fedora and openSUSE.** dnf keeps its package lists in a format of its own, so it is
-asked for them (`dnf -C repoquery`, from its cache, 67,000 packages in under a
-second); openSUSE's repository lists are read directly, as a stream. [Both run inside
-real Fedora 45 and openSUSE Tumbleweed containers.] Updating those systems from the
-Library works for dnf; zypper is not wired into system updates yet.
+**Every source is asked at the same time.** A search takes as long as its slowest
+source, not as long as all of them added together, and the results are merged in a
+fixed order so the list comes out the same every time.
 
 **Switching sources off.** Settings lists every source this device has, each with a
-switch. One that is off is left out of searches and the home page. Search results
-can also be narrowed to one source with the chips under the search box.
+switch. Results can also be narrowed to one source with the chips under the search
+box.
 
 **One app, several sources** (`merge.rs`). The same app in a repository, on Flathub
-and on its release page is one result, marked with how many sources have it. Its page
-says beside the install button which source the button uses, and offers the others.
-No source says two entries are the same app, so it is judged from names: catalogs
-are trusted to have one app per name; a code-host project must share its owner's
-name with the app, be well known, or be a stated mirror. [assumption: this will
-sometimes merge two different apps with one name, or miss a renamed one. It errs
-towards not merging.]
+and on its release page is one result, marked with how many sources carry it. Its
+page says which source the button uses and offers the others. Catalogs are trusted to
+have one app per name; a project on a code host joins them when it shares its owner's
+name with the app, is well known, or is a stated mirror. The rule is conservative:
+when in doubt, two entries stay separate.
 
 **Versions of a service** (`related.rs`, `data/related.json`). VacuumTube, FreeTube
 and NewPipe are different ways to use YouTube, and which one suits depends on the
-device. That relationship is kept by hand in one file: a family per service, its
-members in order of preference, each with the systems and kinds of device it runs
-on where its source does not already say (an Android app on GitHub is not offered
-on a Linux TV). Searching for the service shows one tile. The page of any member has
-a drop-down, "Version of YouTube", listing each app once with a line on what it is
-and whether the service's owner made it; the sources of the chosen app are beside
-the install button as for any other app. The file starts with YouTube; every entry in it was
-checked to exist at its source.
+device. The relationship is curated in one file: a family per service, its members in
+order of preference, each with the systems and devices it runs on. Searching for the
+service shows one tile; a member's page lists the others. Every entry was checked to
+exist at its source.
 
-**Getting the other store's app.** A Steam game's page on a device without Steam
-offers "Install Steam", which opens Steam's own entry in Bilby (from Flathub, the
-distribution, winget or Homebrew, whichever this device has).
-
-**Signing in to Steam, to know what is owned** (`steam_account.rs`, `crates/signin`).
-Steam tells a signed-in browser which games an account owns, and nobody else without
-a key that would have to be kept secret on a server, which Bilby does not have. So
-the person signs in on Steam's own page, in a browser, and that browser asks Steam
-for the list and hands Bilby one line: the account's number and the ids it owns.
-That line is all Bilby keeps. No password, cookie or token reaches it. [The
-addresses are the ones Steam's own web pages use, not ones it publishes for other
-programs; the Playnite game library reads the same ones (its source, read
-2026-11-21). Steam can change them, and then sign-in stops working until Bilby
-follows.]
-
-- *On a computer or phone layout* the browser is a small window of Bilby's own
-  (`bilby-signin`, built on the system's web engine: WebView2, WKWebView or
-  WebKitGTK). It goes to Steam's addresses and nowhere else, opens no other windows,
-  and shows in its title which site it is on, since it has no address bar. Only the
-  store's own page is believed, and only for a number and a list of ids. Its cookies
-  stay in its own folder so a refresh need not ask for the password again; Sign out
-  deletes the folder. On Linux it is a separate program so that Bilby itself starts
-  on systems without WebKitGTK; on Windows and macOS it is Bilby run another way.
-- *On a TV* the browser is Longboard, which a remote can drive. Bilby starts it with
-  `--hand-back=steam-library --hand-back-to=<file>`; Longboard opens Steam's page,
-  asks the person whether to share the list once they are signed in, and writes the
-  line (or a refusal) to the file, which Bilby reads and removes. Bilby can ask only
-  by that name; what the name yields is Longboard's to decide. [This needs a
-  Longboard with the feature, which at the time of writing is on a branch there,
-  not released.]
-
-- *With a QR code, on any device* (`steam_qr.rs`). No browser: Bilby asks Steam for
-  a sign-in code, draws it, and the person scans it with the Steam app on their
-  phone and approves there. On a TV the code fills the screen. This way differs in
-  one respect that the person is told before choosing: Steam answers an approval
-  with keys to the account, so for a moment they do pass through Bilby. It uses the
-  short-lived one once, to ask what the account owns, and drops both; they are
-  never stored, never cached and never put in an error message, and tests hold it
-  to that. [Run against the live service with no account: asking for a code, which
-  needs no key; drawing it, and a scanner reading it back as Steam's address;
-  asking whether it was approved. Not run by anyone: what comes back after an
-  approval, and whether Steam gives the list for those keys. If it does not, the
-  person is told so and the browser way still works.]
-
-Both ways are offered everywhere, the code first.
-
-Owned games are marked Owned in place of their price. [Run for real: the window
-showing Steam's sign-in page; Bilby starting it, reading its answer and saving it,
-with a stand-in for the window's answer; the Longboard exchange end to end against
-an invented store. Not run for real: any of it signed in to Steam, and the window
-on Windows or macOS.]
-
-**Ranking, weighed towards use** (`rank.rs`). How many people use an app is the
-largest share of its score (0.45), ahead of how close its name is to what was typed
-(0.40). An app that is widely used and says in its description that it is about the
-thing outranks a little-used one with the word in its name; the app whose name is
-exactly what was typed gets a fixed bonus and stays first. Apps on record for a
-service (`related.json`) count as near matches for that service's name.
+**Search order** (`rank.rs`). How many people use an app is the largest share of its
+score (0.45), just ahead of how close its name is to what was typed (0.40). An app
+that is widely used and is about the thing outranks a little-used one that merely has
+the word in its name; the app whose name is exactly what was typed gets a fixed bonus
+and stays first. A source that publishes no figures gets a neutral value, so missing
+data never sinks a result.
 
 **The apps everyone expects** (`essentials.rs`, `data/essentials.json`). The sources'
 figures say what is popular on each source. They do not say that someone setting up a
 computer wants a browser, a video player and the names everybody knows, whichever
-source carries them. That is a human judgement, so it is a hand-kept list: some sixty
-apps and sites (about 140 now), each with the ids it goes by at every source (every
-one checked to exist). Each also says which kinds of device it suits and on which it
-leads: a TV opens with things to watch and play and has no office suite at all, a
-computer opens with a browser and what people install first, a touch screen with
-what people use on phones. The home page opens with them, each in the first version
-this device can use, then a row per kind in an order that suits the device; in a search they get a fixed lift, enough to put the real Firefox
-above its look-alikes and not enough to beat an exact name. One switch in Settings
-turns both off, leaving only what the sources say. [The list is one person's view of
-what "everyone" wants, and leans towards what is popular in the English-speaking
-world.]
+source carries them. That is editorial judgement, so it is a curated list: about 140
+apps and sites, each with the id it goes by at every source, every one checked to
+exist. Each also says which devices it suits and where it leads: a TV opens with
+things to watch and play, a computer with a browser and what people install first, a
+phone with what people use on phones. In a search they get a fixed lift, enough to
+put the real Firefox above its look-alikes and not enough to beat an exact name. One
+switch in Settings turns the list off, leaving only what the sources say.
 
-**What an AppImage needs** (`needs.rs`). Most AppImages load FUSE 2 to start, and
-many current systems ship only FUSE 3. The store finds this out before the app is
-opened and deals with it, in this order: the system's own package where its package
-manager can install one; on a read-only system (`/run/ostree-booted` and
-`rpm-ostree` present) `rpm-ostree install --idempotent fuse fuse-libs`, followed by
-a "Restart now / Restart later" question because it works from the next restart;
-and where neither can be done, unpacking the AppImage into a folder and starting
-the program inside, which needs no FUSE. Packages from repositories the system does
-not vouch for are not used: FUSE includes a program that runs with the
-administrator's rights. [The package path was run on Debian; unpacking was run with
-a real AppImage; the read-only path follows Fedora's and rpm-ostree's documentation
-and has not been run on such a system.]
+### The home page
 
-**Sounds** (`app/src/sound.rs`). A tick as the highlight moves, a soft pop on a press,
-a lower note on the way back, a blip for a switch. They are made in code from sine
-waves that die away within a few hundredths of a second; nothing is recorded or
-copied from any other system. The loudest starts at a twentieth of full volume. They
-play from a thread of their own, the sound device is opened on the first sound and
-not before, and a device that is missing or will not open means silence, not an
-error. One switch turns them off. [Played through a real sound device here without
-error; how they sound to a person has not been judged by one yet.]
+The home page costs no requests. It is composed from the bundled lists, worked out
+once and remembered:
 
-**Adult content, Family mode and the PIN** (`parental.rs`). Things meant for adults
-are part of the catalog, kept apart rather than hidden:
+- **Essentials** first, each in the version this device can use.
+- **A row per kind** (web browsers, music and video, chat, games, work, handy tools,
+  developer tools), in the order that suits the device. Websites sit in the same rows
+  as apps of their kind. Nothing appears twice: what leads the page is not repeated in
+  the row beside it.
+- **Web apps**, one row with every listed website.
+- **The sources' own lists**, where a source keeps them: popular, trending, and new
+  and updated on Flathub. These leave out anything a row above already shows.
 
-- In a search they are never among the top results or the other rows. They have a
-  section of their own, last, and each is *covered*: the tile says "Adult content" and
-  nothing of what it is, with no name, picture or figures. Slint's software renderer
-  cannot blur, and a cover gives away less than a blur would.
-- Choosing one asks "Are you 18 or over?", with No highlighted. A yes is remembered,
-  so it is asked once. The tile stays covered in lists all the same.
-- On the home page they appear only if the person switched that on, and covered.
-- "Show adult content uncovered" is for those who want none of this: adult things
-  are then shown as they are, among everything else, and open without a question.
-  Switching it on is itself the question of being an adult.
-- **Family mode** takes them out altogether: not listed, not covered, not openable,
-  and a search does not say that anything was left out. It takes gambling and piracy
-  sites out too (`AppSummary::restricted`, from two more bundled lists). Outside
-  Family mode those are shown like any other site when searched for, uncovered, and
-  are never recommended. [The gambling list has some five thousand addresses; the
-  piracy list about thirteen hundred, and it caught none of the piracy sites among
-  the thousand most visited, so it should not be relied on.]
-- A four-digit **PIN**, kept as a salted hash, replaces the age question where it is
-  set, and is asked for to switch Family mode off, to change any of these settings,
-  to remove itself and, if chosen, before installing or removing anything. Making
-  things stricter never needs it: anyone may switch Family mode on. Entered to open
-  adult content it holds for the rest of the sitting; entered for anything else it
-  covers that one thing. [It stops a child with the remote. It would not stop
-  someone who reads the settings file and tries ten thousand numbers.]
+On a TV, *Made for TV* comes first. On a desktop and a phone, "All" shows the start
+of each section with "Show all", and a chip per section shows the whole of it.
 
-What counts as adult is not Bilby's judgement; it goes by its sources:
+### Web apps (`source/web.rs`, `data/SOURCES.md`)
 
-- Steam's descriptors 3 and 4 ("adult only" and "gratuitous" sexual content), asked
-  for all of a search's games in one keyless request, and again on a game's own page.
-  [Tried live 2026-11-21: Portal 2 has none, Cyberpunk 2077 has 1, 2 and 5 and is not
-  marked, an adult-only title has all five and is. The meanings come from the
-  SteamDatabase project, not from a page Valve publishes.]
-- Flathub's content rating, where it works out to an age of 18. [Read in Flathub's
-  answers; no app that reaches 18 was found to try.]
-- The bundled list of some sixty thousand adult sites' addresses, which covers a
-  site and every address under it.
+A website is added like an app on every system. On a Linux TV it opens in
+[Longboard](https://github.com/AndrewGBest/Longboard), a browser driven by a remote;
+anywhere else in the person's own browser. Nothing is downloaded, and removing it
+from the library removes its entry.
 
-[Limits, which matter most in Family mode: if Steam's lookup fails the search's games
-are not marked, though each page still checks; a typed address Bilby has never heard of is not recognised; GitHub,
-GitLab, winget, Homebrew and the Snap Store say nothing about age at all. The Mac App
-Store's "17+" is not used: it covers ordinary browsers and social apps.]
-
-**Web apps** (`source/web.rs`, `data/SOURCES.md`). A website is added like an app on
-every system: on a Linux TV it opens in Longboard, anywhere else in the person's own
-browser (a menu entry on Linux [run for real], an Internet shortcut in the Start menu
-on Windows and a web-location file on macOS [written from their formats, not tried]).
 Three bundled lists stand behind it:
 
-- About ninety well-known sites, written by hand with a name and a purpose. Only
-  these are *recommended*: the home page has a row of the best known and a row for
-  each purpose (watch, listen, play and so on).
-- The hosts among the thousand most visited by Chrome's users, so that a site is
-  found by typing part of its name. They are bare addresses in no order, and a good
-  part of them are things nobody should be recommended (a fifth are adult sites;
-  others are betting, piracy and sign-in pages), so they are found by searching and
-  never put on the home page. [Asked for as a source of recommendations; held back
-  from that for this reason.]
-- Some sixty thousand addresses of sites for adults, so that one is recognised
+- **About ninety well-known sites**, each written up by hand with a name and a
+  purpose. These are the ones the home page recommends.
+- **The thousand most visited sites**, so that a site is found by typing part of its
+  name. They are found by searching and are deliberately never recommended: a list of
+  what is visited is not a list of what is good.
+- **Some sixty thousand addresses of sites for adults**, so that one is recognised
   whether or not it is on the other lists, including an address typed by hand.
 
-A web app's picture is the site's own (`icons::fetch_site`): the icon its front page
-names, preferring the large one made for phones' home screens, then the usual
-addresses (`/apple-touch-icon.png`, `/favicon.ico`, taking the PNG out of an old-style
-icon file). It is asked of the site and of nobody else, no icon service in between,
-and kept on disk, as is "this site has none we can show". The cost is that showing
-a tile contacts that site once. [Tried live 2026-11-21: 15 of 16 sites in one search
-gave a picture; one refused.] Pictures now load a few at a time in parallel, so a
-slow site no longer holds up every other tile's picture.
+**Longboard is fetched when it is needed.** Bilby recognises Longboard however it was
+installed (an AppImage, an unpacked folder, its Flatpak, or on the `PATH`). Where a
+website or a Steam sign-in on a TV needs it and it is not there, Bilby installs it
+first and carries on. The person is never sent to fetch something themselves.
 
-**Other stores, handed over to.** Some things can only be installed by the store that
-sells them. For those Bilby is the front door: it finds the app, shows its price,
-pictures and how well liked it is, and then opens that store's own app on it with
-the store's own link (`steam://install/620`,
+A web app's picture is the site's own (`icons::fetch_site`): the icon its front page
+names, preferring the large one made for phones' home screens. It is asked of the
+site and of nobody else, with no icon service in between, and kept on disk.
+
+### GitHub
+
+REST endpoints: `/search/repositories`, `/repos/{owner}/{repo}` and
+`/repos/{owner}/{repo}/releases`.
+
+**The request allowance shapes the design.** Without signing in, GitHub allows 60
+requests an hour per address, with a stricter limit on searches
+([GitHub docs](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api)).
+"Only show what works here" needs each candidate's release files, which is one request
+per project. So:
+
+- **Discover costs nothing.** It is driven by the bundled lists.
+- **The allowance is visible.** GitHub reports what is left with every answer;
+  Settings shows it ("42 of 60 GitHub requests left; refills in 23 minutes").
+- **A search checks a bounded number of projects** (8 without signing in, 20 with), in
+  parallel, and reports how many matched but had nothing for this device. Typing
+  costs nothing: suggestions come from the bundled lists.
+- **Answers are cached on disk** for 30 minutes, and a kept copy is served when
+  offline or when the allowance runs out.
+- **Signing in lifts the limit to 5,000 an hour.** See
+  [Signing in to GitHub](#signing-in-to-github-github_loginrs).
+
+Release files uploaded since June 2025 carry a SHA-256 digest
+([GitHub changelog](https://github.blog/changelog/2025-06-03-releases-now-expose-digests-for-release-assets/)).
+Bilby verifies it before anything is opened; a file that does not match is deleted
+and never run.
+
+### AUR
+
+The aurweb RPC, version 5
+([ArchWiki](https://wiki.archlinux.org/title/Aurweb_RPC_interface)). An AUR search is
+a single request, because its results carry everything needed.
+
+An AUR package is a build recipe, not a program. It is modelled as a release with one
+file of the kind "AUR package", which the engine offers only on Arch-family systems.
+Bilby opens a terminal on the build and says plainly that a recipe is code from its
+author, worth reading first. Out-of-date and unmaintained packages are marked.
+
+### System repositories (`source/system.rs`)
+
+Bilby reads what the system's own package manager already has on disk, rather than
+asking a web service per distribution:
+
+- **pacman**: `/var/lib/pacman/sync/<repo>.db` for every repository in `pacman.conf`.
+  That covers Arch's own repositories, CachyOS's optimised ones, Chaotic-AUR,
+  EndeavourOS, Manjaro and private repositories, with no code specific to any of them.
+- **apt**: `/var/lib/apt/lists/*_Packages` for every configured archive, including
+  PPAs and vendor repositories.
+- **dnf**: asked from its own cache (`dnf -C repoquery`): 67,000 packages in under a
+  second.
+- **zypper**: openSUSE's repository lists, read as a stream.
+
+This costs no requests, works offline, and lists exactly what the package manager can
+install, because it is the same data. A repository the device does not use is not
+shown, on the grounds that its packages could not be installed anyway.
+
+- A package in several repositories is listed from the first in `pacman.conf` order,
+  as pacman itself resolves it; with apt the newest version wins.
+- Compressed lists (gzip, zstd, lz4) are recognised by their first bytes.
+- Applications are ranked ahead of libraries, `-dev` and `-doc` packages.
+- What is installed comes from the package manager's own records, so a package shows
+  "Installed" with its version, and "Update available" when there is a newer one.
+- These packages stay in the package manager's care: Bilby installs them and leaves
+  tracking and updating to the system, where it belongs.
+
+### Flathub (`source/flathub.rs`)
+
+Flathub is a source wherever Flatpak is set up. It supplies what release pages lack:
+an icon, screenshots, a description and the id that ratings are keyed by. Install
+runs `flatpak install`, Open runs `flatpak run`, and Remove runs `flatpak uninstall`.
+Flatpaks installed by anything else are recognised from Flatpak's own folders and can
+be opened from Bilby.
+
+A `.flatpak` bundle on a release page is installed for the person's own account.
+Bilby remembers which Flatpak it became, so its page offers Open and Remove like any
+other; the bundle itself never lands in the downloads folder and is discarded once
+Flatpak has taken the app out of it.
+
+### Other stores, handed over to
+
+Some things can only be installed by the store that sells them. For those Bilby is
+the front door: it finds the app, shows its price, pictures and ratings, and opens
+that store's own app on it (`steam://install/620`,
 `macappstore://apps.apple.com/app/id...`). Signing in, paying, downloading and
-updating stay with that store, and Bilby learns nothing about the account unless the
-person signs in to Steam through it (below). Nothing
-goes in Bilby's library, because Bilby installed nothing. For Steam it reads the files
-Steam keeps beside its library to know what is installed, and then offers Open, which
-asks Steam to start it (`steam://rungameid/620`). On Linux a Windows-only game is
-still offered, with a note that Steam runs it through Proton. Without Steam on the
-machine, the button opens the game's page on Steam's website instead.
+updating stay with that store.
+
+For Steam, Bilby reads the files Steam keeps beside its library to know what is
+installed, and offers Open. On Linux a Windows-only game is offered with a note that
+Steam runs it through Proton. On a device without Steam, a game's page offers
+"Install Steam" from whichever source this device has.
 
 Only links Bilby built itself from a checked number are ever opened, and they are
 checked again at the moment of opening.
 
-Checked against the live Steam and Apple services for searching and details. Not
-checked: the hand-over itself, since the test machine has neither Steam nor a Mac;
-whether `steam://install` on a game the person does not own shows its store page (the
-second button, "Its page in Steam", is there in case it does not); and prices, which
-are the United States stores' and may differ elsewhere.
+### Signing in to Steam, to know what is owned (`steam_account.rs`, `crates/signin`)
 
-The **Microsoft Store** answers for an app whose id is known but returned nothing
-for searches, so it is not a source yet; `winget search --source msstore` on Windows
-is the likely way in. **GOG** returned no results and **itch.io** refused requests.
+Bilby marks owned games as Owned in place of their price. Steam tells a signed-in
+browser what an account owns, so the person signs in on Steam's own page and that
+browser hands Bilby one line: the account's number and the ids it owns. That line is
+all Bilby keeps. Three ways are offered:
 
-Looked at and left out for now: **Chocolatey** (its packages need its own tool and
-administrator rights, and winget covers the same ground), **Scoop** (no search service
-of its own), the **Microsoft Store** and **Mac App Store** (no way to install from them
-without their own apps), **dnf and zypper** repositories (their package lists are in
-formats not yet read), and **Nix**.
+- **A QR code** (`steam_qr.rs`), on any device: Bilby draws Steam's sign-in code, the
+  person scans it with the Steam app on their phone and approves there. On a TV the
+  code fills the screen. The short-lived key Steam returns is used once, to ask what
+  the account owns, and dropped; it is never stored, cached or written into a
+  message, and tests hold it to that.
+- **A small window of Bilby's own** (`bilby-signin`), on a computer or phone layout,
+  built on the system's web engine. It goes to Steam's addresses and nowhere else,
+  opens no other windows, and shows which site it is on in its title. On Linux it is
+  a separate program, so Bilby itself starts on systems without WebKitGTK.
+- **Longboard**, on a TV, which a remote can drive. Longboard asks the person whether
+  to share the list once they are signed in.
 
-### GitHub
+### Adult content, Family mode and the PIN (`parental.rs`)
 
-REST endpoints: `/search/repositories`, `/repos/{owner}/{repo}`,
-`/repos/{owner}/{repo}/releases`. Not yet run against the live API. The client is tested
-over real HTTP against a local server answering in the documented shapes
-(`crates/core/tests/http_sources.rs`); the fixtures were written from the API
-documentation **[assumption]**, not captured from GitHub.
+Things meant for adults are part of the catalog, kept apart rather than hidden:
 
-**Rate limits shape the whole design.** An unauthenticated client gets 60 requests per
-hour per IP address, and search has a separate, stricter limit. Conditional requests
-(ETag / 304) are free only when the request is authenticated. **[sourced]**
-([GitHub docs: rate limits](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api),
-[best practices](https://docs.github.com/en/rest/using-the-rest-api/best-practices-for-using-the-rest-api))
+- In a search they have a section of their own, last, and each is *covered*: the tile
+  says "Adult content" and nothing of what it is.
+- Choosing one asks "Are you 18 or over?", with No highlighted. A yes is remembered.
+- On the home page they appear only if the person switched that on, and covered.
+- **Family mode** takes them out altogether: not listed, not covered, not openable.
+  It removes gambling and piracy sites too. Outside Family mode those are shown like
+  any other site when searched for, and are never recommended.
+- A four-digit **PIN**, kept as a salted hash, guards these settings and, if chosen,
+  installing and removing. Making things stricter never needs it: anyone may switch
+  Family mode on. It is a household lock, built to stop a child with the remote.
 
-"Only show what works here" needs each candidate's release assets, which is one request
-per repository. Consequences:
+What counts as adult is the sources' judgement, not Bilby's: Steam's own descriptors
+for adult-only content, Flathub's content rating where it works out to 18, and the
+bundled list of adult sites. Each game's own page checks again, so a search that
+could not ask Steam still ends at a page that does.
 
-- **Discover costs zero requests.** It is driven by the bundled index (below).
-- **The allowance is visible.** GitHub reports what is left with every response; Settings
-  shows it ("42 of 60 GitHub requests left; refills in 23 minutes"), and a rate-limit
-  error says how to raise the limit. **[verified]** by test.
-- **Search checks a bounded number of hits** (8 without a token, 20 with), in parallel,
-  and reports how many matched but had nothing for this device. Typing costs nothing:
-  suggestions come from the bundled index. An AUR search is a single request, because
-  its results already carry everything needed. **[verified]** by test.
-- **The start-up update check can be switched off** in Settings (one request per
-  library app).
-- **Responses are cached on disk** for 30 minutes, and a stale copy is served when
-  offline or rate limited. **[verified]** by test.
-- **A personal token** lifts the limit to 5,000 per hour **[sourced]** (same page). It can
-  be pasted into Settings (stored in the local state file) or given as `GITHUB_TOKEN`.
-  The OAuth device flow would suit TVs, which have no keyboard, but needs a registered
-  OAuth app; not done. The token is only ever attached to API-host requests.
-  **[verified]** by test.
-- Next step: with a token, one GraphQL query can fetch the releases of many repositories
-  at once. **[assumption]**, not implemented.
+### What an AppImage needs (`needs.rs`)
 
-Release assets uploaded since June 2025 carry a SHA-256 digest in the API, which the
-installer verifies before anything is opened. **[sourced]**
-([GitHub changelog](https://github.blog/changelog/2025-06-03-releases-now-expose-digests-for-release-assets/));
-the verification itself is **[verified]** by test, including that a mismatching file is
-deleted and never opened.
+Most AppImages load FUSE 2 to start, and many current systems ship only FUSE 3. Bilby
+finds this out before the app is opened and deals with it, in this order:
 
-### AUR
+1. The system's own package, where its package manager can install one.
+2. On a read-only system, `rpm-ostree install --idempotent fuse fuse-libs`, followed
+   by "Restart now / Restart later", since it works from the next restart.
+3. Otherwise, unpacking the AppImage into a folder and starting the program inside,
+   which needs no FUSE and no password.
 
-The aurweb RPC, version 5: `/rpc/v5/search/{term}?by=name-desc` and
-`/rpc/v5/info?arg[]={name}`. **[sourced]**
-([ArchWiki: Aurweb RPC interface](https://wiki.archlinux.org/title/Aurweb_RPC_interface))
+Either way there is nothing for the person to go and do. Only packages the system
+itself vouches for are used. The notice appears only where an AppImage is what is
+installed or about to be: an app that is here as its Flatpak says nothing about FUSE.
 
-An AUR package is a build recipe, not a binary. It is modelled as a release with one
-asset of format "AUR package", which the compatibility engine allows only on Arch-family
-systems. **[verified]** by test. The store does not build it for you: it shows the
-command (`paru -S name`, or `git clone` + `makepkg -si` when no helper is installed) and
-tells you to read the PKGBUILD, because a recipe is arbitrary code from an unvetted
-author. The RPC does not say which CPUs a package supports **[assumption]**, so
-that check is left to `makepkg`.
+### App pictures (`icons.rs`)
 
-### System repositories (pacman, apt)
+An app's icon is, in order: the icon its source gives; for Flathub, the address made
+from the app's id, so a list shows it before the app's page was ever opened; for a
+GitHub project, the logo its README leads with or one at the usual places in the
+repository; else the owner's picture; else initials on a colour.
 
-"Repositories" could be done two ways. One is a client for each distribution's web
-service (archlinux.org's package search, a mirror's database for CachyOS, packages.
-debian.org, ...): one integration per distribution, a network request per search, and
-no way to know which of them this machine can actually install from. The other, chosen
-here, is to read what the system's own package manager already has on disk:
+Pictures are fetched in the background a few at a time, recognised by what the bytes
+are rather than what the address says, and cached on disk along with "this one has
+none". When one arrives, only the tiles it belongs to are updated. A project's logo
+is read as an ordinary file from the project, which leaves the API allowance alone.
 
-- **pacman**: `/var/lib/pacman/sync/<repo>.db` for every repository in `pacman.conf`.
-  That covers Arch's `core`, `extra` and `multilib`, CachyOS's `cachyos`, `cachyos-v3`,
-  `cachyos-core-v3`, `cachyos-extra-v3` and the v4/znver4 variants
-  ([CachyOS wiki](https://wiki.cachyos.org/features/optimized_repos/)), Chaotic-AUR,
-  EndeavourOS, Manjaro, or a private repository, with no code specific to any of them.
-- **apt**: `/var/lib/apt/lists/*_Packages` for every configured archive, suite and
-  component, including PPAs and vendor repositories.
+### Ratings and reviews (`ratings.rs`, `appstream.rs`)
 
-It costs no requests, works offline, and lists exactly what `pacman -S` / `apt install`
-can install, because it is the same data. The trade-offs: the lists are as fresh as the
-last `pacman -Sy` / `apt update` (the store does not refresh them, which needs root),
-and a repository this machine does not have configured is not browsable, on the grounds
-that its packages could not be installed anyway.
+Ratings come from ODRS, the service behind the ratings in GNOME Software and KDE
+Discover. It publishes one file with every app's star counts, which Bilby fetches at
+most once a day. Because everyone gets the same file, the service learns that this
+device uses ratings and nothing about which apps are looked at. Apps are matched by
+AppStream id: directly for Flathub, and for distribution packages and GitHub projects
+through the catalog the distribution already keeps on disk. An app with fewer than
+five ratings shows none.
 
-Details:
-
-- A package in several repositories is listed from the first one in `pacman.conf`
-  order, as pacman itself resolves a bare name; with apt the newest version wins.
-- CachyOS's optimised packages declare architectures such as `x86_64_v3`. They are
-  treated as x86_64: a machine has such a repository configured only if its CPU
-  qualifies **[sourced]** (same wiki page).
-- Databases may be gzip, zstd or lz4 compressed or plain; the format is taken from the
-  file's first bytes. xz is not supported yet and such a database is skipped.
-- Results are ranked by how well the name matches (there is no popularity to go by),
-  with libraries, `-dev`, `-doc` and similar listed after applications.
-- What is installed comes from `/var/lib/pacman/local` and `/var/lib/dpkg/status`, so a
-  package shows "Installed" with the version you have, and "Update available" when the
-  repository has a newer one.
-- Installing is left to the package manager: the store shows `sudo pacman -S name` or
-  `sudo apt install name`. It does not run them, in keeping with never elevating
-  itself, and does not add these to its own library, since the package manager already
-  tracks and updates them. On Arch-based systems the steps add that an installed
-  package should be updated with a full `pacman -Syu`, because partial upgrades are
-  unsupported there **[assumption]** (from memory of the Arch wiki).
-- The demo catalog uses fictional repositories and never reads the real machine's.
-
-Status: the apt reader was run against the real Ubuntu 24.04 lists on the build machine
-(lz4-compressed, about 70,000 packages; `ripgrep 14.1.0-1` from `noble/universe`, `curl`
-recognised as installed). **[verified]** The pacman reader is tested against databases
-the tests build in the layout `repo-add` produces (`name-version/desc` entries with
-`%NAME%`-style fields, per [alpm-repo-desc](https://man.archlinux.org/man/extra/alpm-repo-db/alpm-repo-desc.5.en))
-but that layout was written from memory **[assumption]** and no real Arch or CachyOS
-database was available to read. Parsing a large distribution takes a few seconds in a
-debug build; it happens once, in the background at start-up, and again only when the
-files change.
-
-Not done: dnf (Fedora) and zypper (openSUSE) metadata, Flatpak remotes (Flathub),
-winget and Homebrew. Each is another `Backend` in `source/system.rs` or another
-`Source`; nothing else in the app needs to change.
-
-### The store's own updates
-
-The store treats its own repository (`STORE_REPOSITORY` in `catalog.rs`) as one more
-app. At start-up, unless start-up checks are switched off, it asks for the newest
-release that has a file for this device and compares it with its own version. If there
-is one, Settings shows it with a "View update" button that opens the store's own app
-page, where the usual rules apply: only files for this device, checksum verified. One
-request, cached like the rest. There is no separate updater and no update server.
-**[verified]** by test with a stand-in project; never against the real repository,
-which has no releases yet.
-
-`.github/workflows/release.yml` builds archives for Linux x86_64, Windows x86_64 and
-Apple-silicon macOS when a `v*` tag is pushed, named so the classifier resolves them
-(**[verified]** by `the_stores_own_release_files_resolve_on_every_desktop`). The
-workflow itself has never run.
-
-What this does not do yet: replace the running program. The release files are archives,
-so today "installing" the update downloads it and shows the folder; swapping the binary
-is manual. A copy installed from a package manager should be updated through that
-instead. Closing that gap means publishing an AppImage, a `.deb` and a Windows
-installer, or having the store replace its own executable and restart.
-
-### App pictures
-
-GitHub projects have no icon in the API. The store shows the owner's avatar, which for
-organisations is normally the project's logo, from `https://github.com/<owner>.png`.
-That is an ordinary web request to GitHub, not an API call. It is expected not to count
-against the API allowance and to redirect to the avatar host **[assumption]**: the URL
-form is widely used but was not exercised here, since GitHub is unreachable from the
-build environment. Pictures are fetched in the background after each page of results,
-decoded by what the bytes are rather than what the URL says (avatars are often JPEGs
-behind a `.png` address), and cached under the owner's name; "this owner has none" is
-cached too. Until a picture arrives, or if there is none, the tile shows the app's
-initials. **[verified]** by tests with a stand-in server; never against GitHub.
-The demo catalog has no pictures. AUR packages have none.
-
-### The index
-
-`crates/core/data/index.json` lists featured apps with the platforms they ship for and,
-optionally, the file names of their latest release. With file names, Discover is
-filtered by the same engine as installs, offline, and can say what would be installed
-("Debian package · x86_64") before any request. The bundled index was written by hand
-from memory **[assumption]**: its platform lists are unverified and it has no file
-names.
-
-In keeping with the client-side rule, the index ships inside the binary. A build-time
-script that regenerates it from the APIs (and records file names) is the intended way to
-keep it fresh; a hosted, separately updated catalog is deliberately not part of the
-design.
-
-## 6. Installing (`install.rs`)
-
-`plan()` is pure and shown to the user before anything is downloaded; `execute()` runs
-it. The store never runs anything as root itself.
-
-| Format | What happens | State |
-|---|---|---|
-| AppImage | download, verify, `chmod +x`, move to `~/Applications` | **[verified]** by test and through the UI |
-| deb, rpm, pacman package, Flatpak bundle | download, verify, hand to the system's installer (`xdg-open`); terminal equivalent is displayed | hand-off **[verified]** with a recorder; not run on a real desktop |
-| exe, msi, msix | download, verify, open | written, **not run on Windows** |
-| dmg, pkg | download, verify, open | written, **not run on macOS** |
-| archive, bare binary | download, verify, reveal in the downloads folder | **[verified]** |
-| AUR | show the command | **[verified]** |
-| APK | download, verify, then Android's `PackageInstaller` via JNI | download and verify work; **the hand-off is not implemented**, the UI says so |
-| ipa | download, hand to a sideloading app | not implemented beyond download |
-
-Downloads can be cancelled; a cancelled or failed download leaves no file behind.
-**[verified]** by test, over real HTTP.
-
-### Library and updates
-
-Every install except an AUR build is recorded in the library with its version and what
-was installed. "Check for updates" (also run quietly at start-up) asks each source for
-the newest release that has a file for this machine and compares versions
-(`version.rs`: numeric components, pre-releases sort below their release, never offers a
-downgrade). One request per app, cached for 30 minutes. **[verified]** by tests at the
-core, CLI and UI level.
-
-"Update" on the Library page updates in place: it looks up the newest release for this
-device and installs its best option without a detour through the app page, showing
-progress on the row; it can be cancelled, and a failure is reported and leaves the old
-entry untouched. "Update all" queues every waiting update and works through them one
-at a time; a failure is reported and the rest carry on, and cancelling stops the queue. **[verified]** by tests headless, offline
-and with real threads.
-
-What the library is not: the store does not ask the system what is installed. It knows
-what it installed. A package handed to the system installer is recorded even if the user
-cancels that installer, and removing an app from the library only deletes the file for
-AppImages the store placed itself; for everything else it says to use the system's
-software manager. Reading the system's package database, and Android's package list,
-would close that gap.
-
-App pages list every recent release (up to six) that has a file for this machine, so an
-older version can be chosen when an update breaks something; the page says it is not the
-newest and the library shows the pending update straight away. **[verified]** by test.
-
-Not designed yet: desktop menu entries for AppImages, unpacking archives onto `PATH`.
-
-## 7. The three interfaces
-
-All three are Slint components in one binary and are chosen at run time
-(`ui/main.slint`): TV if the device is a TV or `--ui tv`; otherwise by window width, so a
-phone, a split-screen tablet and a narrow desktop window all get the mobile layout.
-**[verified]**: see `docs/screenshots/`, produced by the real binary under a headless
-X server with scripted key presses and clicks (`--screenshot`, `--script`).
-
-- **Desktop**: sidebar (Discover, Search, Library, Settings), always-visible search, a
-  spotlight and category chips, a card grid that reflows with the window, details with
-  every compatible file and a "show the N files that won't work" disclosure. Fully usable
-  from the keyboard: Ctrl+K or `/` to search, Escape or Alt+Left to go back, Tab through
-  every control with a visible focus ring, Enter or Space to activate. Browse pages keep
-  their scroll position while an app page is open.
-- **Mobile**: one column, four-tab bottom navigation, full-screen details. Android's Back
-  button leaves the app page. Respects safe-area insets (status bar, gesture bar), which
-  Slint exposes on the window **[verified]** in Slint's element definitions; **not run
-  on a phone**.
-- **TV**: no pointer. Exactly one focused element, drawn with a thick white outline; what
-  is off screen scrolls to keep it in view; every size is a fraction of the screen
-  height so 1080p and 4K look the same. Tabs along the top (Home, Library, Settings and
-  the device's own page), a wide search bar under them on Home, then rows of apps with
-  a hero area describing the focused one. Up and Down move between tabs, search and
-  rows; Down from a tab goes into the page showing and only OK changes page; OK opens,
-  installs, cancels a download or retries a failed lookup; Back returns. An app's page
-  is a column of sections to move down through. Settings is a list reachable by remote,
-  including signing in to GitHub with a code shown on screen.
-
-Shared by all three: light and dark themes (following the system by default; the TV
-interface is always dark), a first-run notice that says what the store is and that
-nothing is reviewed, toasts for feedback, empty and error states with a way forward, and
-accessible roles, labels and default actions on every control, which is also how the
-tests find and operate them.
-
-Slint's Android backend maps D-pad up/down/left/right to arrow keys, D-pad centre to
-Return, and Back to a Back key **[verified]** by reading
-`i-slint-backend-android-activity-1.19.0/androidwindowadapter.rs`. The TV interface
-handles exactly those keys, so the same code serves a remote and a keyboard. On a Linux
-TV it has been used with a physical remote by the project's owner (2026-11), which is
-where Back doing nothing, the missing Library, the hidden Settings and the cramped app
-page were found and put right. It has not been run on Android TV, where there is no
-package yet.
-
-### Search order
-
-Results from all sources go into one list, best match first (`rank.rs`). Most of the
-score is how close the app's name is to what was typed; a quarter is how many people use
-it (stars or votes, on a scale that suits each source); the rest is small nudges: on the
-bundled starter list, already installed, flagged out of date, and where its own source
-placed it. A source that publishes no numbers (a distribution's repository) gets a
-middle value for that part, so missing data never sinks a result. [assumption: the
-weights are a first guess and have not been tuned against real searches.]
-
-### What is shown, and what is one press away
-
-The screens are meant to work for someone who does not know what a `.deb` is, and to
-look like the stores that person already uses. Hiding secondary options until they are
-asked for is the usual advice for this
-([Nielsen Norman Group on progressive disclosure](https://www.nngroup.com/articles/progressive-disclosure/)).
-
-An app's page follows the order Apple and Google use. [sourced where linked; the rest is
-from memory of both stores, not checked against them while writing]
-
-| Part of the page | App Store / Google Play | Bilby |
-|---|---|---|
-| Top | Icon, name, developer, one button | The same. The button says Install, Update, or Open once an AppImage is installed |
-| Key facts row | Rating, size, age rating, chart position | Stars or votes, download size, last updated, licence |
-| Reassurance | "Works on this iPhone"; Play's data-safety section | "Made for this device", and that the download is checked when it is |
-| Short description | Apple's subtitle (up to 30 characters); Play's short description (80) ([Apple](https://developer.apple.com/app-store/product-page/), [Google](https://support.google.com/googleplay/android-developer/answer/13393723)) | The project's one-line description |
-| Screenshots | Up to ten ([Apple](https://developer.apple.com/app-store/product-page/)) | Up to four, found in the project's README (`screenshots.rs`). Badges, logos, icons, small images, GIFs and SVGs are left out, and pictures are only fetched from GitHub's own hosts so that no third party learns who looked. Packages from repositories have none yet |
-| Description | First lines, then "more" | The start of the README, folded to a few lines with "Read more" |
-| What's New | Shown on the page and in Updates ([Apple](https://developer.apple.com/app-store/product-page/)) | Release notes, folded; shown above the description once the app is installed |
-| Ratings and reviews | Yes | Star ratings where a ratings service knows the app (Flathub, distribution packages). Written reviews for the same apps, read-only |
-| Information | A plain table at the bottom: provider, size, compatibility, ... | The same: from, made by, version, released, licence, works on, kind of file, size |
-| Everything technical | Not shown at all | Under *More options and details*: every file with its name, command and steps, older versions, and the hidden files with the reason for each |
-
-Lists (tiles, rows) show the icon, name, one line and popularity, plus whether the app
-is installed or has an update. They say nothing about packaging. The device is named in
-everyday words ("This Linux computer"); the exact system and processor are in Settings
-and in each app's Information table.
-
-Lists have an Install or Update button on each tile and row, as both stores do. It
-opens the app's page and starts the file that suits the device, so the install can be
-watched and stopped. *Other versions and files* sits directly under the main button:
-the version picker, every way to install here, and the files for other devices, which
-can be downloaded anyway (checked, saved, never run).
-
-Known differences that are still gaps: reviews can be read but not written, no "top
-charts", and Open works for AppImages, Flatpaks and web apps but not for packages
-handed to the system installer.
-
-### Flathub, logos and ratings
-
-**Flathub** (`source/flathub.rs`) is a source wherever Flatpak is set up. Its API gives
-what release pages lack: an icon, screenshots, a description and an id that ratings
-are keyed by. Install runs `flatpak install --noninteractive --assumeyes --or-update
-flathub <id>`, Open runs `flatpak run <id>`, and removing the app from the library runs
-`flatpak uninstall`. Flatpaks installed by something else are recognised from
-Flatpak's own folders and can be opened. A `.flatpak` file on a release page is
-installed with `flatpak install --user`. [The API shapes and command options were read
-from Flathub's and Flatpak's source and documentation; neither the live service nor a
-real `flatpak` has been run against. Tests use a stand-in server and a stand-in
-program.]
-
-**Logos.** An app's icon is, in order: the icon its source gives (Flathub); for a
-GitHub project, an early image in its README that calls itself a logo or icon or is
-drawn small; else `icon.png` or `logo.png` at the usual places in the repository; else
-the owner's picture; else initials on a colour. README and repository logos are found
-when the app's page is opened, kept on disk under the app's name, and used in lists
-from then on. PNG and JPEG only: many projects' logos are SVG, which the app cannot
-draw yet, so those fall back to the owner's picture.
-
-**Ratings** (`ratings.rs`, `appstream.rs`) come from ODRS, the service behind the
-ratings in GNOME Software and KDE Discover. It publishes one file with the star counts
-of every app. Bilby fetches that file at most once a day and keeps it on disk. Because
-everyone gets the same file, the service learns that this device uses ratings and
-nothing about which apps are looked at. Apps are matched by AppStream id: directly for
-Flathub; for pacman and apt packages, and GitHub projects, through the catalog the
-distribution already keeps on disk (`/usr/share/swcatalog` and its older locations),
-which costs no requests. An app with fewer than five ratings shows none. Ratings can
-be turned off in Settings, which also stops the download. In search order a rating
-counts as popularity, pulled towards the middle when few people gave one.
-[The file's shape was read from ODRS's source; the live service was unreachable. The
-catalog reader has only read files written for its tests.]
-
-**Written reviews** [Decision, Andrew, 2026-11-20] come from the same service and are
-shown on the page of any app it knows; an app without them has no Reviews section at
-all. They are asked for when such a page is opened, up to eight, best first.
-
-What this costs in privacy, plainly: unlike the ratings file, a request for reviews
-names the app, so the service learns which app's page was opened from which address,
-and its [privacy policy](https://github.com/GNOME/odrs-web/blob/master/odrs/templates/privacy.html)
-says addresses are logged for five years. Bilby sends nothing else that identifies the
-device: no user id (GNOME Software and Discover send a hash of the user name and
-machine id), a system name of "unknown", and no app version. The Settings toggle
-covers ratings and reviews together and says this in its description; turning it off
-stops both.
-
-Reviews are read-only. Writing or voting on one needs the persistent id above, which a
-store with no accounts would have to invent for the user; that is left for a decision
-of its own. [Whether the live service answers a request without a user id was read
-from its source code, where it is allowed, and not tried. If it refuses, the app
-simply shows no reviews.]
-
-The number of ratings is shown beside the score and counts towards search order, as
-stars do for GitHub projects: it is the nearest thing these apps have to a measure of
-how widely they are used.
+Written reviews come from the same service, for apps it knows, up to eight, best
+first. A request for reviews names the app, so Bilby sends as little as it can with
+it: no user id, a system name of "unknown" and no app version, where other stores
+send a hash of the user and machine. The Settings switch covers ratings and reviews
+together, says this in its description, and stops both.
 
 ### Signs of how much an app is used
 
-A store that mixes sources has no single number. A GitHub project has stars, a
-Flathub app has installs, an AUR package has votes, and a distribution package has
-nothing at all. The rule is: use everything a source gives away for free, say plainly
-what each figure counts, and never show a blank or a zero as if it were a verdict.
+A store that mixes sources has no single number. The rule is: use everything a source
+gives away for free, say plainly what each figure counts, and never show a blank or a
+zero as if it were a verdict.
 
-| Source | Shown to the user | Also counts towards search order | Offered by the source, left out on purpose |
+| Source | Shown | Counts towards search order | Left out on purpose |
 | --- | --- | --- | --- |
-| GitHub | Stars; downloads of the listed releases' files; "archived" warning | Both, and the warning | Forks, watchers, open issues: they measure developer activity, not use |
-| Codeberg | Stars; downloads of the listed releases' files | Both | Forks, watchers |
-| Flathub | Installs in the last month; installs in total; verified developer | Installs, verification, whether its trend is rising | Favourites count (needs a Flathub account to give, so it is tiny beside installs) |
-| AUR | Votes; "out of date" and "nobody maintains this" warnings | Votes, the AUR's time-weighted popularity, the warnings | |
-| pacman, apt | Nothing (the package lists carry no such figure) | Nothing; such apps score a neutral half | |
-| Ratings service (ODRS) | Average, number of ratings, share at each star, written reviews | Average, trusted in proportion to the number of ratings | |
+| GitHub, Codeberg | Stars; downloads of the listed releases' files; "archived" notice | Both, and the notice | Forks, watchers, open issues: they measure developer activity, not use |
+| Flathub | Installs this month and in total; verified developer | Installs, verification, a rising trend | The favourites count, which is tiny beside installs |
+| AUR | Votes; out-of-date and unmaintained notices | Votes, the AUR's time-weighted popularity, the notices | |
+| Distribution packages | Their rating, where the ratings service knows them | The rating; otherwise a neutral value | |
+| Ratings service | Average, number of ratings, share at each star, reviews | The average, trusted in proportion to the number of ratings | |
 
-How they are displayed:
-
-- **One figure on a tile.** In order: the rating with its count, else downloads, else
-  the source's own count (installs, stars, votes). An app with none shows its author
-  instead, not an empty badge.
-- **Every figure on the app's page**, each with a caption saying what it is: "194k
-  downloads, of recent versions", "13k stars, on GitHub", "1.3M downloads, in total".
-  They are repeated in the Information table.
-- **The rating as a breakdown**, the way the App Store and Google Play draw it: the
-  average, the number of ratings, and a bar for each number of stars.
+- **One figure on a tile.** The rating with its count, else downloads, else the
+  source's own count. An app with none shows its author, not an empty badge.
+- **Every figure on the app's page**, each captioned with what it counts: "194k
+  downloads, of recent versions", "13k stars, on GitHub".
+- **The rating as a breakdown**: the average, the number of ratings and a bar per
+  star, following Baymard Institute's findings that people rely on the number and
+  spread of ratings more than on the average
+  ([distribution summary](https://baymard.com/blog/user-ratings-distribution-summary)).
 - **A count of zero is not shown.** Zero stars usually means "new", not "bad".
-- **Verified** is a small tick beside the developer's name, only on the app's page.
-
-Why this way, and how sure each part is:
-
-- The breakdown and the count beside the average follow Baymard Institute's testing
-  of shop pages: people rely on the number of ratings and on how they are spread more
-  than on the average, and distrust a high average from a handful of ratings
-  ([distribution summary](https://baymard.com/blog/user-ratings-distribution-summary),
-  [perception of ratings](https://baymard.com/blog/user-perception-of-product-ratings)).
-  Those studies are of online shops, not app stores; applying them here is a judgement.
-- Downloads are preferred to stars on tiles because a star costs nothing to give and
-  can be bought: a 2024 study found millions of suspected fake stars on GitHub
-  ([He et al.](https://arxiv.org/abs/2412.13459)). That downloads are *harder* to fake
-  is an assumption; nothing checked here measures it. A star count with almost no
+- **Downloads before stars**, because a star costs nothing to give: a 2024 study found
+  millions of suspected fake stars on GitHub
+  ([He et al.](https://arxiv.org/abs/2412.13459)). A star count with almost no
   downloads lowers an app's score a little for the same reason.
-- GitHub documents `download_count` on every release file
-  ([GitHub docs](https://docs.github.com/enterprise/2.3/user/articles/getting-the-download-count-for-your-releases)).
-  Only the six newest releases are read, hence the caption "of recent versions": it
-  undercounts old projects and is not a lifetime total.
-- The AUR's popularity is every vote weighted by 0.98 for each day since it was cast
-  ([aurweb patch](https://mailman.archlinux.org/pipermail/aur-dev/2015-June/003320.html)),
-  so it tells an app people are choosing now from one they chose years ago.
-- **Not confirmed against documentation:** Flathub's field names
-  (`verification_verified`, `trending`, and the `/stats/{id}` document with
-  `installs_total`) are written from memory of Flathub's source code. Each is optional:
-  if a name is wrong the figure is simply missing. The scale of `trending` is unknown,
-  so only whether it is above zero is used.
-- The weights given to each signal in the search order are choices, not measurements.
 
-Not available without a server of our own or a new service: Debian's popularity
-contest and Arch's pkgstats (both would mean another network request per search, to
-services not built for it), and any count of how many people use Bilby itself, which
-would need telemetry and is ruled out.
+Counting how many people use Bilby itself would need telemetry, and is ruled out.
+
+### The store's own updates
+
+Bilby treats its own project (`STORE_REPOSITORY` in `catalog.rs`) as one more app.
+At start-up it asks for the newest release with a file for this device and compares
+it with its own version. Updating places the new copy, points the app-menu entry at
+it and offers "Restart Bilby now / Later"; an older copy that is started later hands
+over to the newer one. There is no separate updater and no update server: the same
+rules apply as for any app, including the checksum.
+
+`.github/workflows/release.yml` builds every release: an AppImage for Linux, a
+program for Windows and a disk image for Apple-silicon Macs, each with the
+command-line tool alongside, named so that Bilby's own classifier picks the right one
+(`the_stores_own_release_files_resolve_on_every_desktop`).
+
+## 6. Installing (`install.rs`)
+
+`plan()` is pure and can be shown before anything is downloaded; `execute()` carries
+it out. Bilby never runs as administrator itself.
+
+| Kind | What happens |
+|---|---|
+| AppImage | Download, verify, mark executable, move to `~/Applications`, add to the app menu |
+| Flatpak, from Flathub or a bundle | Flatpak installs it; Bilby opens and removes it through Flatpak |
+| Distribution package, snap, winget | The package manager installs it, behind the system's password prompt where one is needed |
+| deb, rpm or pacman file from a release page | Download, verify, hand to the system's installer |
+| exe, msi, msix | Download, verify, open |
+| dmg, pkg | Download, verify, open |
+| Archive, bare program | Download, verify, show in the downloads folder |
+| AUR | A terminal opens on the build |
+| Web app | An entry among the device's apps |
+| Steam, Mac App Store | The other store's app takes over |
+
+Downloads can be cancelled; a cancelled or failed download leaves no file behind.
+What an install needs first (FUSE for an AppImage, Longboard for a website on a TV) is
+installed as part of it.
+
+### Library and updates
+
+Every install is recorded with its version and what was installed. "Check for
+updates" (also run quietly at start-up) asks each source for the newest release with
+a file for this device and compares versions (`version.rs`: numeric components,
+pre-releases below their release, never a downgrade). One request per app, cached.
+
+"Update" on the Library page updates in place, with progress on the row; it can be
+cancelled, and a failure leaves the old version untouched. "Update all" queues every
+waiting update and works through them one at a time.
+
+Open works for AppImages, Flatpaks, Steam games and web apps. Remove deletes what
+Bilby placed, has Flatpak uninstall what Flatpak holds, and takes down the app-menu
+entry. Apps installed by anything else on the device are recognised and marked
+Installed.
+
+App pages list every recent release (up to six) with a file for this device, so an
+older version can be chosen when an update breaks something; the page says it is not
+the newest and the library shows the pending update straight away.
 
 ### Appearing among the device's apps
 
-A downloaded AppImage is one file; nothing puts it in the app menu, so it would have
-to be found in a file manager every time. On its first real start (not a demo or a
-preview) Bilby therefore writes its own entry and icon into the user's app-menu folder
+An AppImage is one file, and nothing else puts it in the app menu. So Bilby does:
+every AppImage it places gets an entry with its own icon, and a new version replaces
+the entry. On its first real start Bilby also writes its own entry
 (`~/.local/share/applications/bilby.desktop`), pointing at the file it was started
-from, and corrects it if that file later moves. Settings has a switch that removes
-the entry and keeps it away. It cannot happen "on download": a file that has not been
-run cannot do anything. A package (AUR, .deb, Flatpak) is what registers an app at
-install time, and none exists yet.
+from, and corrects it if that file moves. Settings has a switch that removes the
+entry and keeps it away.
 
-[assumption] Launchers that list installed apps read that folder, and Plasma Bigscreen
-is expected to do the same; this has not been checked on Bigscreen. Older versions of
-Bigscreen were said to show only some kinds of apps on its home rows, which was not
-verified either way.
+This is why Bilby ships as an AppImage and not as a Flatpak: a store has to run the
+system's package manager, start other programs and write app-menu entries, which is
+what a Flatpak's sandbox is designed to restrict.
+
+## 7. The three interfaces
+
+All three are Slint components in one program, chosen when it starts
+(`ui/main.slint`): TV on a TV, otherwise by the window's width, so a phone, a
+split-screen tablet and a narrow desktop window all get the phone layout. The
+screenshots in `docs/screenshots/` are made by the real program, driven by a script.
+
+- **Desktop**: a sidebar (Discover, Search, Library, Settings), an always-visible
+  search box, a spotlight and category chips, and a grid of cards that reflows with
+  the window. Fully usable from the keyboard: Ctrl+K or `/` to search, Escape or
+  Alt+Left to go back, Tab through every control with a visible focus ring. Browse
+  pages keep their place while an app's page is open.
+- **Phone**: one column, four tabs along the bottom, full-screen app pages. Android's
+  Back button leaves an app's page. Safe-area insets are respected.
+- **TV**: no pointer. Exactly one focused element, with a thick white outline; what is
+  off screen scrolls to keep it in view; every size is a fraction of the screen's
+  height, so 1080p and 4K look the same. See [TV](#tv).
+
+Shared by all three: light and dark themes (following the system; the TV is always
+dark), a first-run notice that says what the store is, toasts, empty and error states
+that offer a way forward, and accessible roles, labels and default actions on every
+control, which is also how the tests find and operate them.
+
+### What is shown, and what is one press away
+
+The screens are made for someone who does not know what a `.deb` is, and look like
+the stores that person already uses. Secondary options stay out of the way until
+asked for
+([Nielsen Norman Group on progressive disclosure](https://www.nngroup.com/articles/progressive-disclosure/)).
+
+An app's page follows the order of the App Store and Google Play:
+
+| Part of the page | App Store / Google Play | Bilby |
+|---|---|---|
+| Top | Icon, name, developer, one button | The same. The button says Install, Update or Open |
+| Key facts | Rating, size, age rating, chart position | Rating, downloads, size, last updated, licence |
+| Reassurance | "Works on this iPhone" | "Made for this device", and that the download is checked |
+| Screenshots | Up to ten | The source's own (Flathub), else up to four from the project's README, fetched only from the project's own host |
+| Description | First lines, then "more" | The start of the description, with "Read more" |
+| What's New | On the page and in Updates | Release notes, shown above the description once the app is installed |
+| Ratings and reviews | Yes | Star ratings and written reviews for every app the ratings service knows |
+| Information | A plain table at the bottom | The same: from, made by, version, released, licence, works on, kind of file, size |
+| Everything technical | Not shown | Under *Other versions and files*: every file with its steps, older versions, and the hidden files with the reason for each |
+
+Lists show the icon, name, one line and one figure, plus whether the app is installed
+or has an update. They say nothing about packaging. The device is named in everyday
+words ("This Linux computer"). Every tile has an Install or Update button that opens
+the app's page and starts the right file, so the install can be watched and stopped;
+a website's says Add.
 
 ### Motion
 
-Things move for a reason, briefly, and the same way everywhere. The pattern follows
-what Android's Material guidance and Apple's interface guidelines both ask for: short
-durations, easing that slows into place, and motion that explains what happened
-rather than decorating it ([Material motion](https://m3.material.io/styles/motion/overview),
+Things move for a reason, briefly, and the same way everywhere, as Android's Material
+guidance and Apple's interface guidelines both ask
+([Material motion](https://m3.material.io/styles/motion/overview),
 [Apple: Motion](https://developer.apple.com/design/human-interface-guidelines/motion)).
-[The durations below were chosen to sit in the range those guides describe; the exact
-figures are judgement, and those pages were not re-read for this work.]
 
 | What | How it moves |
 |---|---|
-| Starting a download, install or update | The button that started it fills from left to right and becomes Cancel; a bar below shows the same, with a soft highlight passing over it. When the amount is unknown (Flatpak does not say) a band travels instead |
-| Finishing | A tick pops in beside the result; a failure gets a plain mark, no bounce |
-| Changing page, opening an app | The new page fades up a few pixels (220 ms). Leaving is immediate, so nothing lingers |
-| Pressing a button or a tile | It gives slightly (to 96%) and springs back; tiles lift a little under the pointer |
-| Messages at the bottom | Rise into place and fade |
-| Rating bars | Settle to their lengths |
-| TV | The focused item grows and gains a border, as before; screens fade in; the main button fills during a download |
+| Starting a download, install or update | The button fills from left to right and becomes Cancel; a bar below shows the same. When the amount is unknown, a band travels instead |
+| Finishing | A tick pops in beside the result; a failure gets a plain mark |
+| Changing page, opening an app | The new page fades up a few pixels (220 ms). Leaving is immediate |
+| Pressing a button or a tile | It gives slightly and springs back; tiles lift under the pointer |
+| Messages | Rise into place and fade |
+| TV | The focused item grows and gains a border; screens fade in |
 
-Settings has **Reduce motion**, which makes all of it instant, as both platforms offer.
-The system's own "reduce motion" preference is not read yet.
+Settings has **Reduce motion**, which makes all of it instant.
+
+**Sounds** (`app/src/sound.rs`). A tick as the highlight moves, a soft pop on a press,
+a lower note on the way back. They are made in code from sine waves that die away
+within a few hundredths of a second, so nothing is recorded or borrowed. They are
+quiet by design, play from a thread of their own, and a device without sound simply
+stays silent. One switch turns them off.
 
 ### Signing in to GitHub (`github_login.rs`)
 
 Nothing needs a GitHub account. Signing in only lifts GitHub's allowance from 60
-requests an hour (shared by everyone behind the same router) to 5,000.
+requests an hour to 5,000.
 
 It uses GitHub's device flow
 ([GitHub docs](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#device-flow)):
 Bilby shows a short code, the person enters it at `github.com/login/device` on any
 device, and Bilby is handed a token. That suits a TV, where typing a token with a
-remote is not realistic, and it needs no server of ours and no client secret. The
-token is asked for with no permissions, is kept in the same file as a pasted one, and
-is sent only to `api.github.com`. Sign out forgets it; it can also be revoked from
-GitHub's settings.
-
-The client id in the source is public by design. Pasting a personal access token still
-works. [Checked against the real GitHub: asking for a code with this client id returns
-one, and asking for the token before the code is entered returns "authorization
-pending". A whole sign-in through the app, ending in a token, has only been run
-against the demo's stand-in.]
+remote is not realistic, and it needs no server and no secret. The token is asked for
+with no permissions and is sent only to `api.github.com`. Sign out forgets it. A
+personal token can be pasted instead.
 
 ### Knowing it is a TV
 
-A television is not something a computer reports, and a 4K monitor and a 4K TV look
-the same to the system. So the TV layout is chosen in three steps, the first that
-applies:
+A 4K monitor and a 4K TV look the same to a computer, so the TV layout is chosen in
+three steps, the first that applies:
 
 1. **The command line**: `--ui tv` or `--ui desktop`.
 2. **The choice in Settings** (Layout: Automatic, Desktop, TV). It is remembered and
-   switches at once, without a restart. From the TV layout, the way back is the last
-   button on the "This TV" page, so a remote can reach it.
-3. **What the device looks like.** Android: the system says it is a TV. Linux and the
-   rest: one of the sessions people run on a TV is in use, namely Plasma Bigscreen (its
-   name in the session variables, or its shell among the running programs), Steam's
-   big-screen session (gamescope), or Kodi.
+   switches at once. From the TV layout the way back is on the "This TV" page, where
+   a remote can reach it.
+3. **What the device looks like.** Android says when it is a TV. Elsewhere, Bilby
+   recognises the sessions people run on a TV: Plasma Bigscreen, Steam's big-screen
+   session (gamescope) and Kodi.
 
-An ordinary desktop shown on a television matches none of these. For that case, if a
-game controller is attached and nothing else has decided, the store asks once: "Are
-you using this on a TV?". The answer is remembered and the question is not repeated.
+For an ordinary desktop shown on a television, Bilby asks once when a game controller
+is attached: "Are you using this on a TV?". The answer is remembered.
 
 Choosing the TV layout is more than appearance: TV builds of apps are preferred, and
-on Linux the Websites source appears.
-
-[assumption] The names looked for (`bigscreen` in `XDG_CURRENT_DESKTOP`,
-`XDG_SESSION_DESKTOP` or `DESKTOP_SESSION`; `org.kde.plasma.bigscreen` among running
-programs; `gamescope`, `GAMESCOPE_WAYLAND_DISPLAY`, `SteamTenfoot`; `kodi`) are from
-memory. No documentation was found that states what Plasma Bigscreen sets, and none
-has been checked on a real install. The Settings switch is what makes this dependable.
+websites open in Longboard.
 
 ### The operating system's own updates (`os.rs`)
 
-KDE Discover and GNOME Software update the system as well as apps, and so does Bilby,
-on the systems where it can do so safely.
+KDE Discover and GNOME Software update the system as well as apps, and so does Bilby.
 
-**Where it lives.** Not in the navigation. The Library, which is already the place for
-"what needs updating", leads with a card for the system: its name, one line of status
-and an Update button. The card opens a page, "This device", with the status in large
-type, what is waiting, and a table of everything about the machine (system and
-version, kernel, desktop, processor, memory, storage). The same page is reachable from
-Settings on every system, including those Bilby cannot update. On a TV it is the chip
-in the top bar: Up, then Right.
+**Where it lives.** The Library, already the place for "what needs updating", leads
+with a card for the system: its name, one line of status and an Update button. The
+card opens "This device": the status in large type, what is waiting, and everything
+about the machine (system and version, kernel, desktop, processor, memory, storage).
+On a TV it is the entry at the end of the top bar.
 
-**How.** Through the system's own package manager, run the way a person would in a
-terminal, not through PackageKit (which Discover uses, but which Arch does not ship
-and which would be one more thing to depend on).
+**How.** Through the system's own package manager, run the way a person would run it,
+with nothing extra to depend on.
 
 | System | Looking for updates | Installing them |
 | --- | --- | --- |
-| pacman (Arch, CachyOS, ...) | `checkupdates` when installed, else `pacman -Qu` | `pkexec pacman -Syu --noconfirm` |
-| apt (Debian, Ubuntu, ...) | `apt-get -s upgrade` (a dry run) | `pkexec`: `apt-get update`, then `apt-get -y upgrade` keeping changed configuration files |
+| pacman (Arch, CachyOS, ...) | `checkupdates` where installed, else `pacman -Qu` | `pkexec pacman -Syu --noconfirm` |
+| apt (Debian, Ubuntu, ...) | `apt-get -s upgrade` (a dry run) | `pkexec`: `apt-get update`, then `apt-get -y upgrade` |
 | dnf (Fedora, ...) | `dnf check-update` | `pkexec dnf -y upgrade --refresh` |
 | Flatpak | `flatpak remote-ls --updates` | `flatpak update -y` |
-| Image-based (Fedora Atomic, SteamOS) | Flatpak only | Flatpak only; the page says to use the system's own updater |
-| Windows, macOS | not checked | a button opens Windows Update or Software Update |
-| Android, iOS | not checked | the page says where updates are |
+| Image-based (Fedora Atomic, SteamOS) | Flatpak | Flatpak; the page points to the system's own updater for the rest |
+| Windows, macOS | | A button opens Windows Update or Software Update |
 
 Rules it keeps:
 
 - **Looking never asks for a password and never changes anything.** In particular it
-  never runs `pacman -Sy`: refreshing pacman's lists without upgrading is the "partial
-  upgrade" Arch does not support
+  never runs `pacman -Sy`: refreshing pacman's lists without upgrading is the partial
+  upgrade Arch does not support
   ([ArchWiki](https://wiki.archlinux.org/title/System_maintenance)). `checkupdates`
-  looks in a private copy instead. Without it, the answer is only as fresh as the last
-  upgrade, and the page says how old the list is.
-- **Installing asks through the desktop's own password prompt** (`pkexec`). Bilby never
-  sees the password. A closed prompt is reported as "nothing was changed".
-- **apt's lists can be stale.** Their age is shown; pressing "Check again" when they
-  are more than a day old fetches fresh ones, which asks for the password.
-- **A restart is called for** when Debian's or Ubuntu's own note says so, or when the
-  running kernel's files are gone because a newer kernel replaced them.
+  looks in a private copy instead.
+- **Installing asks through the desktop's own password prompt.** Bilby never sees the
+  password. A closed prompt is reported as "nothing was changed".
+- **The age of the lists is shown**, and "Check again" refreshes stale ones.
+- **A restart is called for** when the system says so, or when a newer kernel has
+  replaced the running one.
 - **The demo and `--as` previews use a made-up machine** and cannot touch the real one.
-
-What it does not do: move to a new release of a distribution (Ubuntu 24.04 to 24.10,
-Fedora 41 to 42), which Discover offers on some systems; apply updates during a
-restart, as Fedora's Discover does; zypper, apk and others; and it does not say
-whether a newer release of the distribution exists, only what the system itself
-reports (its version, and "supported until" where the system states it).
-
-Checked only against made-up machines: none of these commands has been run by Bilby
-on a real system yet. The command lines and exit codes (`checkupdates` 2 and `dnf
-check-update` 100) are from memory of those tools' manuals, not re-read for this work.
 
 ### TV
 
-The TV interface follows Android TV's published guidance, with tvOS's where they agree:
+The TV interface follows Android TV's published guidance, and tvOS's where they agree:
 
 | Rule | Source | Bilby |
 |---|---|---|
 | Keep content inside the overscan-safe area: 48dp at the sides, 27dp top and bottom | [Android TV layouts](https://developer.android.com/design/ui/tv/guides/styles/layouts) | Margins are exactly these; backgrounds run to the edge |
-| Everything reachable with the D-pad; Back goes to the previous place | [TV app quality](https://developer.android.com/docs/quality-guidelines/tv-app-quality), [navigation](https://developer.android.com/design/ui/tv/guides/foundations/navigation-on-tv) | Arrows, OK and Back do everything; Back closes the file list, then the page, then leaves it to the system |
-| Exactly one focused element, shown by scale, border or glow; scale 1.025 to 1.1 | [Focus system](https://developer.android.com/design/ui/tv/guides/styles/focus-system) | A white border and about 1.05x growth |
-| Text readable from 3 m; body text 12sp and up in the TV type scale | [Design for TV](https://developer.android.com/design/ui/tv/guides/foundations/design-for-tv), [type scale](https://github.com/androidx/androidx/blob/androidx-main/tv/tv-material/src/main/java/androidx/tv/material3/tokens/TypeScaleTokens.kt) | Nothing below 11dp; body 12 to 14dp |
-| Four cards fill a row at 196dp each with 20dp between | [Cards](https://developer.android.com/design/ui/tv/guides/components/cards) | Four tiles a row, 20dp apart |
-| tvOS: safe area 60pt top/bottom, 80pt sides; text 23pt minimum at 1080p | [Apple layout](https://developer.apple.com/design/human-interface-guidelines/layout), [typography](https://developer.apple.com/design/human-interface-guidelines/typography) | Sides are inside Apple's too (96px vs 80pt); smallest text is 22px at 1080p, a point under Apple's minimum |
+| Everything reachable with the D-pad; Back goes to the previous place | [TV app quality](https://developer.android.com/docs/quality-guidelines/tv-app-quality) | Arrows, OK and Back do everything |
+| Exactly one focused element, shown by scale and border | [Focus system](https://developer.android.com/design/ui/tv/guides/styles/focus-system) | A white border and about 1.05x growth |
+| Text readable from 3 m | [Design for TV](https://developer.android.com/design/ui/tv/guides/foundations/design-for-tv) | Body text 12 to 14dp |
+| Four cards fill a row | [Cards](https://developer.android.com/design/ui/tv/guides/components/cards) | Four tiles a row, 20dp apart |
 
-**Websites as apps (Linux TVs only).** A TV cannot use a website without help, and the
-sister project [Longboard](https://github.com/AndrewGBest/Longboard) is a browser driven
-by a remote. So on Linux with the TV interface, a *Websites* source appears
-(`source/web.rs`): a short hand-written list of free sites, plus any site whose address
-is typed into search. Adding one writes an entry to the TV's app list that starts
-Longboard with `--url=<address>`; the app page's button then becomes Open, and removing
-it from the library deletes the entry. Nothing is downloaded. Longboard itself is
-featured under *Made for TV* and installed like any other app; without it, a website's
-page says so and adding fails with the same advice.
-[verified in tests with a stand-in for Longboard; never run against the real one.
-Longboard keeps its own list of web apps with a Home tile and optional separate
-sign-ins, and has no command to add to it, so a site added here opens in Longboard but
-is not on Longboard's Home. A `--add-app=` option in Longboard would close that gap.]
+**Getting around.** Tabs along the top (Home, Library, Settings and the device's own
+page), a wide search bar under them, then rows of apps with the focused one described
+in large type. Up from the apps reaches search, then the tabs; Left and Right move
+along; OK or Down goes in. Back closes the list of files, then the app's page, then
+goes up to the bar, then Home. The search bar stays in place on a page of results, so
+the next search is one press away, and typing with it highlighted goes straight in.
 
-**Getting around.** The top bar is the map: Home, Library, Search and This TV. Up from
-the apps reaches it (landing on Search from Home), Left and Right move along it, OK
-or Down goes in. Back closes the list of files, then the app's page, then goes up to
-the bar, then Home. The Library page has the apps with updates first, then the rest,
-then favourites, with "Update all" and "Check for updates" above them.
+**An app's page** is a column to move down through: its buttons (the main one,
+Favourite, Versions, Remove), a row of pictures, the description, a row of reviews
+and its details. Reviews open one at a time, large. Versions lists the files of one
+release; Left and Right move to older and newer ones. There is no legend of remote
+buttons: arrows, OK and Back do what they do on every TV.
 
-**The Back key.** Remotes and media keyboards send a key of their own for Back
-(`XF86Back`), which Slint's desktop backend has no mapping for and so drops: its key
-table lists `Back` with no window-system key beside it. Bilby reads the window
-system's events itself and turns that key into Escape, and Select into Return. In the
-TV layout the right and "back" mouse buttons do the same, because air-mouse remotes
-send those. [The mapping gap was read in Slint 1.19's source; which key a given remote
-sends was not tested, and a remote whose Back arrives as something else will still do
-nothing. A game controller is not a keyboard and is not handled at all.]
+**The Back key.** Remotes send a key of their own for Back (`XF86Back`), which
+Slint's desktop backend does not pass on. Bilby reads the window system's events
+itself and turns it into Escape, and Select into Return. In the TV layout the right
+and "back" mouse buttons do the same, because air-mouse remotes send those.
 
-**What Home shows.** The bundled starter list is twenty apps, which is not a store.
-Where Flathub is a source, its own lists follow: popular, trending, new and updated.
-Developer tools are left off a TV's Home. [The address of Flathub's lists,
-`/api/v2/collection/{popular,trending,recently-updated}`, and the shape of what they
-return are from memory; no documentation was found and it has not run against
-Flathub. If it is wrong the rows are simply absent.]
+**Long rows stay fast.** Only the tiles on or beside the screen are drawn, however
+long a row is.
 
-An app's page on TV has its buttons in one row: the main one, a star for favourites,
-Versions, Reviews (where there are any) and, for an app in the library, Remove, which
-asks for a second OK. An installed app
-that cannot be opened from here says "Install again", not "Install". The This TV page
-carries the settings that matter on a TV (ratings and reviews, checking for updates at
-start, test versions) as rows the remote switches with OK. There is no legend of
-remote buttons: arrows, OK and Back do what they do on every TV, things that move
-sideways show an arrow on the side that has more, and a confirmation is spelled out
-in the line above the buttons. Reviews open one at a time, large, with
-Up and Down to move between them. Versions lists the files of one release; Left and
-Right move to older and newer releases. Signing in to GitHub is the last row of the
-settings there.
-
-**Ways back, everywhere.** An app's page and the device page both have a back arrow
-(top left on a desktop, in the header on a phone), and Escape, Alt+Left and a phone's
-Back button do the same. The device page returns to whichever of Library or Settings
-it was opened from, and that entry stays highlighted while it is open.
+The TV layout was shaped by use: the project's owner runs it on a Linux TV with a
+physical remote, and the navigation above is the result of that feedback.
 
 ## 8. Testing
 
-168 tests, none needing the internet. **[verified]**: all pass on Linux here. CI runs
-the suite on Linux, Windows and macOS on every push. It passed on all three for the
-version-picker commit (run 13). The run after that failed on Windows only, because a
-test clicked a button that was below the window there; the test helper was fixed. Check
-the Actions tab for the state of the latest commit rather than trusting this paragraph.
+336 tests, none needing the internet. CI runs them on Linux, Windows and macOS on
+every push, and checks that the core compiles for Android and iOS.
 
-| Suite | Count | What it exercises |
+| Suite | Tests | What it exercises |
 |---|---|---|
-| `bilby-core` unit tests | 80 | detection, classification, compatibility, versions, state file, install plans and execution, index, suggestions, icons, catalog |
-| `core/tests/corpus.rs` | 4 | 169 real-world-style names; cross-OS/CPU safety property; 20,000 generated names |
-| `core/tests/http_sources.rs` | 16 | the real HTTP client and both sources against a local server: headers, token scoping, rate limits, allowance, progress, cancel, cache, documented JSON shapes, garbage responses |
-| `cli/tests/cli.rs` | 8 | the `bilby-cli` binary end to end, including install, library, updates and `doctor` |
-| `app/tests/ui.rs` | 39 | the real window on Slint's headless backend: clicks by accessible label, key presses, all three interfaces |
-| `app/tests/offline.rs` | 7 | the same window with a transport that goes offline or rate limited on demand, then recovers |
-| `app/tests/pictures.rs` | 1 | app pictures: fetched, decoded, shown, cached on disk, harmless when missing |
-| `app/tests/binary.rs` | 7 | the real application (threads, event loop, software renderer) under `xvfb-run`, Linux only |
-| `app/tests/contrast.rs` | 1 | WCAG contrast of every text/background pairing in both themes |
-| app unit tests | 5 | option parsing, release-note rendering, formatting |
+| `bilby-core` unit tests | 170 | Detection, classification, compatibility, versions, state, install plans and their execution, every source's parsing, ranking, merging, the home page |
+| `core/tests/corpus.rs` | 4 | 169 file names; the cross-system safety property; 20,000 generated names |
+| `core/tests/http_sources.rs` | 25 | The real HTTP client and the sources against a local server: headers, token scoping, rate limits, progress, cancelling, the cache, malformed answers |
+| `cli/tests/cli.rs` | 9 | The `bilby-cli` program end to end, including install, library, updates and `doctor` |
+| `app/tests/ui.rs` | 102 | The real window on Slint's headless backend: presses by accessible label, key presses, all three interfaces |
+| `app/tests/offline.rs` | 7 | The same window with a network that goes offline or runs out of allowance on demand, then recovers |
+| `app/tests/pictures.rs` | 1 | App pictures: fetched, decoded, shown, cached, harmless when missing |
+| `app/tests/binary.rs` | 7 | The finished program (threads, event loop, renderer) under a virtual display |
+| `app/tests/contrast.rs` | 1 | WCAG contrast of every text and background pairing, in both themes |
+| App and sign-in unit tests | 10 | Option parsing, release notes, formatting, the sign-in window's rules |
 
-Things the tests found while being written, all fixed:
+What the tests guarantee, beyond behaviour:
 
-- Escape did nothing until a control had been focused; Android's Back was not handled
-  on mobile; focus was lost when an app page was opened from the keyboard.
-- The spotlight banner only reacted on its button.
-- At 320 px wide the app page and library ran off the right edge
-  (`everything_fits_on_the_narrowest_phone` now checks every control on every page).
-- The light theme's chips and status colours were as low as 3.7:1 contrast; all text
-  pairings now reach 4.5:1.
-- 14 file-name misclassifications (section 4).
-- A test that clicked fixed coordinates broke when the layout changed; scripted runs
-  now trigger actions by name instead.
+- Every button, tab and switch has an accessible name, and all text reaches 4.5:1
+  contrast in both themes.
+- Every control on every page fits a 320 px wide phone
+  (`everything_fits_on_the_narrowest_phone`).
+- A state file that cannot be read or written produces a message, never a crash.
+- Nothing is ever offered for another system or processor.
 
-Found by reading the code rather than by a test, then pinned with tests: updates between
-release candidates (`rc.1` to `rc.2`) and Arch package releases (`-1` to `-2`) were never
-offered; the Windows hand-off went through `cmd.exe`, which interprets characters such
-as `&` in file names chosen by release authors (now Explorer; **not run on Windows**);
-and the page promised a checksum check for digest formats it could not check.
-
-Also checked automatically: every button, tab and switch has an accessible name; a
-state file that cannot be written or read produces a message instead of a crash.
-
-Gaps: no test talks to the live services. The Windows and macOS runs use the headless
-backend, so they prove the code builds and behaves there, not that the window looks
-right or that installers launch. Nothing runs on Android or iOS. There are no visual
-regression tests, only the screenshots in `docs/screenshots/`.
+Beyond the tests, the store has been run for real: searches, app pages and installs
+against the live sources on Debian, Fedora, openSUSE and Arch, and the release
+workflow on every release. The [README](../README.md#how-ready-is-it) keeps the
+current list of what has been tried on which system.
 
 ## 9. Platform support
 
-| Platform | Where it stands | What is missing |
+| Platform | Where it stands | Next |
 |---|---|---|
-| Linux | Builds, runs, tested | Packaging (AppImage / Flatpak / AUR package of the store itself) |
-| Windows | Builds; test suite passes in CI (headless) | Run it on a real desktop; precise CPU detection; try the installer hand-off; packaging |
-| macOS | Builds; test suite passes in CI (headless) | Run it on a real desktop; app bundle, signing, notarisation |
-| Android phone / tablet | Core type-checks for `aarch64-linux-android`; `android_main` written | NDK build, APK packaging, `REQUEST_INSTALL_PACKAGES` + `PackageInstaller` JNI, TLS roots check |
-| Android TV | Same as Android | Also a leanback launcher entry and banner |
-| iOS | Core type-checks for `aarch64-apple-ios` | See below |
-
-"Type-checks" means `cargo check -p bilby-core --no-default-features --target ...`
-passes (in CI on every push): the core's own code compiles for that target. The network
-stack and the UI have not been built for Android or iOS.
+| Linux | Released as an AppImage; in use on a Linux TV with a remote | A package in the AUR |
+| Windows | Released as a single program; the full test suite passes there on every push | Signing by a registered developer |
+| macOS | Released as a disk image for Apple silicon; the full test suite passes there on every push | Signing and notarisation |
+| Android phone, tablet and TV | The core compiles for Android on every push; the phone and TV layouts are built and tested | The Android package and the hand-over to Android's installer |
+| iOS | The core compiles for iOS on every push | See below |
 
 ### iOS
 
-Slint can target iOS (a tech preview since 1.12, mid-2025). **[sourced]**
-([Slint 1.12 release notes](https://slint.dev/blog/slint-1.12-released))
-The obstacle is the platform, not the toolkit:
+Slint runs on iOS ([Slint 1.12 release notes](https://slint.dev/blog/slint-1.12-released)),
+so the interface carries over. What iOS decides is how apps are installed: an app
+there does not install other apps, and alternative marketplaces in the EU carry only
+apps Apple has notarised
+([Apple support](https://support.apple.com/en-mide/118110)).
 
-- An app on iOS cannot install another app. Outside the EU (and, per one report, Japan)
-  there is no supported route; sideloading relies on tools such as AltStore that
-  re-sign apps with the user's developer certificate from a computer. **[sourced]**
-  ([Engadget](https://engadget.com/2315074/how-to-sideload-apps-ios-even-in-united-states/))
-- In the EU, alternative marketplaces are allowed on iOS 17.4+, but their apps must be
-  notarised by Apple; an arbitrary `.ipa` from a GitHub release does not qualify.
-  **[sourced]** ([Apple support](https://support.apple.com/en-mide/118110),
-  [TechCrunch](https://techcrunch.com/2024/04/01/the-altstore-an-alternative-app-store-coming-to-eu-will-offer-patreon-backed-apps))
-
-So an iOS build of this store can realistically be a **catalog and companion**: browse,
-see which projects ship an `.ipa`, and pass the file to a sideloading tool the user
-already has. It is unlikely to be accepted into the App Store. **[assumption]**
-A cheaper way to serve iPhone owners is the desktop app offering "send to my phone".
-
-tvOS is not addressed; whether Slint runs there was not checked.
+So Bilby on iOS is a **catalog and companion**: browse everything, see which projects
+publish an `.ipa`, and pass the file to the sideloading tool the person already
+uses. The desktop app offering "send to my phone" serves the same people from the
+other side.
 
 ## 10. UI toolkit
 
-Chosen: **Slint 1.19**.
+**Slint 1.19**, chosen over Dioxus and egui for three reasons:
 
-| | Slint | Dioxus | egui |
-|---|---|---|---|
-| Rendering | Its own, compiled from `.slint` markup | A webview by default; the native renderer is labelled experimental **[sourced]** ([Dioxus README](https://docs.rs/crate/dioxus/latest)) | Immediate mode |
-| Android | Yes, since 1.3 **[sourced]** ([Phoronix](https://phoronix.com/news/Slint-1.3-Rust-UI-Toolkit)) | Yes, via webview **[sourced]** | Yes **[assumption]** |
-| iOS | Tech preview **[sourced]** | Yes, via webview **[sourced]** | **[assumption]** partial |
-| Remote / D-pad | Key events arrive as arrows; focus is ours to manage **[verified]** | Depends on webview focus behaviour, not researched | Not researched |
+- **One renderer on every target.** Slint draws the interface itself, the same way on
+  a desktop, a phone and a TV, with no dependence on a system web view.
+- **Focus is ours to manage**, which is what a remote-driven interface needs. Slint's
+  Android backend maps the D-pad to arrow keys, its centre to Return and Back to a
+  Back key, so the same code serves a remote and a keyboard.
+- **A software renderer**, which makes the real program testable and its screenshots
+  reproducible without a graphics card.
 
-Why Slint: one renderer on every target (no dependence on the system webview, which on
-TVs is old or absent **[assumption]**), explicit control of focus for the TV interface,
-and a software renderer that makes headless screenshots trivial.
+Custom widgets were written for the store's own look, and release notes are shown as
+plain text.
 
-Costs: custom widgets had to be written (done), no built-in Markdown view used (release
-notes are shown as plain text), and **licensing**. Slint is offered under GPLv3, a
-commercial licence, or a royalty-free licence that covers desktop, mobile and web
-applications, requires attribution, and excludes embedded systems. **[verified]** by
-reading `LICENSES/LicenseRef-Slint-Royalty-free-2.0.md` in the crate. Whether a TV
-counts as desktop/mobile or as embedded under that text is not obvious, so this
-repository is licensed `GPL-3.0-only`, which is unambiguous: the full text is in
-`LICENSE`, and every crate declares it. All 681 dependencies were checked on 2026-11-21
-and none has a licence that conflicts with it. Choosing a permissive licence
-for the store would mean either the royalty-free terms (and settling the TV question
-with Slint) or a different toolkit; `crates/core` has no Slint dependency and could be
-licensed separately.
+**Licence.** Slint is offered under GPLv3, a commercial licence, or a royalty-free
+licence for desktop, mobile and web applications. Bilby is `GPL-3.0-only`: it is
+unambiguous, it covers the TV as well as the desktop, and it suits a store that
+should stay open. The full text is in `LICENSE`, every crate declares it, and all 681
+dependencies were checked on 2026-11-21 for compatibility with it. `crates/core` has
+no Slint dependency and could be licensed separately if that were ever wanted.
 
 ## 11. Safety
 
-- Files are verified against the publisher's SHA-256 when GitHub provides one, before
-  they are opened. This proves the download matches the release, not that the release is
-  trustworthy.
-- A release is whatever its author uploaded. The store shows the source, author, stars
-  or votes and licence, and does not vet anything. A real launch needs a position on
-  this: at minimum a first-install warning, ideally signature checks where projects
-  publish them.
-- Asset names are sanitised before touching the file system **[verified]** by test; repo
-  names are validated before being placed in a URL **[verified]** by test.
-- No elevation: privileged installs go through the system's own installer.
+- **Downloads are verified** against the publisher's SHA-256 wherever the source
+  provides one, before anything is opened. A file that does not match is deleted.
+- **Bilby says where an app comes from.** Flathub, Steam, the Mac App Store and
+  distributions review what they carry; a release page is its author's own. Each
+  app's page names its source, author, popularity and licence, and marks test
+  versions, abandoned projects and out-of-date packages.
+- **Bilby never runs as administrator.** What needs those rights goes through the
+  system's own password prompt, and Bilby never sees the password.
+- **Names are not trusted.** File names are made safe before touching the file
+  system, project names are validated before going into an address, and app-menu
+  entries are escaped as the desktop specification requires, because all of these
+  come from release authors.
+- **Only links Bilby built are opened**, checked again at the moment of opening.
+- **Secrets stay put.** A GitHub token goes to GitHub's API only; a Steam key is used
+  once and dropped; the state file is private to its owner.
 
 ## 12. Next steps, in order of value
 
-1. Run against the live GitHub and AUR APIs and fix whatever the real responses break.
-   `bilby-cli doctor` does this in one command: it searches, loads an app, checks every
-   featured entry against this machine and prints GitHub's remaining allowance. It also
-   exposes wrong entries in the hand-written featured list.
-2. Run the classifier over a large sample of real release file names; fix the misses.
-3. Run the app on real Windows and macOS desktops; package it for each.
-4. Android: NDK build, APK, `PackageInstaller` hand-off; then Android TV launcher entry.
-5. Regenerate the bundled index at build time, with file names.
-6. Ask the system what is installed (dpkg/rpm/pacman databases, Android's package list)
-   instead of relying on the store's own record.
-7. Screenshots and a project's own icon from its repository; Markdown release notes.
-8. More repositories: dnf and zypper metadata, Flatpak remotes (Flathub), winget,
-   Homebrew, F-Droid; more release hosts: self-hosted Forgejo / Gitea, GitLab
-   (Codeberg is in, untested against the live site). Try the pacman reader on a real
-   Arch or CachyOS system first.
-9. Translations; a Settings page for TV.
+1. The Android package: the build, the hand-over to Android's installer, then the
+   Android TV launcher entry.
+2. Signed releases for Windows and macOS.
+3. A package of Bilby in the AUR.
+4. Regenerate the bundled starter list at build time, with file names, so Discover
+   can say what would be installed before any request.
+5. Read an APK's own manifest after download, for exact processor and TV support,
+   and ask Windows directly which processor it runs on (`IsWow64Process2`), for an
+   x64 build of Bilby running on Windows on Arm.
+6. System updates on openSUSE, and moving to a distribution's next release.
+7. Writing reviews, top charts, and Open for packages the system installed.
+8. More sources: the Microsoft Store through winget, self-hosted Forgejo and Gitea,
+   Nix.
+9. Translations.
 
-[COMPARISON.md](COMPARISON.md) sets Bilby against Komi Store, Obtainium, UniGetUI and
-others feature by feature and orders the remaining gaps.
+[COMPARISON.md](COMPARISON.md) sets Bilby beside Komi Store, Obtainium, UniGetUI and
+others, feature by feature.
