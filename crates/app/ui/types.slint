@@ -246,6 +246,13 @@ export global Store {
     in property <bool> has-token;
     // Signing in to GitHub with a code: 0 not signing in, 1 asking GitHub for a code,
     // 2 waiting for the person to enter `signin-code` at github.com/login/device.
+    // Signing in to Steam on Steam's own page: 0 not signing in, 1 its page is open
+    // in the store's sign-in window, 2 it is open in Longboard.
+    in property <int> steam-state;
+    in property <bool> steam-available;
+    in property <bool> steam-signed-in;
+    // "312 games and tools", when signed in.
+    in property <string> steam-summary;
     in property <int> signin-state;
     in property <string> signin-code;
     in property <string> downloads-dir;
@@ -296,6 +303,9 @@ export global Store {
     callback save-token(string);
     callback github-signin();
     callback github-cancel();
+    callback steam-signin();
+    callback steam-cancel();
+    callback steam-signout();
     callback clear-cache();
     callback clear-recent();
     callback open-url(string);

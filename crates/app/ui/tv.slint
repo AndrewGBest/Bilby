@@ -354,7 +354,7 @@ export component TvShell inherits Rectangle {
                         root.sys-row -= 1;
                     }
                 } else if (event.text == Key.DownArrow) {
-                    root.sys-row = min(4, root.sys-row + 1);
+                    root.sys-row = min(Store.steam-available ? 5 : 4, root.sys-row + 1);
                 } else if (root.sys-row > 0) {
                     // A setting: OK, Left or Right switches it.
                     if (event.text == Key.Return || event.text == " " || event.text == Key.LeftArrow || event.text == Key.RightArrow) {
@@ -364,6 +364,14 @@ export component TvShell inherits Rectangle {
                             Store.set-check-on-start(!Store.check-updates-on-start);
                         } else if (root.sys-row == 3) {
                             Store.set-prereleases(!Store.include-prereleases);
+                        } else if (root.sys-row == 5) {
+                            if (Store.steam-state != 0) {
+                                Store.steam-cancel();
+                            } else if (Store.steam-signed-in) {
+                                Store.steam-signout();
+                            } else {
+                                Store.steam-signin();
+                            }
                         } else if (Store.has-token) {
                             Store.save-token("");
                         } else if (Store.signin-state == 0) {
@@ -703,6 +711,13 @@ export component TvShell inherits Rectangle {
                     value: Store.has-token ? "Sign out" : Store.signin-state != 0 ? "Cancel" : "Sign in";
                     on: Store.has-token;
                     focused: root.zone == 0 && root.sys-row == 4;
+                }
+                if Store.steam-available : TvSetting {
+                    u: root.u;
+                    label: Store.steam-signed-in ? "Signed in to Steam  ·  " + Store.steam-summary : Store.steam-state != 0 ? "Sign in on Steam's page in Longboard, then share your library" : "Sign in to Steam to see what you own";
+                    value: Store.steam-state != 0 ? "Cancel" : Store.steam-signed-in ? "Sign out" : "Sign in";
+                    on: Store.steam-signed-in;
+                    focused: root.zone == 0 && root.sys-row == 5;
                 }
                 // The code to enter at GitHub, on a phone or computer.
                 if Store.signin-state == 2 : VerticalLayout {

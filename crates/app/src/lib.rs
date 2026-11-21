@@ -9,7 +9,7 @@ use bilby_core::catalog::{SearchOutcome, UpdateStatus};
 use bilby_core::index::Section as CoreSection;
 use bilby_core::install::{self, Action, Dirs};
 use bilby_core::model::{age_label, human_count, human_size, AppDetails, AppId, AppSummary, InstallOption, SourceKind};
-use bilby_core::platform::{FormFactor, PRESETS};
+use bilby_core::platform::{FormFactor, Os, PRESETS};
 use bilby_core::state::{now_unix, Favourite, InstalledApp, Settings, State};
 use bilby_core::{Catalog, Error, Platform};
 use slint::{ComponentHandle, Model, ModelRc, SharedString, VecModel};
@@ -77,6 +77,10 @@ pub struct Options {
     /// How another program is started with arguments (Longboard on an address,
     /// Flatpak to run or remove an app): the program and what to pass it.
     pub runner: Option<Runner>,
+    /// How the person signs in to Steam on its own page: given a folder for the
+    /// browser's data, returns the line the browser handed back, or nothing when the
+    /// window was closed. Defaults to the store's sign-in window; tests pass a stand-in.
+    pub signin: Option<SignIn>,
     /// The machine whose system details and updates are shown. Defaults to this
     /// computer; the demo and previews of other devices get a made-up one.
     pub host: Option<Arc<dyn bilby_core::os::Host>>,
@@ -94,6 +98,7 @@ pub struct Options {
 }
 
 pub type Opener = Arc<dyn Fn(&std::path::Path) -> bilby_core::Result<()> + Send + Sync>;
+pub type SignIn = Arc<dyn Fn(&std::path::Path) -> bilby_core::Result<Option<String>> + Send + Sync>;
 pub type Runner = Arc<dyn Fn(&std::path::Path, &[String]) -> bilby_core::Result<()> + Send + Sync>;
 
 /// Builds the catalog for a platform and the current settings. The default talks to the
@@ -525,6 +530,11 @@ pub struct App {
     opener: Opener,
     launcher: Opener,
     runner: Runner,
+    signin: SignIn,
+    /// The Steam account signed in to, kept beside the saved state for quick lookups.
+    steam: std::sync::RwLock<Option<bilby_core::steam_account::Account>>,
+    /// Bumped whenever a Steam sign-in starts or is cancelled, so a late answer is dropped.
+    steam_generation: AtomicU64,
     /// Icon addresses the sources gave, by app id.
     icon_urls: Mutex<HashMap<String, String>>,
     catalog_factory: CatalogFactory,
@@ -771,7 +781,7 @@ impl App {
             // A forge counts the files of the releases it listed; Flathub counts every install.
             downloads_note: if app.id.source == SourceKind::Flathub { "in total" } else { "of recent versions" }.into(),
             downloads: downloads.into(),
-            price: app.price.clone().unwrap_or_default().into(),
+            price: if self.owns(&app.id) { "Owned".into() } else { app.price.clone().unwrap_or_default().into() },
             headline: headline.into(),
             verified: app.verified,
             more_sources: 0,
@@ -1028,6 +1038,12 @@ impl App {
         store.set_show_ratings(!settings.hide_ratings);
         store.set_check_updates_on_start(!settings.skip_update_check_on_start);
         store.set_has_token(!settings.github_token.trim().is_empty());
+        let steam = self.steam.read().unwrap().clone();
+        // Steam is a desktop program: its library is offered wherever it runs.
+        let os = self.platform.read().unwrap().os;
+        store.set_steam_available(matches!(os, Os::Windows | Os::MacOs | Os::Linux));
+        store.set_steam_signed_in(steam.is_some());
+        store.set_steam_summary(steam.map(|a| format!("{} games and tools", a.owned.len())).unwrap_or_default().into());
         store.set_downloads_dir(self.dirs.downloads.display().to_string().into());
         store.set_show_welcome(!settings.welcomed);
         store.set_interface_mode(interface_mode(&settings.interface));
@@ -1267,6 +1283,106 @@ impl App {
                 );
             },
         );
+    }
+
+    /// Does the signed-in Steam account own this app?
+    pub fn owns(&self, id: &AppId) -> bool {
+        id.source == SourceKind::Steam
+            && self.steam.read().unwrap().as_ref().is_some_and(|account| account.owns_key(&id.key))
+    }
+
+    /// Sign in to Steam on Steam's own page, to learn what the account owns. On a TV
+    /// the page is shown by Longboard, which a remote can drive; elsewhere in a small
+    /// window of the store's own. Either way the store receives only the account's
+    /// number and the ids of what it owns.
+    pub fn steam_signin(self: &Arc<Self>, ui: &AppWindow) {
+        let generation = self.steam_generation.fetch_add(1, Ordering::SeqCst) + 1;
+        let store = ui.global::<Store>();
+        let via_longboard = store.get_shell() == Shell::Tv;
+        store.set_steam_state(if via_longboard { 2 } else { 1 });
+        self.job(
+            move |app| app.steam_ask(via_longboard, generation),
+            move |app, ui, result| {
+                if app.steam_generation.load(Ordering::SeqCst) != generation {
+                    return;
+                }
+                ui.global::<Store>().set_steam_state(0);
+                match result {
+                    Ok(Some(account)) => {
+                        let count = account.owned.len();
+                        *app.steam.write().unwrap() = Some(account.clone());
+                        app.update_state(ui, |state| state.steam = Some(account));
+                        app.refresh_settings(ui);
+                        app.refresh(ui);
+                        app.toast(
+                            ui,
+                            &format!("Signed in to Steam. {count} games and tools are in your library."),
+                            false,
+                        );
+                    }
+                    // Closed, declined or cancelled: nothing changes.
+                    Ok(None) => {}
+                    Err(e) => app.toast(ui, &e.to_string(), true),
+                }
+            },
+        );
+    }
+
+    fn steam_ask(
+        &self,
+        via_longboard: bool,
+        generation: u64,
+    ) -> bilby_core::Result<Option<bilby_core::steam_account::Account>> {
+        use bilby_core::steam_account;
+        if !via_longboard {
+            let line = (self.signin)(&self.dirs.config.join("steam-session"))?;
+            return line
+                .map(|line| {
+                    steam_account::parse(&line).ok_or_else(|| Error::Parse("Steam's answer could not be read.".into()))
+                })
+                .transpose();
+        }
+        let longboard = install::find_longboard(&self.dirs).ok_or_else(|| {
+            Error::Unsupported(
+                "On a TV you sign in to Steam in Longboard, a browser for TVs, which is not installed yet. Install Longboard from this store, then try again.".into(),
+            )
+        })?;
+        // The answer comes back as a file only this user can read, removed once read.
+        let dir = self.dirs.cache.join("hand-back");
+        std::fs::create_dir_all(&dir)?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700));
+        }
+        let file = dir.join("steam.json");
+        let _ = std::fs::remove_file(&file);
+        (self.runner)(&longboard, &steam_account::longboard_args(&file))?;
+        let going = || self.steam_generation.load(Ordering::SeqCst) == generation;
+        let answer = steam_account::await_hand_back(&file, std::time::Duration::from_secs(600), &going);
+        let _ = std::fs::remove_file(&file);
+        answer
+    }
+
+    /// Stop waiting for a Steam sign-in, closing the sign-in window if it is open.
+    pub fn steam_cancel(&self, ui: &AppWindow) {
+        self.steam_generation.fetch_add(1, Ordering::SeqCst);
+        if let Some(mut window) = SIGNIN_WINDOW.lock().unwrap().take() {
+            let _ = window.kill();
+            let _ = window.wait();
+        }
+        ui.global::<Store>().set_steam_state(0);
+    }
+
+    /// Forget the Steam account: what it owns, and the sign-in window's own data.
+    pub fn steam_signout(&self, ui: &AppWindow) {
+        self.steam_generation.fetch_add(1, Ordering::SeqCst);
+        *self.steam.write().unwrap() = None;
+        self.update_state(ui, |state| state.steam = None);
+        let _ = std::fs::remove_dir_all(self.dirs.config.join("steam-session"));
+        self.refresh_settings(ui);
+        self.refresh(ui);
+        self.toast(ui, "Signed out of Steam on this device", false);
     }
 
     /// Stop waiting for a sign-in.
@@ -2426,7 +2542,11 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         steam_libraries: options.steam_libraries.clone(),
         result_filter: Mutex::new(None),
         alternates: Mutex::new(HashMap::new()),
+        signin: options.signin.clone().unwrap_or_else(|| Arc::new(signin_window)),
+        steam: std::sync::RwLock::new(None),
+        steam_generation: AtomicU64::new(0),
     });
+    *app.steam.write().unwrap() = app.state().steam;
     app.apply_menu_entry(&ui);
     app.show_system(&ui, 0, "");
 
@@ -2530,6 +2650,9 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     });
     on!(on_github_signin, |app, ui| { app.github_signin(ui) });
     on!(on_github_cancel, |app, ui| { app.github_cancel(ui) });
+    on!(on_steam_signin, |app, ui| { app.steam_signin(ui) });
+    on!(on_steam_cancel, |app, ui| { app.steam_cancel(ui) });
+    on!(on_steam_signout, |app, ui| { app.steam_signout(ui) });
     on!(on_save_token, |app, ui, token| {
         let token = token.trim().to_string();
         let cleared = token.is_empty();
@@ -2853,6 +2976,63 @@ fn android_main(android_app: slint::android::AndroidApp) {
     };
     if let Err(e) = run(Options { dirs: Some(dirs), ..Default::default() }) {
         eprintln!("bilby: {e}");
+    }
+}
+
+/// The store's sign-in window while it is open, so it can be closed from here.
+static SIGNIN_WINDOW: Mutex<Option<std::process::Child>> = Mutex::new(None);
+
+/// The program that shows the sign-in window. On Windows and macOS it is this program
+/// run another way; on Linux it is a separate file beside this one, so that the store
+/// itself starts on systems without the web engine the window needs.
+fn signin_command() -> Option<std::process::Command> {
+    let me = std::env::current_exe().ok()?;
+    if cfg!(any(windows, target_os = "macos")) {
+        let mut command = std::process::Command::new(me);
+        command.arg("--signin");
+        return Some(command);
+    }
+    let beside = me.parent().map(|dir| dir.join("bilby-signin")).filter(|p| p.is_file());
+    let on_path =
+        || std::env::split_paths(&std::env::var_os("PATH")?).map(|dir| dir.join("bilby-signin")).find(|p| p.is_file());
+    beside.or_else(on_path).map(std::process::Command::new)
+}
+
+/// Show Steam's sign-in page in the store's own small window and wait for it to hand
+/// back what the account owns, or to be closed.
+fn signin_window(data_dir: &std::path::Path) -> bilby_core::Result<Option<String>> {
+    use std::io::Read;
+    use std::process::Stdio;
+    let cannot = || {
+        let needs = if cfg!(target_os = "linux") {
+            " It needs WebKitGTK (the package libwebkit2gtk-4.1) on this system."
+        } else {
+            ""
+        };
+        Error::Unsupported(format!("The sign-in window could not be opened.{needs}"))
+    };
+    let mut command = signin_command().ok_or_else(cannot)?;
+    std::fs::create_dir_all(data_dir)?;
+    command
+        .arg("steam")
+        .arg("--data-dir")
+        .arg(data_dir)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null());
+    let mut window = command.spawn().map_err(|_| cannot())?;
+    let mut said = window.stdout.take();
+    *SIGNIN_WINDOW.lock().unwrap() = Some(window);
+    let mut line = String::new();
+    if let Some(out) = said.as_mut() {
+        let _ = out.read_to_string(&mut line);
+    }
+    // Gone already means it was closed from the store: the same as the person closing it.
+    let Some(mut window) = SIGNIN_WINDOW.lock().unwrap().take() else { return Ok(None) };
+    match window.wait()?.code() {
+        Some(0) if !line.trim().is_empty() => Ok(Some(line)),
+        Some(3) => Ok(None),
+        _ => Err(cannot()),
     }
 }
 

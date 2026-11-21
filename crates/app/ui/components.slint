@@ -2096,6 +2096,24 @@ export component SettingsBody inherits Rectangle {
                 }
             }
 
+            if Store.steam-available : SettingsCard {
+                title: "Steam";
+                Text {
+                    text: Store.steam-signed-in ? "Signed in. Bilby knows " + Store.steam-summary + " in your Steam library and marks them Owned." : Store.steam-state == 1 ? "Sign in on Steam's page in the window that opened. Close it to stop." : Store.steam-state == 2 ? "Sign in on Steam's page in Longboard, then choose to share your library." : "Sign in to see which Steam games you already own. You sign in on Steam's own page; Bilby is given only the list of what you own, never your password, and keeps it on this device.";
+                    color: Theme.text-dim;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                }
+                HorizontalLayout {
+                    alignment: start;
+                    spacing: 8px;
+                    if !Store.steam-signed-in && Store.steam-state == 0 : Button { text: "Sign in to Steam"; clicked => { Store.steam-signin(); } }
+                    if Store.steam-state != 0 : Button { text: "Stop waiting"; primary: false; accessible-label: "Stop waiting for Steam"; clicked => { Store.steam-cancel(); } }
+                    if Store.steam-signed-in && Store.steam-state == 0 : Button { text: "Refresh"; primary: false; accessible-label: "Refresh my Steam library"; clicked => { Store.steam-signin(); } }
+                    if Store.steam-signed-in && Store.steam-state == 0 : Button { text: "Sign out"; primary: false; accessible-label: "Sign out of Steam"; clicked => { Store.steam-signout(); } }
+                }
+            }
+
             SettingsCard {
                 title: "GitHub access";
                 Text {

@@ -12,6 +12,11 @@ app="$dir/Bilby.AppDir"
 mkdir -p "$app/usr/bin" "$app/usr/share/applications" "$app/usr/share/icons/hicolor/512x512/apps"
 cp "$binary" "$app/usr/bin/bilby"
 chmod 755 "$app/usr/bin/bilby"
+# The sign-in window, when it was built: bilby looks for it beside itself.
+if [ -f "$(dirname "$binary")/bilby-signin" ]; then
+  cp "$(dirname "$binary")/bilby-signin" "$app/usr/bin/bilby-signin"
+  chmod 755 "$app/usr/bin/bilby-signin"
+fi
 cp "$here/bilby.desktop" "$app/bilby.desktop"
 cp "$here/bilby.desktop" "$app/usr/share/applications/bilby.desktop"
 cp "$here/../bilby.png" "$app/bilby.png"

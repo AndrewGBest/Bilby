@@ -104,6 +104,8 @@ pub struct Backup {
 #[serde(default)]
 pub struct State {
     pub settings: Settings,
+    /// The Steam account the person signed in to, and what it owns.
+    pub steam: Option<crate::steam_account::Account>,
     pub library: Vec<InstalledApp>,
     pub recent_searches: Vec<String>,
     pub favourites: Vec<Favourite>,

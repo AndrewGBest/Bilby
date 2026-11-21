@@ -7,6 +7,7 @@
 
 use bilby::{build, App, AppCard, AppWindow, Options, Shell, SourceChoice, Store, Theme};
 use bilby_core::install::Dirs;
+use bilby_core::model::AppId;
 use bilby_core::state::State;
 use bilby_core::Platform;
 use i_slint_backend_testing::{ElementHandle, ElementRoot};
@@ -104,7 +105,17 @@ fn start_with(preset: &str, shell: Shell, seed: Option<&str>) -> Session {
         })),
         runner: Some(Arc::new(move |program: &std::path::Path, args: &[String]| {
             web_record.lock().unwrap().push((program.to_path_buf(), args.join(" ")));
+            // A Longboard asked to hand back a Steam library: the person agrees.
+            if let Some(to) = args.iter().find_map(|a| a.strip_prefix("--hand-back-to=")) {
+                std::fs::write(to, r#"{"steamid":"76561198000000001","owned":[570,440]}"#).unwrap();
+            }
             Ok(())
+        })),
+        // The store's sign-in window: the person signs in and Steam answers.
+        signin: Some(Arc::new(|session: &std::path::Path| {
+            std::fs::create_dir_all(session)?;
+            std::fs::write(session.join("cookies"), b"stand-in")?;
+            Ok(Some(r#"{"steamid":"76561198000000001","owned":[620,440,10]}"#.to_string()))
         })),
         ..Default::default()
     };
@@ -2068,4 +2079,52 @@ fn a_tv_remote_can_switch_version_from_the_versions_list() {
     s.press(Key::Return);
     assert_eq!(s.store().get_app().id, first.id, "OK on a version opens it");
     assert!(s.store().get_tv_choices().iter().any(|c| c.id == "web:youtube.com"), "and the way back is offered");
+}
+
+// ---- signing in to Steam ----
+
+#[test]
+fn signing_in_to_steam_in_the_stores_window_records_what_the_account_owns() {
+    let s = start("linux-x64-debian", Shell::Desktop);
+    s.store().set_page(3);
+    assert!(s.has("Sign in to Steam") && !s.store().get_steam_signed_in());
+    s.click("Sign in to Steam");
+    assert!(s.store().get_steam_signed_in());
+    assert_eq!(s.store().get_steam_summary(), "3 games and tools");
+    assert!(s.store().get_toast().contains("3 games and tools"), "{}", s.store().get_toast());
+    let saved = s.saved().steam.expect("kept for next time");
+    assert_eq!((saved.steamid.as_str(), saved.owned.as_slice()), ("76561198000000001", &[10, 440, 620][..]));
+    assert!(s.app.owns(&AppId::parse("steam:440").unwrap()) && !s.app.owns(&AppId::parse("steam:570").unwrap()));
+    assert!(!s.app.owns(&AppId::parse("flathub:440").unwrap()), "only Steam's own ids");
+    // Only the list is kept by the store: nothing that could act as the account.
+    let on_disk = std::fs::read_to_string(&s.state_file).unwrap();
+    assert!(!on_disk.contains("token") || on_disk.contains("github_token"), "{on_disk}");
+
+    // Signing out forgets the list and the window's own data.
+    assert!(s.dirs.config.join("steam-session").join("cookies").exists());
+    s.click("Sign out of Steam");
+    assert!(!s.store().get_steam_signed_in() && s.saved().steam.is_none());
+    assert!(!s.dirs.config.join("steam-session").exists());
+    assert!(!s.app.owns(&AppId::parse("steam:440").unwrap()));
+}
+
+#[test]
+fn on_a_tv_steam_sign_in_happens_in_longboard_which_hands_the_list_back() {
+    let s = start("linux-tv", Shell::Tv);
+    // Without Longboard there is nowhere to sign in: say so, and what to do.
+    s.store().invoke_steam_signin();
+    assert!(s.store().get_toast().contains("Install Longboard"), "{}", s.store().get_toast());
+    assert!(!s.store().get_steam_signed_in() && s.store().get_steam_state() == 0);
+
+    std::fs::create_dir_all(&s.dirs.applications).unwrap();
+    let longboard = s.dirs.applications.join("Longboard-x86_64.AppImage");
+    std::fs::write(&longboard, b"stand-in").unwrap();
+    s.store().invoke_steam_signin();
+    let (program, args) = s.web_opened.lock().unwrap().last().cloned().expect("Longboard was started");
+    assert_eq!(program, longboard);
+    assert!(args.starts_with("--hand-back=steam-library --hand-back-to="), "{args}");
+    assert!(args.ends_with("--url=https://store.steampowered.com/login/?redir=&redir_ssl=1"), "{args}");
+    assert!(s.store().get_steam_signed_in());
+    assert_eq!(s.saved().steam.unwrap().owned, [440, 570]);
+    assert!(!s.dirs.cache.join("hand-back").join("steam.json").exists(), "the answer is removed once read");
 }

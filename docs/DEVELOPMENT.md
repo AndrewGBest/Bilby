@@ -10,7 +10,7 @@ it is, see the [design notes](DESIGN.md).
   fontconfig and xkbcommon. On Debian or Ubuntu:
 
   ```sh
-  sudo apt install build-essential pkg-config libfontconfig1-dev libxkbcommon-dev
+  sudo apt install build-essential pkg-config libfontconfig1-dev libxkbcommon-dev libwebkit2gtk-4.1-dev libgtk-3-dev
   ```
 
 - On Linux, to run: `libxkbcommon` (and `libxkbcommon-x11` on X11).

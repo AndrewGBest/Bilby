@@ -252,12 +252,46 @@ checked to exist at its source.
 offers "Install Steam", which opens Steam's own entry in Bilby (from Flathub, the
 distribution, winget or Homebrew, whichever this device has).
 
+**Signing in to Steam, to know what is owned** (`steam_account.rs`, `crates/signin`).
+Steam tells a signed-in browser which games an account owns, and nobody else without
+a key that would have to be kept secret on a server, which Bilby does not have. So
+the person signs in on Steam's own page, in a browser, and that browser asks Steam
+for the list and hands Bilby one line: the account's number and the ids it owns.
+That line is all Bilby keeps. No password, cookie or token reaches it. [The
+addresses are the ones Steam's own web pages use, not ones it publishes for other
+programs; the Playnite game library reads the same ones (its source, read
+2026-11-21). Steam can change them, and then sign-in stops working until Bilby
+follows.]
+
+- *On a computer or phone layout* the browser is a small window of Bilby's own
+  (`bilby-signin`, built on the system's web engine: WebView2, WKWebView or
+  WebKitGTK). It goes to Steam's addresses and nowhere else, opens no other windows,
+  and shows in its title which site it is on, since it has no address bar. Only the
+  store's own page is believed, and only for a number and a list of ids. Its cookies
+  stay in its own folder so a refresh need not ask for the password again; Sign out
+  deletes the folder. On Linux it is a separate program so that Bilby itself starts
+  on systems without WebKitGTK; on Windows and macOS it is Bilby run another way.
+- *On a TV* the browser is Longboard, which a remote can drive. Bilby starts it with
+  `--hand-back=steam-library --hand-back-to=<file>`; Longboard opens Steam's page,
+  asks the person whether to share the list once they are signed in, and writes the
+  line (or a refusal) to the file, which Bilby reads and removes. Bilby can ask only
+  by that name; what the name yields is Longboard's to decide. [This needs a
+  Longboard with the feature, which at the time of writing is on a branch there,
+  not released.]
+
+Owned games are marked Owned in place of their price. [Run for real: the window
+showing Steam's sign-in page; Bilby starting it, reading its answer and saving it,
+with a stand-in for the window's answer; the Longboard exchange end to end against
+an invented store. Not run for real: any of it signed in to Steam, and the window
+on Windows or macOS.]
+
 **Other stores, handed over to.** Some things can only be installed by the store that
 sells them. For those Bilby is the front door: it finds the app, shows its price,
 pictures and how well liked it is, and then opens that store's own app on it with
 the store's own link (`steam://install/620`,
 `macappstore://apps.apple.com/app/id...`). Signing in, paying, downloading and
-updating stay with that store, and Bilby learns nothing about the account. Nothing
+updating stay with that store, and Bilby learns nothing about the account unless the
+person signs in to Steam through it (below). Nothing
 goes in Bilby's library, because Bilby installed nothing. For Steam it reads the files
 Steam keeps beside its library to know what is installed, and then offers Open, which
 asks Steam to start it (`steam://rungameid/620`). On Linux a Windows-only game is

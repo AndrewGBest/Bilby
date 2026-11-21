@@ -1,0 +1,12 @@
+[package]
+name = "bilby-signin"
+description = "A small browser window for signing in to another store on its own page."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+wry = "0.57"
+tao = "0.37"
+serde_json = "1"
