@@ -336,6 +336,15 @@ on 2026-11-21. Public "top sites" lists were looked at and not used: the best kn
 bare domains, heavy with delivery networks and other things nobody visits. Any other
 address can still be typed and added.
 
+A web app's picture is the site's own (`icons::fetch_site`): the icon its front page
+names, preferring the large one made for phones' home screens, then the usual
+addresses (`/apple-touch-icon.png`, `/favicon.ico`, taking the PNG out of an old-style
+icon file). It is asked of the site and of nobody else, no icon service in between,
+and kept on disk, as is "this site has none we can show". The cost is that showing
+a tile contacts that site once. [Tried live 2026-11-21: 15 of 16 sites in one search
+gave a picture; one refused.] Pictures now load a few at a time in parallel, so a
+slow site no longer holds up every other tile's picture.
+
 **Other stores, handed over to.** Some things can only be installed by the store that
 sells them. For those Bilby is the front door: it finds the app, shows its price,
 pictures and how well liked it is, and then opens that store's own app on it with

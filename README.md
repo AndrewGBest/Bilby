@@ -164,6 +164,7 @@ sources, and what leaves your device is what those requests carry:
 |---|---|---|
 | Search or open an app | Every source switched on for your device (a search), or that app's source (opening it) | What you searched for or opened, and your network address, as with any website |
 | Open Bilby, or check for updates | The sources of the apps in your library, and GitHub for Bilby's own releases | Which apps were checked for updates. Can be switched off for start-up |
+| See a web app's tile (Linux TVs) | That website, and wherever it keeps its icon | That someone fetched its front page and icon, once; the icon is then kept on your device |
 | Have ratings switched on | The ratings service GNOME and KDE use | That *someone* downloaded the full list of ratings, once a day |
 | Open an app that has reviews | The same service | Which app's reviews were asked for. No user id is sent |
 | Sign in to Steam | Steam | That this device signed in, as with any browser or app. Optional. With a QR code, Steam gives Bilby a key to the account, which Bilby uses once to read the list and then discards; in a browser, no key reaches Bilby at all. Either way only the list of what you own is kept, on this device, and Sign out removes it |

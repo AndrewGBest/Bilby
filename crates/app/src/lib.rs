@@ -666,6 +666,12 @@ impl App {
                     }
                     // No address yet. A logo found on an earlier visit is used; otherwise
                     // the question stays open, because the address may still arrive.
+                    // A website's picture comes from the site itself.
+                    None if id.source == SourceKind::Web => {
+                        if requested.insert(own.clone()) {
+                            wanted.push((own, id.clone(), Some(SITE_ICON.to_string())));
+                        }
+                    }
                     None => {
                         if !requested.contains(&own) && matches!(bilby_core::icons::cached(&icons, &own), Some(Some(_)))
                         {
@@ -685,54 +691,61 @@ impl App {
         if wanted.is_empty() {
             return;
         }
-        let dir = self.dirs.cache.join("icons");
-        self.job(
-            move |app| {
-                let http = app.catalog().http();
-                wanted
-                    .into_iter()
-                    .filter_map(|(key, id, own)| {
-                        let path = match own {
-                            // No address: only what an earlier visit to its page left on disk.
-                            Some(url) if url.is_empty() => bilby_core::icons::cached(&dir, &key).flatten(),
-                            Some(url) => {
-                                bilby_core::icons::fetch_picture(http.as_ref(), &dir, &key, &url, 2 * 1024 * 1024)
-                                    .ok()?
-                            }
-                            None => bilby_core::icons::fetch(http.as_ref(), &dir, &id).ok()?,
-                        };
-                        Some((key, path?))
-                    })
-                    .collect::<Vec<_>>()
-            },
-            |app, ui, found| {
-                if found.is_empty() {
-                    return;
-                }
-                PICTURES.with(|pictures| {
-                    for (key, path) in found {
-                        // A file that will not decode is simply not shown.
-                        if let Some(image) = decode_picture(&path) {
-                            pictures.borrow_mut().insert(key, image);
-                        }
+        // A few at a time, each group on its own: a slow site holds up only its group,
+        // and pictures appear as they arrive instead of all at the end.
+        for group in wanted.chunks(4).map(<[_]>::to_vec) {
+            let dir = self.dirs.cache.join("icons");
+            self.job(
+                move |app| {
+                    let http = app.catalog().http();
+                    group
+                        .into_iter()
+                        .filter_map(|(key, id, own)| {
+                            let path = match own {
+                                // No address: only what an earlier visit to its page left on disk.
+                                Some(url) if url.is_empty() => bilby_core::icons::cached(&dir, &key).flatten(),
+                                Some(url) if url == SITE_ICON => {
+                                    bilby_core::icons::fetch_site(http.as_ref(), &dir, &key, &id.key).ok()?
+                                }
+                                Some(url) => {
+                                    bilby_core::icons::fetch_picture(http.as_ref(), &dir, &key, &url, 2 * 1024 * 1024)
+                                        .ok()?
+                                }
+                                None => bilby_core::icons::fetch(http.as_ref(), &dir, &id).ok()?,
+                            };
+                            Some((key, path?))
+                        })
+                        .collect::<Vec<_>>()
+                },
+                |app, ui, found| {
+                    if found.is_empty() {
+                        return;
                     }
-                });
-                app.refresh(ui);
-                let store = ui.global::<Store>();
-                let mut card = store.get_app();
-                card.icon = picture_for(&card.id);
-                store.set_app(card);
-                let suggestions: Vec<AppCard> = store
-                    .get_suggestions()
-                    .iter()
-                    .map(|mut c| {
-                        c.icon = picture_for(&c.id);
-                        c
-                    })
-                    .collect();
-                store.set_suggestions(ModelRc::new(VecModel::from(suggestions)));
-            },
-        );
+                    PICTURES.with(|pictures| {
+                        for (key, path) in found {
+                            // A file that will not decode is simply not shown.
+                            if let Some(image) = decode_picture(&path) {
+                                pictures.borrow_mut().insert(key, image);
+                            }
+                        }
+                    });
+                    app.refresh(ui);
+                    let store = ui.global::<Store>();
+                    let mut card = store.get_app();
+                    card.icon = picture_for(&card.id);
+                    store.set_app(card);
+                    let suggestions: Vec<AppCard> = store
+                        .get_suggestions()
+                        .iter()
+                        .map(|mut c| {
+                            c.icon = picture_for(&c.id);
+                            c
+                        })
+                        .collect();
+                    store.set_suggestions(ModelRc::new(VecModel::from(suggestions)));
+                },
+            );
+        }
     }
 
     fn toast(&self, ui: &AppWindow, message: &str, is_error: bool) {
@@ -3437,6 +3450,9 @@ fn own_icon() -> slint::Image {
     );
     slint::Image::from_rgba8(buffer)
 }
+
+/// In place of an address: this picture is the website's own, found at the site.
+const SITE_ICON: &str = "site:";
 
 /// The id of the Library's card for the device itself, which opens its page.
 const SYSTEM_CARD: &str = "bilby:this-device";

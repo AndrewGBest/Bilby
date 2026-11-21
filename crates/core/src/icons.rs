@@ -126,6 +126,254 @@ pub fn fetch_picture(http: &dyn Http, dir: &Path, key: &str, url: &str, max_byte
     }
 }
 
+/// A website's own picture, from the site itself: the icon its front page names (the
+/// large one made for phones' home screens where there is one), else the usual
+/// addresses for one. Nothing is asked of anyone but the site. Cached like the rest,
+/// and "this site has none we can show" is remembered too.
+pub fn fetch_site(http: &dyn Http, dir: &Path, key: &str, host: &str) -> Result<Option<PathBuf>> {
+    if let Some(known) = cached(dir, key) {
+        return Ok(known);
+    }
+    if !crate::model::valid_key(SourceKind::Web, host) {
+        return Ok(None);
+    }
+    std::fs::create_dir_all(dir)?;
+    let base = format!("https://{host}/");
+    // What the page itself says, best first; then where such pictures usually live.
+    let mut candidates = http.get(&base).map(|html| site_icons(&html, &base)).unwrap_or_default();
+    for usual in ["apple-touch-icon.png", "apple-touch-icon-precomposed.png", "favicon.ico"] {
+        let url = format!("{base}{usual}");
+        if !candidates.contains(&url) {
+            candidates.push(url);
+        }
+    }
+    let download = dir.join(format!("{key}.download"));
+    let mut unreachable = None;
+    for url in candidates.iter().take(6) {
+        match http.download(url, &download, &mut |done, _| done < 2 * 1024 * 1024) {
+            Ok(_) => {}
+            Err(Error::NotFound(_)) | Err(Error::Cancelled) | Err(Error::Status { .. }) => continue,
+            Err(e) => {
+                unreachable = Some(e);
+                continue;
+            }
+        }
+        let bytes = std::fs::read(&download).unwrap_or_default();
+        let _ = std::fs::remove_file(&download);
+        // A PNG or JPEG as it is; from the older icon format, the PNG inside it.
+        let picture = match sniff(&bytes) {
+            Some(ext) => Some((bytes, ext)),
+            None => png_in_ico(&bytes).map(|png| (png, "png")),
+        };
+        if let Some((bytes, ext)) = picture {
+            let path = dir.join(format!("{key}.{ext}"));
+            std::fs::write(&path, bytes)?;
+            return Ok(Some(path));
+        }
+    }
+    let _ = std::fs::remove_file(&download);
+    // Could not be reached at all: ask again another time. Reached, with nothing usable: remember.
+    match unreachable {
+        Some(e) if candidates.len() <= 3 => Err(e),
+        _ => {
+            std::fs::write(dir.join(format!("{key}.none")), b"")?;
+            Ok(None)
+        }
+    }
+}
+
+/// The icons a page names in its `<link>` tags, best first: the ones made for home
+/// screens (large, square, opaque), then other PNG icons, larger before smaller.
+/// Addresses are made whole against `base`; only https ones are kept.
+pub fn site_icons(html: &str, base: &str) -> Vec<String> {
+    let head = &html[..html.len().min(300_000)];
+    let mut found: Vec<(u32, String)> = Vec::new();
+    for tag in head.split('<').filter(|t| t.len() > 5 && t[..5].eq_ignore_ascii_case("link ")) {
+        let tag = tag.split('>').next().unwrap_or("");
+        let attribute = |name: &str| -> Option<String> {
+            let lower = tag.to_ascii_lowercase();
+            let at = lower.find(&format!("{name}="))? + name.len() + 1;
+            let rest = &tag[at..];
+            let value = match rest.chars().next()? {
+                quote @ ('"' | '\'') => rest[1..].split(quote).next()?,
+                _ => rest.split(|c: char| c.is_whitespace() || c == '/').next()?,
+            };
+            Some(value.trim().replace("&amp;", "&"))
+        };
+        let rel = attribute("rel").unwrap_or_default().to_ascii_lowercase();
+        let Some(href) = attribute("href").filter(|h| !h.is_empty()) else { continue };
+        let touch = rel.contains("apple-touch-icon");
+        if !touch && !rel.split_whitespace().any(|word| word == "icon") {
+            continue;
+        }
+        let kind = attribute("type").unwrap_or_default().to_ascii_lowercase();
+        let path = href.split(['?', '#']).next().unwrap_or("").to_ascii_lowercase();
+        let png = path.ends_with(".png") || kind == "image/png";
+        let ico = path.ends_with(".ico") || kind.contains("icon");
+        if !touch && !png && !ico {
+            // SVG and the like: not something this can show.
+            continue;
+        }
+        let size: u32 = attribute("sizes").and_then(|s| s.split(['x', 'X']).next()?.parse().ok()).unwrap_or(if touch {
+            180
+        } else {
+            32
+        });
+        let url = if href.starts_with("https://") {
+            href
+        } else if let Some(rest) = href.strip_prefix("//") {
+            format!("https://{rest}")
+        } else if href.starts_with('/') {
+            format!("{}{}", base.trim_end_matches('/'), href)
+        } else if href.contains("://") || href.starts_with("data:") {
+            continue;
+        } else {
+            format!("{base}{href}")
+        };
+        // Home-screen icons first, then by size; the older format last.
+        let rank = if touch {
+            10_000
+        } else if ico {
+            0
+        } else {
+            1_000
+        } + size.min(999);
+        if !found.iter().any(|(_, seen)| *seen == url) {
+            found.push((rank, url));
+        }
+    }
+    found.sort_by_key(|(rank, _)| std::cmp::Reverse(*rank));
+    found.into_iter().map(|(_, url)| url).collect()
+}
+
+/// The largest PNG picture inside a `.ico` file, when it holds one. Modern icon files
+/// do; the older ones hold bitmaps, which are left alone.
+pub fn png_in_ico(bytes: &[u8]) -> Option<Vec<u8>> {
+    if bytes.len() < 6 || bytes[..4] != [0, 0, 1, 0] {
+        return None;
+    }
+    let count = u16::from_le_bytes([bytes[4], bytes[5]]) as usize;
+    let mut best: Option<&[u8]> = None;
+    for entry in 0..count.min(64) {
+        let at = 6 + entry * 16;
+        let field = |offset: usize| -> Option<usize> {
+            let b = bytes.get(at + offset..at + offset + 4)?;
+            Some(u32::from_le_bytes([b[0], b[1], b[2], b[3]]) as usize)
+        };
+        let (size, start) = (field(8)?, field(12)?);
+        let Some(data) = bytes.get(start..start.checked_add(size)?) else { continue };
+        if sniff(data) == Some("png") && best.is_none_or(|b| data.len() > b.len()) {
+            best = Some(data);
+        }
+    }
+    best.map(<[u8]>::to_vec)
+}
+
+#[cfg(test)]
+mod site_tests {
+    use super::*;
+    use std::collections::HashMap;
+    use std::sync::Mutex;
+
+    /// A made-up web: each address answers with what the test gave it.
+    struct Web(HashMap<&'static str, Vec<u8>>, Mutex<Vec<String>>);
+    impl Http for Web {
+        fn get(&self, url: &str) -> Result<String> {
+            self.1.lock().unwrap().push(url.to_string());
+            self.0
+                .get(url)
+                .map(|b| String::from_utf8_lossy(b).to_string())
+                .ok_or_else(|| Error::NotFound(url.to_string()))
+        }
+        fn download(&self, url: &str, dest: &Path, _: &mut dyn FnMut(u64, Option<u64>) -> bool) -> Result<String> {
+            self.1.lock().unwrap().push(url.to_string());
+            let body = self.0.get(url).ok_or_else(|| Error::NotFound(url.to_string()))?;
+            std::fs::write(dest, body)?;
+            Ok(String::new())
+        }
+    }
+    const PNG: &[u8] = &[0x89, b'P', b'N', b'G', 13, 10, 26, 10, 1, 2, 3];
+
+    fn folder(tag: &str) -> PathBuf {
+        let d = std::env::temp_dir().join(format!("bilby-site-icons-{tag}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&d);
+        d
+    }
+
+    #[test]
+    fn a_pages_own_icons_are_read_best_first() {
+        let html = r#"<html><head>
+            <link rel="icon" href="/favicon.ico">
+            <LINK REL="icon" type="image/png" sizes="32x32" href="/img/fav-32.png?v=2&amp;x=1">
+            <link rel='icon' sizes='192x192' href='https://cdn.example.net/fav-192.png'>
+            <link rel="apple-touch-icon" href="touch.png">
+            <link rel="icon" type="image/svg+xml" href="/logo.svg">
+            <link rel="stylesheet" href="/site.css">
+            <link rel="icon" href="http://insecure.example/x.png">
+            <link rel="icon" href="//static.example.org/i.png" sizes="64x64">
+        </head></html>"#;
+        assert_eq!(
+            site_icons(html, "https://example.org/"),
+            [
+                "https://example.org/touch.png",
+                "https://cdn.example.net/fav-192.png",
+                "https://static.example.org/i.png",
+                "https://example.org/img/fav-32.png?v=2&x=1",
+                "https://example.org/favicon.ico",
+            ]
+        );
+        assert!(site_icons("<p>no head</p>", "https://example.org/").is_empty());
+    }
+
+    #[test]
+    fn a_sites_picture_comes_from_the_site_and_is_remembered() {
+        let dir = folder("named");
+        let mut pages = HashMap::new();
+        pages.insert("https://example.org/", br#"<link rel="apple-touch-icon" href="/touch.png">"#.to_vec());
+        pages.insert("https://example.org/touch.png", PNG.to_vec());
+        let web = Web(pages, Mutex::new(Vec::new()));
+        let path = fetch_site(&web, &dir, "app-web-example-org", "example.org").unwrap().unwrap();
+        assert_eq!(std::fs::read(&path).unwrap(), PNG);
+        assert!(
+            web.1.lock().unwrap().iter().all(|url| url.starts_with("https://example.org/")),
+            "only the site itself is asked"
+        );
+        // The second time nothing is asked at all.
+        let asked = web.1.lock().unwrap().len();
+        assert!(fetch_site(&web, &dir, "app-web-example-org", "example.org").unwrap().is_some());
+        assert_eq!(web.1.lock().unwrap().len(), asked);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn the_usual_places_are_tried_and_an_old_style_icon_gives_up_its_png() {
+        // No page to read (it refuses), no touch icon, but a favicon.ico holding a PNG.
+        let mut ico = vec![0, 0, 1, 0, 1, 0];
+        ico.extend([0u8; 8]);
+        ico.extend((PNG.len() as u32).to_le_bytes());
+        ico.extend(22u32.to_le_bytes());
+        ico.extend(PNG);
+        assert_eq!(png_in_ico(&ico).as_deref(), Some(PNG));
+        assert!(png_in_ico(b"not an icon").is_none() && png_in_ico(&[0, 0, 1, 0, 1, 0, 9, 9]).is_none());
+
+        let dir = folder("usual");
+        let mut pages = HashMap::new();
+        pages.insert("https://old.example/favicon.ico", ico);
+        let web = Web(pages, Mutex::new(Vec::new()));
+        let path = fetch_site(&web, &dir, "app-web-old-example", "old.example").unwrap().unwrap();
+        assert_eq!(std::fs::read(&path).unwrap(), PNG);
+
+        // A site with nothing usable is remembered as such, and not asked again.
+        let none = Web(HashMap::new(), Mutex::new(Vec::new()));
+        assert!(fetch_site(&none, &dir, "app-web-bare-example", "bare.example").unwrap().is_none());
+        let asked = none.1.lock().unwrap().len();
+        assert!(fetch_site(&none, &dir, "app-web-bare-example", "bare.example").unwrap().is_none());
+        assert_eq!(none.1.lock().unwrap().len(), asked);
+        assert!(fetch_site(&none, &dir, "k", "not a host").unwrap().is_none());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
