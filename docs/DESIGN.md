@@ -310,9 +310,27 @@ thing outranks a little-used one with the word in its name; the app whose name i
 exactly what was typed gets a fixed bonus and stays first. Apps on record for a
 service (`related.json`) count as near matches for that service's name.
 
-**18+** (`AppSummary::adult`, `Settings::show_adult`). Off by default: what is marked
-is left out of searches and the home page, the search says how many were left out,
-and such a page will not open. Bilby does not judge content; it goes by its sources:
+**Adult content, Family mode and the PIN** (`parental.rs`). Things meant for adults
+are part of the catalog, kept apart rather than hidden:
+
+- In a search they are never among the top results or the other rows. They have a
+  section of their own, last, and each is *covered*: the tile says "Adult content" and
+  nothing of what it is, with no name, picture or figures. Slint's software renderer
+  cannot blur, and a cover gives away less than a blur would.
+- Choosing one asks "Are you 18 or over?", with No highlighted. A yes is remembered,
+  so it is asked once. The tile stays covered in lists all the same.
+- On the home page they appear only if the person switched that on, and covered.
+- **Family mode** takes them out altogether: not listed, not covered, not openable,
+  and a search does not say that anything was left out.
+- A four-digit **PIN**, kept as a salted hash, replaces the age question where it is
+  set, and is asked for to switch Family mode off, to change any of these settings,
+  to remove itself and, if chosen, before installing or removing anything. Making
+  things stricter never needs it: anyone may switch Family mode on. Entered to open
+  adult content it holds for the rest of the sitting; entered for anything else it
+  covers that one thing. [It stops a child with the remote. It would not stop
+  someone who reads the settings file and tries ten thousand numbers.]
+
+What counts as adult is not Bilby's judgement; it goes by its sources:
 
 - Steam's descriptors 3 and 4 ("adult only" and "gratuitous" sexual content), asked
   for all of a search's games in one keyless request, and again on a game's own page.
@@ -324,8 +342,8 @@ and such a page will not open. Bilby does not judge content; it goes by its sour
 - The bundled list of sites (`data/web.json`), where a handful of the best-known adult
   sites are listed precisely so that they are recognised.
 
-[Limits: if Steam's lookup fails the search's games are not marked, though each page
-still checks; a typed address Bilby has never heard of is not recognised; GitHub,
+[Limits, which matter most in Family mode: if Steam's lookup fails the search's games
+are not marked, though each page still checks; a typed address Bilby has never heard of is not recognised; GitHub,
 GitLab, winget, Homebrew and the Snap Store say nothing about age at all. The Mac App
 Store's "17+" is not used: it covers ordinary browsers and social apps.]
 

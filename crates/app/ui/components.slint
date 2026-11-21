@@ -2070,28 +2070,74 @@ export component SettingsBody inherits Rectangle {
             }
 
             SettingsCard {
-                title: "18+";
+                title: "Family and adult content";
+                Text {
+                    text: "Some games, apps and websites are meant for adults. They are kept apart: in a search they have a section of their own, each one covered until you choose it, and you are asked to confirm you are an adult before one opens.";
+                    color: Theme.text-dim;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                }
                 HorizontalLayout {
                     spacing: 12px;
                     VerticalLayout {
                         horizontal-stretch: 1;
                         spacing: 2px;
-                        Text { text: "Show 18+ apps and sites"; color: Theme.text; font-size: 14px; }
-                        Text {
-                            text: "Off, anything its source marks as adult only is left out of searches and the home page, and will not open. Switch it on only if you are 18 or over. Bilby goes by what sources say: Steam's adult-only marks, an app's own age rating of 18, and its list of well-known adult sites. A site it does not know is not recognised.";
-                            color: Theme.text-dim;
-                            font-size: 12px;
-                            wrap: word-wrap;
-                        }
+                        Text { text: "Family mode"; color: Theme.text; font-size: 14px; }
+                        Text { text: "Nothing for adults is shown anywhere, not even covered, and none of it can be opened." + (Store.has-pin ? " Switching it off needs the PIN." : " Set a PIN below so that it cannot simply be switched off."); color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
                     }
                     VerticalLayout {
                         alignment: center;
-                        Toggle {
-                            label: "Show 18+ apps and sites";
-                            checked: Store.show-adult;
-                            toggled(on) => { Store.set-adult(on); }
+                        Toggle { label: "Family mode"; checked: Store.family-mode; toggled(on) => { Store.set-family-mode(on); } }
+                    }
+                }
+                if !Store.family-mode : HorizontalLayout {
+                    spacing: 12px;
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 2px;
+                        Text { text: "Adult content on the home page"; color: Theme.text; font-size: 14px; }
+                        Text { text: "Off, adult things are only ever found by searching. On, they may also appear on the home page, covered like everywhere else."; color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle { label: "Adult content on the home page"; checked: Store.adult-on-home; toggled(on) => { Store.set-adult-on-home(on); } }
+                    }
+                }
+                HorizontalLayout {
+                    spacing: 12px;
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 2px;
+                        Text { text: Store.has-pin ? "A PIN is set" : "PIN"; color: Theme.text; font-size: 14px; }
+                        Text { text: "Four digits. With a PIN set, it is asked for to change anything in this card and to open adult content, in place of the question about being an adult."; color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Button { text: Store.has-pin ? "Change PIN" : "Set a PIN"; primary: !Store.has-pin; clicked => { Store.set-pin(); } }
+                            if Store.has-pin : Button { text: "Remove PIN"; primary: false; clicked => { Store.remove-pin(); } }
                         }
                     }
+                }
+                if Store.has-pin : HorizontalLayout {
+                    spacing: 12px;
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 2px;
+                        Text { text: "Ask for the PIN to install or remove apps"; color: Theme.text; font-size: 14px; }
+                        Text { text: "So that nothing is added to or taken off this device without it."; color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle { label: "Ask for the PIN to install or remove apps"; checked: Store.pin-for-installs; toggled(on) => { Store.set-pin-for-installs(on); } }
+                    }
+                }
+                Text {
+                    text: "Bilby goes by what its sources say: Steam's adult-only marks, an app's own age rating, and its list of well-known adult sites. A site it has never heard of is not recognised, and most sources say nothing about age at all.";
+                    color: Theme.text-dim;
+                    font-size: 12px;
+                    wrap: word-wrap;
                 }
             }
 
@@ -2497,6 +2543,93 @@ export component Toast inherits Rectangle {
             horizontal-alignment: center;
             vertical-alignment: center;
             overflow: elide;
+        }
+    }
+}
+
+// The question that stands in front of something guarded: "are you 18 or over?" or
+// the PIN. It covers the whole window; nothing behind it can be reached.
+export component GateOverlay inherits Rectangle {
+    property <string> entry;
+    property <int> count: 0;
+    function digit(d: string) {
+        root.entry += d;
+        root.count += 1;
+        if (root.count == 4) {
+            Store.gate-pin(root.entry);
+            root.entry = "";
+            root.count = 0;
+        }
+    }
+    function rub() {
+        // Only whole entries are ever sent, so starting again is the simplest undo.
+        root.entry = "";
+        root.count = 0;
+    }
+    background: #000000b0;
+    TouchArea { }
+    keys := FocusScope {
+        init => { self.focus(); }
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                Store.gate-cancel();
+            } else if (Store.gate >= 2 && (event.text == "0" || event.text == "1" || event.text == "2" || event.text == "3" || event.text == "4" || event.text == "5" || event.text == "6" || event.text == "7" || event.text == "8" || event.text == "9")) {
+                root.digit(event.text);
+            } else if (Store.gate >= 2 && event.text == Key.Backspace) {
+                root.rub();
+            }
+            accept
+        }
+    }
+    Rectangle {
+        width: min(parent.width - 32px, 420px);
+        height: box.preferred-height;
+        border-radius: 16px;
+        background: Theme.surface;
+        border-width: 1px;
+        border-color: Theme.stroke;
+        accessible-role: AccessibleRole.groupbox;
+        accessible-label: Store.gate-title;
+        box := VerticalLayout {
+            width: parent.width;
+            padding: 24px;
+            spacing: 14px;
+            Text { text: Store.gate-title; color: Theme.text; font-size: 20px; font-weight: 700; wrap: word-wrap; }
+            Text { text: Store.gate-text; color: Theme.text-dim; font-size: 14px; wrap: word-wrap; }
+            if Store.gate == 1 : HorizontalLayout {
+                spacing: 10px;
+                alignment: end;
+                Button { text: "No"; primary: false; accessible-label: "No, I am not"; clicked => { Store.gate-answer(false); } }
+                Button { text: "Yes, I am 18 or over"; clicked => { Store.gate-answer(true); } }
+            }
+            if Store.gate >= 2 : VerticalLayout {
+                spacing: 14px;
+                HorizontalLayout {
+                    alignment: center;
+                    spacing: 14px;
+                    for filled in [root.count > 0, root.count > 1, root.count > 2, root.count > 3] : Rectangle {
+                        width: 16px;
+                        height: 16px;
+                        border-radius: 8px;
+                        background: filled ? Theme.accent : transparent;
+                        border-width: 2px;
+                        border-color: filled ? Theme.accent : Theme.stroke;
+                    }
+                }
+                if Store.gate-error != "" : Text { text: Store.gate-error; color: Theme.bad; font-size: 13px; horizontal-alignment: center; }
+                for row in [["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"]] : HorizontalLayout {
+                    alignment: center;
+                    spacing: 10px;
+                    for d in row : Button { text: d; primary: false; min-width: 64px; accessible-label: "Digit " + d; clicked => { root.digit(d); } }
+                }
+                HorizontalLayout {
+                    alignment: center;
+                    spacing: 10px;
+                    Button { text: "Clear"; primary: false; min-width: 64px; clicked => { root.rub(); } }
+                    Button { text: "0"; primary: false; min-width: 64px; accessible-label: "Digit 0"; clicked => { root.digit("0"); } }
+                    Button { text: "Cancel"; primary: false; min-width: 64px; accessible-label: "Cancel the PIN"; clicked => { Store.gate-cancel(); } }
+                }
+            }
         }
     }
 }

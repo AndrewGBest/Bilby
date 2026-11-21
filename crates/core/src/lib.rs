@@ -28,6 +28,7 @@ pub mod merge;
 pub mod model;
 pub mod needs;
 pub mod os;
+pub mod parental;
 pub mod platform;
 pub mod rank;
 pub mod ratings;

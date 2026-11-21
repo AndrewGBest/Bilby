@@ -263,11 +263,11 @@ export component TvShell inherits Rectangle {
     // Steam's (two while there is a choice of how to sign in), then a switch per source.
     property <bool> on-settings: Store.page == 3 && !Store.details-open;
     property <int> steam-rows: !Store.steam-available ? 0 : Store.steam-signed-in || Store.steam-state != 0 ? 1 : 2;
-    property <int> src-first: 8 + root.steam-rows;
+    property <int> src-first: 12 + root.steam-rows;
     property <int> set-last: root.src-first + Store.sources.length - 1;
     changed set-last => { root.sys-row = min(root.sys-row, root.set-last); }
     // Rows below the eighth push the list up, so the focused one is always on screen.
-    property <length> set-shift: max(0, root.sys-row - 8) * 33 * root.u;
+    property <length> set-shift: max(0, root.sys-row - 7) * 34 * root.u;
     property <bool> sys-can-update: Store.system-state == 3;
     // Buttons on that page: Update (when there is one), Check again (where updates are
     // handled), and always last, the way out of the TV layout.
@@ -334,6 +334,28 @@ export component TvShell inherits Rectangle {
         else if (root.sec > 1 && root.sec-exists(1)) { root.sec = 1; }
         else { root.sec = 0; }
     }
+    // The question in front of something guarded: which answer or digit is highlighted,
+    // and how much of a PIN has been entered.
+    property <int> gate-choice: 0;
+    property <int> gate-digit: 0;
+    property <string> gate-entry;
+    property <int> gate-count: 0;
+    property <int> gate-now: Store.gate;
+    changed gate-now => {
+        root.gate-choice = 0;
+        root.gate-digit = 0;
+        root.gate-entry = "";
+        root.gate-count = 0;
+    }
+    function gate-add(d: string) {
+        root.gate-entry += d;
+        root.gate-count += 1;
+        if (root.gate-count == 4) {
+            Store.gate-pin(root.gate-entry);
+            root.gate-entry = "";
+            root.gate-count = 0;
+        }
+    }
     // Remove asks twice: the first OK only arms it.
     property <bool> remove-armed: false;
     changed act => { root.remove-armed = false; }
@@ -395,6 +417,35 @@ export component TvShell inherits Rectangle {
             reject
         }
         key-pressed(event) => {
+            if (Store.gate != 0) {
+                // A question fills the screen: every key is its answer, or Back.
+                if (event.text == Key.Escape || event.text == Key.Back) {
+                    Store.gate-cancel();
+                } else if (Store.gate == 1) {
+                    if (event.text == Key.LeftArrow || event.text == Key.RightArrow) {
+                        root.gate-choice = 1 - root.gate-choice;
+                    } else if (event.text == Key.Return || event.text == " ") {
+                        Store.gate-answer(root.gate-choice == 1);
+                    }
+                } else if (event.text == "0" || event.text == "1" || event.text == "2" || event.text == "3" || event.text == "4" || event.text == "5" || event.text == "6" || event.text == "7" || event.text == "8" || event.text == "9") {
+                    root.gate-add(event.text);
+                } else if (event.text == Key.LeftArrow) {
+                    root.gate-digit = max(0, root.gate-digit - 1);
+                } else if (event.text == Key.RightArrow) {
+                    root.gate-digit = min(10, root.gate-digit + 1);
+                } else if (event.text == Key.Backspace) {
+                    root.gate-entry = "";
+                    root.gate-count = 0;
+                } else if (event.text == Key.Return || event.text == " ") {
+                    if (root.gate-digit == 10) {
+                        root.gate-entry = "";
+                        root.gate-count = 0;
+                    } else {
+                        root.gate-add("" + root.gate-digit);
+                    }
+                }
+                return accept;
+            }
             if (search.has-focus) {
                 return reject;
             }
@@ -473,14 +524,28 @@ export component TvShell inherits Rectangle {
                     } else if (root.sys-row == 4) {
                         Store.set-interface(1);
                     } else if (root.sys-row == 5) {
-                        Store.set-adult(!Store.show-adult);
+                        Store.set-family-mode(!Store.family-mode);
                     } else if (root.sys-row == 6) {
+                        if (!Store.family-mode) {
+                            Store.set-adult-on-home(!Store.adult-on-home);
+                        }
+                    } else if (root.sys-row == 7) {
+                        Store.set-pin();
+                    } else if (root.sys-row == 8) {
+                        if (Store.has-pin) {
+                            Store.set-pin-for-installs(!Store.pin-for-installs);
+                        }
+                    } else if (root.sys-row == 9) {
+                        if (Store.has-pin) {
+                            Store.remove-pin();
+                        }
+                    } else if (root.sys-row == 10) {
                         if (Store.store-update != "") {
                             Store.view-store-update();
                         } else {
                             Store.check-store-update();
                         }
-                    } else if (root.sys-row == 7) {
+                    } else if (root.sys-row == 11) {
                         if (Store.has-token) {
                             Store.save-token("");
                         } else if (Store.signin-state == 0) {
@@ -488,7 +553,7 @@ export component TvShell inherits Rectangle {
                         } else {
                             Store.github-cancel();
                         }
-                    } else if (root.sys-row == 8 && root.steam-rows > 0) {
+                    } else if (root.sys-row == 12 && root.steam-rows > 0) {
                         if (Store.steam-state != 0) {
                             Store.steam-cancel();
                         } else if (Store.steam-signed-in) {
@@ -496,9 +561,9 @@ export component TvShell inherits Rectangle {
                         } else {
                             Store.steam-signin-qr();
                         }
-                    } else if (root.sys-row == 9 && root.steam-rows > 1) {
+                    } else if (root.sys-row == 13 && root.steam-rows > 1) {
                         // The row goes away while signing in; the highlight moves to the one that stays.
-                        root.sys-row = 8;
+                        root.sys-row = 12;
                         Store.steam-signin();
                     } else if (root.sys-row >= root.src-first) {
                         Store.set-source(Store.sources[root.sys-row - root.src-first].id, !Store.sources[root.sys-row - root.src-first].on);
@@ -966,19 +1031,49 @@ export component TvShell inherits Rectangle {
                         focused: root.zone == 0 && root.sys-row == 4;
                         clicked => { Store.set-interface(1); }
                     }
+                    Rectangle { height: 4 * u; }
+                    Text { text: "Family and adult content"; color: Theme.text; font-size: 14 * u; font-weight: 700; }
                     TvSetting {
                         u: root.u;
-                        label: "Show apps and sites marked 18+ (only if you are 18 or over)";
-                        on: Store.show-adult;
+                        label: "Family mode: nothing for adults is shown anywhere";
+                        on: Store.family-mode;
                         focused: root.zone == 0 && root.sys-row == 5;
-                        clicked => { Store.set-adult(!Store.show-adult); }
+                        clicked => { Store.set-family-mode(!Store.family-mode); }
                     }
+                    TvSetting {
+                        u: root.u;
+                        label: Store.family-mode ? "Adult content on Home (off in Family mode)" : "Adult content on Home, covered until chosen";
+                        on: Store.adult-on-home && !Store.family-mode;
+                        focused: root.zone == 0 && root.sys-row == 6;
+                    }
+                    TvSetting {
+                        u: root.u;
+                        label: Store.has-pin ? "A PIN guards these settings and adult content" : "Set a PIN to guard these settings and adult content";
+                        value: Store.has-pin ? "Change" : "Set a PIN";
+                        on: Store.has-pin;
+                        focused: root.zone == 0 && root.sys-row == 7;
+                    }
+                    TvSetting {
+                        u: root.u;
+                        label: Store.has-pin ? "Ask for the PIN to install or remove apps" : "Ask for the PIN to install or remove apps (set a PIN first)";
+                        on: Store.pin-for-installs;
+                        focused: root.zone == 0 && root.sys-row == 8;
+                    }
+                    TvSetting {
+                        u: root.u;
+                        label: Store.has-pin ? "Remove the PIN" : "No PIN is set";
+                        value: Store.has-pin ? "Remove" : "—";
+                        on: false;
+                        focused: root.zone == 0 && root.sys-row == 9;
+                    }
+                    Rectangle { height: 4 * u; }
+                    Text { text: "This store"; color: Theme.text; font-size: 14 * u; font-weight: 700; }
                     TvSetting {
                         u: root.u;
                         label: Store.store-update != "" ? "Bilby " + Store.store-update + " is available. You have " + Store.app-version : "Bilby " + Store.app-version;
                         value: Store.store-update != "" ? "Update" : "Check for updates";
                         on: false;
-                        focused: root.zone == 0 && root.sys-row == 6;
+                        focused: root.zone == 0 && root.sys-row == 10;
                         clicked => { Store.check-store-update(); }
                     }
                     Rectangle { height: 4 * u; }
@@ -988,7 +1083,7 @@ export component TvShell inherits Rectangle {
                         label: Store.has-token ? "Signed in to GitHub" : Store.signin-state != 0 ? "Signing in to GitHub…" : "Sign in to GitHub for more searches an hour";
                         value: Store.has-token ? "Sign out" : Store.signin-state != 0 ? "Cancel" : "Sign in";
                         on: Store.has-token;
-                        focused: root.zone == 0 && root.sys-row == 7;
+                        focused: root.zone == 0 && root.sys-row == 11;
                     }
                     // The code to enter at GitHub, on a phone or computer.
                     if Store.signin-state == 2 : VerticalLayout {
@@ -1009,14 +1104,14 @@ export component TvShell inherits Rectangle {
                         label: Store.steam-signed-in ? "Signed in to Steam  ·  " + Store.steam-summary : Store.steam-state == 3 ? "Scan the code with the Steam app on your phone" : Store.steam-state != 0 ? "Sign in on Steam's page in Longboard, then share your library" : "Sign in to Steam with a QR code, to see what you own";
                         value: Store.steam-state != 0 ? "Cancel" : Store.steam-signed-in ? "Sign out" : "Show code";
                         on: Store.steam-signed-in;
-                        focused: root.zone == 0 && root.sys-row == 8;
+                        focused: root.zone == 0 && root.sys-row == 12;
                     }
                     if root.steam-rows > 1 : TvSetting {
                         u: root.u;
                         label: "Or sign in to Steam in a browser (Longboard)";
                         value: "Open";
                         on: false;
-                        focused: root.zone == 0 && root.sys-row == 9;
+                        focused: root.zone == 0 && root.sys-row == 13;
                     }
                     Rectangle { height: 4 * u; }
                     Text { text: "Where apps come from"; color: Theme.text; font-size: 14 * u; font-weight: 700; }
@@ -1793,6 +1888,74 @@ export component TvShell inherits Rectangle {
                     font-size: 12 * u;
                 }
             }
+        }
+    }
+    // ---- a question in front of everything: "are you 18 or over?", or the PIN ----
+    if Store.gate != 0 : Rectangle {
+        x: 0;
+        y: 0;
+        width: parent.width;
+        height: parent.height;
+        background: Theme.bg;
+        accessible-role: AccessibleRole.groupbox;
+        accessible-label: Store.gate-title;
+        TouchArea { }
+        VerticalLayout {
+            x: (parent.width - self.width) / 2;
+            width: 560 * u;
+            alignment: center;
+            spacing: 14 * u;
+            Text { text: Store.gate-title; color: Theme.text; font-size: 30 * u; font-weight: 800; wrap: word-wrap; horizontal-alignment: center; }
+            Text { text: Store.gate-text; color: Theme.text-dim; font-size: 15 * u; wrap: word-wrap; horizontal-alignment: center; }
+            if Store.gate == 1 : HorizontalLayout {
+                alignment: center;
+                spacing: 14 * u;
+                padding-top: 10 * u;
+                TvButton { u: root.u; text: "No"; focused: root.gate-choice == 0; clicked => { Store.gate-answer(false); } }
+                TvButton { u: root.u; text: "Yes, I am 18 or over"; primary: true; focused: root.gate-choice == 1; clicked => { Store.gate-answer(true); } }
+            }
+            if Store.gate >= 2 : HorizontalLayout {
+                alignment: center;
+                spacing: 16 * u;
+                padding-top: 6 * u;
+                for filled in [root.gate-count > 0, root.gate-count > 1, root.gate-count > 2, root.gate-count > 3] : Rectangle {
+                    width: 18 * u;
+                    height: 18 * u;
+                    border-radius: 9 * u;
+                    background: filled ? Theme.accent : transparent;
+                    border-width: 2 * u;
+                    border-color: filled ? Theme.accent : Theme.stroke;
+                }
+            }
+            if Store.gate >= 2 && Store.gate-error != "" : Text { text: Store.gate-error; color: Theme.bad; font-size: 14 * u; horizontal-alignment: center; }
+            if Store.gate >= 2 : HorizontalLayout {
+                alignment: center;
+                spacing: 6 * u;
+                for d in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] : Rectangle {
+                    property <bool> focused: root.gate-digit == d;
+                    width: (d == 10 ? 64 : 40) * u;
+                    height: 44 * u;
+                    border-radius: 10 * u;
+                    background: focused ? Theme.surface-2 : Theme.surface;
+                    border-width: focused ? 2 * u : 0.5 * u;
+                    border-color: focused ? white : Theme.stroke;
+                    accessible-role: button;
+                    accessible-label: d == 10 ? "Clear the PIN" : "Digit " + d;
+                    TouchArea {
+                        clicked => {
+                            root.gate-digit = d;
+                            if (d == 10) {
+                                root.gate-entry = "";
+                                root.gate-count = 0;
+                            } else {
+                                root.gate-add("" + d);
+                            }
+                        }
+                    }
+                    Text { text: d == 10 ? "Clear" : d; color: Theme.text; font-size: (d == 10 ? 13 : 18) * u; font-weight: 700; }
+                }
+            }
+            Text { text: "Back cancels."; color: Theme.text-dim; font-size: 12 * u; horizontal-alignment: center; }
         }
     }
     if Store.toast != "" : Rectangle {

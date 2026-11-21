@@ -826,7 +826,8 @@ fn the_store_finds_its_own_updates_like_any_other_apps() {
     assert_eq!(s.store().get_toast(), "", "it does not interrupt");
 
     // The update is an ordinary app page: the file for this device, checksum and all.
-    s.click("View the store's update");
+    // (The About card is far down the page, so the button is pressed through its action.)
+    s.store().invoke_view_store_update();
     assert!(s.store().get_details_open());
     assert_eq!(s.store().get_app().id, "github:kestrel-sh/kestrel");
     assert_eq!(s.option_labels()[0], "Portable archive · x86_64");
@@ -1961,7 +1962,7 @@ fn signing_in_to_github_shows_a_code_and_keeps_the_token_it_is_given() {
     tv.press(Key::RightArrow);
     tv.press(Key::RightArrow);
     tv.press(Key::Return);
-    for _ in 0..6 {
+    for _ in 0..10 {
         tv.press(Key::DownArrow);
     }
     tv.press(Key::Return);
@@ -2248,25 +2249,39 @@ fn links_in_a_description_are_found_for_the_remote() {
 
 #[test]
 fn the_tv_has_a_settings_tab_with_every_setting_reachable_by_remote() {
-    let s = start("linux-tv", Shell::Tv);
+    // Without motion, so the list is where it is going at once: the test's clock stands still.
+    let s = start_with("linux-tv", Shell::Tv, Some(r#"{"settings":{"welcomed":true,"reduce_motion":true}}"#));
     s.press(Key::UpArrow);
     s.press(Key::UpArrow);
     s.press(Key::RightArrow);
     s.press(Key::RightArrow);
     s.press(Key::Return);
     assert_eq!(s.store().get_page(), 3);
-    for label in [
+    // Every setting comes into view on the way down the list.
+    let mut seen: Vec<&str> = Vec::new();
+    let wanted = [
         "Ratings and reviews",
         "Use the desktop layout, for a mouse and keyboard",
+        "Family mode: nothing for adults is shown anywhere",
+        "Set a PIN to guard these settings and adult content",
         "Sign in to Steam with a QR code, to see what you own",
         "Or sign in to Steam in a browser (Longboard)",
-    ] {
-        assert!(s.has(label), "{label}");
+    ];
+    for _ in 0..14 {
+        seen.extend(wanted.iter().filter(|label| s.has(label)));
+        s.press(Key::DownArrow);
     }
+    for label in wanted {
+        assert!(seen.contains(&label), "{label}");
+    }
+    for _ in 0..20 {
+        s.press(Key::UpArrow);
+    }
+    s.press(Key::DownArrow);
     // Sources can be switched off from the sofa too: Down to the first of them, OK.
     let sources: Vec<SourceChoice> = s.store().get_sources().iter().collect();
-    assert!(sources.len() >= 2 && sources.iter().all(|c| c.on) && s.has(sources[0].label.as_str()));
-    for _ in 0..9 {
+    assert!(sources.len() >= 2 && sources.iter().all(|c| c.on));
+    for _ in 0..13 {
         s.press(Key::DownArrow);
     }
     s.press(Key::Return);
@@ -2386,31 +2401,171 @@ fn an_appimage_on_a_system_without_fuse_says_so_and_offers_to_install_it() {
     assert_eq!(ui.global::<Store>().get_helper_id(), "");
 }
 
-// ---- 18+ ----
+// ---- adult content, Family mode and the PIN ----
+
+fn adult_site() -> &'static bilby_core::source::web::Site {
+    bilby_core::source::web::sites().iter().find(|site| site.adult).unwrap()
+}
 
 #[test]
-fn what_is_marked_18_plus_is_hidden_until_the_person_switches_it_on() {
+fn adult_things_have_a_covered_section_and_ask_before_opening() {
     let s = start("linux-tv", Shell::Tv);
-    let adult = bilby_core::source::web::sites().iter().find(|site| site.adult).unwrap();
-    assert!(!s.store().get_show_adult(), "off to begin with");
+    let site = adult_site();
+    let id = format!("web:{}", site.host);
+    s.app.search(&s.ui, &site.name);
 
-    // Not in a search, even by its exact name or address, and the page says something was left out.
-    s.app.search(&s.ui, &adult.name);
-    assert!(!s.store().get_results().iter().any(|c| c.id == format!("web:{}", adult.host).as_str()));
-    assert!(s.store().get_search_note().contains("marked 18+"), "{}", s.store().get_search_note());
-    s.app.search(&s.ui, &adult.host);
-    assert!(!s.store().get_results().iter().any(|c| c.id.contains(adult.host.as_str())));
-    // Nor on the home page, nor by opening its link.
-    assert!(!s.store().get_tv_rows().iter().any(|row| row.apps.iter().any(|c| c.id.contains(adult.host.as_str()))));
-    s.app.open(&s.ui, &format!("web:{}", adult.host));
-    assert!(s.store().get_details_error().contains("18+"), "{}", s.store().get_details_error());
-    assert_eq!(s.store().get_options().row_count(), 0, "nothing to install");
+    // In the results it is last, covered: nothing of it shows but that it is there.
+    let card = s.store().get_results().iter().find(|c| c.id == id.as_str()).expect("it is found, not hidden");
+    assert!(card.adult);
+    assert_eq!((card.name.as_str(), card.stat.as_str()), ("Adult content", ""));
+    assert!(!card.summary.contains(site.name.as_str()) && !card.author.contains(site.host.as_str()));
+    let last = s.store().get_results().iter().last().unwrap();
+    assert!(last.adult, "after everything else");
+    // On the TV it has a row of its own, named plainly, and is in no other row.
+    let rows: Vec<(String, Vec<String>)> = s
+        .store()
+        .get_tv_rows()
+        .iter()
+        .map(|row| (row.title.to_string(), row.apps.iter().map(|c| c.id.to_string()).collect()))
+        .collect();
+    assert_eq!(rows.last().unwrap().0, "Adult");
+    assert!(rows.iter().filter(|(title, _)| title != "Adult").all(|(_, ids)| !ids.contains(&id)), "{rows:?}");
+    // Nothing for adults is on the home page unless asked for.
+    assert!(!s.store().get_adult_on_home());
 
-    // Switched on in Settings, it is found like anything else; and it is remembered.
+    // Choosing it asks first. No is the highlighted answer; it changes nothing.
+    s.app.open(&s.ui, &id);
+    assert_eq!(s.store().get_gate(), 1);
+    assert!(s.store().get_gate_text().contains("18 or over") && !s.store().get_details_open());
+    s.press(Key::Return);
+    assert_eq!(s.store().get_gate(), 0);
+    assert!(!s.store().get_details_open() && !s.saved().settings.adult_confirmed);
+
+    // Yes opens it, as itself, and the question is not asked again.
+    s.app.open(&s.ui, &id);
+    s.press(Key::RightArrow);
+    s.press(Key::Return);
+    assert!(s.store().get_details_open() && s.saved().settings.adult_confirmed);
+    assert_eq!(s.store().get_app().name, site.name.as_str());
     s.store().set_details_open(false);
-    s.store().invoke_set_adult(true);
-    assert!(s.saved().settings.show_adult && s.store().get_show_adult());
-    s.app.search(&s.ui, &adult.name);
-    assert!(s.store().get_results().iter().any(|c| c.id == format!("web:{}", adult.host).as_str()));
-    assert!(!s.store().get_search_note().contains("18+"));
+    s.app.open(&s.ui, &id);
+    assert_eq!(s.store().get_gate(), 0);
+    assert!(s.store().get_details_open());
+    // The tile in the list stays covered all the same.
+    assert!(s.store().get_results().iter().any(|c| c.id == id.as_str() && c.name == "Adult content"));
+}
+
+#[test]
+fn family_mode_takes_adult_things_out_altogether() {
+    let s = start("linux-tv", Shell::Tv);
+    let site = adult_site();
+    let id = format!("web:{}", site.host);
+    s.store().invoke_set_family_mode(true);
+    assert!(s.store().get_family_mode() && s.saved().settings.family_mode, "anyone may switch it on");
+
+    for query in [site.name.as_str(), site.host.as_str()] {
+        s.app.search(&s.ui, query);
+        assert!(!s.store().get_results().iter().any(|c| c.adult || c.id == id.as_str()), "{query}: not even covered");
+        assert!(!s.store().get_tv_rows().iter().any(|row| row.title == "Adult"));
+        assert!(!s.store().get_search_note().to_lowercase().contains("adult"), "and no word of it");
+    }
+    // By its link: refused, with no question to say yes to.
+    s.app.open(&s.ui, &id);
+    assert_eq!(s.store().get_gate(), 0);
+    assert!(!s.store().get_details_open());
+    assert!(s.store().get_toast().contains("Family mode"), "{}", s.store().get_toast());
+    // Adult things on the home page cannot be asked for while it is on.
+    assert!(!s.store().get_adult_on_home());
+}
+
+#[test]
+fn a_pin_guards_the_settings_adult_content_and_installs() {
+    let s = start("linux-x64-debian", Shell::Desktop);
+    s.store().set_page(3);
+    assert!(s.has("Set a PIN") && !s.store().get_has_pin());
+
+    // Choosing a PIN: four digits, twice. Two that differ start over.
+    let enter = |pin: &str| s.store().invoke_gate_pin(pin.into());
+    s.click("Set a PIN");
+    assert_eq!(s.store().get_gate(), 3);
+    enter("2580");
+    assert_eq!(s.store().get_gate(), 4);
+    enter("2581");
+    assert_eq!(s.store().get_gate(), 3, "not the same: choose again");
+    enter("2580");
+    enter("2580");
+    assert_eq!(s.store().get_gate(), 0);
+    assert!(s.store().get_has_pin());
+    let saved = s.saved().settings;
+    assert_eq!(saved.pin_hash.len(), 64);
+    assert!(!std::fs::read_to_string(&s.state_file).unwrap().contains("2580"), "the PIN itself is not kept");
+
+    // Family mode goes on without the PIN, and comes off only with it.
+    s.store().invoke_set_family_mode(true);
+    assert!(s.saved().settings.family_mode && s.store().get_gate() == 0);
+    s.store().invoke_set_family_mode(false);
+    assert_eq!(s.store().get_gate(), 2);
+    assert!(s.saved().settings.family_mode, "still on until the PIN is given");
+    enter("0000");
+    assert!(s.store().get_gate() == 2 && s.store().get_gate_error().contains("not the PIN"));
+    assert!(s.saved().settings.family_mode);
+    s.store().invoke_gate_cancel();
+    assert!(s.saved().settings.family_mode, "stepping back changes nothing");
+    s.store().invoke_set_family_mode(false);
+    enter("2580");
+    assert!(!s.saved().settings.family_mode && s.store().get_gate() == 0);
+
+    // With a PIN, adult content asks for it rather than whether you are an adult.
+    let id = format!("web:{}", adult_site().host);
+    s.app.open(&s.ui, &id);
+    assert_eq!(s.store().get_gate(), 2);
+    s.store().invoke_gate_cancel();
+    assert!(!s.store().get_details_open());
+
+    // Installs and removals ask for it too, once that is switched on.
+    s.store().invoke_set_pin_for_installs(true);
+    assert!(s.saved().settings.pin_for_installs, "stricter: no PIN needed to switch it on");
+    s.app.open(&s.ui, "github:lumen-labs/lumen");
+    s.store().invoke_install(0);
+    assert_eq!(s.store().get_gate(), 2);
+    assert_eq!(s.store().get_install_state(), 0, "nothing starts until the PIN is given");
+    enter("2580");
+    assert_ne!(s.store().get_install_state(), 0, "then it goes ahead");
+    assert!(s.saved().library.iter().any(|a| a.id == "github:lumen-labs/lumen"));
+
+    // Removing the PIN needs the PIN, and takes the install lock with it.
+    s.store().invoke_remove_pin();
+    assert_eq!(s.store().get_gate(), 2);
+    enter("2580");
+    let saved = s.saved().settings;
+    assert!(saved.pin_hash.is_empty() && !saved.pin_for_installs && !s.store().get_has_pin());
+}
+
+#[test]
+fn a_tv_remote_enters_the_pin_digit_by_digit() {
+    let s = start("linux-tv", Shell::Tv);
+    s.store().invoke_set_pin();
+    assert_eq!(s.store().get_gate(), 3);
+    // The digits are a row: Right twice is 2, OK enters it; number keys work as well.
+    let two = || {
+        s.press(Key::Return);
+    };
+    s.press(Key::RightArrow);
+    s.press(Key::RightArrow);
+    for _ in 0..4 {
+        two();
+    }
+    assert_eq!(s.store().get_gate(), 4, "2222 entered once");
+    // A new question starts with the highlight back at the first digit.
+    s.press(Key::RightArrow);
+    s.press(Key::RightArrow);
+    for _ in 0..4 {
+        two();
+    }
+    assert!(s.store().get_has_pin() && s.store().get_gate() == 0);
+    // Back steps away from a question without answering it.
+    s.store().invoke_remove_pin();
+    assert_eq!(s.store().get_gate(), 2);
+    s.press(Key::Escape);
+    assert!(s.store().get_gate() == 0 && s.store().get_has_pin());
 }

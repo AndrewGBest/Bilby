@@ -22,8 +22,6 @@ pub struct SearchOutcome {
     pub hidden: usize,
     /// One message per source that failed; the other sources' results are still shown.
     pub errors: Vec<String>,
-    /// How many matches were left out for being marked 18+.
-    pub adult_hidden: usize,
 }
 
 pub struct Catalog {
@@ -39,8 +37,8 @@ pub struct Catalog {
     /// Sources the person switched off in Settings: not searched, not on the home page.
     /// An app from one can still be opened by its link.
     pub disabled: Vec<SourceKind>,
-    /// Show what is marked 18+. Off unless the person switched it on.
-    pub show_adult: bool,
+    /// Family mode and whether adult things may be on the home page. See `parental`.
+    pub parental: crate::parental::Policy,
     /// Star ratings, once loaded, and the catalog that links packages to rated ids.
     /// Shared, so a rebuilt catalog keeps what an earlier one fetched.
     ratings: Arc<std::sync::RwLock<Option<Rated>>>,
@@ -113,7 +111,7 @@ impl Catalog {
             check_limit: 8,
             include_prereleases: false,
             disabled: Vec::new(),
-            show_adult: false,
+            parental: crate::parental::Policy::default(),
             ratings: Arc::default(),
             appstream_dirs: Vec::new(),
         }
@@ -143,7 +141,7 @@ impl Catalog {
             check_limit: 8,
             include_prereleases: false,
             disabled: Vec::new(),
-            show_adult: false,
+            parental: crate::parental::Policy::default(),
             ratings: Arc::default(),
             appstream_dirs: Vec::new(),
         }
@@ -259,7 +257,8 @@ impl Catalog {
                 continue;
             }
             for (title, mut apps) in source.collections(limit) {
-                if !self.show_adult {
+                // The home page carries adult things only where the person asked for that.
+                if self.parental.family_mode || !self.parental.adult_on_home {
                     apps.retain(|app| !app.adult);
                 }
                 for app in &mut apps {
@@ -453,10 +452,8 @@ impl Catalog {
             other => other,
         };
         let mut summary = source.summary(&id.key).map_err(named)?;
-        if summary.adult && !self.show_adult {
-            return Err(Error::Unsupported(
-                "This is marked 18+ and is not shown. To see such apps and sites, switch on “Show 18+ apps and sites” in Settings.".into(),
-            ));
+        if summary.adult && self.parental.family_mode {
+            return Err(Error::Unsupported("This is not available while Family mode is on.".into()));
         }
         let releases = source.releases(&id.key).map_err(named)?;
         let (release, unavailable_reason) = self.pick_release(&releases);
@@ -576,11 +573,9 @@ impl Catalog {
                 hits.push((app, context));
             }
         }
-        // What is marked 18+ is left out unless the person asked for it.
-        if !self.show_adult {
-            let before = hits.len();
+        // Family mode: nothing for adults, and no word that anything was left out.
+        if self.parental.family_mode {
             hits.retain(|(app, _)| !app.adult);
-            outcome.adult_hidden = before - hits.len();
         }
         outcome.apps = crate::rank::sort(query, hits);
         outcome

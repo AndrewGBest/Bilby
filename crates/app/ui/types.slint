@@ -38,6 +38,8 @@ export struct AppCard {
     more-sources: int,
     // The one figure a tile always shows: rating, or how many use it, with the price.
     stat: string,
+    // For adults: in a listing this card is a cover, with nothing of the app on it.
+    adult: bool,
     has-update: bool,
 }
 
@@ -288,7 +290,18 @@ export global Store {
     in property <int> interface-mode;
     // Every source that applies to this device, and whether it is switched on.
     in property <[SourceChoice]> sources;
-    in property <bool> show-adult;
+    // Family mode: nothing for adults anywhere. Adult things on the home page only
+    // where asked for. A PIN, where set, guards these and adult content.
+    in property <bool> family-mode;
+    in property <bool> adult-on-home;
+    in property <bool> has-pin;
+    in property <bool> pin-for-installs;
+    // A question standing between the person and what they asked for: 0 none,
+    // 1 "are you 18 or over?", 2 enter the PIN, 3 choose a PIN, 4 enter it again.
+    in property <int> gate;
+    in property <string> gate-title;
+    in property <string> gate-text;
+    in property <string> gate-error;
     // The store is running from a file it can add to the app menu, and whether it has.
     in property <bool> can-register;
     in property <bool> in-menu;
@@ -340,8 +353,16 @@ export global Store {
     callback check-store-update();
     callback set-interface(int);
     callback set-source(string, bool);
-    // Show or hide what is marked as for people of 18 or over.
-    callback set-adult(bool);
+    callback set-family-mode(bool);
+    callback set-adult-on-home(bool);
+    callback set-pin-for-installs(bool);
+    // Set a PIN, or change the one there is.
+    callback set-pin();
+    callback remove-pin();
+    // The answer to "are you 18 or over?", four digits entered, or stepping back.
+    callback gate-answer(bool);
+    callback gate-pin(string);
+    callback gate-cancel();
     callback filter-results(string);
     callback set-reduce-motion(bool);
     callback set-in-menu(bool);

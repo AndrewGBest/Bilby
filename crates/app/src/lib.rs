@@ -100,6 +100,40 @@ pub struct Options {
 }
 
 pub type Opener = Arc<dyn Fn(&std::path::Path) -> bilby_core::Result<()> + Send + Sync>;
+/// Something that may need an answer first: that the person is an adult, or the PIN.
+#[derive(Debug, Clone)]
+enum Guarded {
+    OpenAdult(String),
+    Setting(Change),
+    Install(i32),
+    Remove(String),
+}
+
+/// A change to the family and adult-content settings.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Change {
+    FamilyMode(bool),
+    AdultOnHome(bool),
+    PinForInstalls(bool),
+    SetPin,
+    RemovePin,
+}
+
+/// What a listing shows in place of something for adults: nothing of it but that it
+/// is there, until it is chosen.
+fn covered(id: &str) -> AppCard {
+    AppCard {
+        id: id.into(),
+        name: "Adult content".into(),
+        author: "Covered until you choose it".into(),
+        summary: "Select to view. You will be asked to confirm you are an adult.".into(),
+        initials: "A".into(),
+        tint: slint::Color::from_rgb_u8(0x55, 0x5b, 0x68),
+        adult: true,
+        ..Default::default()
+    }
+}
+
 /// Apps on the device that were installed some other way than through the store.
 #[derive(Default)]
 struct Elsewhere {
@@ -439,7 +473,8 @@ fn make_catalog(platform: &Platform, demo: bool, settings: &Settings, dirs: &Dir
     };
     catalog.include_prereleases = settings.include_prereleases;
     catalog.disabled = settings.disabled_sources.iter().filter_map(|name| source_named(name)).collect();
-    catalog.show_adult = settings.show_adult;
+    catalog.parental =
+        bilby_core::parental::Policy { family_mode: settings.family_mode, adult_on_home: settings.adult_on_home };
     catalog.use_flatpak_roots(dirs.flatpak_roots.clone());
     Arc::new(catalog)
 }
@@ -552,6 +587,16 @@ pub struct App {
     steam: std::sync::RwLock<Option<bilby_core::steam_account::Account>>,
     /// Bumped whenever a Steam sign-in starts or is cancelled, so a late answer is dropped.
     steam_generation: AtomicU64,
+    /// What is waiting on an answer at the gate (an age question or the PIN).
+    pending: Mutex<Option<Guarded>>,
+    /// Ids learnt to be for adults, so that opening one again asks before loading it.
+    known_adult: Mutex<HashSet<String>>,
+    /// A new PIN entered once, waiting to be entered again.
+    new_pin: Mutex<Option<String>>,
+    /// The PIN was entered in this sitting, so adult content opens without asking again.
+    adult_unlocked: std::sync::atomic::AtomicBool,
+    /// The PIN was just entered for one install or removal.
+    install_cleared: std::sync::atomic::AtomicBool,
     /// What is on this device that the store did not put there: Flatpaks and Steam
     /// games as (app id, name), and the names of the system's installed packages.
     elsewhere: std::sync::RwLock<Elsewhere>,
@@ -770,7 +815,16 @@ impl App {
 
     // ---- cards ----
 
+    /// The card for a listing. Something for adults is covered: see [`covered`].
     pub fn card(&self, app: &AppSummary) -> AppCard {
+        if app.adult {
+            return covered(&app.id.to_string());
+        }
+        self.card_open(app)
+    }
+
+    /// The card as it is, for the app's own page.
+    fn card_open(&self, app: &AppSummary) -> AppCard {
         let id = app.id.to_string();
         let popularity = match (app.popularity, app.id.source) {
             // A count of nothing is left out: it reads as a verdict, and is usually just
@@ -810,6 +864,7 @@ impl App {
             || self.installed_elsewhere(&app.id, &app.name);
         let has_update = matches!(self.updates.lock().unwrap().get(&id), Some(UpdateStatus::Available { .. }));
         AppCard {
+            adult: app.adult,
             stat: stat.into(),
             tint: tint_for(&id),
             icon: picture_for(&id),
@@ -869,6 +924,7 @@ impl App {
             price: SharedString::new(),
             headline: SharedString::new(),
             verified: false,
+            adult: false,
             stat: SharedString::new(),
             more_sources: 0,
             has_update,
@@ -899,6 +955,7 @@ impl App {
             price: SharedString::new(),
             headline: SharedString::new(),
             verified: false,
+            adult: false,
             stat: SharedString::new(),
             more_sources: 0,
             has_update: false,
@@ -1057,6 +1114,9 @@ impl App {
                 }
             }
         }
+        // Everything for adults goes to the end of the list, covered.
+        let (mut cards, adult): (Vec<AppCard>, Vec<AppCard>) = cards.into_iter().partition(|card| !card.adult);
+        cards.extend(adult);
         let found = cards.clone();
         store.set_results(ModelRc::new(VecModel::from(cards)));
         self.show_app_sources(ui);
@@ -1149,14 +1209,22 @@ impl App {
             tv.extend(to_sections(&featured));
         } else {
             const TOP: usize = 6;
+            // Things for adults are never among the top results or the other rows:
+            // they have a row of their own, last, each one covered.
+            let (adult, found): (Vec<AppCard>, Vec<AppCard>) = found.into_iter().partition(|card| card.adult);
             let top: Vec<AppCard> = found.iter().take(TOP).cloned().collect();
-            tv.push(Section {
-                title: format!("Top results for “{query}”").into(),
-                apps: ModelRc::new(VecModel::from(top)),
-            });
-            for kind in ["Apps", "Games", "Web apps", "From developers", "System packages"] {
-                let of_kind: Vec<AppCard> =
-                    found.iter().skip(TOP).filter(|card| kind_of(card.id.as_str()) == kind).take(24).cloned().collect();
+            if !top.is_empty() {
+                tv.push(Section {
+                    title: format!("Top results for “{query}”").into(),
+                    apps: ModelRc::new(VecModel::from(top)),
+                });
+            }
+            for kind in ["Apps", "Games", "Web apps", "From developers", "System packages", "Adult"] {
+                let of_kind: Vec<AppCard> = if kind == "Adult" {
+                    adult.clone()
+                } else {
+                    found.iter().skip(TOP).filter(|card| kind_of(card.id.as_str()) == kind).take(24).cloned().collect()
+                };
                 if !of_kind.is_empty() {
                     tv.push(Section { title: kind.into(), apps: ModelRc::new(VecModel::from(of_kind)) });
                 }
@@ -1173,7 +1241,10 @@ impl App {
         store.set_show_ratings(!settings.hide_ratings);
         store.set_check_updates_on_start(!settings.skip_update_check_on_start);
         store.set_has_token(!settings.github_token.trim().is_empty());
-        store.set_show_adult(settings.show_adult);
+        store.set_family_mode(settings.family_mode);
+        store.set_adult_on_home(settings.adult_on_home);
+        store.set_has_pin(!settings.pin_hash.is_empty());
+        store.set_pin_for_installs(settings.pin_for_installs);
         let steam = self.steam.read().unwrap().clone();
         // Steam is a desktop program: its library is offered wherever it runs.
         let os = self.platform.read().unwrap().os;
@@ -1915,16 +1986,6 @@ impl App {
             }
             note.push_str(&format!("{} more matched but do not work on this device.", outcome.hidden));
         }
-        if outcome.adult_hidden > 0 {
-            if !note.is_empty() {
-                note.push(' ');
-            }
-            let n = outcome.adult_hidden;
-            note.push_str(&format!(
-                "{n} marked 18+ {} not shown; Settings can change that.",
-                if n == 1 { "is" } else { "are" }
-            ));
-        }
         store.set_search_note(note.into());
         store.set_search_error(outcome.errors.join("\n").into());
         *self.results.lock().unwrap() = (query.to_string(), outcome.apps.clone());
@@ -1947,6 +2008,37 @@ impl App {
             store.set_details_open(false);
             store.set_page(4);
             return;
+        }
+        // Something for adults: ask first, once, or for the PIN; never in Family mode.
+        let listed_adult = find_card(&store, id).is_some_and(|card| card.adult)
+            || id.strip_prefix("web:").and_then(bilby_core::source::web::listed).is_some_and(|site| site.adult)
+            || self.known_adult.lock().unwrap().contains(id);
+        if listed_adult {
+            use bilby_core::parental::Gate;
+            self.known_adult.lock().unwrap().insert(id.to_string());
+            match self.gate_for_adult() {
+                Gate::Open => {}
+                Gate::Blocked => {
+                    self.toast(ui, "This is not available while Family mode is on.", true);
+                    return;
+                }
+                Gate::ConfirmAdult => {
+                    let waiting = Guarded::OpenAdult(id.to_string());
+                    self.ask(ui, 1, "Adult content", "This is meant for adults. Are you 18 or over?", waiting);
+                    return;
+                }
+                Gate::Pin => {
+                    let waiting = Guarded::OpenAdult(id.to_string());
+                    self.ask(
+                        ui,
+                        2,
+                        "Enter the PIN",
+                        "This is meant for adults, and a PIN guards it on this device.",
+                        waiting,
+                    );
+                    return;
+                }
+            }
         }
         let generation = self.details_generation.fetch_add(1, Ordering::SeqCst) + 1;
         // Show what the list already knew while the releases load.
@@ -2144,9 +2236,17 @@ impl App {
         let store = ui.global::<Store>();
         store.set_details_loading(false);
         // The list's display name ("Tidewave") reads better than the repository's ("tidewave").
-        let mut card = self.card(&details.summary);
+        // Something for adults that was opened by its link, not chosen from a covered
+        // tile: it is closed again, and the question is asked when it is next opened.
+        if details.summary.adult && self.gate_for_adult() != bilby_core::parental::Gate::Open {
+            self.known_adult.lock().unwrap().insert(details.summary.id.to_string());
+            store.set_details_open(false);
+            store.invoke_open(details.summary.id.to_string().into());
+            return;
+        }
+        let mut card = self.card_open(&details.summary);
         let shown = store.get_app();
-        if shown.id == card.id && !shown.name.is_empty() && !shown.author.is_empty() {
+        if shown.id == card.id && !shown.name.is_empty() && !shown.author.is_empty() && !shown.adult {
             card.name = shown.name;
             card.initials = shown.initials;
             // What the list already knew is kept when the app's own page does not repeat it.
@@ -2382,6 +2482,11 @@ impl App {
         if store.get_install_state() == 1 {
             return;
         }
+        if self.needs_pin_to_install() {
+            let why = "A PIN is needed to install or remove apps on this device.";
+            self.ask(ui, 2, "Enter the PIN", why, Guarded::Install(index));
+            return;
+        }
         let (details, option, version) = {
             let current = self.current.lock().unwrap();
             let Some(details) = current.details.clone() else { return };
@@ -2595,6 +2700,202 @@ impl App {
         );
     }
 
+    /// What stands between the person and something for adults, right now.
+    fn gate_for_adult(&self) -> bilby_core::parental::Gate {
+        let settings = self.state().settings;
+        let policy =
+            bilby_core::parental::Policy { family_mode: settings.family_mode, adult_on_home: settings.adult_on_home };
+        bilby_core::parental::to_open_adult(
+            policy,
+            !settings.pin_hash.is_empty(),
+            settings.adult_confirmed,
+            self.adult_unlocked.load(Ordering::SeqCst),
+        )
+    }
+
+    /// Installing and removing ask for the PIN where the person chose that. Entering
+    /// it clears exactly one action.
+    fn needs_pin_to_install(&self) -> bool {
+        let settings = self.state().settings;
+        settings.pin_for_installs
+            && !settings.pin_hash.is_empty()
+            && !self.install_cleared.swap(false, Ordering::SeqCst)
+    }
+
+    /// Put the question on screen: 1 "are you an adult?", 2 the PIN, 3 a new PIN,
+    /// 4 the new PIN again. What was being done waits for the answer.
+    fn ask(&self, ui: &AppWindow, kind: i32, title: &str, text: &str, waiting: Guarded) {
+        *self.pending.lock().unwrap() = Some(waiting);
+        let store = ui.global::<Store>();
+        store.set_gate_title(title.into());
+        store.set_gate_text(text.into());
+        store.set_gate_error(SharedString::new());
+        store.set_gate(kind);
+    }
+
+    fn close_gate(&self, ui: &AppWindow) {
+        let store = ui.global::<Store>();
+        store.set_gate(0);
+        store.set_gate_error(SharedString::new());
+    }
+
+    /// The person stepped back from the question: nothing happens.
+    pub fn gate_cancel(&self, ui: &AppWindow) {
+        *self.pending.lock().unwrap() = None;
+        *self.new_pin.lock().unwrap() = None;
+        self.close_gate(ui);
+        self.refresh_settings(ui);
+    }
+
+    /// The answer to "are you 18 or over?". A yes is remembered; a no changes nothing.
+    pub fn gate_answer(self: &Arc<Self>, ui: &AppWindow, yes: bool) {
+        if ui.global::<Store>().get_gate() != 1 || !yes {
+            self.gate_cancel(ui);
+            return;
+        }
+        self.update_state(ui, |state| state.settings.adult_confirmed = true);
+        self.close_gate(ui);
+        self.carry_on(ui);
+    }
+
+    /// Four digits were entered at the gate.
+    pub fn gate_pin(self: &Arc<Self>, ui: &AppWindow, entry: &str) {
+        use bilby_core::parental;
+        let store = ui.global::<Store>();
+        match store.get_gate() {
+            2 => {
+                let settings = self.state().settings;
+                if parental::valid_pin(entry) && parental::hash_pin(&settings.pin_salt, entry) == settings.pin_hash {
+                    // Given to open adult content, it holds for the rest of this
+                    // sitting; given for anything else, it covers that one thing.
+                    if matches!(*self.pending.lock().unwrap(), Some(Guarded::OpenAdult(_))) {
+                        self.adult_unlocked.store(true, Ordering::SeqCst);
+                    }
+                    self.close_gate(ui);
+                    self.carry_on(ui);
+                } else {
+                    store.set_gate_error("That is not the PIN. Try again.".into());
+                }
+            }
+            3 => {
+                if parental::valid_pin(entry) {
+                    *self.new_pin.lock().unwrap() = Some(entry.to_string());
+                    store.set_gate_title("Enter the new PIN again".into());
+                    store.set_gate_text("To be sure it is the one you meant.".into());
+                    store.set_gate_error(SharedString::new());
+                    store.set_gate(4);
+                }
+            }
+            4 => {
+                let first = self.new_pin.lock().unwrap().take();
+                if first.as_deref() == Some(entry) && parental::valid_pin(entry) {
+                    let salt = parental::new_salt();
+                    let hash = parental::hash_pin(&salt, entry);
+                    self.update_state(ui, |state| {
+                        state.settings.pin_salt = salt;
+                        state.settings.pin_hash = hash;
+                    });
+                    *self.pending.lock().unwrap() = None;
+                    self.close_gate(ui);
+                    self.refresh_settings(ui);
+                    self.toast(ui, "The PIN is set. Remember it: it cannot be shown again.", false);
+                } else {
+                    store.set_gate_title("Choose a PIN".into());
+                    store.set_gate_text("Those two were not the same. Choose four digits.".into());
+                    store.set_gate(3);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Do what was waiting on the answer.
+    fn carry_on(self: &Arc<Self>, ui: &AppWindow) {
+        let Some(waiting) = self.pending.lock().unwrap().take() else { return };
+        match waiting {
+            Guarded::OpenAdult(id) => self.open(ui, &id),
+            Guarded::Install(index) => {
+                self.install_cleared.store(true, Ordering::SeqCst);
+                self.install(ui, index);
+            }
+            Guarded::Remove(id) => {
+                self.install_cleared.store(true, Ordering::SeqCst);
+                self.remove_from_library(ui, &id);
+            }
+            Guarded::Setting(change) => self.apply_setting(ui, change),
+        }
+    }
+
+    /// Change a family or adult-content setting, asking first where that is called for.
+    pub fn request_setting(self: &Arc<Self>, ui: &AppWindow, change: Change) {
+        use bilby_core::parental::{to_change_settings, Gate};
+        let settings = self.state().settings;
+        let has_pin = !settings.pin_hash.is_empty();
+        let stricter =
+            matches!(change, Change::FamilyMode(true) | Change::AdultOnHome(false) | Change::PinForInstalls(true));
+        if to_change_settings(has_pin, stricter) == Gate::Pin {
+            self.ask(ui, 2, "Enter the PIN", "The PIN guards these settings.", Guarded::Setting(change));
+            return;
+        }
+        // Without a PIN, asking for adult things on the home page is itself the
+        // question of being an adult.
+        if change == Change::AdultOnHome(true) && !settings.adult_confirmed {
+            let text = "This shows things meant for adults on the home page, covered until chosen. Are you 18 or over?";
+            self.ask(ui, 1, "Adult content", text, Guarded::Setting(change));
+            return;
+        }
+        self.apply_setting(ui, change);
+    }
+
+    fn apply_setting(self: &Arc<Self>, ui: &AppWindow, change: Change) {
+        match change {
+            Change::SetPin => {
+                *self.pending.lock().unwrap() = None;
+                let store = ui.global::<Store>();
+                store.set_gate_title("Choose a PIN".into());
+                store.set_gate_text(
+                    "Four digits. It will be asked for to change these settings and to open adult content.".into(),
+                );
+                store.set_gate_error(SharedString::new());
+                store.set_gate(3);
+                return;
+            }
+            Change::RemovePin => {
+                self.update_state(ui, |state| {
+                    state.settings.pin_hash.clear();
+                    state.settings.pin_salt.clear();
+                    state.settings.pin_for_installs = false;
+                });
+                self.adult_unlocked.store(false, Ordering::SeqCst);
+                self.toast(ui, "The PIN is removed", false);
+            }
+            Change::FamilyMode(on) => {
+                self.update_state(ui, |state| state.settings.family_mode = on);
+                let said = if on { "Family mode is on: nothing for adults is shown" } else { "Family mode is off" };
+                self.toast(ui, said, false);
+            }
+            Change::AdultOnHome(on) => {
+                self.update_state(ui, |state| {
+                    state.settings.adult_on_home = on;
+                    state.settings.adult_confirmed |= on;
+                });
+            }
+            Change::PinForInstalls(on) => {
+                if on && self.state().settings.pin_hash.is_empty() {
+                    self.toast(ui, "Set a PIN first", true);
+                } else {
+                    self.update_state(ui, |state| state.settings.pin_for_installs = on);
+                }
+            }
+        }
+        // What is listed depends on it: build the catalog again and redraw.
+        self.rebuild_catalog();
+        self.collections.lock().unwrap().clear();
+        self.load_collections(ui);
+        self.refresh_settings(ui);
+        self.refresh(ui);
+    }
+
     /// Look for a newer Bilby because the person asked, and say what was found.
     pub fn check_store_update_now(self: &Arc<Self>, ui: &AppWindow) {
         let Some(id) = self.store_app.clone() else { return };
@@ -2761,6 +3062,11 @@ impl App {
     }
 
     pub fn remove_from_library(&self, ui: &AppWindow, id: &str) {
+        if self.needs_pin_to_install() {
+            let why = "A PIN is needed to install or remove apps on this device.";
+            self.ask(ui, 2, "Enter the PIN", why, Guarded::Remove(id.to_string()));
+            return;
+        }
         let mut removed = None;
         self.update_state(ui, |state| removed = state.remove(id));
         let Some(entry) = removed else { return };
@@ -2935,6 +3241,11 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         steam: std::sync::RwLock::new(None),
         steam_generation: AtomicU64::new(0),
         elsewhere: std::sync::RwLock::new(Elsewhere::default()),
+        pending: Mutex::new(None),
+        known_adult: Mutex::new(HashSet::new()),
+        new_pin: Mutex::new(None),
+        adult_unlocked: std::sync::atomic::AtomicBool::new(false),
+        install_cleared: std::sync::atomic::AtomicBool::new(false),
     });
     app.scan_installed(&ui);
     *app.steam.write().unwrap() = app.state().steam;
@@ -3087,20 +3398,14 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         app.update_state(ui, |state| state.settings.reduce_motion = on);
         app.refresh_settings(ui);
     });
-    on!(on_set_adult, |app, ui, on| {
-        app.update_state(ui, |state| state.settings.show_adult = on);
-        // What is listed depends on it: build the catalog again and redraw.
-        app.rebuild_catalog();
-        app.collections.lock().unwrap().clear();
-        app.load_collections(ui);
-        app.refresh_settings(ui);
-        app.refresh(ui);
-        app.toast(
-            ui,
-            if on { "Apps and sites marked 18+ are now shown" } else { "Apps and sites marked 18+ are hidden" },
-            false,
-        );
-    });
+    on!(on_set_family_mode, |app, ui, on| { app.request_setting(ui, Change::FamilyMode(on)) });
+    on!(on_set_adult_on_home, |app, ui, on| { app.request_setting(ui, Change::AdultOnHome(on)) });
+    on!(on_set_pin_for_installs, |app, ui, on| { app.request_setting(ui, Change::PinForInstalls(on)) });
+    on!(on_set_pin, |app, ui| { app.request_setting(ui, Change::SetPin) });
+    on!(on_remove_pin, |app, ui| { app.request_setting(ui, Change::RemovePin) });
+    on!(on_gate_answer, |app, ui, yes| { app.gate_answer(ui, yes) });
+    on!(on_gate_pin, |app, ui, entry| { app.gate_pin(ui, &entry) });
+    on!(on_gate_cancel, |app, ui| { app.gate_cancel(ui) });
     on!(on_set_source, |app, ui, name, on| {
         let name = name.to_string();
         app.update_state(ui, |state| {

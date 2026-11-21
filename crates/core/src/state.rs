@@ -34,8 +34,18 @@ pub struct Settings {
     pub reduce_motion: bool,
     /// Sources switched off, by their short names (`flathub`, `steam`, ...).
     pub disabled_sources: Vec<String>,
-    /// Show apps and sites marked 18+. Off until the person switches it on.
-    pub show_adult: bool,
+    /// Family mode: nothing for adults anywhere, in any form.
+    pub family_mode: bool,
+    /// Adult things may appear on the home page (covered, as everywhere).
+    pub adult_on_home: bool,
+    /// The person has confirmed, once, that they are an adult.
+    pub adult_confirmed: bool,
+    /// The PIN that guards these settings and adult content, as a salted hash.
+    /// Empty when no PIN is set.
+    pub pin_hash: String,
+    pub pin_salt: String,
+    /// Ask for the PIN before installing or removing anything.
+    pub pin_for_installs: bool,
 }
 
 /// An app obtained through the store.
