@@ -30,6 +30,9 @@ third is a page of 18 download files where you have to work out which one is you
 (Windows, macOS, or which kind of Linux), your processor and the kind of device you
 are on, shows only what runs there, and gives each app one **Install** button.
 
+The catalog is as big as the sources themselves. Bilby does not keep its own list of
+approved apps; it searches each source's whole catalog live.
+
 It is not limited to one kind of app or one kind of source. It searches the places
 your device can install from: package managers (winget, Homebrew, Flathub, the Snap
 Store, your Linux distribution's repositories), other stores (Steam, the Mac App
@@ -67,15 +70,19 @@ There is no Android package yet, and no Flatpak
 
 **Find an app**
 
-- Browse a short starter list of well-known apps that ships with Bilby. On Linux, also
-  what is popular and trending on Flathub.
+- Search whole catalogs at once, not a hand-made list: everything in winget on
+  Windows, Homebrew and the Mac App Store on a Mac, Flathub, the Snap Store and your
+  distribution's repositories on Linux (tens of thousands of packages on a typical
+  system), plus Steam and every project with releases on GitHub and GitLab.
+- Or browse the home page. It shows what is popular, trending and newly updated on
+  Flathub when you are on Linux, and a few well-known apps to start from everywhere.
 - One app is one result, even when several sources have it. Its page shows which
   source the button uses and lets you switch.
 - Different apps for the same service (YouTube has several) are gathered on one
   page, so you can pick the version that suits your device.
-- Search every source your device has at once, or narrow to one. Sources you never
-  want can be switched off in Settings. The best match comes first: the app
-  with the name you typed, then the ones most people use.
+- Narrow a search to one source, or switch off in Settings the sources you never
+  want. The best match comes first: the app with the name you typed, then the ones
+  most people use.
 - See what you are getting: pictures and a description, and, where the source provides
   them, the price, download counts, star ratings, written reviews and whether the
   developer is verified. What is shown depends on the source: Flathub, Steam and the
