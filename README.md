@@ -197,7 +197,7 @@ is written and tested but not yet tried on a real machine. Plainly:
 | **iOS** | Could only ever browse, not install ([why](docs/DESIGN.md#ios)) |
 | **System updates** | Finds updates correctly on Debian. Installing them has not been run on a real system. Not available on openSUSE yet |
 | **Arch** | Written from documentation and tested against stand-ins, not on a real system |
-| **TV** | Works with arrow keys, OK and Back. Not yet tried with a physical remote |
+| **TV** | Works with arrow keys, OK and Back. Used on a Linux TV with a physical remote by the project's owner, whose reports shaped the layout; not tried on other TVs or remotes |
 
 Bilby does not review apps itself. Some sources do (Flathub, Steam, the Mac App Store,
 your distribution); a release page on GitHub is checked by nobody. Bilby says which

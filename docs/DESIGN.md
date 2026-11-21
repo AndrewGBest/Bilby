@@ -669,12 +669,15 @@ X server with scripted key presses and clicks (`--screenshot`, `--script`).
   button leaves the app page. Respects safe-area insets (status bar, gesture bar), which
   Slint exposes on the window **[verified]** in Slint's element definitions; **not run
   on a phone**.
-- **TV**: no pointer. Exactly one focused element, drawn with a thick white outline; rows
-  scroll to keep it in view; a hero area describes the focused app in large type; every
-  size is a fraction of the screen height so 1080p and 4K look the same. The library is
-  the first row, with updates marked. Up from the top row focuses search; OK opens,
-  installs, cancels a download or retries a failed lookup; Back returns. There is no
-  Settings page on TV yet (a token cannot sensibly be typed with a remote).
+- **TV**: no pointer. Exactly one focused element, drawn with a thick white outline; what
+  is off screen scrolls to keep it in view; every size is a fraction of the screen
+  height so 1080p and 4K look the same. Tabs along the top (Home, Library, Settings and
+  the device's own page), a wide search bar under them on Home, then rows of apps with
+  a hero area describing the focused one. Up and Down move between tabs, search and
+  rows; Down from a tab goes into the page showing and only OK changes page; OK opens,
+  installs, cancels a download or retries a failed lookup; Back returns. An app's page
+  is a column of sections to move down through. Settings is a list reachable by remote,
+  including signing in to GitHub with a code shown on screen.
 
 Shared by all three: light and dark themes (following the system by default; the TV
 interface is always dark), a first-run notice that says what the store is and that
@@ -685,8 +688,11 @@ tests find and operate them.
 Slint's Android backend maps D-pad up/down/left/right to arrow keys, D-pad centre to
 Return, and Back to a Back key **[verified]** by reading
 `i-slint-backend-android-activity-1.19.0/androidwindowadapter.rs`. The TV interface
-handles exactly those keys, so the same code serves a remote and a keyboard. It has not
-been run on a television.
+handles exactly those keys, so the same code serves a remote and a keyboard. On a Linux
+TV it has been used with a physical remote by the project's owner (2026-11), which is
+where Back doing nothing, the missing Library, the hidden Settings and the cramped app
+page were found and put right. It has not been run on Android TV, where there is no
+package yet.
 
 ### Search order
 
