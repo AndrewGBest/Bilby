@@ -897,7 +897,7 @@ export component Welcome inherits Rectangle {
             wrap: word-wrap;
         }
         Text {
-            text: "•  Apps come straight from their authors' release pages. Nobody reviews them, so only install software you trust.";
+            text: "•  Apps come from many places: package managers, other stores and developers' own release pages. Bilby does not review them, so only install software you trust.";
             color: Theme.text;
             font-size: 13px;
             wrap: word-wrap;
@@ -2414,13 +2414,13 @@ export component SettingsBody inherits Rectangle {
                     }
                 }
                 Text {
-                    text: "Bilby " + Store.app-version + ". Everything runs on this device: there is no account and no server of ours. The store talks directly to GitHub and the AUR, and keeps your library and settings in a file on this device.";
+                    text: "Bilby " + Store.app-version + ". Everything runs on this device: there is no account and no server of ours. The store talks directly to the places apps come from, and keeps your library and settings in a file on this device.";
                     color: Theme.text-dim;
                     font-size: 13px;
                     wrap: word-wrap;
                 }
                 Text {
-                    text: "Apps come straight from their authors and are not reviewed by anyone. Install software you trust. Made with Slint.";
+                    text: "Apps come from the sources listed above and are not reviewed by Bilby. Install software you trust. Made with Slint.";
                     color: Theme.text-dim;
                     font-size: 13px;
                     wrap: word-wrap;

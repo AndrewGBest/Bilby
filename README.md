@@ -6,8 +6,9 @@
 
 <p align="center">
   <b>An app store that only shows what runs on your device.</b><br>
+  Every kind of app: free and paid, open source and not, games included.<br>
   For Windows, macOS and Linux, on a desktop or a TV. Android is on the way.<br>
-  No account. No server of ours. No tracking.
+  No Bilby account. No server of ours. No tracking.
 </p>
 
 <p align="center">
@@ -22,16 +23,18 @@
 
 ## The idea
 
-Outside the big app stores, getting an app usually means a page of download files and
-working out which one is yours.
+Apps are scattered. One is in your system's package manager, another on a store, a
+third is a page of 18 download files where you have to work out which one is yours.
 
-**Bilby works it out for you.** It looks at your system (Windows, macOS, or which kind
-of Linux), your processor and the kind of device you are on, and turns a release with
-18 files into one **Install** button. The other 17 stay out of the way unless you ask
-for them.
+**Bilby puts them in one place and works out what fits.** It looks at your system
+(Windows, macOS, or which kind of Linux), your processor and the kind of device you
+are on, shows only what runs there, and gives each app one **Install** button.
 
-It gathers apps from wherever they are published: project release pages on GitHub and
-Codeberg everywhere, plus Flathub and your distribution's own repositories on Linux.
+It is not limited to one kind of app or one kind of source. It searches the places
+your device can install from: package managers (winget, Homebrew, Flathub, the Snap
+Store, your Linux distribution's repositories), other stores (Steam, the Mac App
+Store) and developers' own release pages (GitHub, GitLab, Codeberg). The
+[full list](#where-apps-come-from) is below.
 
 | On a desktop | On a phone | On a TV |
 |:---:|:---:|:---:|
@@ -74,19 +77,25 @@ There is no Android package yet, and no Flatpak
   want can be switched off in Settings. The best match comes first: the app
   with the name you typed, then the ones most people use.
 - See what you are getting: pictures and a description, and, where the source provides
-  them, download counts, star ratings, written reviews and whether the developer is
-  verified. Ratings and reviews exist mainly for Linux apps.
+  them, the price, download counts, star ratings, written reviews and whether the
+  developer is verified. What is shown depends on the source: Flathub, Steam and the
+  Mac App Store give ratings, for example, and a release page gives none.
 
 **Install it**
 
-- One button installs it. Bilby never hands you a command to type. It fetches the
-  right file for your device and hands it to your system's installer: an `.exe` or `.msi` on Windows, a `.dmg` or `.pkg` on macOS, a package,
-  AppImage or Flatpak on Linux.
+- One button installs it. For a downloaded file, Bilby fetches the right one for your
+  device and hands it to your system's installer: an `.exe` or `.msi` on Windows, a
+  `.dmg` or `.pkg` on macOS, a package, AppImage or Flatpak on Linux. For a package
+  from winget, the Snap Store or your distribution, it runs the install itself, and
+  your system asks for your password when one is needed.
+- The one exception is the AUR, where building asks questions as it goes: Bilby opens
+  a terminal on the build, and shows the command only if it cannot find a terminal.
 - Downloads are checked against the checksum the source publishes, when there is one.
 - Every other file and every older version is one press away, never hidden for good.
 - For things only another store can install (Steam, the Mac App Store), Bilby opens
-  that store on the right page and lets it take over. Paying and signing in happen
-  there, not in Bilby.
+  that store's app on the right page and lets it take over. Buying, downloading and
+  updating happen there, not in Bilby. If Steam itself is missing, Bilby offers to
+  install it.
 - Optionally, sign in to Steam to have the games you already own marked Owned. On
   every device you choose how: scan a QR code with the Steam app on your phone, or
   sign in on Steam's own page in a small browser window (Longboard on a TV). Bilby
@@ -94,7 +103,8 @@ There is no Android package yet, and no Flatpak
 
 **Keep everything up to date**
 
-- The Library lists what you installed and tells you when something newer is out.
+- The Library lists what you installed through Bilby and tells you when something
+  newer is out.
 - Update one app or all of them, or skip a version you do not want.
 - On Linux, Bilby can update the system itself too, through pacman, apt, dnf and Flatpak.
 
@@ -111,7 +121,7 @@ Each source only appears on devices it applies to. A Windows user never sees the
 
 | Source | Shown on | What you get |
 |---|---|---|
-| **GitHub Releases** | Windows, macOS, Linux | Any project that publishes files with its releases |
+| **GitHub Releases** | Windows, macOS, Linux | Any project, open source or not, that publishes files with its releases |
 | **GitLab** | Windows, macOS, Linux | The same, for projects on GitLab.com |
 | **winget** | Windows | The Windows Package Manager's catalog |
 | **Homebrew** | macOS | Thousands of Mac apps. Bilby downloads each from its publisher and checks it; Homebrew itself is not needed |
@@ -120,19 +130,21 @@ Each source only appears on devices it applies to. A Windows user never sees the
 | **The AUR** | Arch-based systems | Community build recipes |
 | **Snap Store** | Linux with snapd | Its whole catalog |
 | **F-Droid** | Android (when the Android app arrives) | Its catalog of free Android apps |
-| **Steam** | Windows, macOS, Linux | Games and apps with their prices. Bilby hands over to the Steam app, which installs and runs them |
-| **Mac App Store** | macOS | Its catalog with prices and ratings. Bilby hands over to the App Store app |
+| **Steam** | Windows, macOS, Linux | Games and apps, free and paid, with their prices. Bilby hands over to the Steam app, which sells, installs and runs them |
+| **Mac App Store** | macOS | Its catalog, free and paid, with prices and ratings. Bilby hands over to the App Store app |
 | **Codeberg** | Windows, macOS, Linux | Projects by link and from the home page. Codeberg is turning away searches at the moment |
 | **Websites** | Linux TVs | Sites that open like apps in Longboard |
 
 ## Your privacy
 
-Bilby has no server and no account, so there is nobody for it to report to. Your library
-and settings are one file on your device. What does leave your device:
+Bilby has no server and no account of its own, so there is nobody for it to report to.
+Your library and settings are one file on your device. Bilby talks directly to the
+sources, and what leaves your device is what those requests carry:
 
 | When you | Bilby contacts | It learns |
 |---|---|---|
-| Search or open an app | That app's source (GitHub, Flathub, ...) | What you searched for or opened, as with any website |
+| Search or open an app | Every source switched on for your device (a search), or that app's source (opening it) | What you searched for or opened, and your network address, as with any website |
+| Open Bilby, or check for updates | The sources of the apps in your library, and GitHub for Bilby's own releases | Which apps were checked for updates. Can be switched off for start-up |
 | Have ratings switched on | The ratings service GNOME and KDE use | That *someone* downloaded the full list of ratings, once a day |
 | Open an app that has reviews | The same service | Which app's reviews were asked for. No user id is sent |
 | Sign in to Steam | Steam | That this device signed in, as with any browser or app. Optional. With a QR code, Steam gives Bilby a key to the account, which Bilby uses once to read the list and then discards; in a browser, no key reaches Bilby at all. Either way only the list of what you own is kept, on this device, and Sign out removes it |
@@ -142,22 +154,29 @@ Ratings and reviews can be switched off in Settings, which stops both requests.
 
 ## How ready is it
 
-Bilby works and is being used, but it is early. Plainly:
+Bilby is early. It works on Linux, where it has been tried for real; much of the rest
+is written and tested but not yet tried on a real machine. Plainly:
 
 | | State |
 |---|---|
-| **Linux** | Works. Tried on Debian 13: real searches on every source and a real install from Flathub |
+| **Linux** | Works. Tried on Debian 13: real searches on GitHub, GitLab, Flathub, apt and Steam, and a real install from Flathub. Search and package details also run for real on Fedora and openSUSE |
+| **Installing distribution packages** | The install commands were run for real on Fedora and openSUSE. Doing it through the system's password prompt has not been tried on a real desktop, nor has any of it on Arch |
+| **Snap Store, AUR** | Written and tested against stand-ins. Not tried end to end |
+| **Steam, Mac App Store** | Searching Steam works for real. Handing over to the Steam or App Store app has not been tried on a machine that has them |
+| **Signing in to Steam** | Nobody has completed a sign-in yet, by QR code or browser. On a TV, the browser way also waits on a Longboard release |
 | **Windows, macOS** | Downloads are published and the tests pass on both. Nobody has checked the window by eye yet, so expect rough edges |
 | **winget** (Windows) | Written without a Windows machine to try it on. English-language Windows only |
 | **Homebrew** (macOS) | Searching and choosing the right download work against the real catalog. Installing from it has not been tried on a Mac |
 | **Android** (phone, tablet, TV) | Not installable yet. The core compiles for it and the phone and TV layouts exist |
 | **iOS** | Could only ever browse, not install ([why](docs/DESIGN.md#ios)) |
-| **System updates** | Finds updates correctly on Debian. Installing them has not been run on a real system |
-| **Arch, Fedora** | Written from documentation and tested against stand-ins, not on real systems |
+| **System updates** | Finds updates correctly on Debian. Installing them has not been run on a real system. Not available on openSUSE yet |
+| **Arch** | Written from documentation and tested against stand-ins, not on a real system |
 | **TV** | Works with arrow keys, OK and Back. Not yet tried with a physical remote |
 
-Nobody reviews the apps in the catalog. Bilby warns about test versions, abandoned
-projects and out-of-date packages, but an app is only as trustworthy as its author.
+Bilby does not review apps itself. Some sources do (Flathub, Steam, the Mac App Store,
+your distribution); a release page on GitHub is checked by nobody. Bilby says which
+source an app comes from and warns about test versions, abandoned projects and
+out-of-date packages, but an app is only as trustworthy as whoever published it.
 
 ## Good to know
 
@@ -165,8 +184,9 @@ projects and out-of-date packages, but an app is only as trustworthy as its auth
   everyone on your network. Bilby tells you when it runs out. Signing in to GitHub in
   Settings (you type a short code on GitHub's site) raises it to 5,000. Flathub and your distribution's packages have no such limit.
 - **Reduce motion.** Settings can turn animations off.
-- **From a terminal.** `bilby-cli` does everything the app does, and can export your
-  library to move it to another device.
+- **From a terminal.** `bilby-cli` can search, show, install and check for updates, and
+  can export your library to move it to another device. It does not do everything the
+  app does: system updates and signing in are in the app only.
 
 ## Learn more
 
@@ -178,5 +198,7 @@ projects and out-of-date packages, but an app is only as trustworthy as its auth
 
 ## Licence
 
-GPL-3.0-only for now. Read [the licensing note](docs/DESIGN.md#10-ui-toolkit) before
-relying on that: it was chosen as a starting point and may change.
+Bilby's own code is intended to be GPL-3.0-only, and the source is marked that way, but
+the repository has no licence file yet and the choice may change. Read
+[the licensing note](docs/DESIGN.md#10-ui-toolkit) before relying on it. This is about
+Bilby itself; the apps it lists have whatever licences their publishers chose.
