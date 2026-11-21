@@ -1,5 +1,5 @@
 import { Theme } from "theme.slint";
-import { AppCard, OptionRow, LibraryRow, Store } from "types.slint";
+import { AppCard, OptionRow, LibraryRow, Store, VersionChoice } from "types.slint";
 
 export component AppIcon inherits Rectangle {
     in property <string> initials;
@@ -50,6 +50,118 @@ export component Chip inherits Rectangle {
 }
 
 // A chip that can be pressed: category filters, recent searches.
+// One app out of several for the same service, chosen from a list that drops down.
+// Closed, it says which service and which app; open, each app has a line saying what
+// kind of thing it is and whether the service's owner made it.
+export component VersionPicker inherits Rectangle {
+    in property <string> service;
+    in property <[VersionChoice]> versions;
+    callback chosen(string);
+    property <bool> open: false;
+    height: 58px;
+    border-radius: 12px;
+    background: ta.has-hover || fs.has-focus ? Theme.surface-2 : Theme.surface;
+    border-width: 1px;
+    border-color: fs.has-focus ? Theme.focus : Theme.stroke;
+    accessible-role: button;
+    accessible-label: "Choose a version of " + service;
+    accessible-expandable: true;
+    accessible-action-default => { list.show(); }
+    fs := FocusScope {
+        focus-on-click: false;
+        key-pressed(event) => {
+            if (event.text == Key.Return || event.text == " " || event.text == Key.DownArrow) {
+                list.show();
+                return accept;
+            }
+            reject
+        }
+        ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => { list.show(); }
+        }
+    }
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        spacing: 12px;
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            spacing: 2px;
+            Text { text: "Version of " + root.service; color: Theme.text-dim; font-size: 11px; }
+            for v in root.versions : Text {
+                visible: v.on;
+                height: v.on ? self.preferred-height : 0px;
+                text: v.name + (v.official ? "" : "   ·   unofficial");
+                color: Theme.text;
+                font-size: 15px;
+                font-weight: 600;
+                overflow: elide;
+            }
+        }
+        Text { text: "▾"; color: Theme.text-dim; font-size: 14px; vertical-alignment: center; }
+    }
+    list := PopupWindow {
+        x: 0px;
+        y: root.height + 6px;
+        width: root.width;
+        Rectangle {
+            background: Theme.surface;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: Theme.stroke;
+            drop-shadow-blur: 24px;
+            drop-shadow-offset-y: 8px;
+            drop-shadow-color: #00000066;
+            VerticalLayout {
+                padding: 6px;
+                spacing: 2px;
+                for v in root.versions : Rectangle {
+                    height: 58px;
+                    border-radius: 8px;
+                    background: v.on ? Theme.accent.with-alpha(0.16) : row.has-hover ? Theme.surface-2 : transparent;
+                    accessible-role: button;
+                    accessible-label: (v.on ? "Showing " : "Switch to ") + v.name;
+                    accessible-action-default => { root.chosen(v.id); }
+                    row := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            if (!v.on) {
+                                root.chosen(v.id);
+                            }
+                        }
+                    }
+                    HorizontalLayout {
+                        padding-left: 12px;
+                        padding-right: 12px;
+                        spacing: 10px;
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            alignment: center;
+                            spacing: 3px;
+                            HorizontalLayout {
+                                alignment: start;
+                                spacing: 8px;
+                                Text { text: v.name; color: Theme.text; font-size: 14px; font-weight: 600; vertical-alignment: center; }
+                                Rectangle {
+                                    width: tag.preferred-width + 12px;
+                                    height: 18px;
+                                    border-radius: 9px;
+                                    background: v.official ? Theme.ok.with-alpha(0.18) : Theme.text-dim.with-alpha(0.16);
+                                    tag := Text { text: v.official ? "Official" : "Unofficial"; color: v.official ? Theme.ok : Theme.text-dim; font-size: 10px; font-weight: 600; }
+                                }
+                            }
+                            Text { text: v.note; color: Theme.text-dim; font-size: 12px; overflow: elide; }
+                        }
+                        Text { text: v.on ? "✓" : ""; color: Theme.accent; font-size: 15px; font-weight: 700; vertical-alignment: center; }
+                    }
+                }
+            }
+        }
+    }
+}
+
 export component ChoiceChip inherits Rectangle {
     in property <string> text;
     in property <bool> selected;
@@ -1099,35 +1211,16 @@ export component DetailsBody inherits Rectangle {
                     clicked => { Store.toggle-favourite(); }
                 }
             }
-            // A service with several apps: which version this is, and the others that
-            // work on this device.
-            if Store.app-family.length > 1 : VerticalLayout {
-                spacing: 6px;
-                Text {
-                    text: "Versions of " + Store.app-family-name + " for this device";
-                    color: Theme.text-dim;
-                    font-size: 12px;
-                    horizontal-alignment: compact ? center : right;
-                }
-                Flickable {
-                    height: 36px;
-                    viewport-width: family-chips.preferred-width;
-                    HorizontalLayout {
-                        alignment: compact ? start : end;
-                        family-chips := HorizontalLayout {
-                            spacing: 8px;
-                            for version in Store.app-family : ChoiceChip {
-                                text: version.label;
-                                selected: version.on;
-                                accessible-label: version.on ? "Showing " + version.label : "Switch to " + version.label;
-                                clicked => {
-                                    if (!version.on) {
-                                        Store.open(version.id);
-                                    }
-                                }
-                            }
-                        }
-                    }
+            // A service with several apps: which one this is, as a list to choose from.
+            if Store.app-family.length > 1 : HorizontalLayout {
+                alignment: compact ? stretch : end;
+                VersionPicker {
+                    horizontal-stretch: 1;
+                    min-width: 260px;
+                    max-width: compact ? 4000px : 340px;
+                    service: Store.app-family-name;
+                    versions: Store.app-family;
+                    chosen(id) => { Store.open(id); }
                 }
             }
             // Which source the button installs from, right beside it, and the others to
@@ -2099,17 +2192,59 @@ export component SettingsBody inherits Rectangle {
             if Store.steam-available : SettingsCard {
                 title: "Steam";
                 Text {
-                    text: Store.steam-signed-in ? "Signed in. Bilby knows " + Store.steam-summary + " in your Steam library and marks them Owned." : Store.steam-state == 1 ? "Sign in on Steam's page in the window that opened. Close it to stop." : Store.steam-state == 2 ? "Sign in on Steam's page in Longboard, then choose to share your library." : "Sign in to see which Steam games you already own. You sign in on Steam's own page; Bilby is given only the list of what you own, never your password, and keeps it on this device.";
+                    text: Store.steam-signed-in ? "Signed in. Bilby knows " + Store.steam-summary + " in your Steam library and marks them Owned." : Store.steam-state == 1 ? "Sign in on Steam's page in the window that opened. Close it to stop." : Store.steam-state == 2 ? "Sign in on Steam's page in Longboard, then choose to share your library." : Store.steam-state == 3 ? "Scan this with the Steam app on your phone and approve the sign-in there." : "Sign in to see which Steam games you already own. Bilby keeps only the list of what you own, on this device. Choose how:";
                     color: Theme.text-dim;
                     font-size: 13px;
                     wrap: word-wrap;
                 }
+                if !Store.steam-signed-in && Store.steam-state == 0 : VerticalLayout {
+                    spacing: 10px;
+                    HorizontalLayout {
+                        spacing: 12px;
+                        VerticalLayout {
+                            alignment: center;
+                            Button { text: "Sign in with a QR code"; min-width: 200px; accessible-label: "Sign in to Steam with a QR code"; clicked => { Store.steam-signin-qr(); } }
+                        }
+                        Text { horizontal-stretch: 1; text: "Scan a code with the Steam app on your phone. Nothing to type. Steam gives Bilby a key to your account, which Bilby uses once to read the list and then throws away."; color: Theme.text-dim; font-size: 12px; wrap: word-wrap; vertical-alignment: center; }
+                    }
+                    HorizontalLayout {
+                        spacing: 12px;
+                        VerticalLayout {
+                            alignment: center;
+                            Button { text: "Sign in in a browser"; primary: false; min-width: 200px; accessible-label: "Sign in to Steam in a browser"; clicked => { Store.steam-signin(); } }
+                        }
+                        Text { horizontal-stretch: 1; text: "Steam's own sign-in page opens in a small window. The browser asks Steam for the list, so no key ever reaches Bilby."; color: Theme.text-dim; font-size: 12px; wrap: word-wrap; vertical-alignment: center; }
+                    }
+                }
+                if Store.steam-state == 3 : HorizontalLayout {
+                    alignment: start;
+                    spacing: 16px;
+                    Rectangle {
+                        width: 216px;
+                        height: 216px;
+                        border-radius: 12px;
+                        background: white;
+                        accessible-role: AccessibleRole.image;
+                        accessible-label: "QR code to scan with the Steam app";
+                        if Store.steam-qr.width > 0 : Image {
+                            width: 200px;
+                            height: 200px;
+                            source: Store.steam-qr;
+                            image-rendering: pixelated;
+                        }
+                        if Store.steam-qr.width == 0 : Busy { }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        spacing: 6px;
+                        Text { text: Store.steam-qr-scanned ? "Scanned. Approve it in the Steam app." : "Waiting for the Steam app…"; color: Theme.text; font-size: 14px; font-weight: 600; }
+                        Text { text: "The code refreshes by itself."; color: Theme.text-dim; font-size: 12px; }
+                    }
+                }
                 HorizontalLayout {
                     alignment: start;
                     spacing: 8px;
-                    if !Store.steam-signed-in && Store.steam-state == 0 : Button { text: "Sign in to Steam"; clicked => { Store.steam-signin(); } }
                     if Store.steam-state != 0 : Button { text: "Stop waiting"; primary: false; accessible-label: "Stop waiting for Steam"; clicked => { Store.steam-cancel(); } }
-                    if Store.steam-signed-in && Store.steam-state == 0 : Button { text: "Refresh"; primary: false; accessible-label: "Refresh my Steam library"; clicked => { Store.steam-signin(); } }
                     if Store.steam-signed-in && Store.steam-state == 0 : Button { text: "Sign out"; primary: false; accessible-label: "Sign out of Steam"; clicked => { Store.steam-signout(); } }
                 }
             }

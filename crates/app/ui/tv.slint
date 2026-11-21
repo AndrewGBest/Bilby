@@ -344,7 +344,12 @@ export component TvShell inherits Rectangle {
                 return accept;
             }
             if (root.on-system) {
-                if (event.text == Key.Escape || event.text == Key.Back || event.text == Key.Backspace) {
+                if (Store.steam-state == 3) {
+                    // The code fills the screen: Back or OK takes it down.
+                    if (event.text == Key.Escape || event.text == Key.Back || event.text == Key.Backspace || event.text == Key.Return || event.text == " ") {
+                        Store.steam-cancel();
+                    }
+                } else if (event.text == Key.Escape || event.text == Key.Back || event.text == Key.Backspace) {
                     root.tab = 0;
                     root.activate-tab();
                 } else if (event.text == Key.UpArrow) {
@@ -354,7 +359,7 @@ export component TvShell inherits Rectangle {
                         root.sys-row -= 1;
                     }
                 } else if (event.text == Key.DownArrow) {
-                    root.sys-row = min(Store.steam-available ? 5 : 4, root.sys-row + 1);
+                    root.sys-row = min(!Store.steam-available ? 4 : Store.steam-signed-in || Store.steam-state != 0 ? 5 : 6, root.sys-row + 1);
                 } else if (root.sys-row > 0) {
                     // A setting: OK, Left or Right switches it.
                     if (event.text == Key.Return || event.text == " " || event.text == Key.LeftArrow || event.text == Key.RightArrow) {
@@ -370,8 +375,12 @@ export component TvShell inherits Rectangle {
                             } else if (Store.steam-signed-in) {
                                 Store.steam-signout();
                             } else {
-                                Store.steam-signin();
+                                Store.steam-signin-qr();
                             }
+                        } else if (root.sys-row == 6) {
+                            // The row goes away while signing in; the highlight moves to the one that stays.
+                            root.sys-row = 5;
+                            Store.steam-signin();
                         } else if (Store.has-token) {
                             Store.save-token("");
                         } else if (Store.signin-state == 0) {
@@ -674,15 +683,20 @@ export component TvShell inherits Rectangle {
                 width: parent.width - 2 * margin - 432 * u;
                 spacing: 7 * u;
                 alignment: start;
-                Text { text: "Information"; color: Theme.text; font-size: 14 * u; font-weight: 700; }
-                for fact in Store.system-facts : HorizontalLayout {
-                    spacing: 12 * u;
-                    accessible-role: text;
-                    accessible-label: fact.name + ": " + fact.value;
-                    Text { width: 130 * u; text: fact.name; color: Theme.text-dim; font-size: 12 * u; }
-                    Text { horizontal-stretch: 1; text: fact.value; color: Theme.text; font-size: 12 * u; wrap: word-wrap; }
+                // The facts make way once the highlight is well into the settings, so the
+                // last rows and the sign-in code under them are on screen.
+                if root.sys-row < 3 : VerticalLayout {
+                    spacing: 7 * u;
+                    Text { text: "Information"; color: Theme.text; font-size: 14 * u; font-weight: 700; }
+                    for fact in Store.system-facts : HorizontalLayout {
+                        spacing: 12 * u;
+                        accessible-role: text;
+                        accessible-label: fact.name + ": " + fact.value;
+                        Text { width: 130 * u; text: fact.name; color: Theme.text-dim; font-size: 12 * u; }
+                        Text { horizontal-stretch: 1; text: fact.value; color: Theme.text; font-size: 12 * u; wrap: word-wrap; }
+                    }
+                    Rectangle { height: 6 * u; }
                 }
-                Rectangle { height: 6 * u; }
                 Text { text: "Settings"; color: Theme.text; font-size: 14 * u; font-weight: 700; }
                 TvSetting {
                     u: root.u;
@@ -714,10 +728,17 @@ export component TvShell inherits Rectangle {
                 }
                 if Store.steam-available : TvSetting {
                     u: root.u;
-                    label: Store.steam-signed-in ? "Signed in to Steam  ·  " + Store.steam-summary : Store.steam-state != 0 ? "Sign in on Steam's page in Longboard, then share your library" : "Sign in to Steam to see what you own";
-                    value: Store.steam-state != 0 ? "Cancel" : Store.steam-signed-in ? "Sign out" : "Sign in";
+                    label: Store.steam-signed-in ? "Signed in to Steam  ·  " + Store.steam-summary : Store.steam-state == 3 ? "Scan the code with the Steam app on your phone" : Store.steam-state != 0 ? "Sign in on Steam's page in Longboard, then share your library" : "Sign in to Steam with a QR code, to see what you own";
+                    value: Store.steam-state != 0 ? "Cancel" : Store.steam-signed-in ? "Sign out" : "Show code";
                     on: Store.steam-signed-in;
                     focused: root.zone == 0 && root.sys-row == 5;
+                }
+                if Store.steam-available && !Store.steam-signed-in && Store.steam-state == 0 : TvSetting {
+                    u: root.u;
+                    label: "Or sign in to Steam in a browser (Longboard)";
+                    value: "Open";
+                    on: false;
+                    focused: root.zone == 0 && root.sys-row == 6;
                 }
                 // The code to enter at GitHub, on a phone or computer.
                 if Store.signin-state == 2 : VerticalLayout {
@@ -731,6 +752,47 @@ export component TvShell inherits Rectangle {
                         font-weight: 800;
                         letter-spacing: 3 * u;
                         accessible-label: "Sign-in code " + Store.signin-code;
+                    }
+                }
+            }
+            // Signing in to Steam with a code: the whole screen, so a phone across the
+            // room can read it. Back or OK stops.
+            if Store.steam-state == 3 : Rectangle {
+                x: 0;
+                y: 0;
+                width: parent.width;
+                height: parent.height;
+                background: Theme.bg;
+                TouchArea { }
+                HorizontalLayout {
+                    alignment: center;
+                    spacing: 40 * u;
+                    VerticalLayout {
+                        alignment: center;
+                        Rectangle {
+                            width: 280 * u;
+                            height: 280 * u;
+                            border-radius: 14 * u;
+                            background: white;
+                            accessible-role: AccessibleRole.image;
+                            accessible-label: "QR code to scan with the Steam app";
+                            Image {
+                                width: 256 * u;
+                                height: 256 * u;
+                                source: Store.steam-qr;
+                                image-rendering: pixelated;
+                            }
+                        }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        spacing: 10 * u;
+                        width: 380 * u;
+                        Text { text: "Sign in to Steam"; color: Theme.text; font-size: 30 * u; font-weight: 800; }
+                        Text { text: "Open the Steam app on your phone, scan this code and approve the sign-in there."; color: Theme.text; font-size: 15 * u; wrap: word-wrap; }
+                        Text { text: Store.steam-qr-scanned ? "Scanned. Approve it in the Steam app." : "Waiting for the Steam app…"; color: Theme.accent; font-size: 15 * u; font-weight: 700; }
+                        Text { text: "Steam gives Bilby a key to your account. Bilby uses it once to read what you own, then throws it away."; color: Theme.text-dim; font-size: 12 * u; wrap: word-wrap; }
+                        Text { text: "Press Back to stop."; color: Theme.text-dim; font-size: 12 * u; }
                     }
                 }
             }

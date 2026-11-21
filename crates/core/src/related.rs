@@ -9,6 +9,7 @@
 //! Anything not made by the service's owner is marked unofficial wherever it is shown.
 
 use crate::model::{AppId, SourceKind};
+use crate::platform::{FormFactor, Os, Platform};
 use serde::Deserialize;
 use std::sync::OnceLock;
 
@@ -30,6 +31,13 @@ pub struct Member {
     /// Made by the service's owner.
     #[serde(default)]
     pub official: bool,
+    /// The systems it runs on (`linux`, `windows`, `macos`, `android`, `ios`). Empty
+    /// for one that runs wherever its source is offered.
+    #[serde(default)]
+    pub os: Vec<String>,
+    /// The kinds of device it is made for (`desktop`, `mobile`, `tv`). Empty for any.
+    #[serde(default)]
+    pub form: Vec<String>,
 }
 
 #[derive(Deserialize)]
@@ -69,9 +77,27 @@ pub fn family_named<'a>(list: &'a [Family], query: &str) -> Option<&'a Family> {
 
 impl Family {
     /// The members this device can use, in the family's order: those whose source
-    /// applies here.
-    pub fn here(&self, sources: &[SourceKind]) -> Vec<&Member> {
-        self.members.iter().filter(|m| AppId::parse(&m.id).is_some_and(|id| sources.contains(&id.source))).collect()
+    /// applies here and that are made for this system and kind of device.
+    pub fn here(&self, sources: &[SourceKind], platform: &Platform) -> Vec<&Member> {
+        let os = match platform.os {
+            Os::Linux => "linux",
+            Os::Windows => "windows",
+            Os::MacOs => "macos",
+            Os::Android => "android",
+            Os::Ios => "ios",
+        };
+        let form = match platform.form_factor {
+            FormFactor::Desktop => "desktop",
+            FormFactor::Mobile => "mobile",
+            FormFactor::Tv => "tv",
+        };
+        let fits =
+            |wanted: &[String], have: &str| wanted.is_empty() || wanted.iter().any(|w| w.eq_ignore_ascii_case(have));
+        self.members
+            .iter()
+            .filter(|m| AppId::parse(&m.id).is_some_and(|id| sources.contains(&id.source)))
+            .filter(|m| fits(&m.os, os) && fits(&m.form, form))
+            .collect()
     }
 }
 
@@ -104,14 +130,21 @@ mod tests {
     fn a_family_offers_only_what_this_device_can_use() {
         let list = families();
         let youtube = family_named(list, "youtube").unwrap();
-        let ids =
-            |sources: &[SourceKind]| -> Vec<&str> { youtube.here(sources).iter().map(|m| m.id.as_str()).collect() };
-        let windows = ids(&[SourceKind::GitHub, SourceKind::Winget]);
-        assert!(windows.iter().all(|id| id.starts_with("github:")) && !windows.is_empty());
-        let linux_tv = ids(&[SourceKind::Web, SourceKind::Flathub, SourceKind::GitHub]);
+        let on = |preset: &str, sources: &[SourceKind]| -> Vec<&str> {
+            let platform = Platform::preset(preset).unwrap();
+            youtube.here(sources, &platform).iter().map(|m| m.id.as_str()).collect()
+        };
+        let windows = on("windows-x64", &[SourceKind::GitHub, SourceKind::Winget]);
+        assert_eq!(windows, ["github:shy1132/VacuumTube", "github:FreeTubeApp/FreeTube"], "no Android apps on Windows");
+        let linux_tv = on("linux-tv", &[SourceKind::Web, SourceKind::Flathub, SourceKind::GitHub]);
         assert_eq!(linux_tv[0], "web:youtube.com", "the service's own site comes first where it can be used");
-        assert!(linux_tv.contains(&"flathub:rocks.shy.VacuumTube"));
-        assert!(ids(&[SourceKind::FDroid]).contains(&"fdroid:org.schabi.newpipe"));
+        assert!(
+            linux_tv.contains(&"flathub:rocks.shy.VacuumTube")
+                && !linux_tv.iter().any(|id| id.contains("SmartTube") || id.contains("NewPipe"))
+        );
+        // A phone gets the phone app, not the one made for Android TVs.
+        let phone = on("android-arm64", &[SourceKind::GitHub, SourceKind::FDroid]);
+        assert_eq!(phone, ["fdroid:org.schabi.newpipe", "github:TeamNewPipe/NewPipe"]);
         assert_eq!(youtube.members[1].describe(), "VacuumTube  ·  Flathub  ·  unofficial");
     }
 

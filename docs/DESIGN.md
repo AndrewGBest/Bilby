@@ -243,9 +243,12 @@ towards not merging.]
 **Versions of a service** (`related.rs`, `data/related.json`). VacuumTube, FreeTube
 and NewPipe are different ways to use YouTube, and which one suits depends on the
 device. That relationship is kept by hand in one file: a family per service, its
-members in order of preference. Searching for the service shows one tile; the page
-of any member lists the versions this device can use, each marked unofficial unless
-the service's owner made it. The file starts with YouTube; every entry in it was
+members in order of preference, each with the systems and kinds of device it runs
+on where its source does not already say (an Android app on GitHub is not offered
+on a Linux TV). Searching for the service shows one tile. The page of any member has
+a drop-down, "Version of YouTube", listing each app once with a line on what it is
+and whether the service's owner made it; the sources of the chosen app are beside
+the install button as for any other app. The file starts with YouTube; every entry in it was
 checked to exist at its source.
 
 **Getting the other store's app.** A Steam game's page on a device without Steam
@@ -278,6 +281,21 @@ follows.]
   by that name; what the name yields is Longboard's to decide. [This needs a
   Longboard with the feature, which at the time of writing is on a branch there,
   not released.]
+
+- *With a QR code, on any device* (`steam_qr.rs`). No browser: Bilby asks Steam for
+  a sign-in code, draws it, and the person scans it with the Steam app on their
+  phone and approves there. On a TV the code fills the screen. This way differs in
+  one respect that the person is told before choosing: Steam answers an approval
+  with keys to the account, so for a moment they do pass through Bilby. It uses the
+  short-lived one once, to ask what the account owns, and drops both; they are
+  never stored, never cached and never put in an error message, and tests hold it
+  to that. [Run against the live service with no account: asking for a code, which
+  needs no key; drawing it, and a scanner reading it back as Steam's address;
+  asking whether it was approved. Not run by anyone: what comes back after an
+  approval, and whether Steam gives the list for those keys. If it does not, the
+  person is told so and the browser way still works.]
+
+Both ways are offered everywhere, the code first.
 
 Owned games are marked Owned in place of their price. [Run for real: the window
 showing Steam's sign-in page; Bilby starting it, reading its answer and saving it,

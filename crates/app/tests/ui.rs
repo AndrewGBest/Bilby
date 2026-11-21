@@ -5,7 +5,7 @@
 //! elements found by their accessible label, or sending key presses. Catalog work runs
 //! inline (`Options::inline`), so every assertion sees the finished result.
 
-use bilby::{build, App, AppCard, AppWindow, Options, Shell, SourceChoice, Store, Theme};
+use bilby::{build, App, AppCard, AppWindow, Options, Shell, SourceChoice, Store, Theme, VersionChoice};
 use bilby_core::install::Dirs;
 use bilby_core::model::AppId;
 use bilby_core::state::State;
@@ -2041,15 +2041,33 @@ fn a_service_with_several_apps_is_one_result_and_its_page_offers_the_versions() 
 
     s.app.open(&s.ui, "web:youtube.com");
     assert_eq!(s.store().get_app_family_name(), "YouTube");
-    let versions: Vec<SourceChoice> = s.store().get_app_family().iter().collect();
-    assert!(versions.len() >= 3, "{}", versions.len());
+    // One line per app, however many sources have it, each saying what it is and whose.
+    let versions: Vec<VersionChoice> = s.store().get_app_family().iter().collect();
+    let names: Vec<&str> = versions.iter().map(|v| v.name.as_str()).collect();
+    assert_eq!(names, ["YouTube website", "VacuumTube", "FreeTube"], "only what this device can use, each once");
     assert_eq!(versions.iter().filter(|v| v.on).count(), 1);
-    assert_eq!(versions[0].label, "YouTube website  ·  Websites");
-    let vacuum = versions.iter().find(|v| v.id == "flathub:rocks.shy.VacuumTube").unwrap();
-    assert_eq!(vacuum.label, "VacuumTube  ·  Flathub  ·  unofficial", "whose it is, is always said");
-    assert!(
-        versions.iter().all(|v| !v.id.starts_with("fdroid:") && !v.id.starts_with("brew:")),
-        "only what this device can use"
+    assert!(versions[0].on && versions[0].official);
+    let vacuum = &versions[1];
+    assert_eq!(
+        (vacuum.id.as_str(), vacuum.official),
+        ("flathub:rocks.shy.VacuumTube", false),
+        "whose it is, is always said"
+    );
+    assert_eq!(vacuum.note, "YouTube's TV interface, as an app");
+
+    // Choosing one shows it, with its other sources beside the button.
+    s.app.open(&s.ui, "flathub:rocks.shy.VacuumTube");
+    let now: Vec<VersionChoice> = s.store().get_app_family().iter().collect();
+    assert_eq!(now.iter().find(|v| v.on).unwrap().name, "VacuumTube");
+    let sources: Vec<(String, bool)> =
+        s.store().get_app_sources().iter().map(|c| (c.label.to_string(), c.on)).collect();
+    assert_eq!(sources, [("Flathub".to_string(), true), ("GitHub".to_string(), false)]);
+    s.app.open(&s.ui, "github:shy1132/VacuumTube");
+    let now: Vec<VersionChoice> = s.store().get_app_family().iter().collect();
+    assert_eq!(
+        now.iter().find(|v| v.on).map(|v| v.id.as_str()),
+        Some("github:shy1132/VacuumTube"),
+        "the list follows the source in use"
     );
 
     // On a phone the same family offers the Android apps instead.
@@ -2087,8 +2105,9 @@ fn a_tv_remote_can_switch_version_from_the_versions_list() {
 fn signing_in_to_steam_in_the_stores_window_records_what_the_account_owns() {
     let s = start("linux-x64-debian", Shell::Desktop);
     s.store().set_page(3);
-    assert!(s.has("Sign in to Steam") && !s.store().get_steam_signed_in());
-    s.click("Sign in to Steam");
+    assert!(s.has("Sign in to Steam with a QR code"), "both ways are offered");
+    assert!(s.has("Sign in to Steam in a browser") && !s.store().get_steam_signed_in());
+    s.click("Sign in to Steam in a browser");
     assert!(s.store().get_steam_signed_in());
     assert_eq!(s.store().get_steam_summary(), "3 games and tools");
     assert!(s.store().get_toast().contains("3 games and tools"), "{}", s.store().get_toast());
@@ -2106,6 +2125,25 @@ fn signing_in_to_steam_in_the_stores_window_records_what_the_account_owns() {
     assert!(!s.store().get_steam_signed_in() && s.saved().steam.is_none());
     assert!(!s.dirs.config.join("steam-session").exists());
     assert!(!s.app.owns(&AppId::parse("steam:440").unwrap()));
+}
+
+#[test]
+fn signing_in_to_steam_with_a_code_shows_it_and_keeps_only_the_list() {
+    let s = start("linux-x64-debian", Shell::Desktop);
+    s.store().set_page(3);
+    // The demo's Steam swaps the code once and approves the second time it is asked.
+    s.click("Sign in to Steam with a QR code");
+    assert!(s.store().get_steam_signed_in() && s.store().get_steam_state() == 0);
+    assert_eq!(s.saved().steam.unwrap().owned, [440, 620]);
+    let on_disk = std::fs::read_to_string(&s.state_file).unwrap();
+    assert!(!on_disk.contains("demo.") && !on_disk.contains("refresh"), "no key from Steam is kept: {on_disk}");
+    assert_eq!(s.store().get_steam_qr().size().width, 0, "the code is taken down afterwards");
+    assert!(!s.dirs.config.join("steam-session").exists(), "and no browser was involved");
+
+    // A TV offers the same two ways, the code first.
+    let tv = start("linux-tv", Shell::Tv);
+    tv.store().invoke_steam_signin_qr();
+    assert!(tv.store().get_steam_signed_in());
 }
 
 #[test]

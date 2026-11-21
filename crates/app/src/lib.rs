@@ -983,7 +983,8 @@ impl App {
             let available = self.catalog().available_sources();
             let families = bilby_core::related::families();
             if let Some(family) = bilby_core::related::family_named(families, &query) {
-                let here = family.here(&available);
+                let platform = self.platform.read().unwrap().clone();
+                let here = family.here(&available, &platform);
                 if let Some(first) = here.first().and_then(|m| AppId::parse(&m.id).map(|id| (id, *m))) {
                     // One tile for the service; its versions are chosen on its page.
                     cards.retain(|card| !family.members.iter().any(|m| m.id.eq_ignore_ascii_case(card.id.as_str())));
@@ -1158,20 +1159,45 @@ impl App {
         let available = self.catalog().available_sources();
         let families = bilby_core::related::families();
         let family = bilby_core::related::family_of(families, &id);
-        let versions: Vec<SourceChoice> = family
-            .map(|family| {
-                family
-                    .here(&available)
-                    .into_iter()
-                    .map(|m| SourceChoice {
+        // One entry per app, however many sources have it: the one being shown, or
+        // the first this device can use.
+        let device = self.platform.read().unwrap().clone();
+        let here = family.map(|family| family.here(&available, &device)).unwrap_or_default();
+        let showing = here.iter().find(|m| m.id.eq_ignore_ascii_case(&id)).map(|m| m.label.as_str());
+        let mut versions: Vec<VersionChoice> = Vec::new();
+        for member in &here {
+            let on = showing == Some(member.label.as_str());
+            if versions.iter().any(|v| v.name == member.label.as_str()) || (on && !member.id.eq_ignore_ascii_case(&id))
+            {
+                continue;
+            }
+            versions.push(VersionChoice {
+                id: member.id.as_str().into(),
+                name: member.label.as_str().into(),
+                note: member.note.as_str().into(),
+                official: member.official,
+                on,
+            });
+        }
+        // The other sources of the app being shown, when a search has not already said.
+        if store.get_app_sources().row_count() == 0 {
+            let same: Vec<SourceChoice> = here
+                .iter()
+                .filter(|m| showing == Some(m.label.as_str()))
+                .filter_map(|m| {
+                    let source = AppId::parse(&m.id)?.source.label();
+                    Some(SourceChoice {
                         id: m.id.as_str().into(),
-                        label: m.describe().into(),
+                        label: source.into(),
                         on: m.id.eq_ignore_ascii_case(&id),
                         count: 0,
                     })
-                    .collect()
-            })
-            .unwrap_or_default();
+                })
+                .collect();
+            if same.len() > 1 {
+                store.set_app_sources(ModelRc::new(VecModel::from(same)));
+            }
+        }
         store.set_app_family_name(family.map(|f| f.name.as_str()).unwrap_or_default().into());
         store.set_app_family(ModelRc::new(VecModel::from(versions)));
 
@@ -1190,7 +1216,13 @@ impl App {
         // The same choices as rows for the TV, without the one already showing.
         let mut rows: Vec<SourceChoice> = Vec::new();
         for version in store.get_app_family().iter().filter(|v| !v.on) {
-            rows.push(SourceChoice { label: format!("Switch to {}", version.label).into(), ..version });
+            let whose = if version.official { "" } else { "  ·  unofficial" };
+            rows.push(SourceChoice {
+                id: version.id,
+                label: format!("Switch to {}{whose}", version.name).into(),
+                on: false,
+                count: 0,
+            });
         }
         for source in store.get_app_sources().iter().filter(|c| !c.on) {
             rows.push(SourceChoice { label: format!("Get it from {} instead", source.label).into(), ..source });
@@ -1308,21 +1340,107 @@ impl App {
                 }
                 ui.global::<Store>().set_steam_state(0);
                 match result {
-                    Ok(Some(account)) => {
-                        let count = account.owned.len();
-                        *app.steam.write().unwrap() = Some(account.clone());
-                        app.update_state(ui, |state| state.steam = Some(account));
-                        app.refresh_settings(ui);
-                        app.refresh(ui);
-                        app.toast(
-                            ui,
-                            &format!("Signed in to Steam. {count} games and tools are in your library."),
-                            false,
-                        );
-                    }
+                    Ok(Some(account)) => app.steam_signed_in(ui, account),
                     // Closed, declined or cancelled: nothing changes.
                     Ok(None) => {}
                     Err(e) => app.toast(ui, &e.to_string(), true),
+                }
+            },
+        );
+    }
+
+    /// What a finished Steam sign-in leaves behind, whichever way it was done.
+    fn steam_signed_in(&self, ui: &AppWindow, account: bilby_core::steam_account::Account) {
+        let count = account.owned.len();
+        *self.steam.write().unwrap() = Some(account.clone());
+        self.update_state(ui, |state| state.steam = Some(account));
+        self.refresh_settings(ui);
+        self.refresh(ui);
+        self.toast(ui, &format!("Signed in to Steam. {count} games and tools are in your library."), false);
+    }
+
+    /// Sign in to Steam with a code: draw it, and wait for the person to scan it with
+    /// the Steam app on their phone and approve there.
+    pub fn steam_signin_qr(self: &Arc<Self>, ui: &AppWindow) {
+        use bilby_core::steam_qr;
+        let generation = self.steam_generation.fetch_add(1, Ordering::SeqCst) + 1;
+        let store = ui.global::<Store>();
+        store.set_steam_qr(slint::Image::default());
+        store.set_steam_qr_scanned(false);
+        store.set_steam_state(3);
+        self.job(
+            |app| steam_qr::start(app.catalog().http().as_ref(), "Bilby"),
+            move |app, ui, started| {
+                if app.steam_generation.load(Ordering::SeqCst) != generation {
+                    return;
+                }
+                match started {
+                    Ok(session) => {
+                        ui.global::<Store>().set_steam_qr(code_image(&session.challenge_url));
+                        app.steam_qr_wait(session, generation, std::time::Instant::now());
+                    }
+                    Err(e) => {
+                        ui.global::<Store>().set_steam_state(0);
+                        app.toast(ui, &format!("Could not start signing in to Steam: {e}"), true);
+                    }
+                }
+            },
+        );
+    }
+
+    /// Ask Steam once, after the wait it asks for, whether the code was approved; then
+    /// show what changed and ask again.
+    fn steam_qr_wait(
+        self: &Arc<Self>,
+        mut session: bilby_core::steam_qr::Session,
+        generation: u64,
+        since: std::time::Instant,
+    ) {
+        use bilby_core::steam_qr::{self, Poll};
+        let shown = session.challenge_url.clone();
+        self.job(
+            move |app| {
+                // Wait in short steps, so cancelling is noticed promptly.
+                let until = std::time::Instant::now() + std::time::Duration::from_secs(session.interval);
+                while std::time::Instant::now() < until && app.steam_generation.load(Ordering::SeqCst) == generation {
+                    std::thread::sleep(std::time::Duration::from_millis(200));
+                }
+                if app.steam_generation.load(Ordering::SeqCst) != generation {
+                    return (session, Ok(Poll::Expired));
+                }
+                let answer = steam_qr::poll(app.catalog().http().as_ref(), &mut session);
+                (session, answer)
+            },
+            move |app, ui, (session, answer)| {
+                if app.steam_generation.load(Ordering::SeqCst) != generation {
+                    return;
+                }
+                let store = ui.global::<Store>();
+                let stop = |message: &str| {
+                    store.set_steam_state(0);
+                    store.set_steam_qr(slint::Image::default());
+                    app.toast(ui, message, true);
+                };
+                match answer {
+                    Ok(Poll::Done(account)) => {
+                        store.set_steam_state(0);
+                        store.set_steam_qr(slint::Image::default());
+                        app.steam_signed_in(ui, account);
+                    }
+                    Ok(Poll::Waiting { .. }) if since.elapsed().as_secs() > 300 => {
+                        stop("Nobody scanned the code in five minutes. Try again when you are ready.")
+                    }
+                    Ok(Poll::Waiting { scanned }) => {
+                        store.set_steam_qr_scanned(scanned);
+                        if session.challenge_url != shown {
+                            store.set_steam_qr(code_image(&session.challenge_url));
+                        }
+                        app.steam_qr_wait(session, generation, since);
+                    }
+                    Ok(Poll::Expired) => {
+                        stop("The code ran out, or the sign-in was refused in the Steam app. Try again.")
+                    }
+                    Err(e) => stop(&e.to_string()),
                 }
             },
         );
@@ -2651,6 +2769,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     on!(on_github_signin, |app, ui| { app.github_signin(ui) });
     on!(on_github_cancel, |app, ui| { app.github_cancel(ui) });
     on!(on_steam_signin, |app, ui| { app.steam_signin(ui) });
+    on!(on_steam_signin_qr, |app, ui| { app.steam_signin_qr(ui) });
     on!(on_steam_cancel, |app, ui| { app.steam_cancel(ui) });
     on!(on_steam_signout, |app, ui| { app.steam_signout(ui) });
     on!(on_save_token, |app, ui, token| {
@@ -2977,6 +3096,23 @@ fn android_main(android_app: slint::android::AndroidApp) {
     if let Err(e) = run(Options { dirs: Some(dirs), ..Default::default() }) {
         eprintln!("bilby: {e}");
     }
+}
+
+/// A code for a phone's camera, as a picture: one dot per square with a clear margin
+/// around it, to be drawn large without smoothing.
+fn code_image(text: &str) -> slint::Image {
+    let Some(code) = bilby_core::steam_qr::code(text) else { return slint::Image::default() };
+    const MARGIN: usize = 2;
+    let side = code.size + 2 * MARGIN;
+    let mut pixels = slint::SharedPixelBuffer::<slint::Rgba8Pixel>::new(side as u32, side as u32);
+    for (at, pixel) in pixels.make_mut_slice().iter_mut().enumerate() {
+        let (x, y) = (at % side, at / side);
+        let inside = (MARGIN..MARGIN + code.size).contains(&x) && (MARGIN..MARGIN + code.size).contains(&y);
+        let dark = inside && code.dark[(y - MARGIN) * code.size + (x - MARGIN)];
+        let shade = if dark { 0 } else { 255 };
+        *pixel = slint::Rgba8Pixel { r: shade, g: shade, b: shade, a: 255 };
+    }
+    slint::Image::from_rgba8(pixels)
 }
 
 /// The store's sign-in window while it is open, so it can be closed from here.

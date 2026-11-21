@@ -88,6 +88,18 @@ export struct SystemUpdate {
 }
 
 // A source of apps that can be switched on and off, or filtered by.
+// One app among several for the same service ("YouTube": VacuumTube, FreeTube, ...).
+export struct VersionChoice {
+    id: string,
+    // "VacuumTube".
+    name: string,
+    // A few words on what kind of version it is.
+    note: string,
+    // Made by the service's owner.
+    official: bool,
+    on: bool,
+}
+
 export struct SourceChoice {
     // Its short name: "flathub", "steam".
     id: string,
@@ -158,7 +170,7 @@ export global Store {
     in property <[SourceChoice]> app-sources;
     // Other versions of the same service that work on this device ("YouTube":
     // VacuumTube, FreeTube, ...), when the app belongs to such a family.
-    in property <[SourceChoice]> app-family;
+    in property <[VersionChoice]> app-family;
     in property <string> app-family-name;
     // An app that is needed first (Steam, for a Steam game), which this store can
     // install: its id and what to call it. "" when nothing is missing.
@@ -248,7 +260,11 @@ export global Store {
     // 2 waiting for the person to enter `signin-code` at github.com/login/device.
     // Signing in to Steam on Steam's own page: 0 not signing in, 1 its page is open
     // in the store's sign-in window, 2 it is open in Longboard.
+    // 3: a code is on screen for the Steam app on a phone to scan.
     in property <int> steam-state;
+    in property <image> steam-qr;
+    // The Steam app has read the code; the person has yet to approve.
+    in property <bool> steam-qr-scanned;
     in property <bool> steam-available;
     in property <bool> steam-signed-in;
     // "312 games and tools", when signed in.
@@ -304,6 +320,7 @@ export global Store {
     callback github-signin();
     callback github-cancel();
     callback steam-signin();
+    callback steam-signin-qr();
     callback steam-cancel();
     callback steam-signout();
     callback clear-cache();

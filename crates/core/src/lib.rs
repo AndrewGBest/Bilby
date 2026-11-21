@@ -35,6 +35,7 @@ pub mod screenshots;
 pub mod source;
 pub mod state;
 pub mod steam_account;
+pub mod steam_qr;
 pub mod version;
 
 pub use catalog::Catalog;

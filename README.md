@@ -87,10 +87,10 @@ There is no Android package yet, and no Flatpak
 - For things only another store can install (Steam, the Mac App Store), Bilby opens
   that store on the right page and lets it take over. Paying and signing in happen
   there, not in Bilby.
-- Optionally, sign in to Steam to have the games you already own marked Owned. You
-  sign in on Steam's own page, in a small window (in Longboard on a TV). Bilby is
-  given the list of what you own and nothing else: no password, and nothing that
-  could act as your account.
+- Optionally, sign in to Steam to have the games you already own marked Owned. On
+  every device you choose how: scan a QR code with the Steam app on your phone, or
+  sign in on Steam's own page in a small browser window (Longboard on a TV). Bilby
+  never sees your password and keeps only the list of what you own.
 
 **Keep everything up to date**
 
@@ -135,7 +135,7 @@ and settings are one file on your device. What does leave your device:
 | Search or open an app | That app's source (GitHub, Flathub, ...) | What you searched for or opened, as with any website |
 | Have ratings switched on | The ratings service GNOME and KDE use | That *someone* downloaded the full list of ratings, once a day |
 | Open an app that has reviews | The same service | Which app's reviews were asked for. No user id is sent |
-| Sign in to Steam | Steam, from the sign-in window | What any browser signing in tells Steam. Optional. Bilby keeps the list of what you own on this device; Sign out removes it and the window's data |
+| Sign in to Steam | Steam | That this device signed in, as with any browser or app. Optional. With a QR code, Steam gives Bilby a key to the account, which Bilby uses once to read the list and then discards; in a browser, no key reaches Bilby at all. Either way only the list of what you own is kept, on this device, and Sign out removes it |
 | Sign in to GitHub | GitHub | Which account is asking. Optional; it only raises GitHub's hourly limit, and Bilby asks for no access to the account |
 
 Ratings and reviews can be switched off in Settings, which stops both requests.

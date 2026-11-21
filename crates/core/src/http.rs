@@ -49,6 +49,13 @@ pub trait Http: Send + Sync {
         Err(Error::Unsupported(format!("cannot send a request to {url}")))
     }
 
+    /// GET something that must not be kept: the address carries a key, or the answer
+    /// is one person's. Never cached, and never written anywhere.
+    fn get_private(&self, url: &str) -> Result<String> {
+        let _ = url;
+        Err(Error::Unsupported("cannot send that request".into()))
+    }
+
     /// GitHub's request allowance as of the last API response, if any was seen.
     fn quota(&self) -> Option<Quota> {
         None
@@ -202,6 +209,10 @@ impl Http for NetHttp {
         }
     }
 
+    fn get_private(&self, url: &str) -> Result<String> {
+        self.get(url)
+    }
+
     fn post_form(&self, url: &str, body: &str) -> Result<String> {
         let request = self
             .agent
@@ -312,6 +323,10 @@ impl<H: Http> Http for CachedHttp<H> {
         self.inner.post_form(url, body)
     }
 
+    fn get_private(&self, url: &str) -> Result<String> {
+        self.inner.get_private(url)
+    }
+
     fn download(&self, url: &str, dest: &Path, progress: &mut dyn FnMut(u64, Option<u64>) -> bool) -> Result<String> {
         self.inner.download(url, dest, progress)
     }
@@ -332,6 +347,10 @@ impl<H: Http + ?Sized> Http for std::sync::Arc<H> {
 
     fn post_form(&self, url: &str, body: &str) -> Result<String> {
         (**self).post_form(url, body)
+    }
+
+    fn get_private(&self, url: &str) -> Result<String> {
+        (**self).get_private(url)
     }
 
     fn get(&self, url: &str) -> Result<String> {

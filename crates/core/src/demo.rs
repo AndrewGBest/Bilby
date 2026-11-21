@@ -849,7 +849,40 @@ impl Http for DemoHttp {
         if url == crate::github_login::TOKEN_URL {
             return Ok(json!({ "access_token": "demo-token", "token_type": "bearer", "scope": "" }).to_string());
         }
+        // Signing in to the fictional Steam with a code: a code, a fresh one the first
+        // time it is asked about, and a yes the second.
+        if url == crate::steam_qr::BEGIN_URL {
+            return Ok(json!({ "response": {
+                "client_id": "1001", "request_id": "ZGVtbw==", "interval": 0,
+                "challenge_url": "https://s.team/q/1/1001",
+            }})
+            .to_string());
+        }
+        if url == crate::steam_qr::POLL_URL {
+            if _body.contains("client_id=1001") {
+                return Ok(json!({ "response": {
+                    "had_remote_interaction": true, "new_client_id": "1002", "new_challenge_url": "https://s.team/q/1/1002",
+                }})
+                .to_string());
+            }
+            // {"sub":"76561198000000001"} between two dots, as Steam's keys carry the account number.
+            return Ok(json!({ "response": {
+                "refresh_token": "demo.refresh.token",
+                "access_token": "demo.eyJzdWIiOiI3NjU2MTE5ODAwMDAwMDAwMSJ9.signature",
+                "account_name": "demo",
+            }})
+            .to_string());
+        }
         Err(Error::NotFound(url.to_string()))
+    }
+
+    fn get_private(&self, url: &str) -> Result<String> {
+        if url.starts_with(crate::steam_qr::OWNED_URL) && url.contains("steamid=76561198000000001") {
+            return Ok(
+                json!({ "response": { "game_count": 2, "games": [{ "appid": 620 }, { "appid": 440 }] } }).to_string()
+            );
+        }
+        Err(Error::NotFound("that address".to_string()))
     }
 
     fn post_json(&self, url: &str, body: &str) -> Result<String> {
