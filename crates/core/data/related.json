@@ -1,10 +1,10 @@
 {
-  "_comment": "Apps that are different ways to use the same service. Each family is shown as one app; its page lets the person pick a version that works on their device. Order matters: the first member this device can use is the one shown first. Mark anything not made by the service's owner as unofficial. 'os' (linux, windows, macos, android, ios) and 'form' (desktop, mobile, tv) say where a member runs; leave them out for one that runs wherever its source is.",
+  "_comment": "Apps that are different ways to use the same service: the service's own website and apps, and the best-known ones by others. Each family is shown as one app; its page lets the person pick a version that works on their device. Keep it short: only services nearly everyone knows, and only members that are widely used. Order matters: the first member this device can use is the one shown first. Mark anything not made by the service's owner as unofficial (leave 'official' out). 'os' (linux, windows, macos, android, ios) and 'form' (desktop, mobile, tv) say where a member runs; leave them out for one that runs wherever its source is. Every id was checked to exist at its source on 2026-11-21.",
   "families": [
     {
       "name": "YouTube",
       "members": [
-        { "id": "web:youtube.com", "label": "YouTube website", "official": true },
+        { "id": "web:youtube.com", "label": "YouTube website", "official": true, "note": "In your browser" },
         { "id": "flathub:rocks.shy.VacuumTube", "label": "VacuumTube", "note": "YouTube's TV interface, as an app" },
         { "id": "github:shy1132/VacuumTube", "label": "VacuumTube", "note": "YouTube's TV interface, as an app", "os": [ "linux", "windows", "macos" ] },
         { "id": "flathub:io.freetubeapp.FreeTube", "label": "FreeTube", "note": "A private YouTube player" },
@@ -14,6 +14,110 @@
         { "id": "github:yuliskov/SmartTube", "label": "SmartTube", "note": "A YouTube player for Android TV", "os": [ "android" ], "form": [ "tv" ] },
         { "id": "fdroid:org.schabi.newpipe", "label": "NewPipe", "note": "A lightweight YouTube player for Android" },
         { "id": "github:TeamNewPipe/NewPipe", "label": "NewPipe", "note": "A lightweight YouTube player for Android", "os": [ "android" ] }
+      ]
+    },
+    {
+      "name": "YouTube Music",
+      "members": [
+        { "id": "web:music.youtube.com", "label": "YouTube Music website", "note": "In your browser", "official": true },
+        { "id": "github:th-ch/youtube-music", "label": "YouTube Music Desktop", "note": "A desktop app around the website, with extras", "os": [ "linux", "windows", "macos" ] }
+      ]
+    },
+    {
+      "name": "Spotify",
+      "members": [
+        { "id": "web:spotify.com", "label": "Spotify website", "note": "In your browser", "official": true },
+        { "id": "snap:spotify", "label": "Spotify", "note": "Spotify's own app", "official": true },
+        { "id": "flathub:com.spotify.Client", "label": "Spotify", "note": "Spotify's own app, packaged by Flathub's volunteers", "official": true },
+        { "id": "winget:Spotify.Spotify", "label": "Spotify", "note": "Spotify's own app", "official": true },
+        { "id": "brew:spotify", "label": "Spotify", "note": "Spotify's own app", "official": true },
+        { "id": "github:KRTirtho/spotube", "label": "Spotube", "note": "A free player that uses Spotify's catalog", "os": [ "linux", "windows", "macos", "android" ] }
+      ]
+    },
+    {
+      "name": "Discord",
+      "members": [
+        { "id": "web:discord.com", "label": "Discord website", "note": "In your browser", "official": true },
+        { "id": "flathub:com.discordapp.Discord", "label": "Discord", "note": "Discord's own app, packaged by Flathub's volunteers", "official": true },
+        { "id": "snap:discord", "label": "Discord", "note": "Discord's own app, packaged by volunteers", "official": true },
+        { "id": "winget:Discord.Discord", "label": "Discord", "note": "Discord's own app", "official": true },
+        { "id": "brew:discord", "label": "Discord", "note": "Discord's own app", "official": true },
+        { "id": "flathub:dev.vencord.Vesktop", "label": "Vesktop", "note": "Discord with screen sharing that works on Linux" }
+      ]
+    },
+    {
+      "name": "Telegram",
+      "members": [
+        { "id": "web:web.telegram.org", "label": "Telegram website", "note": "In your browser", "official": true },
+        { "id": "flathub:org.telegram.desktop", "label": "Telegram Desktop", "note": "Telegram's own app", "official": true },
+        { "id": "winget:Telegram.TelegramDesktop", "label": "Telegram Desktop", "note": "Telegram's own app", "official": true },
+        { "id": "brew:telegram", "label": "Telegram", "note": "Telegram's own app", "official": true }
+      ]
+    },
+    {
+      "name": "WhatsApp",
+      "members": [
+        { "id": "web:web.whatsapp.com", "label": "WhatsApp website", "note": "In your browser", "official": true },
+        { "id": "brew:whatsapp", "label": "WhatsApp", "note": "WhatsApp's own app", "official": true },
+        { "id": "flathub:com.rtosta.zapzap", "label": "ZapZap", "note": "WhatsApp's website as a desktop app" }
+      ]
+    },
+    {
+      "name": "Plex",
+      "members": [
+        { "id": "web:plex.tv", "label": "Plex website", "note": "In your browser", "official": true },
+        { "id": "flathub:tv.plex.PlexDesktop", "label": "Plex", "note": "Plex's own app", "official": true },
+        { "id": "winget:Plex.Plex", "label": "Plex", "note": "Plex's own app", "official": true },
+        { "id": "brew:plex", "label": "Plex", "note": "Plex's own app", "official": true }
+      ]
+    },
+    {
+      "name": "Apple Music",
+      "members": [
+        { "id": "web:music.apple.com", "label": "Apple Music website", "note": "In your browser", "official": true },
+        { "id": "flathub:sh.cider.Cider", "label": "Cider", "note": "A desktop player for Apple Music" }
+      ]
+    },
+    {
+      "name": "Mastodon",
+      "members": [
+        { "id": "web:mastodon.social", "label": "Mastodon website", "note": "In your browser", "official": true },
+        { "id": "flathub:dev.geopjr.Tuba", "label": "Tuba", "note": "A desktop app for Mastodon and its relatives" },
+        { "id": "fdroid:com.keylesspalace.tusky", "label": "Tusky", "note": "An Android app for Mastodon" }
+      ]
+    },
+    {
+      "name": "GitHub",
+      "members": [
+        { "id": "web:github.com", "label": "GitHub website", "note": "In your browser", "official": true },
+        { "id": "winget:GitHub.GitHubDesktop", "label": "GitHub Desktop", "note": "GitHub's own app", "official": true },
+        { "id": "brew:github", "label": "GitHub Desktop", "note": "GitHub's own app", "official": true },
+        { "id": "flathub:io.github.shiftey.Desktop", "label": "GitHub Desktop", "note": "GitHub's app, built for Linux by volunteers" }
+      ]
+    },
+    {
+      "name": "ChatGPT",
+      "members": [
+        { "id": "web:chatgpt.com", "label": "ChatGPT website", "note": "In your browser", "official": true },
+        { "id": "winget:OpenAI.ChatGPT", "label": "ChatGPT", "note": "OpenAI's own app", "official": true },
+        { "id": "brew:chatgpt", "label": "ChatGPT", "note": "OpenAI's own app", "official": true }
+      ]
+    },
+    {
+      "name": "Claude",
+      "members": [
+        { "id": "web:claude.ai", "label": "Claude website", "note": "In your browser", "official": true },
+        { "id": "winget:Anthropic.Claude", "label": "Claude", "note": "Anthropic's own app", "official": true },
+        { "id": "brew:claude", "label": "Claude", "note": "Anthropic's own app", "official": true }
+      ]
+    },
+    {
+      "name": "Wikipedia",
+      "members": [
+        { "id": "web:wikipedia.org", "label": "Wikipedia website", "note": "In your browser", "official": true },
+        { "id": "fdroid:org.wikipedia", "label": "Wikipedia", "note": "Wikipedia's own Android app", "official": true },
+        { "id": "flathub:org.kiwix.desktop", "label": "Kiwix", "note": "Read Wikipedia without a connection" },
+        { "id": "winget:Kiwix.KiwixJS", "label": "Kiwix", "note": "Read Wikipedia without a connection" }
       ]
     }
   ]

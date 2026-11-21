@@ -46,9 +46,6 @@ pub fn evaluate(info: &AssetInfo, p: &Platform) -> Verdict {
         // Installs, but has no launcher icon and expects a remote: useless on a phone.
         return Verdict::no("Built for Android TV");
     }
-    if info.format == Format::WebApp && p.form_factor != FormFactor::Tv {
-        return Verdict::no("Web apps are for TVs; here a website opens in the browser you already have");
-    }
     if info.format == Format::ApkBundle {
         return Verdict::no("Split APK bundles need a dedicated installer (not supported yet)");
     }

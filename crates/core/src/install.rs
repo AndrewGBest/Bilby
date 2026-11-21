@@ -125,10 +125,14 @@ pub fn plan(asset: &Asset, info: &AssetInfo, p: &Platform) -> InstallPlan {
         Format::WebApp => {
             return InstallPlan {
                 action: Action::WebApp,
-                verb: "Add to this TV".to_string(),
+                verb: if info.tv { "Add to this TV" } else { "Add to my apps" }.to_string(),
                 steps: vec![
-                    format!("Put {} in this TV's app list", asset.name),
-                    "It opens in Longboard, a browser made for remotes".to_string(),
+                    format!("Put {} among this device's apps", asset.name),
+                    if info.tv {
+                        "It opens in Longboard, a browser made for remotes".to_string()
+                    } else {
+                        "It opens in the browser you already use".to_string()
+                    },
                     "Nothing is downloaded; remove it from your library at any time".to_string(),
                 ],
                 command: None,
@@ -454,6 +458,64 @@ fn write_menu_entry(
     std::fs::create_dir_all(&dirs.menu)?;
     let path = menu_entry_path(dirs, id);
     std::fs::write(&path, entry)?;
+    Ok(path)
+}
+
+/// Put a website among the device's apps as a shortcut that opens it in the person's
+/// own browser: a menu entry on Linux, an Internet shortcut in the Start menu on
+/// Windows, a web-location file in Applications on macOS. The site's own icon is used
+/// where the store already has it. [Run for real on Linux. The Windows and macOS
+/// forms are written from their file formats and have not been tried there.]
+pub fn write_web_shortcut(dirs: &Dirs, id: &str, name: &str, url: &str) -> Result<PathBuf> {
+    if !(url.starts_with("https://") && url.len() < 500 && url.chars().all(|c| c.is_ascii_graphic())) {
+        return Err(Error::Unsupported("That is not an address this can open.".into()));
+    }
+    let label: String = name
+        .chars()
+        .filter(|c| !c.is_control() && !matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|'))
+        .collect();
+    let label = if label.trim().is_empty() { "Web app".to_string() } else { label.trim().to_string() };
+    if cfg!(target_os = "windows") {
+        let programs = std::env::var_os("APPDATA")
+            .map(PathBuf::from)
+            .ok_or_else(|| Error::Unsupported("The Start menu could not be found.".into()))?
+            .join("Microsoft")
+            .join("Windows")
+            .join("Start Menu")
+            .join("Programs");
+        std::fs::create_dir_all(&programs)?;
+        let path = programs.join(format!("{label}.url"));
+        std::fs::write(&path, format!("[InternetShortcut]\r\nURL={url}\r\n"))?;
+        return Ok(path);
+    }
+    if cfg!(target_os = "macos") {
+        std::fs::create_dir_all(&dirs.applications)?;
+        let path = dirs.applications.join(format!("{label}.webloc"));
+        let escaped = url.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;");
+        let plist = format!(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n\t<key>URL</key>\n\t<string>{escaped}</string>\n</dict>\n</plist>\n"
+        );
+        std::fs::write(&path, plist)?;
+        return Ok(path);
+    }
+    // Linux and the like: the desktop's own opener, started on the address.
+    let opener = std::env::var_os("PATH")
+        .and_then(|path| std::env::split_paths(&path).map(|dir| dir.join("xdg-open")).find(|p| p.is_file()))
+        .unwrap_or_else(|| PathBuf::from("/usr/bin/xdg-open"));
+    let path = write_menu_entry(dirs, id, &label, &opener, &[url.to_string()], "Network;")?;
+    let key = crate::model::AppId::parse(id).map(|id| crate::icons::app_key(&id)).unwrap_or_default();
+    if let Some(Some(icon)) = crate::icons::cached(&dirs.cache.join("icons"), &key) {
+        // Kept beside the apps, so clearing the cache does not blank the entry.
+        let folder = dirs.applications.join(".icons");
+        let kept = folder.join(icon.file_name().unwrap_or_default());
+        if std::fs::create_dir_all(&folder).is_ok() && std::fs::copy(&icon, &kept).is_ok() {
+            if let Ok(entry) = std::fs::read_to_string(&path) {
+                let line = format!("Icon={}\n", kept.display());
+                let _ =
+                    std::fs::write(&path, entry.replacen("Terminal=false\n", &format!("{line}Terminal=false\n"), 1));
+            }
+        }
+    }
     Ok(path)
 }
 
@@ -794,6 +856,16 @@ pub fn execute(
         return Ok(Outcome {
             message: "Installed from Flathub. It is in your app menu.".to_string(),
             file: None,
+            store_managed: false,
+        });
+    }
+    // On a computer or phone a web app is a shortcut to the site in the usual browser.
+    if plan.action == Action::WebApp && !asset.info.as_ref().is_some_and(|info| info.tv) {
+        let host = asset.url.trim_start_matches("https://").trim_end_matches('/');
+        let entry = write_web_shortcut(dirs, &format!("web:{host}"), &asset.name, &asset.url)?;
+        return Ok(Outcome {
+            message: format!("{} is among your apps. It opens in your browser.", asset.name),
+            file: Some(entry),
             store_managed: false,
         });
     }

@@ -294,6 +294,8 @@ export global Store {
     // where asked for. A PIN, where set, guards these and adult content.
     in property <bool> family-mode;
     in property <bool> adult-on-home;
+    // Adult things shown as they are: no cover, no question.
+    in property <bool> adult-uncovered;
     in property <bool> has-pin;
     in property <bool> pin-for-installs;
     // A question standing between the person and what they asked for: 0 none,
@@ -355,6 +357,7 @@ export global Store {
     callback set-source(string, bool);
     callback set-family-mode(bool);
     callback set-adult-on-home(bool);
+    callback set-adult-uncovered(bool);
     callback set-pin-for-installs(bool);
     // Set a PIN, or change the one there is.
     callback set-pin();

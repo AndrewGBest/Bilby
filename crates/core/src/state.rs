@@ -38,6 +38,9 @@ pub struct Settings {
     pub family_mode: bool,
     /// Adult things may appear on the home page (covered, as everywhere).
     pub adult_on_home: bool,
+    /// Adult things are shown as they are, like anything else: no cover, no section
+    /// of their own, no question on opening.
+    pub adult_uncovered: bool,
     /// The person has confirmed, once, that they are an adult.
     pub adult_confirmed: bool,
     /// The PIN that guards these settings and adult content, as a salted hash.

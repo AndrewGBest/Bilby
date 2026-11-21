@@ -81,6 +81,8 @@ pub struct Options {
     /// browser's data, returns the line the browser handed back, or nothing when the
     /// window was closed. Defaults to the store's sign-in window; tests pass a stand-in.
     pub signin: Option<SignIn>,
+    /// How an address is opened in the person's browser. For tests.
+    pub browser: Option<Browser>,
     /// What the system has of FUSE (looked up when not given). For tests.
     pub fuse: Option<bilby_core::needs::Fuse>,
     /// The machine whose system details and updates are shown. Defaults to this
@@ -114,6 +116,7 @@ enum Guarded {
 pub enum Change {
     FamilyMode(bool),
     AdultOnHome(bool),
+    AdultUncovered(bool),
     PinForInstalls(bool),
     SetPin,
     RemovePin,
@@ -124,9 +127,8 @@ pub enum Change {
 fn covered(id: &str) -> AppCard {
     AppCard {
         id: id.into(),
-        name: "Adult content".into(),
-        author: "Covered until you choose it".into(),
-        summary: "Select to view. You will be asked to confirm you are an adult.".into(),
+        name: "Adult".into(),
+        summary: "Select to view".into(),
         initials: "A".into(),
         tint: slint::Color::from_rgb_u8(0x55, 0x5b, 0x68),
         adult: true,
@@ -147,6 +149,7 @@ fn plain(text: &str) -> String {
 }
 
 pub type SignIn = Arc<dyn Fn(&std::path::Path) -> bilby_core::Result<Option<String>> + Send + Sync>;
+pub type Browser = Arc<dyn Fn(&str) -> bilby_core::Result<()> + Send + Sync>;
 pub type Runner = Arc<dyn Fn(&std::path::Path, &[String]) -> bilby_core::Result<()> + Send + Sync>;
 
 /// Builds the catalog for a platform and the current settings. The default talks to the
@@ -587,6 +590,8 @@ pub struct App {
     steam: std::sync::RwLock<Option<bilby_core::steam_account::Account>>,
     /// Bumped whenever a Steam sign-in starts or is cancelled, so a late answer is dropped.
     steam_generation: AtomicU64,
+    /// How an address is opened in the person's browser. Tests record it instead.
+    browser: Browser,
     /// What is waiting on an answer at the gate (an age question or the PIN).
     pending: Mutex<Option<Guarded>>,
     /// Ids learnt to be for adults, so that opening one again asks before loading it.
@@ -817,10 +822,18 @@ impl App {
 
     /// The card for a listing. Something for adults is covered: see [`covered`].
     pub fn card(&self, app: &AppSummary) -> AppCard {
-        if app.adult {
+        // (Read and let go of at once: the card itself looks at the state again.)
+        let uncovered = {
+            let state = self.state.lock().unwrap();
+            state.settings.adult_uncovered && !state.settings.family_mode
+        };
+        if app.adult && !uncovered {
             return covered(&app.id.to_string());
         }
-        self.card_open(app)
+        // Shown as it is: then it is a card like any other.
+        let mut card = self.card_open(app);
+        card.adult = false;
+        card
     }
 
     /// The card as it is, for the app's own page.
@@ -976,7 +989,12 @@ impl App {
         };
         store.set_sections(ModelRc::new(VecModel::from(to_sections(&featured))));
         store.set_categories(ModelRc::new(VecModel::from(
-            featured.iter().map(|s| SharedString::from(&s.title)).collect::<Vec<_>>(),
+            // The rows of web apps by purpose are rows, not filters: one chip stands for them.
+            featured
+                .iter()
+                .filter(|s| !s.title.starts_with("Web apps "))
+                .map(|s| SharedString::from(&s.title))
+                .collect::<Vec<_>>(),
         )));
         if !featured.iter().any(|s| s.title == store.get_category().as_str()) {
             store.set_category(SharedString::new());
@@ -1243,6 +1261,7 @@ impl App {
         store.set_has_token(!settings.github_token.trim().is_empty());
         store.set_family_mode(settings.family_mode);
         store.set_adult_on_home(settings.adult_on_home);
+        store.set_adult_uncovered(settings.adult_uncovered);
         store.set_has_pin(!settings.pin_hash.is_empty());
         store.set_pin_for_installs(settings.pin_for_installs);
         let steam = self.steam.read().unwrap().clone();
@@ -2324,7 +2343,10 @@ impl App {
         // Things worth knowing before installing, most important first.
         let age = age_label(&date, now_unix());
         let mut warnings: Vec<String> = details.summary.warning.clone().into_iter().collect();
-        if details.summary.id.source == SourceKind::Web && install::find_longboard(&self.dirs).is_none() {
+        if details.summary.id.source == SourceKind::Web
+            && self.opens_sites_in_longboard()
+            && install::find_longboard(&self.dirs).is_none()
+        {
             warnings.push("Websites open in Longboard, a browser for TVs, which is not installed yet. Install Longboard first: it is under Made for TV.".to_string());
         }
         let newest = details.versions.first().map(|r| r.version.as_str());
@@ -2700,9 +2722,19 @@ impl App {
         );
     }
 
+    /// On a Linux TV a website opens in Longboard; anywhere else in the usual browser.
+    fn opens_sites_in_longboard(&self) -> bool {
+        let platform = self.platform.read().unwrap();
+        platform.os == Os::Linux && platform.form_factor == FormFactor::Tv
+    }
+
     /// What stands between the person and something for adults, right now.
     fn gate_for_adult(&self) -> bilby_core::parental::Gate {
         let settings = self.state().settings;
+        // Asked to show adult things as they are: that was the question, answered.
+        if settings.adult_uncovered && !settings.family_mode {
+            return bilby_core::parental::Gate::Open;
+        }
         let policy =
             bilby_core::parental::Policy { family_mode: settings.family_mode, adult_on_home: settings.adult_on_home };
         bilby_core::parental::to_open_adult(
@@ -2831,14 +2863,24 @@ impl App {
         use bilby_core::parental::{to_change_settings, Gate};
         let settings = self.state().settings;
         let has_pin = !settings.pin_hash.is_empty();
-        let stricter =
-            matches!(change, Change::FamilyMode(true) | Change::AdultOnHome(false) | Change::PinForInstalls(true));
+        let stricter = matches!(
+            change,
+            Change::FamilyMode(true)
+                | Change::AdultOnHome(false)
+                | Change::AdultUncovered(false)
+                | Change::PinForInstalls(true)
+        );
         if to_change_settings(has_pin, stricter) == Gate::Pin {
             self.ask(ui, 2, "Enter the PIN", "The PIN guards these settings.", Guarded::Setting(change));
             return;
         }
         // Without a PIN, asking for adult things on the home page is itself the
         // question of being an adult.
+        if change == Change::AdultUncovered(true) && !settings.adult_confirmed {
+            let text = "This shows things meant for adults as they are, with nothing covered. Are you 18 or over?";
+            self.ask(ui, 1, "Adult content", text, Guarded::Setting(change));
+            return;
+        }
         if change == Change::AdultOnHome(true) && !settings.adult_confirmed {
             let text = "This shows things meant for adults on the home page, covered until chosen. Are you 18 or over?";
             self.ask(ui, 1, "Adult content", text, Guarded::Setting(change));
@@ -2877,6 +2919,12 @@ impl App {
             Change::AdultOnHome(on) => {
                 self.update_state(ui, |state| {
                     state.settings.adult_on_home = on;
+                    state.settings.adult_confirmed |= on;
+                });
+            }
+            Change::AdultUncovered(on) => {
+                self.update_state(ui, |state| {
+                    state.settings.adult_uncovered = on;
                     state.settings.adult_confirmed |= on;
                 });
             }
@@ -2987,9 +3035,13 @@ impl App {
     /// The file to run for an app the store placed itself, if it is still there.
     fn launchable(&self, id: &str) -> Option<PathBuf> {
         let state = self.state.lock().unwrap();
-        // A web app is opened by starting Longboard on its address.
+        // A web app is opened by starting Longboard on its address on a TV, and in
+        // the person's own browser anywhere else.
         if id.starts_with("web:") {
             state.installed(id)?;
+            if !self.opens_sites_in_longboard() {
+                return Some(PathBuf::from("browser"));
+            }
             return install::find_longboard(&self.dirs);
         }
         // A Flatpak is run by Flatpak, whoever installed it.
@@ -3014,7 +3066,9 @@ impl App {
         let store = ui.global::<Store>();
         let id = store.get_app().id.to_string();
         let Some(path) = self.launchable(&id) else { return };
-        let started = if let Some(host) = id.strip_prefix("web:") {
+        let started = if let Some(host) = id.strip_prefix("web:").filter(|_| !self.opens_sites_in_longboard()) {
+            (self.browser)(&format!("https://{host}/"))
+        } else if let Some(host) = id.strip_prefix("web:") {
             (self.runner)(&path, &[format!("--url=https://{host}/")])
         } else if let Some(app_id) = id.strip_prefix("flathub:") {
             (self.runner)(&path, &["run".to_string(), app_id.to_string()])
@@ -3241,6 +3295,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         steam: std::sync::RwLock::new(None),
         steam_generation: AtomicU64::new(0),
         elsewhere: std::sync::RwLock::new(Elsewhere::default()),
+        browser: options.browser.clone().unwrap_or_else(|| Arc::new(install::open_url)),
         pending: Mutex::new(None),
         known_adult: Mutex::new(HashSet::new()),
         new_pin: Mutex::new(None),
@@ -3400,6 +3455,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     });
     on!(on_set_family_mode, |app, ui, on| { app.request_setting(ui, Change::FamilyMode(on)) });
     on!(on_set_adult_on_home, |app, ui, on| { app.request_setting(ui, Change::AdultOnHome(on)) });
+    on!(on_set_adult_uncovered, |app, ui, on| { app.request_setting(ui, Change::AdultUncovered(on)) });
     on!(on_set_pin_for_installs, |app, ui, on| { app.request_setting(ui, Change::PinForInstalls(on)) });
     on!(on_set_pin, |app, ui| { app.request_setting(ui, Change::SetPin) });
     on!(on_remove_pin, |app, ui| { app.request_setting(ui, Change::RemovePin) });

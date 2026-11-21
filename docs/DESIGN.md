@@ -320,6 +320,9 @@ are part of the catalog, kept apart rather than hidden:
 - Choosing one asks "Are you 18 or over?", with No highlighted. A yes is remembered,
   so it is asked once. The tile stays covered in lists all the same.
 - On the home page they appear only if the person switched that on, and covered.
+- "Show adult content uncovered" is for those who want none of this: adult things
+  are then shown as they are, among everything else, and open without a question.
+  Switching it on is itself the question of being an adult.
 - **Family mode** takes them out altogether: not listed, not covered, not openable,
   and a search does not say that anything was left out.
 - A four-digit **PIN**, kept as a salted hash, replaces the age question where it is
@@ -339,20 +342,31 @@ What counts as adult is not Bilby's judgement; it goes by its sources:
   SteamDatabase project, not from a page Valve publishes.]
 - Flathub's content rating, where it works out to an age of 18. [Read in Flathub's
   answers; no app that reaches 18 was found to try.]
-- The bundled list of sites (`data/web.json`), where a handful of the best-known adult
-  sites are listed precisely so that they are recognised.
+- The bundled list of some sixty thousand adult sites' addresses, which covers a
+  site and every address under it.
 
 [Limits, which matter most in Family mode: if Steam's lookup fails the search's games
 are not marked, though each page still checks; a typed address Bilby has never heard of is not recognised; GitHub,
 GitLab, winget, Homebrew and the Snap Store say nothing about age at all. The Mac App
 Store's "17+" is not used: it covers ordinary browsers and social apps.]
 
-**Web apps** (`data/web.json`). About ninety well-known sites, written by hand with a
-name, a line on what each is, and what it is for; every address was checked to answer
-on 2026-11-21. Public "top sites" lists were looked at and not used: the best known
-(Tranco) states no licence and mixes in a non-commercial source, and all of them are
-bare domains, heavy with delivery networks and other things nobody visits. Any other
-address can still be typed and added.
+**Web apps** (`source/web.rs`, `data/SOURCES.md`). A website is added like an app on
+every system: on a Linux TV it opens in Longboard, anywhere else in the person's own
+browser (a menu entry on Linux [run for real], an Internet shortcut in the Start menu
+on Windows and a web-location file on macOS [written from their formats, not tried]).
+Three bundled lists stand behind it:
+
+- About ninety well-known sites, written by hand with a name and a purpose. Only
+  these are *recommended*: the home page has a row of the best known and a row for
+  each purpose (watch, listen, play and so on).
+- The hosts among the thousand most visited by Chrome's users, so that a site is
+  found by typing part of its name. They are bare addresses in no order, and a good
+  part of them are things nobody should be recommended (a fifth are adult sites;
+  others are betting, piracy and sign-in pages), so they are found by searching and
+  never put on the home page. [Asked for as a source of recommendations; held back
+  from that for this reason.]
+- Some sixty thousand addresses of sites for adults, so that one is recognised
+  whether or not it is on the other lists, including an address typed by hand.
 
 A web app's picture is the site's own (`icons::fetch_site`): the icon its front page
 names, preferring the large one made for phones' home screens, then the usual

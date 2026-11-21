@@ -78,8 +78,9 @@ There is no Android package yet, and no Flatpak
   Flathub when you are on Linux, and a few well-known apps to start from everywhere.
 - One app is one result, even when several sources have it. Its page shows which
   source the button uses and lets you switch.
-- Different apps for the same service (YouTube has several) are gathered on one
-  page, so you can pick the version that suits your device.
+- Different ways to use the same service are gathered on one page: for YouTube,
+  Spotify, Discord and ten or so others, the website as a web app, the service's own
+  app and the best-known ones by others, so you can pick what suits your device.
 - Narrow a search to one source, or switch off in Settings the sources you never
   want. The app with exactly the name you typed comes first; after that, how many
   people use an app counts for more than how its name is spelt. On a TV a search
@@ -87,7 +88,7 @@ There is no Android package yet, and no Flatpak
 - Adult content is part of the catalog and handled with care. In a search it has a
   section of its own, each item covered until you choose it, and choosing one asks
   you to confirm you are an adult. It appears on the home page only if you ask for
-  that.
+  that. Those who want no cover at all can switch it off.
 - **Family mode** removes adult content altogether: not listed, not covered, not
   openable. A four-digit **PIN** can guard that, the other family settings, adult
   content, and, if you want, installing or removing anything.
@@ -152,7 +153,7 @@ Each source only appears on devices it applies to. A Windows user never sees the
 | **Steam** | Windows, macOS, Linux | Games and apps, free and paid, with their prices. Bilby hands over to the Steam app, which sells, installs and runs them |
 | **Mac App Store** | macOS | Its catalog, free and paid, with prices and ratings. Bilby hands over to the App Store app |
 | **Codeberg** | Windows, macOS, Linux | Projects by link and from the home page. Codeberg is turning away searches at the moment |
-| **Web apps** | Linux TVs | About ninety well-known websites, and any other address you type, opened like apps in Longboard |
+| **Web apps** | Windows, macOS, Linux | Websites added like apps: about ninety well-known ones recommended, a thousand more found by name, and any address you type. They open in your own browser, or in Longboard on a Linux TV |
 
 ## Your privacy
 
@@ -164,7 +165,7 @@ sources, and what leaves your device is what those requests carry:
 |---|---|---|
 | Search or open an app | Every source switched on for your device (a search), or that app's source (opening it) | What you searched for or opened, and your network address, as with any website |
 | Open Bilby, or check for updates | The sources of the apps in your library, and GitHub for Bilby's own releases | Which apps were checked for updates. Can be switched off for start-up |
-| See a web app's tile (Linux TVs) | That website, and wherever it keeps its icon | That someone fetched its front page and icon, once; the icon is then kept on your device |
+| See a web app's tile | That website, and wherever it keeps its icon | That someone fetched its front page and icon, once; the icon is then kept on your device |
 | Have ratings switched on | The ratings service GNOME and KDE use | That *someone* downloaded the full list of ratings, once a day |
 | Open an app that has reviews | The same service | Which app's reviews were asked for. No user id is sent |
 | Sign in to Steam | Steam | That this device signed in, as with any browser or app. Optional. With a QR code, Steam gives Bilby a key to the account, which Bilby uses once to read the list and then discards; in a browser, no key reaches Bilby at all. Either way only the list of what you own is kept, on this device, and Sign out removes it |

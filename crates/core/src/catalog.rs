@@ -101,7 +101,7 @@ impl Catalog {
             Arc::new(crate::source::flathub::Flathub::new(http.clone(), Vec::new())),
             Arc::new(crate::source::forgejo::Forgejo::codeberg(http.clone())),
             Arc::new(Aur::new(http.clone())),
-            Arc::new(crate::source::web::Websites),
+            Arc::new(crate::source::web::Websites::new(&platform)),
         ];
         Catalog {
             platform,
@@ -236,9 +236,12 @@ impl Catalog {
             s.apps.retain(|a| active.contains(&a.id.source));
         }
         sections.retain(|s| !s.apps.is_empty());
-        // On a Linux TV, websites sit beside the apps.
+        // Websites sit beside the apps: the best-known first, then by what they are for.
         if active.contains(&SourceKind::Web) {
             sections.push(Section { title: "Web apps".to_string(), apps: crate::source::web::featured() });
+            for (title, apps) in crate::source::web::rows() {
+                sections.push(Section { title, apps });
+            }
         }
         sections
     }
@@ -701,7 +704,7 @@ mod tests {
     fn suggestions_come_from_the_index_and_respect_the_device() {
         let names =
             |preset: &str, q: &str| -> Vec<String> { demo(preset).suggest(q, 5).into_iter().map(|a| a.name).collect() };
-        assert_eq!(names("linux-x64-debian", "lu"), ["Lumen"]);
+        assert_eq!(names("linux-x64-debian", "lu"), ["Lumen", "Amazon Luna"], "apps first, then web apps");
         assert_eq!(names("linux-x64-debian", "LUMEN"), ["Lumen"], "case does not matter");
         assert_eq!(names("linux-x64-debian", "editor"), ["Lumen"], "summaries are searched too");
         assert_eq!(names("linux-x64-debian", "media"), ["Tidewave", "Marquee", "Couchplay"], "and categories");

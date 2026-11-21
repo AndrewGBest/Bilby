@@ -643,7 +643,7 @@ fn typing_suggests_featured_apps_without_searching() {
     // Enter runs the real search and replaces the suggestions.
     s.app.search(&s.ui, "lum");
     assert_eq!(s.store().get_suggestions().row_count(), 0);
-    assert_eq!(s.store().get_results().row_count(), 1);
+    assert_eq!(s.store().get_results().row_data(0).unwrap().id, "github:lumen-labs/lumen");
 
     // Typing again clears the old results so the two never mix.
     s.app.typing(&s.ui, "tide");
@@ -1022,7 +1022,11 @@ fn slash_and_ctrl_k_start_a_search_from_the_keyboard() {
     // Enter searches.
     s.press(Key::Return);
     assert!(s.store().get_searched());
-    assert_eq!(s.store().get_results().row_count(), 1);
+    assert_eq!(
+        s.store().get_results().row_data(0).unwrap().id,
+        "github:lumen-labs/lumen",
+        "the app first, web apps after"
+    );
     assert_eq!(s.saved().recent_searches, ["lu"]);
     // Escape leaves the field; Ctrl+K comes back to it and selects the text, so typing replaces it.
     s.press(Key::Escape);
@@ -1124,7 +1128,8 @@ fn tv_focus_survives_rows_changing_under_it() {
     // Whatever is focused now must be a real app: OK opens it.
     s.press(Key::Return);
     assert!(s.store().get_details_open());
-    assert!(s.store().get_app().id.starts_with("github:"), "focus landed on {:?}", s.store().get_app().id);
+    let landed = s.store().get_app().id;
+    assert!(landed.starts_with("github:") || landed.starts_with("web:"), "focus landed on {landed:?}");
     assert!(s.store().get_details_error().is_empty());
 }
 
@@ -1378,15 +1383,15 @@ fn on_a_linux_tv_a_website_is_added_and_opened_like_an_app() {
 }
 
 #[test]
-fn websites_are_not_offered_away_from_a_linux_tv() {
+fn web_apps_are_offered_on_every_kind_of_device() {
     for (preset, shell) in
         [("linux-x64-debian", Shell::Desktop), ("android-tv", Shell::Tv), ("windows-x64", Shell::Desktop)]
     {
         let s = start(preset, shell);
-        assert!(!s.store().get_tv_rows().iter().any(|r| r.title == "Web apps"), "{preset}");
-        assert!(!s.store().get_sections().iter().any(|r| r.title == "Web apps"), "{preset}");
+        assert!(s.store().get_sections().iter().any(|r| r.title == "Web apps"), "{preset}");
         s.app.open(&s.ui, "web:lichess.org");
-        assert!(!s.store().get_details_error().is_empty(), "{preset}: a website cannot be added here");
+        assert!(s.store().get_details_error().is_empty(), "{preset}: {}", s.store().get_details_error());
+        assert_eq!(s.store().get_options().row_count(), 1, "{preset}: one thing to add");
     }
 }
 
@@ -1686,14 +1691,14 @@ fn the_layout_chosen_in_settings_is_remembered_and_switches_at_once() {
     assert_eq!(ui.get_effective(), Shell::Tv);
     assert_eq!((store.get_interface_mode(), store.get_device_name().as_str()), (2, "This TV"));
     let websites = |store: &Store| store.get_tv_rows().iter().any(|row| row.title == "Web apps");
-    assert!(websites(&store), "being a Linux TV brings the websites with it");
+    assert!(websites(&store), "web apps are offered on a TV");
 
     // Back to the desktop layout: at once, and saved.
     app.set_interface(&ui, 1);
     assert_eq!(ui.get_effective(), Shell::Desktop);
     assert_eq!(store.get_device_name(), "This Linux computer");
     assert_eq!(State::load(&state_file).settings.interface, "desktop");
-    assert!(!websites(&store));
+    assert!(websites(&store), "and on a computer, to open in its own browser");
 
     // "Automatic" on a device that is a TV is the TV layout; "Desktop" there is honoured.
     let (tv, tv_app, _) = start_unforced("android-tv", r#"{"settings":{"welcomed":true}}"#, false);
@@ -1962,7 +1967,7 @@ fn signing_in_to_github_shows_a_code_and_keeps_the_token_it_is_given() {
     tv.press(Key::RightArrow);
     tv.press(Key::RightArrow);
     tv.press(Key::Return);
-    for _ in 0..10 {
+    for _ in 0..11 {
         tv.press(Key::DownArrow);
     }
     tv.press(Key::Return);
@@ -2099,12 +2104,14 @@ fn a_service_with_several_apps_is_one_result_and_its_page_offers_the_versions() 
         "the list follows the source in use"
     );
 
-    // On a phone the same family offers the Android apps instead.
+    // On a phone the same family leads with the website and offers the Android apps.
     let phone = start("android-arm64", Shell::Mobile);
     phone.app.search(&phone.ui, "YouTube");
     let first = phone.store().get_results().row_data(0).unwrap();
-    assert_eq!(first.name, "YouTube");
-    assert!(first.id.starts_with("github:"), "{}", first.id);
+    assert_eq!((first.name.as_str(), first.id.as_str()), ("YouTube", "web:youtube.com"));
+    phone.app.open(&phone.ui, "web:youtube.com");
+    let on_phone: Vec<String> = phone.store().get_app_family().iter().map(|v| v.name.to_string()).collect();
+    assert!(on_phone.contains(&"NewPipe".to_string()) && !on_phone.contains(&"VacuumTube".to_string()), "{on_phone:?}");
 
     // An app that belongs to no family shows no such choice.
     s.app.open(&s.ui, "github:lumen-labs/lumen");
@@ -2281,7 +2288,7 @@ fn the_tv_has_a_settings_tab_with_every_setting_reachable_by_remote() {
     // Sources can be switched off from the sofa too: Down to the first of them, OK.
     let sources: Vec<SourceChoice> = s.store().get_sources().iter().collect();
     assert!(sources.len() >= 2 && sources.iter().all(|c| c.on));
-    for _ in 0..13 {
+    for _ in 0..14 {
         s.press(Key::DownArrow);
     }
     s.press(Key::Return);
@@ -2417,7 +2424,7 @@ fn adult_things_have_a_covered_section_and_ask_before_opening() {
     // In the results it is last, covered: nothing of it shows but that it is there.
     let card = s.store().get_results().iter().find(|c| c.id == id.as_str()).expect("it is found, not hidden");
     assert!(card.adult);
-    assert_eq!((card.name.as_str(), card.stat.as_str()), ("Adult content", ""));
+    assert_eq!((card.name.as_str(), card.summary.as_str(), card.stat.as_str()), ("Adult", "Select to view", ""));
     assert!(!card.summary.contains(site.name.as_str()) && !card.author.contains(site.host.as_str()));
     let last = s.store().get_results().iter().last().unwrap();
     assert!(last.adult, "after everything else");
@@ -2452,7 +2459,89 @@ fn adult_things_have_a_covered_section_and_ask_before_opening() {
     assert_eq!(s.store().get_gate(), 0);
     assert!(s.store().get_details_open());
     // The tile in the list stays covered all the same.
-    assert!(s.store().get_results().iter().any(|c| c.id == id.as_str() && c.name == "Adult content"));
+    assert!(s.store().get_results().iter().any(|c| c.id == id.as_str() && c.name == "Adult"));
+
+    // For those who want no cover at all: shown as itself, among everything else.
+    s.store().set_details_open(false);
+    s.store().invoke_set_adult_uncovered(true);
+    assert!(s.saved().settings.adult_uncovered && s.store().get_gate() == 0, "already confirmed an adult");
+    s.app.search(&s.ui, &site.name);
+    let card = s.store().get_results().iter().find(|c| c.id == id.as_str()).unwrap();
+    assert_eq!(card.name, site.name.as_str());
+    assert!(!card.adult && !s.store().get_tv_rows().iter().any(|row| row.title == "Adult"));
+    s.app.open(&s.ui, &id);
+    assert!(s.store().get_details_open() && s.store().get_gate() == 0);
+    // Family mode still overrides it.
+    s.store().set_details_open(false);
+    s.store().invoke_set_family_mode(true);
+    s.app.search(&s.ui, &site.name);
+    assert!(!s.store().get_results().iter().any(|c| c.id == id.as_str()));
+}
+
+#[test]
+fn a_site_nobody_listed_by_hand_is_still_recognised_as_adult() {
+    let s = start("linux-tv", Shell::Tv);
+    // A language edition of a listed site: on no hand-written list, typed as an address.
+    let typed = format!("fr.{}", adult_site().host);
+    s.app.search(&s.ui, &typed);
+    let card =
+        s.store().get_results().iter().find(|c| c.id == format!("web:{typed}").as_str()).expect("offered as typed");
+    assert!(card.adult && card.name == "Adult");
+    s.store().invoke_set_family_mode(true);
+    s.app.search(&s.ui, &typed);
+    assert!(!s.store().get_results().iter().any(|c| c.id.contains(typed.as_str())), "and gone in Family mode");
+}
+
+#[test]
+fn on_a_computer_a_web_app_opens_in_the_persons_own_browser() {
+    init_backend();
+    let dirs = dirs_in(&temp_root());
+    std::fs::create_dir_all(&dirs.config).unwrap();
+    std::fs::write(dirs.config.join("demo-state.json"), r#"{"settings":{"welcomed":true}}"#).unwrap();
+    let opened: Arc<Mutex<Vec<String>>> = Arc::default();
+    let record = opened.clone();
+    let options = Options {
+        demo: true,
+        inline: true,
+        platform: Platform::preset("linux-x64-debian"),
+        shell: Some(Shell::Desktop),
+        dirs: Some(dirs.clone()),
+        browser: Some(Arc::new(move |url: &str| {
+            record.lock().unwrap().push(url.to_string());
+            Ok(())
+        })),
+        ..Default::default()
+    };
+    let (ui, app) = build(&options).unwrap();
+    let store = ui.global::<Store>();
+
+    // Web apps are offered here too: found by name, and on the home page.
+    app.search(&ui, "lichess");
+    assert!(store.get_results().iter().any(|c| c.id == "web:lichess.org"));
+    assert!(store.get_sections().iter().any(|row| row.title == "Web apps"));
+    assert!(store.get_sections().iter().any(|row| row.title == "Web apps to watch"));
+
+    // Adding one puts an entry among the apps that opens the address.
+    app.open(&ui, "web:lichess.org");
+    assert_eq!(store.get_options().row_data(0).unwrap().verb, "Add to my apps");
+    store.invoke_install(0);
+    assert!(store.get_install_message().contains("opens in your browser"), "{}", store.get_install_message());
+    let entry = std::fs::read_dir(&dirs.menu)
+        .unwrap()
+        .flatten()
+        .find(|e| e.file_name().to_string_lossy().contains("lichess"))
+        .expect("a menu entry");
+    let text = std::fs::read_to_string(entry.path()).unwrap();
+    assert!(
+        text.contains("Name=Lichess") && text.contains("xdg-open") && text.contains("\"https://lichess.org/\""),
+        "{text}"
+    );
+    assert!(!text.to_lowercase().contains("longboard"));
+
+    // Open goes to the browser, not to Longboard.
+    assert!(store.get_can_open());
+    store.invoke_launch();
+    assert_eq!(*opened.lock().unwrap(), ["https://lichess.org/"]);
 }
 
 #[test]
