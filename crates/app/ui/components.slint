@@ -1464,6 +1464,7 @@ export component DetailsBody inherits Rectangle {
                 acted => { Store.retry-details(); }
             }
             if Store.warning != "" : Text { text: Store.warning; color: Theme.warn; font-size: 13px; wrap: word-wrap; }
+            if Store.need-note != "" : Text { text: Store.need-note; color: Theme.warn; font-size: 13px; wrap: word-wrap; }
             // Something else is needed first, and this store can install it.
             if Store.helper-id != "" : HorizontalLayout {
                 alignment: start;

@@ -81,6 +81,8 @@ pub struct Options {
     /// browser's data, returns the line the browser handed back, or nothing when the
     /// window was closed. Defaults to the store's sign-in window; tests pass a stand-in.
     pub signin: Option<SignIn>,
+    /// What the system has of FUSE (looked up when not given). For tests.
+    pub fuse: Option<bilby_core::needs::Fuse>,
     /// The machine whose system details and updates are shown. Defaults to this
     /// computer; the demo and previews of other devices get a made-up one.
     pub host: Option<Arc<dyn bilby_core::os::Host>>,
@@ -543,6 +545,8 @@ pub struct App {
     launcher: Opener,
     runner: Runner,
     signin: SignIn,
+    /// What this system has of FUSE, which AppImages need to start.
+    fuse: bilby_core::needs::Fuse,
     /// The Steam account signed in to, kept beside the saved state for quick lookups.
     steam: std::sync::RwLock<Option<bilby_core::steam_account::Account>>,
     /// Bumped whenever a Steam sign-in starts or is cancelled, so a late answer is dropped.
@@ -1295,6 +1299,27 @@ impl App {
                 }
             }
         }
+        // An AppImage on a system that lacks what AppImages need to start: said before
+        // it is downloaded, with the package that provides it one press away.
+        let mut need_note = String::new();
+        if helper.0.is_empty() {
+            let placed = self.launchable(&id).and_then(|path| bilby_core::needs::as_appimage(&path));
+            let offered = store.get_options().row_data(0).is_some_and(|option| option.label.contains("AppImage"));
+            if placed.is_some() || offered {
+                let platform = self.platform.read().unwrap().clone();
+                let catalog = self.catalog();
+                let in_repositories = |package: &AppId| catalog.source_summary(package).is_ok();
+                if let Some(need) =
+                    bilby_core::needs::for_appimage(&platform, self.fuse, placed.as_deref(), &in_repositories)
+                {
+                    need_note = need.why;
+                    if let Some(package) = need.package {
+                        helper = (package.to_string(), need.action);
+                    }
+                }
+            }
+        }
+        store.set_need_note(need_note.into());
         // The same choices as rows for the TV, without the one already showing.
         let mut rows: Vec<SourceChoice> = Vec::new();
         for version in store.get_app_family().iter().filter(|v| !v.on) {
@@ -2127,6 +2152,8 @@ impl App {
         store.set_app(card);
         store.set_install_state(0);
         store.set_options(ModelRc::new(VecModel::from(options.iter().map(option_row).collect::<Vec<_>>())));
+        // Now that the kind of file is known: does this system have what it needs?
+        self.show_app_sources(ui);
         store.set_hidden(ModelRc::new(VecModel::from(
             hidden
                 .iter()
@@ -2841,6 +2868,11 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         result_filter: Mutex::new(None),
         alternates: Mutex::new(HashMap::new()),
         signin: options.signin.clone().unwrap_or_else(|| Arc::new(signin_window)),
+        // The demo is a made-up device with everything in place, unless told otherwise.
+        fuse: options.fuse.unwrap_or_else(|| match options.demo {
+            true => bilby_core::needs::Fuse { library: true, mounter: true },
+            false => bilby_core::needs::fuse_here(),
+        }),
         steam: std::sync::RwLock::new(None),
         steam_generation: AtomicU64::new(0),
         elsewhere: std::sync::RwLock::new(Elsewhere::default()),

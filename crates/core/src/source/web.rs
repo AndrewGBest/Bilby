@@ -55,7 +55,7 @@ fn summary_of(host: &str) -> AppSummary {
         popularity: None,
         homepage: format!("https://{host}/"),
         license: None,
-        category: Some("Websites".to_string()),
+        category: Some("Web apps".to_string()),
         version: None,
         install_label: Some(Format::WebApp.label().to_string()),
         warning: None,

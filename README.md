@@ -98,6 +98,10 @@ There is no Android package yet, and no Flatpak
 - The one exception is the AUR, where building asks questions as it goes: Bilby opens
   a terminal on the build, and shows the command only if it cannot find a terminal.
 - Downloads are checked against the checksum the source publishes, when there is one.
+- Bilby checks what an app needs before you download it. An AppImage on a Linux system
+  without FUSE 2 says so on its page, with a button that installs the missing piece
+  from your distribution. An app that closes the moment it starts is reported with
+  the reason.
 - Every other file and every older version is one press away, never hidden for good.
 - For things only another store can install (Steam, the Mac App Store), Bilby opens
   that store's app on the right page and lets it take over. Buying, downloading and
@@ -144,7 +148,7 @@ Each source only appears on devices it applies to. A Windows user never sees the
 | **Steam** | Windows, macOS, Linux | Games and apps, free and paid, with their prices. Bilby hands over to the Steam app, which sells, installs and runs them |
 | **Mac App Store** | macOS | Its catalog, free and paid, with prices and ratings. Bilby hands over to the App Store app |
 | **Codeberg** | Windows, macOS, Linux | Projects by link and from the home page. Codeberg is turning away searches at the moment |
-| **Websites** | Linux TVs | Sites that open like apps in Longboard |
+| **Web apps** | Linux TVs | Websites that open like apps in Longboard |
 
 ## Your privacy
 

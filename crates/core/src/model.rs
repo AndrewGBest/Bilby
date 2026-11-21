@@ -53,7 +53,7 @@ impl SourceKind {
             SourceKind::Apt => "apt repositories",
             SourceKind::Dnf => "dnf repositories",
             SourceKind::Zypper => "zypper repositories",
-            SourceKind::Web => "Websites",
+            SourceKind::Web => "Web apps",
             SourceKind::GitLab => "GitLab",
             SourceKind::Homebrew => "Homebrew",
             SourceKind::Winget => "winget",

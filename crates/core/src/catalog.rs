@@ -234,7 +234,7 @@ impl Catalog {
         sections.retain(|s| !s.apps.is_empty());
         // On a Linux TV, websites sit beside the apps.
         if active.contains(&SourceKind::Web) {
-            sections.push(Section { title: "Websites".to_string(), apps: crate::source::web::featured() });
+            sections.push(Section { title: "Web apps".to_string(), apps: crate::source::web::featured() });
         }
         sections
     }
@@ -425,6 +425,12 @@ impl Catalog {
     /// Screenshots the source publishes for the app (Flathub does; release pages do not).
     pub fn pictures(&self, id: &AppId) -> Vec<String> {
         self.source(id.source).map(|s| s.pictures(&id.key)).unwrap_or_default()
+    }
+
+    /// The app as its own source describes it, without its releases: a quick way to
+    /// ask whether a source has something by that name.
+    pub fn source_summary(&self, id: &AppId) -> Result<AppSummary> {
+        self.source(id.source)?.summary(&id.key)
     }
 
     pub fn details(&self, id: &AppId) -> Result<AppDetails> {

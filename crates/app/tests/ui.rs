@@ -1337,7 +1337,7 @@ fn the_tv_app_page_has_one_main_button_and_the_rest_a_step_away() {
 fn on_a_linux_tv_a_website_is_added_and_opened_like_an_app() {
     let s = start("linux-tv", Shell::Tv);
     let rows = s.store().get_tv_rows();
-    let websites = rows.iter().find(|r| r.title == "Websites").expect("a Websites row on a Linux TV");
+    let websites = rows.iter().find(|r| r.title == "Web apps").expect("a Web apps row on a Linux TV");
     assert!(websites.apps.iter().any(|a| a.id == "web:lichess.org"));
 
     // Without Longboard the page says what is needed, and adding fails with the same advice.
@@ -1382,8 +1382,8 @@ fn websites_are_not_offered_away_from_a_linux_tv() {
         [("linux-x64-debian", Shell::Desktop), ("android-tv", Shell::Tv), ("windows-x64", Shell::Desktop)]
     {
         let s = start(preset, shell);
-        assert!(!s.store().get_tv_rows().iter().any(|r| r.title == "Websites"), "{preset}");
-        assert!(!s.store().get_sections().iter().any(|r| r.title == "Websites"), "{preset}");
+        assert!(!s.store().get_tv_rows().iter().any(|r| r.title == "Web apps"), "{preset}");
+        assert!(!s.store().get_sections().iter().any(|r| r.title == "Web apps"), "{preset}");
         s.app.open(&s.ui, "web:lichess.org");
         assert!(!s.store().get_details_error().is_empty(), "{preset}: a website cannot be added here");
     }
@@ -1684,7 +1684,7 @@ fn the_layout_chosen_in_settings_is_remembered_and_switches_at_once() {
     let store = ui.global::<Store>();
     assert_eq!(ui.get_effective(), Shell::Tv);
     assert_eq!((store.get_interface_mode(), store.get_device_name().as_str()), (2, "This TV"));
-    let websites = |store: &Store| store.get_tv_rows().iter().any(|row| row.title == "Websites");
+    let websites = |store: &Store| store.get_tv_rows().iter().any(|row| row.title == "Web apps");
     assert!(websites(&store), "being a Linux TV brings the websites with it");
 
     // Back to the desktop layout: at once, and saved.
@@ -1866,17 +1866,19 @@ fn a_tv_remote_reaches_settings_and_can_remove_an_app() {
 
 #[test]
 fn a_tv_remote_reads_reviews_and_picks_an_older_version() {
-    let s = start("linux-tv", Shell::Tv);
+    // Without motion: the page is where it is going at once, as the test's clock stands still.
+    let s = start_with("linux-tv", Shell::Tv, Some(r#"{"settings":{"welcomed":true,"reduce_motion":true}}"#));
     s.app.load_ratings(&s.ui);
 
-    // An app with reviews: the Reviews button shows one at a time.
+    // An app with reviews: they are a row on its page, and OK on one reads it in full.
     s.app.open(&s.ui, "flathub:io.quillpad.Quillpad");
     assert_eq!(s.store().get_reviews().row_count(), 3);
-    assert!(s.has("Reviews"));
-    // Main, star, Versions, Reviews.
-    for _ in 0..3 {
-        s.press(Key::RightArrow);
+    // Down to the foot of the page and one back up is the row of reviews; OK reads the first.
+    for _ in 0..5 {
+        s.press(Key::DownArrow);
     }
+    s.press(Key::UpArrow);
+    assert!(s.has("Review: Exactly what I wanted"), "the reviews are on the page");
     s.press(Key::Return);
     assert!(s.has("Review 1: Exactly what I wanted"));
     s.press(Key::DownArrow);
@@ -1888,24 +1890,33 @@ fn a_tv_remote_reads_reviews_and_picks_an_older_version() {
     s.press(Key::Escape);
     assert!(s.store().get_details_open() && !s.has("Review 3: Lost my window layout"));
 
-    // An app without reviews has no such button.
+    // Versions: a list to pick from. Left leaves the list instead of changing version.
     s.app.open(&s.ui, "github:kestrel-sh/kestrel");
-    assert!(!s.has("Reviews"));
-    // Versions: Right is older, Left is newer, and the files follow the version.
+    s.press(Key::RightArrow);
+    s.press(Key::LeftArrow);
+    assert!(s.has("☆  Favourite"), "the favourites button says what it is");
     let versions = s.store().get_versions().row_count();
     assert!(versions > 1, "the demo app has older releases");
+    // Main button, Favourite, Versions: OK opens the list, on its "Change version" row.
     s.press(Key::RightArrow);
     s.press(Key::RightArrow);
     s.press(Key::Return);
+    assert!(s.has("Change version"));
     assert_eq!(s.store().get_selected_version(), 0);
     let newest = s.store().get_app().version;
+    // OK opens the releases; Down and OK takes the next one, and the files follow it.
+    s.press(Key::Return);
+    s.press(Key::DownArrow);
+    s.press(Key::Return);
+    assert_eq!(s.store().get_selected_version(), 1, "an older version was picked from the list");
+    assert_ne!(s.store().get_app().version, newest);
+    assert!(s.has("Change version"), "and the list of releases closed again");
+    // Left and Right no longer change the version; Left leaves the list for the buttons.
     s.press(Key::RightArrow);
     assert_eq!(s.store().get_selected_version(), 1);
-    assert_ne!(s.store().get_app().version, newest);
     s.press(Key::LeftArrow);
-    s.press(Key::LeftArrow);
-    assert_eq!(s.store().get_selected_version(), 0, "it stops at the newest");
-    assert_eq!(s.store().get_app().version, newest);
+    assert_eq!(s.store().get_selected_version(), 1);
+    assert!(!s.has("Change version") && s.store().get_details_open());
 }
 
 #[test]
@@ -2323,4 +2334,54 @@ fn down_from_a_tab_goes_into_the_page_showing_and_only_ok_changes_page() {
     s.press(Key::DownArrow);
     s.press(Key::Return);
     assert!(s.store().get_details_open(), "and the apps are below that");
+}
+
+// ---- what an app needs before it will run ----
+
+#[test]
+fn an_appimage_on_a_system_without_fuse_says_so_and_offers_to_install_it() {
+    use bilby_core::needs::Fuse;
+    let start_with_fuse = |fuse: Fuse, preset: &str| {
+        init_backend();
+        let dirs = dirs_in(&temp_root());
+        std::fs::create_dir_all(&dirs.config).unwrap();
+        std::fs::write(dirs.config.join("demo-state.json"), r#"{"settings":{"welcomed":true}}"#).unwrap();
+        let options = Options {
+            demo: true,
+            inline: true,
+            platform: Platform::preset(preset),
+            shell: Some(Shell::Desktop),
+            dirs: Some(dirs),
+            fuse: Some(fuse),
+            ..Default::default()
+        };
+        build(&options).unwrap()
+    };
+    // A system and a demo app where the best file is an AppImage.
+    let without = Fuse { library: false, mounter: true };
+    let (preset, id) = ["linux-x64-arch", "linux-x64-fedora", "linux-x64-debian"]
+        .into_iter()
+        .flat_map(|preset| ["github:tidewave/tidewave", "github:lumen-labs/lumen"].map(|id| (preset, id)))
+        .find(|(preset, id)| {
+            let (ui, app) = start_with_fuse(without, preset);
+            app.open(&ui, id);
+            ui.global::<Store>().get_options().row_data(0).is_some_and(|o| o.label.contains("AppImage"))
+        })
+        .expect("the demo has an app that comes as an AppImage somewhere");
+    let (ui, app) = start_with_fuse(without, preset);
+    app.open(&ui, id);
+    let store = ui.global::<Store>();
+    assert!(store.get_need_note().contains("FUSE 2"), "said before anything is downloaded: {}", store.get_need_note());
+    // The demo's repositories have no such package, so no button is offered: only advice.
+    if store.get_helper_id().is_empty() {
+        assert!(store.get_need_note().contains("libfuse2 or fuse2"), "{}", store.get_need_note());
+    } else {
+        assert!(store.get_helper_label().contains("FUSE"), "{}", store.get_helper_label());
+    }
+
+    // With FUSE in place nothing is said.
+    let (ui, app) = start_with_fuse(Fuse { library: true, mounter: true }, preset);
+    app.open(&ui, id);
+    assert_eq!(ui.global::<Store>().get_need_note(), "");
+    assert_eq!(ui.global::<Store>().get_helper_id(), "");
 }
