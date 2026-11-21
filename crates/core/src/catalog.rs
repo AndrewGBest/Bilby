@@ -241,6 +241,11 @@ impl Catalog {
 
     /// Lists the sources themselves keep, such as what is popular on Flathub. Unlike
     /// [`Catalog::featured`] this uses the network, so call it off the UI thread.
+    /// Names of the packages the system's own package manager has installed.
+    pub fn installed_packages(&self) -> Vec<String> {
+        self.sources.iter().flat_map(|source| source.installed_names()).collect()
+    }
+
     pub fn collections(&self, limit: usize) -> Vec<Section> {
         let mut sections = Vec::new();
         for source in &self.sources {

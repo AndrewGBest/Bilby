@@ -329,6 +329,8 @@ export global Store {
     callback dismiss-toast();
     callback dismiss-welcome();
     callback view-store-update();
+    // Look for a newer version of the store itself, and say what was found.
+    callback check-store-update();
     callback set-interface(int);
     callback set-source(string, bool);
     callback filter-results(string);

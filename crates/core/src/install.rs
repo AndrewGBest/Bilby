@@ -325,7 +325,72 @@ fn menu_entry_path(dirs: &Dirs, id: &str) -> PathBuf {
 /// The format is the freedesktop.org Desktop Entry Specification; values are escaped as
 /// it requires, because names and paths come from release authors.
 pub fn add_menu_entry(dirs: &Dirs, id: &str, name: &str, appimage: &Path) -> Result<PathBuf> {
-    write_menu_entry(dirs, id, name, appimage, &[], "Utility;")
+    let path = write_menu_entry(dirs, id, name, appimage, &[], "Utility;")?;
+    // The app's own picture, so the entry is not a blank tile. Without one the entry
+    // still works.
+    if let Some(icon) = appimage_icon(dirs, id, appimage) {
+        if let Ok(entry) = std::fs::read_to_string(&path) {
+            let line = format!("Icon={}\n", icon.display().to_string().replace('\\', "\\\\"));
+            let _ = std::fs::write(&path, entry.replacen("Terminal=false\n", &format!("{line}Terminal=false\n"), 1));
+        }
+    }
+    Ok(path)
+}
+
+/// Take an AppImage's own icon out of it and keep it beside the app. An AppImage
+/// carries its icon at its root as `.DirIcon`; asking the file to extract that does
+/// not start the app inside it. Anything unexpected means no icon, never an error.
+fn appimage_icon(dirs: &Dirs, id: &str, appimage: &Path) -> Option<PathBuf> {
+    use std::process::{Command, Stdio};
+    if !cfg!(target_os = "linux") {
+        return None;
+    }
+    let slug: String =
+        id.chars().map(|c| if c.is_ascii_alphanumeric() { c.to_ascii_lowercase() } else { '-' }).collect();
+    let work = dirs.cache.join(format!("icon-of-{slug}"));
+    let _ = std::fs::remove_dir_all(&work);
+    std::fs::create_dir_all(&work).ok()?;
+    let extract = |what: &str| -> bool {
+        Command::new(appimage)
+            .arg("--appimage-extract")
+            .arg(what)
+            .current_dir(&work)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .is_ok_and(|status| status.success())
+    };
+    let root = work.join("squashfs-root");
+    let mut found = None;
+    if extract(".DirIcon") {
+        let mut at = root.join(".DirIcon");
+        // Usually a link to the real picture, sometimes through a second link.
+        for _ in 0..3 {
+            let Ok(target) = std::fs::read_link(&at) else { break };
+            let inside = target.to_string_lossy().trim_start_matches("./").to_string();
+            if inside.starts_with('/') || inside.split('/').any(|part| part == "..") || !extract(&inside) {
+                break;
+            }
+            at = root.join(&inside);
+        }
+        let is_picture = std::fs::read(&at).is_ok_and(|bytes| {
+            bytes.starts_with(b"\x89PNG") || bytes.starts_with(b"<svg") || bytes.starts_with(b"<?xml")
+        });
+        if at.is_file() && !at.is_symlink() && is_picture {
+            found = Some(at);
+        }
+    }
+    let kept = found.and_then(|from| {
+        let svg = std::fs::read(&from).is_ok_and(|bytes| !bytes.starts_with(b"\x89PNG"));
+        let folder = dirs.applications.join(".icons");
+        std::fs::create_dir_all(&folder).ok()?;
+        let to = folder.join(format!("{slug}.{}", if svg { "svg" } else { "png" }));
+        std::fs::copy(&from, &to).ok()?;
+        Some(to)
+    });
+    let _ = std::fs::remove_dir_all(&work);
+    kept
 }
 
 /// Longboard, when it is on this device: the copy the store placed, or one on the PATH.
@@ -538,7 +603,59 @@ pub fn run_program(
 
 /// Start a program the store placed (an AppImage), without waiting for it.
 pub fn launch(path: &Path) -> Result<()> {
-    launch_with(path, &[])
+    launch_watched(path, &[], std::time::Duration::from_millis(2500))
+}
+
+/// Start a program and watch its first moments. One that closes straight away with an
+/// error did not start, and saying "Opening…" would be untrue: what it printed is
+/// turned into the reason, in words a person can act on where the cause is known.
+pub fn launch_watched(path: &Path, args: &[String], watch: std::time::Duration) -> Result<()> {
+    use std::process::{Command, Stdio};
+    let log = std::env::temp_dir().join(format!("bilby-launch-{}.log", std::process::id()));
+    let errors = std::fs::File::create(&log).map(Stdio::from).unwrap_or_else(|_| Stdio::null());
+    let mut child = Command::new(path).args(args).stdin(Stdio::null()).stdout(Stdio::null()).stderr(errors).spawn()?;
+    let started = std::time::Instant::now();
+    let failed = loop {
+        match child.try_wait() {
+            Ok(Some(status)) => break !status.success(),
+            Ok(None) if started.elapsed() >= watch => break false,
+            Ok(None) => std::thread::sleep(std::time::Duration::from_millis(100)),
+            Err(_) => break false,
+        }
+    };
+    let said = std::fs::read_to_string(&log).unwrap_or_default();
+    let _ = std::fs::remove_file(&log);
+    if failed {
+        return Err(Error::Unsupported(why_it_closed(&said)));
+    }
+    Ok(())
+}
+
+/// The reason a program gave for not starting, for a person. Known causes get advice;
+/// anything else is the program's own last words.
+pub fn why_it_closed(said: &str) -> String {
+    let lower = said.to_lowercase();
+    if lower.contains("fuse") {
+        return "It closed straight away: this kind of app (an AppImage) needs FUSE, which this system does not have. Install the package libfuse2 (on newer systems libfuse2t64, or fuse2 on Arch), then open it again.".to_string();
+    }
+    if lower.contains("sandbox") {
+        return "It closed straight away: its built-in browser could not start its sandbox on this system. This is a known limit of some Linux setups for apps built this way; its developer's page usually says how to allow it.".to_string();
+    }
+    if lower.contains("error while loading shared libraries") {
+        let library = said
+            .lines()
+            .find(|l| l.contains("shared libraries"))
+            .and_then(|l| l.split(": ").nth(2))
+            .unwrap_or("a library");
+        return format!("It closed straight away: this system is missing something it needs ({library}).");
+    }
+    let last = said.lines().map(str::trim).rfind(|l| !l.is_empty()).unwrap_or("");
+    let last: String = last.chars().filter(|c| !c.is_control()).take(160).collect();
+    if last.is_empty() {
+        "It closed straight away without saying why.".to_string()
+    } else {
+        format!("It closed straight away. It said: {last}")
+    }
 }
 
 /// Start a program with arguments, without waiting for it.
@@ -1067,5 +1184,45 @@ mod tests {
         assert!(foreign.exists());
         remove_menu_entry(&dirs, "github:Owner/Thing");
         assert!(!path.exists());
+    }
+}
+
+#[cfg(test)]
+mod launch_tests {
+    use super::*;
+
+    #[test]
+    fn a_program_that_closes_at_once_gives_its_reason() {
+        assert!(
+            why_it_closed("dlopen(): error loading libfuse.so.2\nAppImages require FUSE to run.").contains("libfuse2")
+        );
+        assert!(why_it_closed("FATAL:setuid_sandbox_host.cc(163)] The SUID sandbox helper binary was found, but is not configured correctly.").contains("sandbox"));
+        let missing = why_it_closed(
+            "app: error while loading shared libraries: libwebkit2gtk-4.1.so.0: cannot open shared object file",
+        );
+        assert!(missing.contains("libwebkit2gtk-4.1.so.0"), "{missing}");
+        assert_eq!(why_it_closed("first\nsecond line\n\n"), "It closed straight away. It said: second line");
+        assert_eq!(why_it_closed(""), "It closed straight away without saying why.");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn starting_is_watched_for_a_moment() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = std::env::temp_dir().join(format!("bilby-launch-test-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let script = |name: &str, body: &str| {
+            let path = dir.join(name);
+            std::fs::write(&path, format!("#!/bin/sh\n{body}\n")).unwrap();
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).unwrap();
+            path
+        };
+        let watch = std::time::Duration::from_millis(1500);
+        let broken = script("broken", "echo 'AppImages require FUSE to run.' >&2; exit 127");
+        assert!(launch_watched(&broken, &[], watch).unwrap_err().to_string().contains("FUSE"));
+        // One that stays up, and one that finishes cleanly, both count as started.
+        assert!(launch_watched(&script("stays", "sleep 3"), &[], std::time::Duration::from_millis(300)).is_ok());
+        assert!(launch_watched(&script("done", "exit 0"), &[], watch).is_ok());
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

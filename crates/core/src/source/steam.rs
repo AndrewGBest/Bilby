@@ -75,6 +75,42 @@ pub fn is_installed(libraries: &[PathBuf], id: &str) -> bool {
         && libraries.iter().any(|library| library.join(format!("appmanifest_{id}.acf")).is_file())
 }
 
+/// Everything Steam has installed: its number at Steam and its name, read from the
+/// files Steam keeps beside its library. Steam's own tools and runtimes are left out.
+pub fn installed_games(libraries: &[PathBuf]) -> Vec<(String, String)> {
+    let quoted = |text: &str, key: &str| -> Option<String> {
+        text.lines().find_map(|line| {
+            let mut parts = line.split('"').skip(1).step_by(2);
+            (parts.next()? == key).then(|| parts.next().map(str::to_string))?
+        })
+    };
+    let mut games: Vec<(String, String)> = Vec::new();
+    for library in libraries {
+        let Ok(entries) = std::fs::read_dir(library) else { continue };
+        for entry in entries.flatten() {
+            let file = entry.file_name().to_string_lossy().to_string();
+            let Some(id) = file.strip_prefix("appmanifest_").and_then(|rest| rest.strip_suffix(".acf")) else {
+                continue;
+            };
+            if !crate::model::valid_key(SourceKind::Steam, id) || games.iter().any(|(seen, _)| seen == id) {
+                continue;
+            }
+            let Ok(text) = std::fs::read_to_string(entry.path()) else { continue };
+            let Some(name) = quoted(&text, "name").filter(|n| !n.is_empty()) else { continue };
+            let lower = name.to_lowercase();
+            if lower.starts_with("steam linux runtime")
+                || lower.starts_with("proton ")
+                || lower.starts_with("steamworks common")
+            {
+                continue;
+            }
+            games.push((id.to_string(), name));
+        }
+    }
+    games.sort_by_key(|(_, name)| name.to_lowercase());
+    games
+}
+
 impl Steam {
     pub fn new(http: Arc<dyn Http>, platform: &Platform) -> Steam {
         let libraries = default_libraries(platform.os);

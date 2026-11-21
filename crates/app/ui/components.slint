@@ -2413,6 +2413,10 @@ export component SettingsBody inherits Rectangle {
                         clicked => { Store.view-store-update(); }
                     }
                 }
+                if Store.store-update == "" : HorizontalLayout {
+                    alignment: start;
+                    Button { text: "Check for a newer Bilby"; primary: false; clicked => { Store.check-store-update(); } }
+                }
                 Text {
                     text: "Bilby " + Store.app-version + ". Everything runs on this device: there is no account and no server of ours. The store talks directly to the places apps come from, and keeps your library and settings in a file on this device.";
                     color: Theme.text-dim;

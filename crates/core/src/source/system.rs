@@ -674,6 +674,10 @@ impl Source for SystemRepos {
         self.backend.kind()
     }
 
+    fn installed_names(&self) -> Vec<String> {
+        self.backend.installed().into_keys().collect()
+    }
+
     fn available_on(&self, platform: &Platform) -> bool {
         let Some(linux) = platform.linux.as_ref().filter(|_| platform.os == Os::Linux) else { return false };
         let has_manager = match self.backend.kind() {

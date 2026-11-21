@@ -98,6 +98,18 @@ pub struct Options {
 }
 
 pub type Opener = Arc<dyn Fn(&std::path::Path) -> bilby_core::Result<()> + Send + Sync>;
+/// Apps on the device that were installed some other way than through the store.
+#[derive(Default)]
+struct Elsewhere {
+    apps: Vec<(String, String)>,
+    packages: HashSet<String>,
+}
+
+/// Letters and digits only, lower-cased, for comparing an app's name with a package's.
+fn plain(text: &str) -> String {
+    text.chars().filter(|c| c.is_alphanumeric()).flat_map(char::to_lowercase).collect()
+}
+
 pub type SignIn = Arc<dyn Fn(&std::path::Path) -> bilby_core::Result<Option<String>> + Send + Sync>;
 pub type Runner = Arc<dyn Fn(&std::path::Path, &[String]) -> bilby_core::Result<()> + Send + Sync>;
 
@@ -535,6 +547,9 @@ pub struct App {
     steam: std::sync::RwLock<Option<bilby_core::steam_account::Account>>,
     /// Bumped whenever a Steam sign-in starts or is cancelled, so a late answer is dropped.
     steam_generation: AtomicU64,
+    /// What is on this device that the store did not put there: Flatpaks and Steam
+    /// games as (app id, name), and the names of the system's installed packages.
+    elsewhere: std::sync::RwLock<Elsewhere>,
     /// Icon addresses the sources gave, by app id.
     icon_urls: Mutex<HashMap<String, String>>,
     catalog_factory: CatalogFactory,
@@ -624,6 +639,9 @@ impl App {
         shown.extend(store.get_results().iter().map(|c| c.id.to_string()));
         shown.extend(store.get_suggestions().iter().map(|c| c.id.to_string()));
         shown.extend(store.get_library().iter().map(|r| r.card.id.to_string()));
+        for section in store.get_tv_library_rows().iter() {
+            shown.extend(section.apps.iter().map(|c| c.id.to_string()));
+        }
         shown.push(store.get_app().id.to_string());
 
         // For each app: its own logo (an address the source gave, or one found earlier
@@ -734,7 +752,7 @@ impl App {
 
     // ---- cards ----
 
-    fn card(&self, app: &AppSummary) -> AppCard {
+    pub fn card(&self, app: &AppSummary) -> AppCard {
         let id = app.id.to_string();
         let popularity = match (app.popularity, app.id.source) {
             // A count of nothing is left out: it reads as a verdict, and is usually just
@@ -758,7 +776,9 @@ impl App {
             self.icon_urls.lock().unwrap().insert(id.clone(), url.clone());
         }
         // In the store's library, or already installed by the system's package manager.
-        let installed = self.state.lock().unwrap().installed(&id).is_some() || app.installed_version.is_some();
+        let installed = self.state.lock().unwrap().installed(&id).is_some()
+            || app.installed_version.is_some()
+            || self.installed_elsewhere(&app.id, &app.name);
         let has_update = matches!(self.updates.lock().unwrap().get(&id), Some(UpdateStatus::Available { .. }));
         let rating = app.rating.or_else(|| self.catalog().rating_for(&app.id));
         AppCard {
@@ -1012,11 +1032,73 @@ impl App {
         let (waiting, current): (Vec<AppCard>, Vec<AppCard>) =
             state.library.iter().map(|a| self.library_card(a)).partition(|card| card.has_update);
         let mut tv_library = Vec::new();
+        // The device itself and the store come first: what they run and whether
+        // either has an update, whoever installed what.
+        let mut device = Vec::new();
+        if store.get_system_supported() || !store.get_system_name().is_empty() {
+            device.push(AppCard {
+                id: SYSTEM_CARD.into(),
+                name: if store.get_system_name().is_empty() {
+                    store.get_device_name()
+                } else {
+                    store.get_system_name()
+                },
+                author: "This device's own software".into(),
+                summary: store.get_system_headline(),
+                has_update: store.get_system_state() == 3,
+                installed: true,
+                tint: tint_for(SYSTEM_CARD),
+                ..Default::default()
+            });
+        }
+        if let Some(own) = self.store_app.as_ref().map(|id| id.to_string()) {
+            let newer = store.get_store_update();
+            device.push(AppCard {
+                id: own.as_str().into(),
+                name: "Bilby".into(),
+                author: "This store".into(),
+                summary: if newer.is_empty() {
+                    format!("Version {}. Open it to look for a newer one.", env!("CARGO_PKG_VERSION")).into()
+                } else {
+                    format!("Version {newer} is available. You have {}.", env!("CARGO_PKG_VERSION")).into()
+                },
+                has_update: !newer.is_empty(),
+                installed: true,
+                tint: tint_for(&own),
+                icon: own_icon(),
+                ..Default::default()
+            });
+        }
+        if !device.is_empty() {
+            tv_library.push(section(&store.get_device_name(), device));
+        }
         if !waiting.is_empty() {
             tv_library.push(section("Updates available", waiting));
         }
         if !current.is_empty() {
             tv_library.push(section("Installed with Bilby", current));
+        }
+        // Everything else on the device, however it got there.
+        let others: Vec<AppCard> = self
+            .elsewhere
+            .read()
+            .unwrap()
+            .apps
+            .iter()
+            .filter(|(id, _)| state.installed(id).is_none())
+            .map(|(id, name)| AppCard {
+                id: id.as_str().into(),
+                name: name.as_str().into(),
+                source: AppId::parse(id).map(|id| id.source.label()).unwrap_or("").into(),
+                author: AppId::parse(id).map(|id| id.source.label()).unwrap_or("").into(),
+                installed: true,
+                tint: tint_for(id),
+                icon: picture_for(id),
+                ..Default::default()
+            })
+            .collect();
+        if !others.is_empty() {
+            tv_library.push(section("Also installed here", others));
         }
         if !state.favourites.is_empty() {
             tv_library.push(section("Favourites", state.favourites.iter().map(|f| self.favourite_card(f)).collect()));
@@ -1613,6 +1695,14 @@ impl App {
                 (refreshed, bilby_core::os::check(app.host.as_ref(), &app.system))
             },
             |app, ui, (refreshed, check)| {
+                // The Library's card for the device says what was found.
+                let after = app.clone();
+                let weak = ui.as_weak();
+                slint::Timer::single_shot(std::time::Duration::from_millis(0), move || {
+                    if let Some(ui) = weak.upgrade() {
+                        after.refresh(&ui);
+                    }
+                });
                 *app.system_check.lock().unwrap() = Some(check);
                 app.show_system(ui, 0, "");
                 if let Err(e) = refreshed {
@@ -1769,6 +1859,11 @@ impl App {
 
     pub fn open(self: &Arc<Self>, ui: &AppWindow, id: &str) {
         let store = ui.global::<Store>();
+        if id == SYSTEM_CARD {
+            store.set_details_open(false);
+            store.set_page(4);
+            return;
+        }
         let generation = self.details_generation.fetch_add(1, Ordering::SeqCst) + 1;
         // Show what the list already knew while the releases load.
         let known = find_card(&store, id);
@@ -2410,6 +2505,75 @@ impl App {
         );
     }
 
+    /// Look for a newer Bilby because the person asked, and say what was found.
+    pub fn check_store_update_now(self: &Arc<Self>, ui: &AppWindow) {
+        let Some(id) = self.store_app.clone() else { return };
+        self.toast(ui, "Looking for a newer Bilby…", false);
+        self.job(
+            move |app| app.catalog().check_update(&id, env!("CARGO_PKG_VERSION")),
+            |app, ui, status| {
+                let have = env!("CARGO_PKG_VERSION");
+                let (version, message, bad) = match status {
+                    UpdateStatus::Available { version, .. } => {
+                        let message = format!("Bilby {version} is available. You have {have}.");
+                        (version, message, false)
+                    }
+                    UpdateStatus::Unknown(why) => {
+                        (String::new(), format!("Could not look for a newer Bilby: {why}"), true)
+                    }
+                    _ => (String::new(), format!("Bilby {have} is the newest version."), false),
+                };
+                ui.global::<Store>().set_store_update(version.into());
+                app.refresh(ui);
+                app.toast(ui, &message, bad);
+            },
+        );
+    }
+
+    /// Find what is installed on the device that the store did not install: Flatpaks,
+    /// Steam games and the system's packages. Read from disk, in the background.
+    pub fn scan_installed(self: &Arc<Self>, ui: &AppWindow) {
+        let _ = ui;
+        self.job(
+            |app| {
+                let os = app.platform.read().unwrap().os;
+                let mut apps: Vec<(String, String)> =
+                    bilby_core::source::flathub::installed_apps(&app.dirs.flatpak_roots)
+                        .into_iter()
+                        .map(|(id, name)| (format!("flathub:{id}"), name))
+                        .collect();
+                let libraries =
+                    app.steam_libraries.clone().unwrap_or_else(|| bilby_core::source::steam::default_libraries(os));
+                apps.extend(
+                    bilby_core::source::steam::installed_games(&libraries)
+                        .into_iter()
+                        .map(|(id, name)| (format!("steam:{id}"), name)),
+                );
+                let packages = app.catalog().installed_packages().iter().map(|name| plain(name)).collect();
+                Elsewhere { apps, packages }
+            },
+            |app, ui, found| {
+                *app.elsewhere.write().unwrap() = found;
+                app.refresh(ui);
+            },
+        );
+    }
+
+    /// Is this app on the device although the store did not install it? Its own entry
+    /// may be (a Flatpak, a Steam game), or the system's package of the same name: the
+    /// VLC on Flathub's page is "installed" when the distribution's vlc is.
+    fn installed_elsewhere(&self, id: &AppId, name: &str) -> bool {
+        let known = self.elsewhere.read().unwrap();
+        let text = id.to_string();
+        if known.apps.iter().any(|(app, _)| app.eq_ignore_ascii_case(&text)) {
+            return true;
+        }
+        // By name, only when the app's name and the last part of its id agree on it,
+        // so that somebody's unrelated project called "notes" is not marked.
+        let tail = plain(id.key.rsplit(['/', '.']).next().unwrap_or(&id.key));
+        tail.chars().count() >= 3 && tail == plain(name) && known.packages.contains(&tail)
+    }
+
     /// Stop offering the update that is waiting for this app; the one after it is
     /// announced as usual.
     pub fn skip_update(&self, ui: &AppWindow, id: &str) {
@@ -2455,7 +2619,7 @@ impl App {
     }
 
     /// Start the open app, when the store installed it as a file it can run.
-    pub fn launch(&self, ui: &AppWindow) {
+    pub fn launch(self: &Arc<Self>, ui: &AppWindow) {
         let store = ui.global::<Store>();
         let id = store.get_app().id.to_string();
         let Some(path) = self.launchable(&id) else { return };
@@ -2467,7 +2631,19 @@ impl App {
             // A link, handed to the system, which passes it to Steam.
             (self.opener)(&path)
         } else {
-            (self.launcher)(&path)
+            // A program is watched for a moment as it starts, away from the interface:
+            // one that closes straight away says why.
+            self.toast(ui, &format!("Opening {}…", store.get_app().name), false);
+            let launcher = self.launcher.clone();
+            self.job(
+                move |_| launcher(&path),
+                |app, ui, started: bilby_core::Result<()>| {
+                    if let Err(e) = started {
+                        app.toast(ui, &format!("Couldn't open it. {e}"), true);
+                    }
+                },
+            );
+            return;
         };
         match started {
             Ok(()) => self.toast(ui, &format!("Opening {}…", store.get_app().name), false),
@@ -2663,7 +2839,9 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         signin: options.signin.clone().unwrap_or_else(|| Arc::new(signin_window)),
         steam: std::sync::RwLock::new(None),
         steam_generation: AtomicU64::new(0),
+        elsewhere: std::sync::RwLock::new(Elsewhere::default()),
     });
+    app.scan_installed(&ui);
     *app.steam.write().unwrap() = app.state().steam;
     app.apply_menu_entry(&ui);
     app.show_system(&ui, 0, "");
@@ -2769,6 +2947,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     on!(on_github_signin, |app, ui| { app.github_signin(ui) });
     on!(on_github_cancel, |app, ui| { app.github_cancel(ui) });
     on!(on_steam_signin, |app, ui| { app.steam_signin(ui) });
+    on!(on_check_store_update, |app, ui| { app.check_store_update_now(ui) });
     on!(on_steam_signin_qr, |app, ui| { app.steam_signin_qr(ui) });
     on!(on_steam_cancel, |app, ui| { app.steam_cancel(ui) });
     on!(on_steam_signout, |app, ui| { app.steam_signout(ui) });
@@ -3114,6 +3293,21 @@ fn code_image(text: &str) -> slint::Image {
     }
     slint::Image::from_rgba8(pixels)
 }
+
+/// The store's own picture, for its card in the Library.
+fn own_icon() -> slint::Image {
+    let Ok(picture) = image::load_from_memory(ICON_PNG) else { return slint::Image::default() };
+    let picture = picture.thumbnail(128, 128).to_rgba8();
+    let buffer = slint::SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(
+        picture.as_raw(),
+        picture.width(),
+        picture.height(),
+    );
+    slint::Image::from_rgba8(buffer)
+}
+
+/// The id of the Library's card for the device itself, which opens its page.
+const SYSTEM_CARD: &str = "bilby:this-device";
 
 /// The store's sign-in window while it is open, so it can be closed from here.
 static SIGNIN_WINDOW: Mutex<Option<std::process::Child>> = Mutex::new(None);

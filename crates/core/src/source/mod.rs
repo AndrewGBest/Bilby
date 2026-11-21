@@ -22,6 +22,12 @@ use crate::platform::Platform;
 pub trait Source: Send + Sync {
     fn kind(&self) -> SourceKind;
 
+    /// Names of what is on the device that this source would know as its own (a
+    /// distribution's installed packages). Empty for sources that cannot tell.
+    fn installed_names(&self) -> Vec<String> {
+        Vec::new()
+    }
+
     /// Is this source relevant on that machine at all? (The AUR only on Arch.)
     fn available_on(&self, platform: &Platform) -> bool;
 

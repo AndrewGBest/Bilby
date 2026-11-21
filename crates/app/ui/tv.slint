@@ -263,7 +263,7 @@ export component TvShell inherits Rectangle {
     // Steam's (two while there is a choice of how to sign in), then a switch per source.
     property <bool> on-settings: Store.page == 3 && !Store.details-open;
     property <int> steam-rows: !Store.steam-available ? 0 : Store.steam-signed-in || Store.steam-state != 0 ? 1 : 2;
-    property <int> src-first: 6 + root.steam-rows;
+    property <int> src-first: 7 + root.steam-rows;
     property <int> set-last: root.src-first + Store.sources.length - 1;
     changed set-last => { root.sys-row = min(root.sys-row, root.set-last); }
     // Rows below the eighth push the list up, so the focused one is always on screen.
@@ -378,11 +378,18 @@ export component TvShell inherits Rectangle {
                         if (rows.length > 0) {
                             root.zone = 0;
                         }
-                    } else if (Store.page == 0 && root.tab == 0) {
-                        // From the Home tab, down to search.
+                    } else if (Store.page == 0) {
+                        // On Home, down from any tab is search. Only OK changes page.
                         root.tab = 2;
+                    } else if (Store.page == 2) {
+                        root.lib-act = 0;
+                        root.zone = Store.library.length > 0 ? 2 : Store.tv-library-rows.length > 0 ? 0 : 1;
+                    } else if (Store.page == 3) {
+                        root.sys-row = 1;
+                        root.zone = 0;
                     } else {
-                        root.activate-tab();
+                        root.sys-row = 0;
+                        root.zone = 0;
                     }
                 } else if (event.text == Key.Return || event.text == " ") {
                     root.activate-tab();
@@ -425,6 +432,12 @@ export component TvShell inherits Rectangle {
                     } else if (root.sys-row == 4) {
                         Store.set-interface(1);
                     } else if (root.sys-row == 5) {
+                        if (Store.store-update != "") {
+                            Store.view-store-update();
+                        } else {
+                            Store.check-store-update();
+                        }
+                    } else if (root.sys-row == 6) {
                         if (Store.has-token) {
                             Store.save-token("");
                         } else if (Store.signin-state == 0) {
@@ -432,7 +445,7 @@ export component TvShell inherits Rectangle {
                         } else {
                             Store.github-cancel();
                         }
-                    } else if (root.sys-row == 6 && root.steam-rows > 0) {
+                    } else if (root.sys-row == 7 && root.steam-rows > 0) {
                         if (Store.steam-state != 0) {
                             Store.steam-cancel();
                         } else if (Store.steam-signed-in) {
@@ -440,9 +453,9 @@ export component TvShell inherits Rectangle {
                         } else {
                             Store.steam-signin-qr();
                         }
-                    } else if (root.sys-row == 7 && root.steam-rows > 1) {
+                    } else if (root.sys-row == 8 && root.steam-rows > 1) {
                         // The row goes away while signing in; the highlight moves to the one that stays.
-                        root.sys-row = 6;
+                        root.sys-row = 7;
                         Store.steam-signin();
                     } else if (root.sys-row >= root.src-first) {
                         Store.set-source(Store.sources[root.sys-row - root.src-first].id, !Store.sources[root.sys-row - root.src-first].on);
@@ -844,6 +857,14 @@ export component TvShell inherits Rectangle {
                         focused: root.zone == 0 && root.sys-row == 4;
                         clicked => { Store.set-interface(1); }
                     }
+                    TvSetting {
+                        u: root.u;
+                        label: Store.store-update != "" ? "Bilby " + Store.store-update + " is available. You have " + Store.app-version : "Bilby " + Store.app-version;
+                        value: Store.store-update != "" ? "Update" : "Check for updates";
+                        on: false;
+                        focused: root.zone == 0 && root.sys-row == 5;
+                        clicked => { Store.check-store-update(); }
+                    }
                     Rectangle { height: 4 * u; }
                     Text { text: "Accounts"; color: Theme.text; font-size: 14 * u; font-weight: 700; }
                     TvSetting {
@@ -851,7 +872,7 @@ export component TvShell inherits Rectangle {
                         label: Store.has-token ? "Signed in to GitHub" : Store.signin-state != 0 ? "Signing in to GitHub…" : "Sign in to GitHub for more searches an hour";
                         value: Store.has-token ? "Sign out" : Store.signin-state != 0 ? "Cancel" : "Sign in";
                         on: Store.has-token;
-                        focused: root.zone == 0 && root.sys-row == 5;
+                        focused: root.zone == 0 && root.sys-row == 6;
                     }
                     // The code to enter at GitHub, on a phone or computer.
                     if Store.signin-state == 2 : VerticalLayout {
@@ -872,14 +893,14 @@ export component TvShell inherits Rectangle {
                         label: Store.steam-signed-in ? "Signed in to Steam  ·  " + Store.steam-summary : Store.steam-state == 3 ? "Scan the code with the Steam app on your phone" : Store.steam-state != 0 ? "Sign in on Steam's page in Longboard, then share your library" : "Sign in to Steam with a QR code, to see what you own";
                         value: Store.steam-state != 0 ? "Cancel" : Store.steam-signed-in ? "Sign out" : "Show code";
                         on: Store.steam-signed-in;
-                        focused: root.zone == 0 && root.sys-row == 6;
+                        focused: root.zone == 0 && root.sys-row == 7;
                     }
                     if root.steam-rows > 1 : TvSetting {
                         u: root.u;
                         label: "Or sign in to Steam in a browser (Longboard)";
                         value: "Open";
                         on: false;
-                        focused: root.zone == 0 && root.sys-row == 7;
+                        focused: root.zone == 0 && root.sys-row == 8;
                     }
                     Rectangle { height: 4 * u; }
                     Text { text: "Where apps come from"; color: Theme.text; font-size: 14 * u; font-weight: 700; }

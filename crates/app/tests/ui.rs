@@ -7,7 +7,7 @@
 
 use bilby::{build, App, AppCard, AppWindow, Options, Shell, SourceChoice, Store, Theme, VersionChoice};
 use bilby_core::install::Dirs;
-use bilby_core::model::AppId;
+use bilby_core::model::{AppId, AppSummary};
 use bilby_core::state::State;
 use bilby_core::Platform;
 use i_slint_backend_testing::{ElementHandle, ElementRoot};
@@ -1141,7 +1141,11 @@ fn the_tv_has_a_library_page_and_a_home_that_is_the_store() {
     s.app.check_updates(&s.ui, false);
     assert_eq!(s.store().get_toast(), "", "a start-up check stays quiet");
     let library: Vec<String> = s.store().get_tv_library_rows().iter().map(|row| row.title.to_string()).collect();
-    assert_eq!(library, ["Updates available", "Installed with Bilby"]);
+    assert_eq!(
+        library,
+        ["This TV", "Updates available", "Installed with Bilby"],
+        "the device and the store itself come first"
+    );
     assert!(s.has("Library  ·  1 update"), "the top bar says an update is waiting");
 
     // With the remote: Up to search, Up to the tabs, Right to Library, OK.
@@ -1151,7 +1155,9 @@ fn the_tv_has_a_library_page_and_a_home_that_is_the_store() {
     s.press(Key::Return);
     assert_eq!(s.store().get_page(), 2);
     assert!(s.has("Check for updates"));
-    // The library's buttons have the focus; Down goes to the apps, OK opens the first.
+    // The library's buttons have the focus; Down goes to the device's own row, Down
+    // again to the apps, OK opens the first.
+    s.press(Key::DownArrow);
     s.press(Key::DownArrow);
     s.press(Key::Return);
     assert!(s.store().get_details_open());
@@ -1842,7 +1848,8 @@ fn a_tv_remote_reaches_settings_and_can_remove_an_app() {
     s.press(Key::Return);
     assert_eq!(s.store().get_page(), 2, "Library, from the top bar");
 
-    // Open the installed app: its page offers Remove, which asks twice.
+    // Past the device's own row to the installed app: its page offers Remove, which asks twice.
+    s.press(Key::DownArrow);
     s.press(Key::DownArrow);
     s.press(Key::Return);
     assert!(s.store().get_details_open() && s.store().get_in_library());
@@ -1943,7 +1950,7 @@ fn signing_in_to_github_shows_a_code_and_keeps_the_token_it_is_given() {
     tv.press(Key::RightArrow);
     tv.press(Key::RightArrow);
     tv.press(Key::Return);
-    for _ in 0..4 {
+    for _ in 0..5 {
         tv.press(Key::DownArrow);
     }
     tv.press(Key::Return);
@@ -2223,7 +2230,7 @@ fn the_tv_has_a_settings_tab_with_every_setting_reachable_by_remote() {
     // Sources can be switched off from the sofa too: Down to the first of them, OK.
     let sources: Vec<SourceChoice> = s.store().get_sources().iter().collect();
     assert!(sources.len() >= 2 && sources.iter().all(|c| c.on) && s.has(sources[0].label.as_str()));
-    for _ in 0..7 {
+    for _ in 0..8 {
         s.press(Key::DownArrow);
     }
     s.press(Key::Return);
@@ -2241,4 +2248,54 @@ fn the_tv_has_a_settings_tab_with_every_setting_reachable_by_remote() {
     s.press(Key::RightArrow);
     s.press(Key::Return);
     assert_eq!(s.store().get_page(), 4);
+}
+
+#[test]
+fn the_library_shows_the_device_the_store_and_what_was_installed_some_other_way() {
+    let s = start("linux-tv", Shell::Tv);
+    // A Flatpak and a Steam game that Bilby had no part in.
+    let flatpak = s.dirs.flatpak_roots[0].join("app/org.example.Paint/current/active/export/share/applications");
+    std::fs::create_dir_all(&flatpak).unwrap();
+    std::fs::write(flatpak.join("org.example.Paint.desktop"), "[Desktop Entry]\nName=Paint Box\n").unwrap();
+    s.app.scan_installed(&s.ui);
+    let rows: Vec<(String, Vec<String>)> = s
+        .store()
+        .get_tv_library_rows()
+        .iter()
+        .map(|row| (row.title.to_string(), row.apps.iter().map(|c| c.name.to_string()).collect()))
+        .collect();
+    let also =
+        rows.iter().find(|(title, _)| title == "Also installed here").expect("a row for what came from elsewhere");
+    assert_eq!(also.1, ["Paint Box"]);
+    // The same app is marked installed wherever the store shows it.
+    assert!(s.app.card(&AppSummary::new(AppId::parse("flathub:org.example.Paint").unwrap(), "Paint Box")).installed);
+
+    // The device's card opens its page; the store's own card opens the store's.
+    s.store().set_page(2);
+    s.store().invoke_open("bilby:this-device".into());
+    assert_eq!(s.store().get_page(), 4);
+    assert!(!s.store().get_details_open());
+
+    // The store is in its own library, and asking for a newer one always answers.
+    let own = start_as_store("linux-x64-debian", "github:kestrel-sh/kestrel");
+    let names: Vec<String> =
+        own.store().get_tv_library_rows().row_data(0).unwrap().apps.iter().map(|c| c.name.to_string()).collect();
+    assert_eq!(names.last().map(String::as_str), Some("Bilby"), "{names:?}");
+    own.store().invoke_check_store_update();
+    assert!(own.store().get_toast().contains("Bilby"), "{}", own.store().get_toast());
+}
+
+#[test]
+fn down_from_a_tab_goes_into_the_page_showing_and_only_ok_changes_page() {
+    let s = start("linux-tv", Shell::Tv);
+    // Home: up to search, up to the tabs, right to Library, then Down.
+    s.press(Key::UpArrow);
+    s.press(Key::UpArrow);
+    s.press(Key::RightArrow);
+    s.press(Key::DownArrow);
+    assert_eq!(s.store().get_page(), 0, "Down from the Library tab does not open the Library");
+    // It went to search, the first thing on Home; Down again is the apps.
+    s.press(Key::DownArrow);
+    s.press(Key::Return);
+    assert!(s.store().get_details_open(), "and the apps are below that");
 }

@@ -49,6 +49,30 @@ pub fn is_installed(roots: &[PathBuf], id: &str) -> bool {
     valid_key(SourceKind::Flathub, id) && roots.iter().any(|root| root.join("app").join(id).is_dir())
 }
 
+/// Every Flatpak app on the device, however it got there: its id and the name its own
+/// menu entry gives it. Runtimes are not apps and are not listed.
+pub fn installed_apps(roots: &[PathBuf]) -> Vec<(String, String)> {
+    let mut apps: Vec<(String, String)> = Vec::new();
+    for root in roots {
+        let Ok(entries) = std::fs::read_dir(root.join("app")) else { continue };
+        for entry in entries.flatten() {
+            let id = entry.file_name().to_string_lossy().to_string();
+            if !valid_key(SourceKind::Flathub, &id) || apps.iter().any(|(seen, _)| *seen == id) {
+                continue;
+            }
+            let menu = entry.path().join("current/active/export/share/applications").join(format!("{id}.desktop"));
+            let name = std::fs::read_to_string(menu)
+                .ok()
+                .and_then(|text| text.lines().find_map(|line| line.strip_prefix("Name=").map(|n| n.trim().to_string())))
+                .filter(|name| !name.is_empty())
+                .unwrap_or_else(|| id.rsplit('.').next().unwrap_or(&id).to_string());
+            apps.push((id, name));
+        }
+    }
+    apps.sort_by_key(|(_, name)| name.to_lowercase());
+    apps
+}
+
 #[derive(Deserialize)]
 struct SearchResponse {
     #[serde(default)]
