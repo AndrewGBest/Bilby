@@ -231,7 +231,9 @@ impl Flathub {
                     shot.sizes.into_iter().filter_map(|s| Some((number(&s.width)?, own_media(s.src)?))).collect();
                 // The smallest that is still at least 600 wide; else the largest there is.
                 sizes.sort_by_key(|(width, _)| *width);
-                let pick = sizes.iter().find(|(width, _)| *width >= 600).or(sizes.last()).cloned();
+                // Wide enough to stay sharp when shown large (on a TV a picture fills
+                // the screen): the first of about 1,200 pixels or more, else the widest.
+                let pick = sizes.iter().find(|(width, _)| *width >= 1200).or(sizes.last()).cloned();
                 pick.map(|(_, src)| src)
             })
             .filter(|src| {

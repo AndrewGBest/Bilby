@@ -36,6 +36,17 @@ fn run(seed: &str, args: &[&str]) -> Run {
     std::fs::write(&state, seed).unwrap();
     let screenshot = home.join("shot.png");
     let report = home.join("report.txt");
+    // The app hands some files to the system to open. In a test that must not reach
+    // the desktop of whoever is running it (a "Choose Application" window per run):
+    // a stand-in that does nothing is found first.
+    let bin = home.join("bin");
+    std::fs::create_dir_all(&bin).unwrap();
+    std::fs::write(bin.join("xdg-open"), "#!/bin/sh\nexit 0\n").unwrap();
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(bin.join("xdg-open"), std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
+    let path = format!("{}:{}", bin.display(), std::env::var("PATH").unwrap_or_default());
     let output = Command::new("xvfb-run")
         // Each run starts looking for a free display at its own number: tests run side by
         // side, and two that both find the same number free take each other's display down.
@@ -49,6 +60,7 @@ fn run(seed: &str, args: &[&str]) -> Run {
         .arg("--report")
         .arg(&report)
         .env("HOME", &home)
+        .env("PATH", path)
         .env("XDG_DOWNLOAD_DIR", home.join("Downloads"))
         .env("XDG_CONFIG_HOME", home.join("config"))
         .env("XDG_CACHE_HOME", home.join("cache"))

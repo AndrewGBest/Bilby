@@ -571,20 +571,26 @@ pub fn write_web_shortcut(dirs: &Dirs, id: &str, name: &str, url: &str) -> Resul
         .and_then(|path| std::env::split_paths(&path).map(|dir| dir.join("xdg-open")).find(|p| p.is_file()))
         .unwrap_or_else(|| PathBuf::from("/usr/bin/xdg-open"));
     let path = write_menu_entry(dirs, id, &label, &opener, &[url.to_string()], "Network;")?;
-    let key = crate::model::AppId::parse(id).map(|id| crate::icons::app_key(&id)).unwrap_or_default();
-    if let Some(Some(icon)) = crate::icons::cached(&dirs.cache.join("icons"), &key) {
-        // Kept beside the apps, so clearing the cache does not blank the entry.
-        let folder = dirs.applications.join(".icons");
-        let kept = folder.join(icon.file_name().unwrap_or_default());
-        if std::fs::create_dir_all(&folder).is_ok() && std::fs::copy(&icon, &kept).is_ok() {
-            if let Ok(entry) = std::fs::read_to_string(&path) {
-                let line = format!("Icon={}\n", kept.display());
-                let _ =
-                    std::fs::write(&path, entry.replacen("Terminal=false\n", &format!("{line}Terminal=false\n"), 1));
-            }
-        }
-    }
+    give_entry_its_picture(dirs, id, &path);
     Ok(path)
+}
+
+/// Give a menu entry the picture the store shows for the app (a website's own icon),
+/// when one has been fetched. Without this the entry gets the picture of the program
+/// that opens it, or none: every website on a TV would look like the browser.
+fn give_entry_its_picture(dirs: &Dirs, id: &str, entry: &Path) {
+    let key = crate::model::AppId::parse(id).map(|id| crate::icons::app_key(&id)).unwrap_or_default();
+    let Some(Some(icon)) = crate::icons::cached(&dirs.cache.join("icons"), &key) else { return };
+    // Kept beside the apps, so clearing the cache does not blank the entry.
+    let folder = dirs.applications.join(".icons");
+    let kept = folder.join(icon.file_name().unwrap_or_default());
+    if std::fs::create_dir_all(&folder).is_err() || std::fs::copy(&icon, &kept).is_err() {
+        return;
+    }
+    if let Ok(text) = std::fs::read_to_string(entry) {
+        let line = format!("Icon={}\n", kept.display().to_string().replace('\\', "\\\\"));
+        let _ = std::fs::write(entry, text.replacen("Terminal=false\n", &format!("{line}Terminal=false\n"), 1));
+    }
 }
 
 /// What an AppImage tells the program inside it about itself: where its file is and
@@ -595,6 +601,30 @@ pub const APPIMAGE_SAYS: [&str; 4] = ["APPIMAGE", "APPDIR", "ARGV0", "OWD"];
 fn not_ours(command: &mut std::process::Command) {
     for name in APPIMAGE_SAYS {
         command.env_remove(name);
+    }
+    carry_activation(command);
+}
+
+/// Leave to come to the front, from the window system, for the next program started.
+static ACTIVATION: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+
+/// Hand the next program the store starts the right to come to the front.
+///
+/// A window system such as Wayland does not let a program put its own window in front
+/// of the one being used. That is felt when the program is already running: started
+/// again, it tells its running copy what to open, and that copy stays behind the
+/// store, as if nothing had happened. The window that was just pressed can ask for a
+/// token that carries its leave to do so, and pass it on; this keeps one for the next
+/// program started. It is used once.
+pub fn grant_activation(token: String) {
+    *ACTIVATION.lock().unwrap() = Some(token).filter(|t| !t.is_empty());
+}
+
+/// Give `command` the token, if there is one, under the names programs look for it by
+/// (Wayland's and, for the X Window System, the older start-up notification's).
+fn carry_activation(command: &mut std::process::Command) {
+    if let Some(token) = ACTIVATION.lock().unwrap().take() {
+        command.env("XDG_ACTIVATION_TOKEN", &token).env("DESKTOP_STARTUP_ID", &token);
     }
 }
 
@@ -1058,6 +1088,7 @@ pub fn open_with_system(path: &Path) -> Result<()> {
     } else {
         std::process::Command::new("xdg-open")
     };
+    carry_activation(&mut cmd);
     cmd.arg(path).spawn().map(|_| ()).map_err(|e| Error::Unsupported(format!("Could not open {}: {e}", path.display())))
 }
 
@@ -1209,6 +1240,8 @@ pub fn execute(
         })?;
         let args = longboard.args(&[format!("--url={}", asset.url)]);
         let entry = write_menu_entry(dirs, &format!("web:{host}"), &asset.name, &longboard.program, &args, "Network;")?;
+        // The site's own picture, not Longboard's, in the TV's list of apps.
+        give_entry_its_picture(dirs, &format!("web:{host}"), &entry);
         return Ok(Outcome {
             message: format!("{} is in this TV's app list. It opens in Longboard.", asset.name),
             file: Some(entry),

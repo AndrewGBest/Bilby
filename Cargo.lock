@@ -389,6 +389,9 @@ dependencies = [
  "rodio",
  "slint",
  "slint-build",
+ "wayland-backend",
+ "wayland-client",
+ "wayland-protocols",
 ]
 
 [[package]]

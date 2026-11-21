@@ -1351,6 +1351,9 @@ fn on_a_linux_tv_a_website_is_added_and_opened_like_an_app() {
     let websites = rows.iter().find(|r| r.title == "Web apps").expect("a Web apps row on a Linux TV");
     assert!(websites.apps.iter().any(|a| a.id == "web:lichess.org"));
 
+    // The site's picture, as the store keeps it once it has been fetched.
+    std::fs::create_dir_all(s.dirs.cache.join("icons")).unwrap();
+    std::fs::write(s.dirs.cache.join("icons").join("app-web-lichess-org.png"), b"\x89PNG stand-in").unwrap();
     // Without Longboard the page says the store will fetch it, and adding the site does:
     // nobody is sent to install it themselves.
     s.app.open(&s.ui, "web:lichess.org");
@@ -1376,6 +1379,9 @@ fn on_a_linux_tv_a_website_is_added_and_opened_like_an_app() {
     let entry = std::fs::read_to_string(s.dirs.menu.join("bilby-web-lichess-org.desktop")).unwrap();
     assert!(entry.contains("Name=Lichess\n"), "{entry}");
     assert!(entry.contains("Longboard-x86_64.AppImage\" \"--url=https://lichess.org/\"\n"), "{entry}");
+    // It carries the site's own picture, so the TV's list does not show a blank tile
+    // or Longboard's picture for every website.
+    assert!(entry.contains("\nIcon=") && entry.contains("app-web-lichess-org"), "{entry}");
 
     // The same button now opens it: Longboard is started on the site's address.
     assert!(s.store().get_can_open());

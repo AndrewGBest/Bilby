@@ -21,6 +21,8 @@ use std::sync::{Arc, Mutex, RwLock};
 
 slint::include_modules!();
 
+#[cfg(target_os = "linux")]
+mod activation;
 pub mod sound;
 
 const USAGE: &str = "\
@@ -591,8 +593,14 @@ fn decode_screenshot(path: &std::path::Path) -> Option<slint::SharedPixelBuffer<
         return None;
     }
     let decoded = image::open(path).ok()?;
-    // Shrink what is larger than a page can show; never enlarge.
-    let decoded = if width > 1280 || height > 720 { decoded.thumbnail(1280, 720) } else { decoded }.into_rgba8();
+    // Shrink what is larger than a screen can show; never enlarge. Kept at up to a
+    // full 1080p screen, so a picture opened large is sharp and not stretched.
+    let decoded = if width > 1920 || height > 1080 {
+        decoded.resize(1920, 1080, image::imageops::FilterType::Triangle)
+    } else {
+        decoded
+    }
+    .into_rgba8();
     let (width, height) = decoded.dimensions();
     Some(slint::SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(decoded.as_raw(), width, height))
 }
@@ -601,6 +609,13 @@ fn decode_screenshot(path: &std::path::Path) -> Option<slint::SharedPixelBuffer<
 fn picture_for(id: &str) -> slint::Image {
     let Some(id) = AppId::parse(id) else { return slint::Image::default() };
     let own = bilby_core::icons::app_key(&id);
+    // The store's own picture is the one it carries, wherever it is shown: not its
+    // owner's picture from GitHub, nor a logo that happens to arrive later.
+    if let Some(picture) =
+        OWN_PICTURE.with(|kept| kept.borrow().as_ref().filter(|(key, _)| *key == own).map(|(_, p)| p.clone()))
+    {
+        return picture;
+    }
     PICTURES.with(|p| {
         let pictures = p.borrow();
         pictures
@@ -703,6 +718,8 @@ pub struct App {
     asked_folder: Mutex<Option<PathBuf>>,
     /// A newer copy of the store itself, placed and ready to be restarted into.
     self_new: Mutex<Option<PathBuf>>,
+    /// Open was pressed and the app is started once the window system has answered.
+    launch_waiting: AtomicBool,
     /// Longboard, just installed on the way to something that needs it, waiting to be
     /// written into the library.
     fetched: Mutex<Option<InstalledApp>>,
@@ -2816,6 +2833,15 @@ impl App {
                     app.ensure_longboard(&mut progress)?;
                 }
                 let http = app.catalog().http();
+                // A website's entry among the device's apps carries the site's own
+                // picture: fetched now if the page has not got it yet.
+                if work_option.plan.action == Action::WebApp {
+                    let host = work_option.asset.url.trim_start_matches("https://").trim_end_matches('/');
+                    if let Some(id) = AppId::parse(&format!("web:{host}")) {
+                        let key = bilby_core::icons::app_key(&id);
+                        let _ = bilby_core::icons::fetch_site(http.as_ref(), &app.dirs.cache.join("icons"), &key, &id.key);
+                    }
+                }
                 let mut outcome = install::execute(
                     &work_option.plan,
                     &work_option.asset,
@@ -3757,7 +3783,51 @@ impl App {
     }
 
     /// Start the open app, when the store installed it as a file it can run.
+    ///
+    /// The window system is first asked for leave to bring another window to the
+    /// front (see `install::grant_activation`), which takes a moment to arrive; the app
+    /// is started when it has, or shortly after if it never does.
     pub fn launch(self: &Arc<Self>, ui: &AppWindow) {
+        #[cfg(target_os = "linux")]
+        if !self.inline && !self.launch_waiting.load(Ordering::SeqCst) {
+            use slint::winit_030::winit::platform::startup_notify::WindowExtStartupNotify;
+            use slint::winit_030::WinitWindowAccessor;
+            // On Wayland the store asks itself, with the serial of the press that led
+            // here, and has the answer at once.
+            if let Some(token) = wayland_activation(ui, |activation| activation.token()).flatten() {
+                install::grant_activation(token);
+                self.launch_now(ui);
+                return;
+            }
+            // Elsewhere (the X Window System) the windowing library asks, and the
+            // answer arrives as an event a moment later.
+            let asked = ui.window().with_winit_window(|window| window.request_activation_token().is_ok());
+            if asked == Some(true) {
+                self.launch_waiting.store(true, Ordering::SeqCst);
+                let (app, weak) = (self.clone(), ui.as_weak());
+                slint::Timer::single_shot(std::time::Duration::from_millis(600), move || {
+                    if let Some(ui) = weak.upgrade() {
+                        app.launch_granted(&ui, None);
+                    }
+                });
+                return;
+            }
+        }
+        self.launch_now(ui);
+    }
+
+    /// The window system answered (or took too long to): start what was waiting, once.
+    fn launch_granted(self: &Arc<Self>, ui: &AppWindow, token: Option<String>) {
+        if !self.launch_waiting.swap(false, Ordering::SeqCst) {
+            return;
+        }
+        if let Some(token) = token {
+            install::grant_activation(token);
+        }
+        self.launch_now(ui);
+    }
+
+    fn launch_now(self: &Arc<Self>, ui: &AppWindow) {
         let store = ui.global::<Store>();
         let id = store.get_app().id.to_string();
         let Some(path) = self.launchable(&id) else { return };
@@ -4076,6 +4146,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         picker: options.picker.clone().unwrap_or_else(|| Arc::new(system_picker)),
         asked_folder: Mutex::new(None),
         self_new: Mutex::new(None),
+        launch_waiting: AtomicBool::new(false),
         fetched: Mutex::new(None),
         pending: Mutex::new(None),
         known_adult: Mutex::new(HashSet::new()),
@@ -4083,6 +4154,11 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         adult_unlocked: std::sync::atomic::AtomicBool::new(false),
         install_cleared: std::sync::atomic::AtomicBool::new(false),
     });
+    // The store's own picture, kept under its own app's name before anything is drawn.
+    if let Some(own) = &app.store_app {
+        let picture = own_icon();
+        OWN_PICTURE.with(|kept| *kept.borrow_mut() = Some((bilby_core::icons::app_key(own), picture)));
+    }
     app.note_self(&ui);
     app.scan_installed(&ui);
     *app.steam.write().unwrap() = app.state().steam;
@@ -4345,14 +4421,30 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
 /// page already treats as "back". "Select" becomes Return. In the TV layout the right
 /// and "back" mouse buttons do the same, because air-mouse remotes send those for Back.
 #[cfg(not(target_os = "android"))]
-fn translate_remote_keys(ui: &AppWindow) {
+fn translate_remote_keys(ui: &AppWindow, app: &Arc<App>) {
     use slint::platform::{Key, WindowEvent};
     use slint::winit_030::winit::event::{ElementState, MouseButton, WindowEvent as Raw};
     use slint::winit_030::winit::keyboard::{Key as RawKey, NamedKey};
     use slint::winit_030::{EventResult, WinitWindowAccessor};
     let weak = ui.as_weak();
+    let app = Arc::downgrade(app);
     ui.window().on_winit_window_event(move |window, event| {
         let on_tv = || weak.upgrade().is_some_and(|ui| ui.get_effective() == Shell::Tv);
+        // Keep up with the serials of presses, which leave to bring another window
+        // forward is asked with (activation.rs).
+        #[cfg(target_os = "linux")]
+        if matches!(event, Raw::KeyboardInput { .. } | Raw::MouseInput { .. } | Raw::Focused(true)) {
+            if let Some(ui) = weak.upgrade() {
+                wayland_activation(&ui, |activation| activation.listen());
+            }
+        }
+        // Leave to bring another window to the front has arrived: start what waited for it.
+        if let Raw::ActivationTokenDone { token, .. } = event {
+            if let (Some(app), Some(ui)) = (app.upgrade(), weak.upgrade()) {
+                app.launch_granted(&ui, Some(token.clone().into_raw()));
+            }
+            return EventResult::Propagate;
+        }
         let (key, state) = match event {
             Raw::KeyboardInput { event, .. } => match &event.logical_key {
                 RawKey::Named(NamedKey::BrowserBack | NamedKey::GoBack) => (Key::Escape, event.state),
@@ -4371,6 +4463,43 @@ fn translate_remote_keys(ui: &AppWindow) {
         });
         EventResult::PreventDefault
     });
+}
+
+#[cfg(target_os = "linux")]
+thread_local! {
+    /// The store's ear on its own Wayland connection, once it has been wanted: `None`
+    /// inside when this is not Wayland or the window system has nothing to ask.
+    static ACTIVATION: RefCell<Option<Option<activation::Activation>>> = const { RefCell::new(None) };
+}
+
+/// Do something with the store's ear on its Wayland connection, setting it up the
+/// first time. `None` when there is none (not Wayland, or no window yet).
+#[cfg(target_os = "linux")]
+fn wayland_activation<T>(ui: &AppWindow, with: impl FnOnce(&mut activation::Activation) -> T) -> Option<T> {
+    use slint::winit_030::winit::raw_window_handle::{
+        HasDisplayHandle, HasWindowHandle, RawDisplayHandle, RawWindowHandle,
+    };
+    use slint::winit_030::WinitWindowAccessor;
+    ACTIVATION.with(|kept| {
+        let mut kept = kept.borrow_mut();
+        if kept.is_none() {
+            let made = ui.window().with_winit_window(|window| {
+                let (display, surface) =
+                    match (window.display_handle().ok()?.as_raw(), window.window_handle().ok()?.as_raw()) {
+                        (RawDisplayHandle::Wayland(display), RawWindowHandle::Wayland(surface)) => {
+                            (display.display.as_ptr(), surface.surface.as_ptr())
+                        }
+                        _ => return None,
+                    };
+                // SAFETY: both come from the live window, which is kept for as long as
+                // the program runs, on this same thread.
+                unsafe { activation::Activation::on(display, surface) }
+            });
+            // No window yet: try again another time. Otherwise the answer is kept.
+            *kept = Some(made?);
+        }
+        kept.as_mut().and_then(|ear| ear.as_mut()).map(with)
+    })
 }
 
 /// Set for a copy that was started by an older one handing over, so that two copies
@@ -4438,7 +4567,7 @@ pub fn run(mut options: Options) -> Result<(), Box<dyn std::error::Error>> {
     }
     let (ui, app) = build(&options)?;
     #[cfg(not(target_os = "android"))]
-    translate_remote_keys(&ui);
+    translate_remote_keys(&ui, &app);
     let store = ui.global::<Store>();
     if let Some((w, h)) = options.size {
         ui.window().set_size(slint::LogicalSize::new(w as f32, h as f32));
@@ -4675,8 +4804,16 @@ fn kind_of(id: &str) -> &'static str {
     }
 }
 
-/// The store's own picture, for its card in the Library.
+thread_local! {
+    /// The store's own picture, decoded once, under the name its own app goes by.
+    static OWN_PICTURE: RefCell<Option<(String, slint::Image)>> = const { RefCell::new(None) };
+}
+
+/// The store's own picture, for wherever the store itself is shown.
 fn own_icon() -> slint::Image {
+    if let Some(picture) = OWN_PICTURE.with(|kept| kept.borrow().as_ref().map(|(_, picture)| picture.clone())) {
+        return picture;
+    }
     let Ok(picture) = image::load_from_memory(ICON_PNG) else { return slint::Image::default() };
     let picture = picture.thumbnail(128, 128).to_rgba8();
     let buffer = slint::SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(

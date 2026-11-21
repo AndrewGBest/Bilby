@@ -29,6 +29,14 @@ slint = { version = "1.19", default-features = false, features = ["unstable-wini
 # code, so no decoders are needed.
 rodio = { version = "0.21", default-features = false, features = ["playback"] }
 
+# Asking a Wayland window system for leave to bring another program's window to the
+# front, with the serial of the press that asked for it (see src/activation.rs). The
+# same libraries, at the same versions, that the windowing code underneath already uses.
+[target.'cfg(target_os = "linux")'.dependencies]
+wayland-client = "0.31"
+wayland-backend = { version = "0.3", features = ["client_system"] }
+wayland-protocols = { version = "0.32", features = ["client", "staging"] }
+
 # The window for signing in to another store on its own page. On Linux it is a separate
 # program (bilby-signin), so the store starts without the web engine being installed.
 [target.'cfg(any(windows, target_os = "macos"))'.dependencies]
