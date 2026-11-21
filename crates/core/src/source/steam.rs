@@ -177,6 +177,12 @@ struct Hit {
     #[serde(default)]
     platforms: Platforms,
     tiny_image: Option<String>,
+    /// A critics' score out of 100, as text; empty when there is none.
+    #[serde(default)]
+    metascore: Option<String>,
+    /// "full" or "partial", when the game says it works with a controller.
+    #[serde(default)]
+    controller_support: Option<String>,
 }
 
 #[derive(Deserialize, Default, Clone, Copy)]
@@ -292,6 +298,28 @@ impl Source for Steam {
                 // A search hit's price being absent means free to play.
                 app.price = price_text(hit.price.as_ref(), true);
                 app.icon_url = own_picture(hit.tiny_image);
+                // What the search itself says about it, so its tile is not blank.
+                let mut on: Vec<&str> = Vec::new();
+                if hit.platforms.windows {
+                    on.push("Windows");
+                }
+                if hit.platforms.mac {
+                    on.push("macOS");
+                }
+                if hit.platforms.linux {
+                    on.push("Linux");
+                }
+                let mut says = vec![format!("On Steam for {}.", on.join(", "))];
+                if let Some(score) = hit.metascore.as_deref().filter(|s| !s.is_empty() && *s != "0") {
+                    says.push(format!("Metascore {score}."));
+                }
+                match hit.controller_support.as_deref() {
+                    Some("full") => says.push("Plays fully with a controller.".to_string()),
+                    Some("partial") => says.push("Plays partly with a controller.".to_string()),
+                    _ => {}
+                }
+                app.summary = says.join(" ");
+                app.author = "Steam".to_string();
                 self.mark_installed(app)
             })
             .collect())

@@ -549,12 +549,16 @@ impl Catalog {
         // One list, best match first: how close the name is, how many people use it,
         // and what else is known. See `rank`.
         let featured: Vec<AppId> = self.featured().into_iter().flat_map(|s| s.apps).map(|a| a.id).collect();
+        // Apps kept on record as ways to use the service that was named.
+        let family = crate::related::family_named(crate::related::families(), query);
         let mut hits = Vec::new();
         for list in per_source {
             let of = list.len();
             for (position, mut app) in list.into_iter().enumerate() {
                 app.rating = app.rating.or_else(|| self.rating_for(&app.id));
-                let context = crate::rank::Context { position, of, featured: featured.contains(&app.id) };
+                let related =
+                    family.is_some_and(|f| f.members.iter().any(|m| m.id.eq_ignore_ascii_case(&app.id.to_string())));
+                let context = crate::rank::Context { position, of, featured: featured.contains(&app.id), related };
                 hits.push((app, context));
             }
         }

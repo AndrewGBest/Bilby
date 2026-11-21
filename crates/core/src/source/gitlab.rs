@@ -137,7 +137,7 @@ impl Source for GitLab {
         // GitLab limits how often an anonymous client may ask. Being turned away is
         // not something to show the person searching; GitLab's apps are just absent.
         let body = match self.http.get(&url) {
-            Err(Error::Status { code: 429, .. }) | Err(Error::RateLimited { .. }) => return Ok(Vec::new()),
+            Err(Error::Status { code: 429 | 403, .. }) | Err(Error::RateLimited { .. }) => return Ok(Vec::new()),
             other => other?,
         };
         let projects: Vec<Project> = serde_json::from_str(&body)?;
@@ -161,7 +161,7 @@ impl Source for GitLab {
         let url = format!("{}/projects/{}/releases?per_page={RELEASES_PER_APP}", self.api, url_encode(key));
         let body = match self.http.get(&url) {
             // Turned away for asking too often: nothing to offer from here for now.
-            Err(Error::Status { code: 429, .. }) | Err(Error::RateLimited { .. }) => return Ok(Vec::new()),
+            Err(Error::Status { code: 429 | 403, .. }) | Err(Error::RateLimited { .. }) => return Ok(Vec::new()),
             other => other?,
         };
         let releases: Vec<ApiRelease> = serde_json::from_str(&body)?;

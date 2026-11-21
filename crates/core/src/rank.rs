@@ -4,8 +4,10 @@
 //! "what GitHub thinks matches" is not the same as "what someone typing a name wants".
 //! So every hit gets one score from three things:
 //!
-//! * **how close the name is to what was typed** (most of the score),
-//! * **how many people use it** (stars, votes), on a scale that suits its source,
+//! * **how close the name is to what was typed**,
+//! * **how many people use it** (downloads, ratings, stars), on a scale that suits its
+//!   source, weighed almost as heavily: a well-used app that is plainly about what was
+//!   typed belongs above an obscure one that merely has the word in its name,
 //! * **small nudges** from anything else that is known: on the bundled starter list for the Discover
 //!   page, already installed, where the source itself placed it, flagged out of date.
 //!
@@ -15,13 +17,17 @@
 use crate::model::{AppSummary, SourceKind};
 
 /// The share of the score each part can contribute. They sum to 1.
-const CLOSENESS: f32 = 0.60;
-const POPULARITY: f32 = 0.25;
+const CLOSENESS: f32 = 0.40;
+const POPULARITY: f32 = 0.45;
 const POSITION: f32 = 0.05;
 const NUDGES: f32 = 0.10;
 
-/// What a hit with no popularity figure is assumed to have: the middle.
-const UNKNOWN_POPULARITY: f32 = 0.5;
+/// Added for the app whose name is exactly what was typed: that one is first.
+const EXACT_NAME: f32 = 0.20;
+
+/// What a hit with no popularity figure is assumed to have: a little under the middle,
+/// so that an app known to be widely used is not outranked by one nothing is known of.
+const UNKNOWN_POPULARITY: f32 = 0.4;
 
 /// Things known about a hit beyond the summary itself.
 #[derive(Debug, Clone, Copy, Default)]
@@ -31,12 +37,19 @@ pub struct Context {
     pub of: usize,
     /// It is on the bundled Discover list.
     pub featured: bool,
+    /// It is one of the apps kept on record for the service that was searched for
+    /// (VacuumTube, for "youtube"): what the person is looking for, whatever its name.
+    pub related: bool,
 }
 
 /// 0.0 (unlikely) to 1.0 (certainly what was meant).
 pub fn score(query: &str, app: &AppSummary, context: Context) -> f32 {
     let position = if context.of > 1 { 1.0 - context.position as f32 / (context.of - 1) as f32 } else { 1.0 };
-    CLOSENESS * closeness(query, app)
+    let close = closeness(query, app);
+    // An app for the service that was named counts as a near match on its name.
+    let close = if context.related { close.max(0.85) } else { close };
+    CLOSENESS * close
+        + if close >= 1.0 { EXACT_NAME } else { 0.0 }
         + POPULARITY * popularity(app)
         + POSITION * position
         + NUDGES * nudges(app, context.featured)
@@ -92,8 +105,8 @@ fn closeness(query: &str, app: &AppSummary) -> f32 {
     } else if name_contains == total {
         0.60
     } else if covered == total {
-        // Every word found, some only in the description.
-        0.30 + 0.25 * (name_contains / total)
+        // Every word found, some only in the description: it says it is about this.
+        0.55 + 0.04 * (name_contains / total)
     } else {
         // The source matched on something we cannot see (a topic, the README).
         0.10 + 0.15 * (covered / total)
@@ -233,7 +246,10 @@ mod tests {
 
     fn order(query: &str, apps: Vec<AppSummary>) -> Vec<String> {
         let of = apps.len();
-        let hits = apps.into_iter().enumerate().map(|(position, a)| (a, Context { position, of, featured: false }));
+        let hits = apps
+            .into_iter()
+            .enumerate()
+            .map(|(position, a)| (a, Context { position, of, featured: false, related: false }));
         sort(query, hits.collect()).into_iter().map(|a| a.id.to_string()).collect()
     }
 
@@ -247,7 +263,9 @@ mod tests {
                 app("github:other/supernotes", "supernotes", "Notes, but super", Some(4_000)),
             ],
         );
-        assert_eq!(got, ["github:plain/notes", "github:other/supernotes", "github:big/markdown-suite"]);
+        // The exact name is first. After it, the app tens of thousands use and that says
+        // it does notes comes before a little-used one with the word inside its name.
+        assert_eq!(got, ["github:plain/notes", "github:big/markdown-suite", "github:other/supernotes"]);
     }
 
     #[test]
@@ -357,8 +375,50 @@ mod tests {
         flagged.warning = Some("out of date".into());
         assert!(score("tool", &flagged, Context::default()) < base);
         // The source's own order decides only when nothing else does.
-        let first = score("tool", &plain, Context { position: 0, of: 5, featured: false });
-        let last = score("tool", &plain, Context { position: 4, of: 5, featured: false });
+        let first = score("tool", &plain, Context { position: 0, of: 5, ..Default::default() });
+        let last = score("tool", &plain, Context { position: 4, of: 5, ..Default::default() });
         assert!(first > last && first - last < 0.06);
+    }
+}
+
+#[cfg(test)]
+mod weight_tests {
+    use super::*;
+    use crate::model::{AppId, Rating};
+
+    fn app(id: &str, name: &str, summary: &str) -> AppSummary {
+        let mut app = AppSummary::new(AppId::parse(id).unwrap(), name);
+        app.summary = summary.to_string();
+        app
+    }
+
+    #[test]
+    fn a_well_used_app_about_the_thing_outranks_obscure_ones_named_for_it() {
+        // What Flathub says of VacuumTube (2026-11-21): installs a month, downloads, ratings.
+        let mut vacuum = app("flathub:rocks.shy.VacuumTube", "VacuumTube", "YouTube for TV, on your PC");
+        vacuum.popularity = Some(15_000);
+        vacuum.downloads = Some(216_000);
+        vacuum.rating = Some(Rating { stars: 4.2, count: 81, spread: [0; 5] });
+        vacuum.verified = true;
+        let mut obscure = app("github:someone/youtube-thing", "youtube-thing", "A script");
+        obscure.popularity = Some(12);
+        let package = app("apt:youtube-helper", "youtube-helper", "helper for video sites");
+        let ranked = sort(
+            "youtube",
+            vec![(obscure, Context::default()), (package, Context::default()), (vacuum.clone(), Context::default())],
+        );
+        assert_eq!(ranked[0].name, "VacuumTube", "{:?}", ranked.iter().map(|a| a.name.as_str()).collect::<Vec<_>>());
+
+        // The app whose name is exactly what was typed is still first, popular or not.
+        let exact = app("github:someone/youtube", "youtube", "Unofficial client");
+        let ranked = sort("youtube", vec![(vacuum.clone(), Context::default()), (exact, Context::default())]);
+        assert_eq!(ranked[0].name, "youtube");
+
+        // And an app on record for the service counts as a near match even with no
+        // word of it in its name or description.
+        let listed = app("flathub:io.freetubeapp.FreeTube", "FreeTube", "A private video player");
+        let plain = score("youtube", &listed, Context::default());
+        let related = score("youtube", &listed, Context { related: true, ..Default::default() });
+        assert!(related > plain + 0.25, "{related} vs {plain}");
     }
 }

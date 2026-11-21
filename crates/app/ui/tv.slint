@@ -40,7 +40,7 @@ component TvTile inherits Rectangle {
                     spacing: 1 * u;
                     Text { text: app.name; color: Theme.text; font-size: 14 * u; font-weight: 700; overflow: elide; }
                     Text {
-                        text: app.has-update ? "Update available" : app.installed ? "Installed" : app.rating != "" ? "★ " + app.rating + "  ·  " + app.rating-count : app.headline != "" ? app.headline : app.author;
+                        text: app.has-update ? "Update available" : app.installed ? "Installed" : app.stat != "" ? app.stat : app.author;
                         color: app.has-update || app.installed ? Theme.accent : Theme.text-dim;
                         font-size: 11 * u;
                         font-weight: app.has-update || app.installed ? 700 : 400;

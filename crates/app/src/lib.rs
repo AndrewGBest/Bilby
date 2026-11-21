@@ -776,6 +776,17 @@ impl App {
         };
         // Downloads say "people use this" in words everyone knows; stars need explaining.
         let headline = if downloads.is_empty() { popularity.clone() } else { downloads.clone() };
+        let rating = app.rating.or_else(|| self.catalog().rating_for(&app.id));
+        // The one figure a tile always shows: what people think of it, else how many
+        // use it, and what it costs where it costs anything.
+        let price = if self.owns(&app.id) { "Owned".to_string() } else { app.price.clone().unwrap_or_default() };
+        let mut stat = match rating {
+            Some(r) => format!("★ {}  ·  {}", bilby_core::ratings::stars_text(r), ratings_text(r.count)),
+            None => headline.clone(),
+        };
+        if !price.is_empty() {
+            stat = if stat.is_empty() { price.clone() } else { format!("{price}  ·  {stat}") };
+        }
         if let Some(url) = &app.icon_url {
             self.icon_urls.lock().unwrap().insert(id.clone(), url.clone());
         }
@@ -784,8 +795,8 @@ impl App {
             || app.installed_version.is_some()
             || self.installed_elsewhere(&app.id, &app.name);
         let has_update = matches!(self.updates.lock().unwrap().get(&id), Some(UpdateStatus::Available { .. }));
-        let rating = app.rating.or_else(|| self.catalog().rating_for(&app.id));
         AppCard {
+            stat: stat.into(),
             tint: tint_for(&id),
             icon: picture_for(&id),
             id: id.into(),
@@ -805,7 +816,7 @@ impl App {
             // A forge counts the files of the releases it listed; Flathub counts every install.
             downloads_note: if app.id.source == SourceKind::Flathub { "in total" } else { "of recent versions" }.into(),
             downloads: downloads.into(),
-            price: if self.owns(&app.id) { "Owned".into() } else { app.price.clone().unwrap_or_default().into() },
+            price: price.into(),
             headline: headline.into(),
             verified: app.verified,
             more_sources: 0,
@@ -844,6 +855,7 @@ impl App {
             price: SharedString::new(),
             headline: SharedString::new(),
             verified: false,
+            stat: SharedString::new(),
             more_sources: 0,
             has_update,
         }
@@ -873,6 +885,7 @@ impl App {
             price: SharedString::new(),
             headline: SharedString::new(),
             verified: false,
+            stat: SharedString::new(),
             more_sources: 0,
             has_update: false,
         }
@@ -1011,20 +1024,26 @@ impl App {
                 let here = family.here(&available, &platform);
                 if let Some(first) = here.first().and_then(|m| AppId::parse(&m.id).map(|id| (id, *m))) {
                     // One tile for the service; its versions are chosen on its page.
-                    cards.retain(|card| !family.members.iter().any(|m| m.id.eq_ignore_ascii_case(card.id.as_str())));
+                    // The tile stands for the family's first choice here; its other
+                    // members stay in the results as themselves, ranked as near matches.
+                    cards.retain(|card| !card.id.as_str().eq_ignore_ascii_case(&first.1.id));
                     let mut app = AppSummary::new(first.0, family.name.clone());
                     app.summary = match here.len() {
                         1 => first.1.note.clone(),
                         n => format!("{n} versions work on this device. Choose one on its page."),
                     };
+                    app.author = "Choose a version on its page".to_string();
                     let mut card = self.card(&app);
                     card.more_sources = 0;
+                    card.stat =
+                        if here.len() > 1 { format!("{} versions", here.len()).into() } else { SharedString::new() };
                     card.headline =
                         if here.len() > 1 { format!("{} versions", here.len()).into() } else { SharedString::new() };
                     cards.insert(0, card);
                 }
             }
         }
+        let found = cards.clone();
         store.set_results(ModelRc::new(VecModel::from(cards)));
         self.show_app_sources(ui);
 
@@ -1109,11 +1128,26 @@ impl App {
         }
         store.set_tv_library_rows(ModelRc::new(VecModel::from(tv_library)));
         // TV home: search results, then the store.
+        // TV: a search is the whole page. The likeliest few first, then the rest by
+        // kind, so a game is not buried under packages or the other way round.
         let mut tv = Vec::new();
-        if !results.is_empty() {
-            tv.push(Section { title: format!("Results for “{query}”").into(), apps: self.cards(&results) });
+        if found.is_empty() {
+            tv.extend(to_sections(&featured));
+        } else {
+            const TOP: usize = 6;
+            let top: Vec<AppCard> = found.iter().take(TOP).cloned().collect();
+            tv.push(Section {
+                title: format!("Top results for “{query}”").into(),
+                apps: ModelRc::new(VecModel::from(top)),
+            });
+            for kind in ["Apps", "Games", "Web apps", "From developers", "System packages"] {
+                let of_kind: Vec<AppCard> =
+                    found.iter().skip(TOP).filter(|card| kind_of(card.id.as_str()) == kind).take(24).cloned().collect();
+                if !of_kind.is_empty() {
+                    tv.push(Section { title: kind.into(), apps: ModelRc::new(VecModel::from(of_kind)) });
+                }
+            }
         }
-        tv.extend(to_sections(&featured));
         store.set_tv_rows(ModelRc::new(VecModel::from(tv)));
     }
 
@@ -3353,6 +3387,17 @@ fn show_links(store: &Store) {
     let text = format!("{}\n{}", store.get_about(), store.get_notes());
     let links: Vec<SharedString> = links_in(&text).into_iter().map(SharedString::from).collect();
     store.set_about_links(ModelRc::new(VecModel::from(links)));
+}
+
+/// Which row of a search an app belongs in, by where it comes from.
+fn kind_of(id: &str) -> &'static str {
+    match id.split(':').next().unwrap_or("") {
+        "steam" => "Games",
+        "web" => "Web apps",
+        "github" | "gitlab" | "codeberg" => "From developers",
+        "apt" | "pacman" | "dnf" | "zypper" | "aur" => "System packages",
+        _ => "Apps",
+    }
 }
 
 /// The store's own picture, for its card in the Library.

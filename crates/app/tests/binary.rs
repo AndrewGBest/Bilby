@@ -197,10 +197,10 @@ fn tv_remote_and_typed_search_with_real_key_events() {
     assert_eq!(run.get("shell"), "tv");
     assert_eq!(run.get("results"), "3");
     assert_eq!(run.get("details_open"), "true");
-    // "play" is in Couchplay's name, so it is listed first; Right moves on to Tidewave,
-    // which only mentions a player in its description.
-    assert_eq!(run.get("app"), "github:tidewave/tidewave");
-    assert_eq!(run.get("first_option"), "APK · arm64 · TV");
+    // Tidewave is far more widely used and says it is a player, so it is listed first;
+    // Right moves on to Couchplay, which has "play" inside its name.
+    assert_eq!(run.get("app"), "github:couchplay/couchplay");
+    assert_eq!(run.get("first_option"), "APK · universal · TV");
     assert!(drew_something(&run.screenshot));
 }
 
