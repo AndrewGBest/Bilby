@@ -198,6 +198,21 @@ fn format_preference(format: Format, p: &Platform) -> i32 {
         },
         Os::Linux => {
             let family = p.linux.as_ref().map(|l| l.family).unwrap_or(LinuxFamily::Other);
+            // A system that is one read-only image is built around Flatpak: it is set
+            // up there, needs no password and no restart, and nothing it lacks (FUSE 2,
+            // on Fedora's) gets in the way. A system package there has to be added on
+            // top of the image and waits for a restart: the last thing to offer.
+            if p.linux.as_ref().is_some_and(|l| l.image) {
+                return match format {
+                    Flatpak => 30,
+                    AppImage => 24,
+                    Archive => 14,
+                    Binary => 12,
+                    Snap | SnapStore => 10,
+                    Deb | Rpm | PacmanPkg | RepoPackage | AurBuild => 6,
+                    _ => 5,
+                };
+            }
             let native = match family {
                 LinuxFamily::Debian => Some(Deb),
                 LinuxFamily::Fedora | LinuxFamily::Suse => Some(Rpm),
@@ -236,6 +251,20 @@ mod tests {
     }
     fn level(name: &str, preset: &str) -> Level {
         verdict(name, preset).level
+    }
+
+    #[test]
+    fn a_read_only_system_is_offered_the_flatpak_first_and_a_system_package_last() {
+        let mut kinoite = Platform::preset("linux-x64-fedora").unwrap();
+        kinoite.linux.as_mut().unwrap().image = true;
+        let score = |name: &str, p: &Platform| evaluate(&classify(name).unwrap(), p).score;
+        let (appimage, flatpak, rpm) =
+            ("Longboard-x86_64.AppImage", "Longboard-x86_64.flatpak", "longboard-1.0.x86_64.rpm");
+        assert!(score(flatpak, &kinoite) > score(appimage, &kinoite));
+        assert!(score(appimage, &kinoite) > score(rpm, &kinoite));
+        // On ordinary Fedora the system's own kind of package still leads.
+        let fedora = Platform::preset("linux-x64-fedora").unwrap();
+        assert!(score(rpm, &fedora) > score(appimage, &fedora));
     }
 
     /// Pick the winner the way the catalog does.

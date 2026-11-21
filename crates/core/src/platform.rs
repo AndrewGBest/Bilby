@@ -109,6 +109,10 @@ pub struct LinuxInfo {
     pub snap: bool,
     /// `paru`, `yay`, ... if one is installed.
     pub aur_helper: Option<String>,
+    /// The system is one read-only image (Fedora Kinoite or Silverblue, Bazzite,
+    /// SteamOS): packages are not installed into it in the ordinary way, and apps are
+    /// meant to come as Flatpaks.
+    pub image: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -242,6 +246,7 @@ impl Platform {
                 flatpak: !matches!(family, LinuxFamily::Alpine),
                 snap: false,
                 aur_helper: (family == LinuxFamily::Arch).then(|| "paru".to_string()),
+                image: false,
             })
         };
         let p = |os, arch, also_runs: &[Arch], linux: Option<LinuxInfo>, ff, os_name: &str| Platform {
@@ -489,6 +494,7 @@ fn detect_linux() -> LinuxInfo {
         flatpak: on_path("flatpak"),
         snap: on_path("snap"),
         aur_helper: ["paru", "yay", "pikaur", "aura"].iter().find(|h| on_path(h)).map(|h| h.to_string()),
+        image: Path::new("/run/ostree-booted").exists() || on_path("steamos-update"),
     }
 }
 
