@@ -2436,6 +2436,9 @@ fn an_appimage_on_a_system_without_fuse_has_it_installed_along_with_the_app() {
     }
     let _ = (&dirs, id);
 
+    // The page never sends the person off to install something themselves.
+    assert!(!note.contains("Install your system"), "{note}");
+
     // With FUSE in place to begin with, nothing is said and nothing extra is run.
     let (ui, app, dirs) = start_with_fuse(Fuse { library: true, mounter: true });
     app.open(&ui, id);
@@ -2999,4 +3002,46 @@ fn updating_bilby_itself_repoints_its_menu_entry_and_offers_to_restart() {
     let launched = started.lock().unwrap().clone();
     assert_eq!(launched.len(), 1);
     assert!(launched[0].starts_with(&dirs.applications), "{launched:?}");
+}
+
+#[test]
+fn where_fuse_cannot_be_installed_the_app_is_unpacked_instead_of_asking_the_person() {
+    use bilby_core::needs::Fuse;
+    init_backend();
+    bilby_core::demo::DOWNLOAD_STEP_MS.store(0, Ordering::Relaxed);
+    let dirs = dirs_in(&temp_root());
+    std::fs::create_dir_all(&dirs.config).unwrap();
+    std::fs::write(dirs.config.join("demo-state.json"), r#"{"settings":{"welcomed":true}}"#).unwrap();
+    // A system whose repositories have no FUSE 2 package at all.
+    let options = Options {
+        demo: true,
+        inline: true,
+        platform: Platform::preset("linux-x64-fedora"),
+        shell: Some(Shell::Desktop),
+        dirs: Some(dirs.clone()),
+        opener: Some(Arc::new(|_: &std::path::Path| Ok(()))),
+        fuse: Some(Fuse { library: false, mounter: true }),
+        ..Default::default()
+    };
+    let (ui, app) = build(&options).unwrap();
+    let store = ui.global::<Store>();
+    let Some(id) =
+        ["github:tidewave/tidewave", "github:lumen-labs/lumen", "github:kestrel-sh/kestrel"].into_iter().find(|id| {
+            app.open(&ui, id);
+            store.get_options().row_data(0).is_some_and(|o| o.label.contains("AppImage"))
+        })
+    else {
+        return; // no AppImage is the best file on this made-up system: nothing to check
+    };
+    let note = store.get_need_note();
+    assert!(note.contains("Bilby will unpack it") && note.contains("Nothing for you to do"), "{note}");
+    assert!(
+        !note.contains("Install your system") && store.get_helper_id().is_empty(),
+        "no errand for the person: {note}"
+    );
+    // Installing goes ahead without a package manager or a password.
+    store.invoke_install(0);
+    assert_eq!(store.get_install_state(), 2, "{}", store.get_install_message());
+    assert!(!dirs.elevate.with_extension("log").exists(), "nothing was asked of the system");
+    let _ = id;
 }

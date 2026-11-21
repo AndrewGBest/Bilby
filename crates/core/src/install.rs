@@ -349,6 +349,20 @@ fn appimage_icon(dirs: &Dirs, id: &str, appimage: &Path) -> Option<PathBuf> {
     if !cfg!(target_os = "linux") {
         return None;
     }
+    // An app that was unpacked has its icon lying in its folder.
+    if let Some(folder) = unpacked_folder(appimage) {
+        let icon = std::fs::canonicalize(folder.join(".DirIcon"))
+            .ok()
+            .filter(|icon| icon.starts_with(&folder) && icon.is_file())?;
+        let svg = std::fs::read(&icon).is_ok_and(|bytes| !bytes.starts_with(b"\x89PNG"));
+        let slug: String =
+            id.chars().map(|c| if c.is_ascii_alphanumeric() { c.to_ascii_lowercase() } else { '-' }).collect();
+        let kept = dirs.applications.join(".icons");
+        std::fs::create_dir_all(&kept).ok()?;
+        let to = kept.join(format!("{slug}.{}", if svg { "svg" } else { "png" }));
+        std::fs::copy(&icon, &to).ok()?;
+        return Some(to);
+    }
     let slug: String =
         id.chars().map(|c| if c.is_ascii_alphanumeric() { c.to_ascii_lowercase() } else { '-' }).collect();
     let work = dirs.cache.join(format!("icon-of-{slug}"));
@@ -517,6 +531,77 @@ pub fn write_web_shortcut(dirs: &Dirs, id: &str, name: &str, url: &str) -> Resul
         }
     }
     Ok(path)
+}
+
+/// The folder of an app that was unpacked, when `program` is the `AppRun` inside one.
+pub fn unpacked_folder(program: &Path) -> Option<PathBuf> {
+    let folder = program.parent()?;
+    let is_one = program.file_name().is_some_and(|name| name == "AppRun")
+        && folder.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("AppDir"));
+    is_one.then(|| folder.to_path_buf())
+}
+
+/// Unpack an AppImage into a folder beside it and give back the program to start.
+///
+/// An AppImage normally mounts itself with FUSE each time it starts. Asked to, it
+/// will instead write its contents out as an ordinary folder, and the `AppRun` in
+/// that folder starts the app with no FUSE involved, no package to install and no
+/// password. The cost is disk: the app takes its full size rather than its packed one.
+/// The AppImage itself is removed once the folder is in place. [Run for real with
+/// Longboard's AppImage on Debian 13.]
+pub fn unpack_appimage(appimage: &Path) -> Result<PathBuf> {
+    use std::process::{Command, Stdio};
+    let cannot = |why: &str| Error::Unsupported(format!("The app could not be unpacked: {why}"));
+    let home = appimage.parent().ok_or_else(|| cannot("it has no folder"))?;
+    let stem = appimage
+        .file_stem()
+        .map(|s| s.to_string_lossy().to_string())
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| cannot("it has no name"))?;
+    let work = home.join(format!(".unpacking-{stem}"));
+    let _ = std::fs::remove_dir_all(&work);
+    std::fs::create_dir_all(&work)?;
+    let ran = Command::new(appimage)
+        .arg("--appimage-extract")
+        .current_dir(&work)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
+    let inside = work.join("squashfs-root");
+    let whole = ran.is_ok_and(|status| status.success()) && inside.join("AppRun").exists();
+    if !whole {
+        let _ = std::fs::remove_dir_all(&work);
+        return Err(cannot("it is not a kind of AppImage that can unpack itself"));
+    }
+    let folder = home.join(format!("{stem}.AppDir"));
+    let _ = std::fs::remove_dir_all(&folder);
+    std::fs::rename(&inside, &folder)?;
+    let _ = std::fs::remove_dir_all(&work);
+    let _ = std::fs::remove_file(appimage);
+    let program = folder.join("AppRun");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if let Ok(meta) = std::fs::metadata(&program) {
+            let mut permissions = meta.permissions();
+            permissions.set_mode(permissions.mode() | 0o755);
+            let _ = std::fs::set_permissions(&program, permissions);
+        }
+    }
+    Ok(program)
+}
+
+/// Remove what the store placed for an app: the file, or the whole folder of an app
+/// that was unpacked. Only ever inside the store's own Applications folder.
+pub fn remove_placed(dirs: &Dirs, program: &Path) -> bool {
+    if !program.starts_with(&dirs.applications) {
+        return false;
+    }
+    match unpacked_folder(program) {
+        Some(folder) => std::fs::remove_dir_all(folder).is_ok(),
+        None => std::fs::remove_file(program).is_ok(),
+    }
 }
 
 /// Does this step fetch a file into the downloads folder? Package managers, Flatpak,
@@ -1341,5 +1426,77 @@ mod launch_tests {
         assert!(launch_watched(&script("stays", "sleep 3"), &[], std::time::Duration::from_millis(300)).is_ok());
         assert!(launch_watched(&script("done", "exit 0"), &[], watch).is_ok());
         let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+#[cfg(all(test, unix))]
+mod unpack_tests {
+    use super::*;
+    use std::os::unix::fs::PermissionsExt;
+
+    /// A stand-in AppImage: a script that unpacks itself the way a real one does.
+    fn stand_in(dir: &Path, name: &str, works: bool) -> PathBuf {
+        let body = if works {
+            "#!/bin/sh\nif [ \"$1\" = \"--appimage-extract\" ]; then mkdir -p squashfs-root/usr/share; printf '#!/bin/sh\\necho started\\n' > squashfs-root/AppRun; chmod 644 squashfs-root/AppRun; printf '\\211PNG....' > squashfs-root/usr/share/app.png; ln -s usr/share/app.png squashfs-root/.DirIcon; exit 0; fi\nexit 1\n"
+        } else {
+            "#!/bin/sh\nexit 1\n"
+        };
+        let path = dir.join(name);
+        std::fs::write(&path, body).unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).unwrap();
+        path
+    }
+
+    #[test]
+    fn an_appimage_is_unpacked_into_a_folder_that_runs_without_fuse() {
+        let root = std::env::temp_dir().join(format!("bilby-unpack-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let dirs = Dirs {
+            applications: root.join("Applications"),
+            cache: root.join("cache"),
+            menu: root.join("menu"),
+            ..Dirs::for_current_user()
+        };
+        std::fs::create_dir_all(&dirs.applications).unwrap();
+        let appimage = stand_in(&dirs.applications, "Gauge-2.1.0-x86_64.AppImage", true);
+
+        let program = unpack_appimage(&appimage).unwrap();
+        assert_eq!(program, dirs.applications.join("Gauge-2.1.0-x86_64.AppDir").join("AppRun"));
+        assert!(program.is_file() && !appimage.exists(), "the folder takes the file's place");
+        assert_ne!(std::fs::metadata(&program).unwrap().permissions().mode() & 0o111, 0, "and can be started");
+        assert!(!dirs.applications.join(".unpacking-Gauge-2.1.0-x86_64").exists(), "nothing is left lying about");
+        assert_eq!(unpacked_folder(&program), Some(dirs.applications.join("Gauge-2.1.0-x86_64.AppDir")));
+        assert_eq!(unpacked_folder(&dirs.applications.join("x.AppImage")), None);
+        // It starts like any program.
+        assert!(launch_watched(&program, &[], std::time::Duration::from_millis(800)).is_ok());
+
+        // Its menu entry starts the folder's program and carries its icon.
+        let entry = add_menu_entry(&dirs, "own:workshop/gauge", "Gauge", &program).unwrap();
+        let text = std::fs::read_to_string(entry).unwrap();
+        assert!(text.contains("Gauge-2.1.0-x86_64.AppDir/AppRun") && text.contains("Icon="), "{text}");
+
+        // Removing it removes the whole folder, and nothing outside Applications.
+        assert!(!remove_placed(&dirs, &root.join("elsewhere").join("AppRun")));
+        assert!(remove_placed(&dirs, &program));
+        assert!(!dirs.applications.join("Gauge-2.1.0-x86_64.AppDir").exists());
+
+        // One that cannot unpack itself is left as it was, with the reason.
+        let stubborn = stand_in(&dirs.applications, "Old.AppImage", false);
+        assert!(unpack_appimage(&stubborn).unwrap_err().to_string().contains("could not be unpacked"));
+        assert!(stubborn.exists());
+        let _ = std::fs::remove_dir_all(&root);
+    }
+}
+
+#[cfg(all(test, unix))]
+mod unpack_for_real {
+    /// Not a check that runs by itself: unpacks a real AppImage named in
+    /// `BILBY_APPIMAGE` and prints the program to start.
+    #[test]
+    #[ignore]
+    fn unpack_the_named_appimage() {
+        let Ok(path) = std::env::var("BILBY_APPIMAGE") else { return };
+        let program = super::unpack_appimage(std::path::Path::new(&path)).unwrap();
+        println!("PROGRAM {}", program.display());
     }
 }

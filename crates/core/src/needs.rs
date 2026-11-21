@@ -117,8 +117,9 @@ pub fn for_appimage(
     let _ = sure;
     let why = match &package {
         // The store takes care of it: say what will happen, not what to go and do.
-        Some(_) => "This app needs FUSE 2 to run, which this system does not have. Bilby will install it for you along with the app; your system will ask for your password.".to_string(),
-        None => "This app needs FUSE 2 to run, which this system does not have, and Bilby could not find it in your system's repositories. Install your system's FUSE 2 package (often called libfuse2 or fuse2), then open the app again.".to_string(),
+        Some(_) => "This app needs FUSE 2 to run, which this system does not have. Bilby will install it for you along with the app; your system will ask for your password. If that cannot be done, Bilby unpacks the app so that it runs without it.".to_string(),
+        // No package to be had: the app is unpacked instead, which needs no FUSE at all.
+        None => "This app usually needs FUSE 2 to run, which this system does not have. Bilby will unpack it instead, so that it runs without it. Nothing for you to do.".to_string(),
     };
     Some(Need { action: "Install FUSE".to_string(), why, package })
 }
@@ -149,7 +150,11 @@ mod tests {
         assert_eq!(older.package.unwrap().to_string(), "apt:libfuse2");
         // No package to be had: say what to look for instead of offering a button.
         let none = for_appimage(&debian, modern, None, &|_| false).unwrap();
-        assert!(none.package.is_none() && none.why.contains("libfuse2 or fuse2"));
+        assert!(
+            none.package.is_none() && none.why.contains("Bilby will unpack it"),
+            "nothing is left to the person: {}",
+            none.why
+        );
 
         // With the library, nothing is said; nor on Windows.
         assert!(for_appimage(&debian, Fuse { library: true, mounter: false }, None, &all).is_none());

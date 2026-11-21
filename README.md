@@ -108,8 +108,10 @@ There is no Android package yet, and no Flatpak
   a terminal on the build, and shows the command only if it cannot find a terminal.
 - Downloads are checked against the checksum the source publishes, when there is one.
 - Bilby checks what an app needs before you download it. An AppImage on a Linux system
-  without FUSE 2 says so on its page, and Bilby installs the missing piece from your
-  distribution along with the app. An app that closes the moment it starts is reported with
+  without FUSE 2 says so on its page, and Bilby deals with it: it installs the missing
+  piece from your distribution along with the app, or, where that cannot be done,
+  unpacks the app so that it runs without it. Either way there is nothing for you to
+  do. An app that closes the moment it starts is reported with
   the reason.
 - Every other file and every older version is one press away, never hidden for good.
 - For things only another store can install (Steam, the Mac App Store), Bilby opens

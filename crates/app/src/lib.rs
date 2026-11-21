@@ -630,6 +630,8 @@ pub struct App {
     /// A package the app on screen needs before it will run, which the store installs
     /// along with it.
     needed: Mutex<Option<AppId>>,
+    /// The app on screen is an AppImage and this system lacks the FUSE it would use.
+    lacks_fuse: std::sync::atomic::AtomicBool,
     /// The Steam account signed in to, kept beside the saved state for quick lookups.
     steam: std::sync::RwLock<Option<bilby_core::steam_account::Account>>,
     /// Bumped whenever a Steam sign-in starts or is cancelled, so a late answer is dropped.
@@ -1523,6 +1525,7 @@ impl App {
                 }
             }
         }
+        self.lacks_fuse.store(!need_note.is_empty(), Ordering::SeqCst);
         store.set_need_note(need_note.into());
         *self.needed.lock().unwrap() = needed;
         // The same choices as rows for the TV, without the one already showing.
@@ -2601,12 +2604,18 @@ impl App {
         let weak = self.ui.clone();
         let work_option = option.clone();
         // What it needs first (FUSE, for an AppImage) is installed first, as part of this.
-        let requirement =
-            if option.plan.action == Action::PlaceAppImage { self.needed.lock().unwrap().clone() } else { None };
+        let placing = option.plan.action == Action::PlaceAppImage;
+        let requirement = if placing { self.needed.lock().unwrap().clone() } else { None };
+        let lacks_fuse = placing && self.lacks_fuse.load(Ordering::SeqCst);
         self.job(
             move |app| {
+                // FUSE from the system's repositories where it can be had. Where it
+                // cannot (no such package, or the install did not go through), the app
+                // is unpacked instead, which needs none. Either way the person is not
+                // sent to do anything.
+                let mut unpack = lacks_fuse && requirement.is_none();
                 if let Some(package) = &requirement {
-                    app.install_requirement(package)?;
+                    unpack = app.install_requirement(package).is_err();
                 }
                 let mut last_percent = 0u64;
                 let mut progress = |done: u64, total: Option<u64>| {
@@ -2634,14 +2643,27 @@ impl App {
                     !cancel.load(Ordering::SeqCst)
                 };
                 let http = app.catalog().http();
-                install::execute(
+                let mut outcome = install::execute(
                     &work_option.plan,
                     &work_option.asset,
                     http.as_ref(),
                     &app.dirs_for_download(),
                     app.opener.as_ref(),
                     &mut progress,
-                )
+                )?;
+                if unpack {
+                    if let Some(file) = outcome.file.clone() {
+                        match install::unpack_appimage(&file) {
+                            Ok(program) => {
+                                outcome.file = Some(program);
+                                outcome.message = format!("{} Unpacked, so it runs here without FUSE.", outcome.message);
+                            }
+                            // Left as the file it is; opening it will say what is wrong.
+                            Err(e) => outcome.message = format!("{} {e}", outcome.message),
+                        }
+                    }
+                }
+                Ok(outcome)
             },
             move |app, ui, result| {
                 let store = ui.global::<Store>();
@@ -2694,8 +2716,8 @@ impl App {
                             let previous =
                                 app.state().installed(&id).filter(|a| a.store_managed).and_then(|a| a.path.clone());
                             if let Some(previous) = previous.map(PathBuf::from) {
-                                if previous != *file && previous.starts_with(&app.dirs.applications) {
-                                    let _ = std::fs::remove_file(previous);
+                                if previous != *file {
+                                    install::remove_placed(&app.dirs, &previous);
                                 }
                             }
                         } else if let (true, Some(file)) = (outcome.store_managed, outcome.file.as_ref()) {
@@ -2708,8 +2730,8 @@ impl App {
                             let previous =
                                 app.state().installed(&id).filter(|a| a.store_managed).and_then(|a| a.path.clone());
                             if let Some(previous) = previous.map(PathBuf::from) {
-                                if previous != *file && previous.starts_with(&app.dirs.applications) {
-                                    let _ = std::fs::remove_file(previous);
+                                if previous != *file {
+                                    install::remove_placed(&app.dirs, &previous);
                                 }
                             }
                         }
@@ -3396,23 +3418,46 @@ impl App {
             // A program is watched for a moment as it starts, away from the interface:
             // one that closes straight away says why.
             let requirement = self.needed.lock().unwrap().clone();
-            let said = match requirement {
-                Some(_) => format!("Installing what {} needs, then opening it…", store.get_app().name),
-                None => format!("Opening {}…", store.get_app().name),
+            let lacks_fuse = self.lacks_fuse.load(Ordering::SeqCst);
+            let said = match (lacks_fuse, &requirement) {
+                (true, Some(_)) => format!("Installing what {} needs, then opening it…", store.get_app().name),
+                (true, None) => {
+                    format!("Getting {} ready to run on this system, then opening it…", store.get_app().name)
+                }
+                _ => format!("Opening {}…", store.get_app().name),
             };
             self.toast(ui, &said, false);
             let launcher = self.launcher.clone();
+            let app_id = id.clone();
+            let app_name = store.get_app().name.to_string();
             self.job(
                 move |app| {
-                    if let Some(package) = &requirement {
-                        app.install_requirement(package)?;
+                    // As when installing: FUSE where it can be had, else unpack the app.
+                    let mut program = path.clone();
+                    let mut unpack = lacks_fuse && requirement.is_none();
+                    if let (true, Some(package)) = (lacks_fuse, &requirement) {
+                        unpack = app.install_requirement(package).is_err();
                     }
-                    launcher(&path)
+                    if unpack {
+                        program = install::unpack_appimage(&path)?;
+                    }
+                    launcher(&program)?;
+                    Ok((program != path).then_some(program))
                 },
-                |app, ui, started: bilby_core::Result<()>| {
-                    if let Err(e) = started {
-                        app.toast(ui, &format!("Couldn't open it. {e}"), true);
+                move |app, ui, started: bilby_core::Result<Option<PathBuf>>| match started {
+                    // It runs from its folder now: the library and the menu follow.
+                    Ok(Some(program)) => {
+                        let now = program.display().to_string();
+                        app.update_state(ui, |state| {
+                            if let Some(entry) = state.library.iter_mut().find(|a| a.id == app_id) {
+                                entry.path = Some(now.clone());
+                            }
+                        });
+                        let _ = install::add_menu_entry(&app.dirs, &app_id, &app_name, &program);
+                        app.show_app_sources(ui);
                     }
+                    Ok(None) => {}
+                    Err(e) => app.toast(ui, &format!("Couldn't open it. {e}"), true),
                 },
             );
             return;
@@ -3460,7 +3505,7 @@ impl App {
         // Only files the store itself placed, and only inside its own Applications folder.
         if let (true, Some(path)) = (entry.store_managed, entry.path.as_deref()) {
             let path = PathBuf::from(path);
-            if path.starts_with(&self.dirs.applications) && std::fs::remove_file(&path).is_ok() {
+            if install::remove_placed(&self.dirs, &path) {
                 message = format!("{} uninstalled", entry.name);
             }
         }
@@ -3625,6 +3670,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         })),
         fuse_given: options.fuse.is_some() || options.demo,
         needed: Mutex::new(None),
+        lacks_fuse: std::sync::atomic::AtomicBool::new(false),
         steam: std::sync::RwLock::new(None),
         steam_generation: AtomicU64::new(0),
         elsewhere: std::sync::RwLock::new(Elsewhere::default()),
