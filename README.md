@@ -205,7 +205,12 @@ out-of-date packages, but an app is only as trustworthy as whoever published it.
 
 ## Licence
 
-Bilby's own code is intended to be GPL-3.0-only, and the source is marked that way, but
-the repository has no licence file yet and the choice may change. Read
-[the licensing note](docs/DESIGN.md#10-ui-toolkit) before relying on it. This is about
-Bilby itself; the apps it lists have whatever licences their publishers chose.
+Bilby is free software under the [GNU General Public License, version 3](LICENSE)
+(GPL-3.0-only). You may use, study, share and change it; if you share a changed
+version, it must be under the same licence. It comes with no warranty.
+
+That licence covers Bilby itself. The apps it lists are not part of Bilby and have
+whatever licences their publishers chose, including paid and closed-source ones.
+
+Why this licence: the interface toolkit, Slint, is used under GPLv3
+([details](docs/DESIGN.md#10-ui-toolkit)).

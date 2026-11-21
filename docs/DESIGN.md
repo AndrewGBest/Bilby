@@ -1064,7 +1064,9 @@ commercial licence, or a royalty-free licence that covers desktop, mobile and we
 applications, requires attribution, and excludes embedded systems. **[verified]** by
 reading `LICENSES/LicenseRef-Slint-Royalty-free-2.0.md` in the crate. Whether a TV
 counts as desktop/mobile or as embedded under that text is not obvious, so this
-repository declares `GPL-3.0-only`, which is unambiguous. Choosing a permissive licence
+repository is licensed `GPL-3.0-only`, which is unambiguous: the full text is in
+`LICENSE`, and every crate declares it. All 681 dependencies were checked on 2026-11-21
+and none has a licence that conflicts with it. Choosing a permissive licence
 for the store would mean either the royalty-free terms (and settling the TV question
 with Slint) or a different toolkit; `crates/core` has no Slint dependency and could be
 licensed separately.
