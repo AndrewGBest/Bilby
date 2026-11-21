@@ -3,6 +3,7 @@
 | File | What it is | From | Licence |
 |---|---|---|---|
 | `index.json` | The starter apps on the home page | Written for Bilby | GPL-3.0-only, with Bilby |
+| `essentials.json` | The sixty or so apps and websites nearly everyone expects, with the ids each goes by at every source | Written for Bilby; every id checked to exist | GPL-3.0-only, with Bilby |
 | `related.json` | Apps that are different ways to use one service | Written for Bilby; every id checked to exist | GPL-3.0-only, with Bilby |
 | `web.json` | About ninety well-known websites, with names and what each is for | Written for Bilby; every address checked to answer | GPL-3.0-only, with Bilby |
 | `web-top.txt` | Hosts among the 1,000 most visited by Chrome's users | The Chrome UX Report, through [zakird/crux-top-lists](https://github.com/zakird/crux-top-lists); tidied (see the file's first line) | Chrome UX Report data, by Google. Stated as CC BY-SA 4.0 by the Tranco project, which uses it; Google's own licence page was not readable when this was written |

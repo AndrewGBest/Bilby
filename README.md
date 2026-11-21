@@ -74,8 +74,10 @@ There is no Android package yet, and no Flatpak
   Windows, Homebrew and the Mac App Store on a Mac, Flathub, the Snap Store and your
   distribution's repositories on Linux (tens of thousands of packages on a typical
   system), plus Steam and every project with releases on GitHub and GitLab.
-- Or browse the home page. It shows what is popular, trending and newly updated on
-  Flathub when you are on Linux, and a few well-known apps to start from everywhere.
+- Or browse the home page. It opens with the apps and sites nearly everyone looks for
+  (a browser, a video player, the big names), each in the version for your device:
+  a short list chosen by people, which you can switch off in Settings. Below it are
+  web apps by purpose and, on Linux, what is popular and trending on Flathub.
 - One app is one result, even when several sources have it. Its page shows which
   source the button uses and lets you switch.
 - Different ways to use the same service are gathered on one page: for YouTube,
@@ -204,6 +206,10 @@ out-of-date packages, but an app is only as trustworthy as whoever published it.
 - **GitHub's limit.** Without signing in, GitHub allows 60 requests an hour for
   everyone on your network. Bilby tells you when it runs out. Signing in to GitHub in
   Settings (you type a short code on GitHub's site) raises it to 5,000. Flathub and your distribution's packages have no such limit.
+- **Where things go.** Downloaded files are saved in `Downloads/bilby` in your home
+  folder unless you choose another folder in Settings, where you can also have Bilby
+  ask each time. AppImages are then moved to `Applications` in your home folder;
+  packages, Flatpaks and store apps go where your system puts them.
 - **Reduce motion.** Settings can turn animations off.
 - **From a terminal.** `bilby-cli` can search, show, install and check for updates, and
   can export your library to move it to another device. It does not do everything the

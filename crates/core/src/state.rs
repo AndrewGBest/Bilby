@@ -34,6 +34,14 @@ pub struct Settings {
     pub reduce_motion: bool,
     /// Sources switched off, by their short names (`flathub`, `steam`, ...).
     pub disabled_sources: Vec<String>,
+    /// Where downloaded files go, when the person chose somewhere other than the
+    /// usual folder. Empty for the usual one.
+    pub downloads_dir: String,
+    /// Ask where to save each download. Off unless the person switched it on.
+    pub ask_where: bool,
+    /// Do not recommend the hand-kept list of apps nearly everyone expects: no rows
+    /// of them on the home page, no extra weight in a search.
+    pub hide_essentials: bool,
     /// Family mode: nothing for adults anywhere, in any form.
     pub family_mode: bool,
     /// Adult things may appear on the home page (covered, as everywhere).

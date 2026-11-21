@@ -25,6 +25,10 @@ const NUDGES: f32 = 0.10;
 /// Added for the app whose name is exactly what was typed: that one is first.
 const EXACT_NAME: f32 = 0.20;
 
+/// Added for an app on the hand-kept list of what nearly everyone expects: enough to
+/// lift the real Firefox above its look-alikes, not enough to beat an exact name.
+const ESSENTIAL: f32 = 0.12;
+
 /// What a hit with no popularity figure is assumed to have: a little under the middle,
 /// so that an app known to be widely used is not outranked by one nothing is known of.
 const UNKNOWN_POPULARITY: f32 = 0.4;
@@ -40,6 +44,8 @@ pub struct Context {
     /// It is one of the apps kept on record for the service that was searched for
     /// (VacuumTube, for "youtube"): what the person is looking for, whatever its name.
     pub related: bool,
+    /// It is one of the apps nearly everyone expects (`essentials`), at this source.
+    pub essential: bool,
 }
 
 /// 0.0 (unlikely) to 1.0 (certainly what was meant).
@@ -50,6 +56,7 @@ pub fn score(query: &str, app: &AppSummary, context: Context) -> f32 {
     let close = if context.related { close.max(0.85) } else { close };
     CLOSENESS * close
         + if close >= 1.0 { EXACT_NAME } else { 0.0 }
+        + if context.essential { ESSENTIAL } else { 0.0 }
         + POPULARITY * popularity(app)
         + POSITION * position
         + NUDGES * nudges(app, context.featured)
@@ -251,7 +258,7 @@ mod tests {
         let hits = apps
             .into_iter()
             .enumerate()
-            .map(|(position, a)| (a, Context { position, of, featured: false, related: false }));
+            .map(|(position, a)| (a, Context { position, of, featured: false, related: false, essential: false }));
         sort(query, hits.collect()).into_iter().map(|a| a.id.to_string()).collect()
     }
 
@@ -422,5 +429,27 @@ mod weight_tests {
         let plain = score("youtube", &listed, Context::default());
         let related = score("youtube", &listed, Context { related: true, ..Default::default() });
         assert!(related > plain + 0.25, "{related} vs {plain}");
+    }
+
+    #[test]
+    fn an_app_everyone_expects_is_lifted_above_its_look_alikes() {
+        // Two browsers' packages with the word in their names, nothing known of either.
+        let real = app("winget:Mozilla.Firefox", "Mozilla Firefox", "Web browser");
+        let other = app("winget:Someone.FirefoxTheme", "Firefox Theme Pack", "Themes");
+        let ranked = sort(
+            "firefox",
+            vec![
+                (other.clone(), Context::default()),
+                (real.clone(), Context { essential: true, ..Default::default() }),
+            ],
+        );
+        assert_eq!(ranked[0].id, real.id);
+        // It does not beat the app whose name is exactly what was typed.
+        let exact = app("github:someone/firefox", "firefox", "A thing called firefox");
+        let ranked = sort(
+            "firefox",
+            vec![(real, Context { essential: true, ..Default::default() }), (exact.clone(), Context::default())],
+        );
+        assert_eq!(ranked[0].id, exact.id);
     }
 }

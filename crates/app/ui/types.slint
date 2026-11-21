@@ -280,6 +280,10 @@ export global Store {
     in property <int> signin-state;
     in property <string> signin-code;
     in property <string> downloads-dir;
+    // The person chose that folder; false for the usual one.
+    in property <bool> downloads-custom;
+    // Ask where to save each download.
+    in property <bool> ask-where;
     // A newer release of the store itself that has a file for this device, "" when none.
     in property <string> store-update;
     // GitHub's remaining request allowance, in words. Empty until known.
@@ -292,6 +296,8 @@ export global Store {
     in property <[SourceChoice]> sources;
     // Family mode: nothing for adults anywhere. Adult things on the home page only
     // where asked for. A PIN, where set, guards these and adult content.
+    // Recommend the hand-kept list of apps nearly everyone expects.
+    in property <bool> show-essentials;
     in property <bool> family-mode;
     in property <bool> adult-on-home;
     // Adult things shown as they are: no cover, no question.
@@ -355,6 +361,12 @@ export global Store {
     callback check-store-update();
     callback set-interface(int);
     callback set-source(string, bool);
+    // Choose the downloads folder with the system's dialog, or set it by its path
+    // ("" goes back to the usual one).
+    callback choose-downloads();
+    callback set-downloads(string);
+    callback set-ask-where(bool);
+    callback set-essentials(bool);
     callback set-family-mode(bool);
     callback set-adult-on-home(bool);
     callback set-adult-uncovered(bool);

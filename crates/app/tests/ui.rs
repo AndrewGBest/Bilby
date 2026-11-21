@@ -1972,7 +1972,7 @@ fn signing_in_to_github_shows_a_code_and_keeps_the_token_it_is_given() {
     tv.press(Key::RightArrow);
     tv.press(Key::RightArrow);
     tv.press(Key::Return);
-    for _ in 0..11 {
+    for _ in 0..12 {
         tv.press(Key::DownArrow);
     }
     tv.press(Key::Return);
@@ -2293,7 +2293,7 @@ fn the_tv_has_a_settings_tab_with_every_setting_reachable_by_remote() {
     // Sources can be switched off from the sofa too: Down to the first of them, OK.
     let sources: Vec<SourceChoice> = s.store().get_sources().iter().collect();
     assert!(sources.len() >= 2 && sources.iter().all(|c| c.on));
-    for _ in 0..14 {
+    for _ in 0..15 {
         s.press(Key::DownArrow);
     }
     s.press(Key::Return);
@@ -2497,6 +2497,9 @@ fn a_site_nobody_listed_by_hand_is_still_recognised_as_adult() {
     assert!(!s.store().get_results().iter().any(|c| c.id.contains(typed.as_str())), "and gone in Family mode");
 }
 
+// The entry it writes is Linux's kind; the Windows and macOS shortcuts go to places
+// a test has no business writing to.
+#[cfg(target_os = "linux")]
 #[test]
 fn on_a_computer_a_web_app_opens_in_the_persons_own_browser() {
     init_backend();
@@ -2688,4 +2691,104 @@ fn family_mode_also_takes_out_gambling_and_piracy_sites() {
         s.store().get_details_error()
     );
     assert_eq!(s.store().get_options().row_count(), 0);
+}
+
+#[test]
+fn recommending_the_apps_everyone_knows_can_be_switched_off() {
+    let s = start("linux-x64-debian", Shell::Desktop);
+    assert!(s.store().get_show_essentials(), "on to begin with");
+    s.store().invoke_set_essentials(false);
+    assert!(!s.store().get_show_essentials() && s.saved().settings.hide_essentials);
+    s.store().invoke_set_essentials(true);
+    assert!(s.store().get_show_essentials() && !s.saved().settings.hide_essentials);
+    // On a TV it is a row in Settings.
+    let tv = start_with("linux-tv", Shell::Tv, Some(r#"{"settings":{"welcomed":true,"reduce_motion":true}}"#));
+    tv.press(Key::UpArrow);
+    tv.press(Key::UpArrow);
+    tv.press(Key::RightArrow);
+    tv.press(Key::RightArrow);
+    tv.press(Key::Return);
+    for _ in 0..4 {
+        tv.press(Key::DownArrow);
+    }
+    assert!(tv.has("Recommend the apps everyone knows, on Home and in searches"));
+    tv.press(Key::Return);
+    assert!(tv.saved().settings.hide_essentials, "OK on the row switches it off");
+}
+
+// ---- where downloads go ----
+
+#[test]
+fn the_downloads_folder_can_be_chosen_and_each_download_can_ask() {
+    init_backend();
+    let root = temp_root();
+    let dirs = dirs_in(&root);
+    std::fs::create_dir_all(&dirs.config).unwrap();
+    std::fs::write(dirs.config.join("demo-state.json"), r#"{"settings":{"welcomed":true}}"#).unwrap();
+    let state_file = dirs.config.join("demo-state.json");
+    // The folder chooser: answers with whatever the test last put here.
+    let answer: Arc<Mutex<bilby::Picked>> = Arc::new(Mutex::new(bilby::Picked::Cancelled));
+    let asked: Arc<Mutex<usize>> = Arc::default();
+    let (reply, count) = (answer.clone(), asked.clone());
+    let options = Options {
+        demo: true,
+        inline: true,
+        platform: Platform::preset("linux-x64-debian"),
+        shell: Some(Shell::Desktop),
+        dirs: Some(dirs.clone()),
+        opener: Some(Arc::new(|_: &std::path::Path| Ok(()))),
+        picker: Some(Arc::new(move |_: &std::path::Path| {
+            *count.lock().unwrap() += 1;
+            reply.lock().unwrap().clone()
+        })),
+        ..Default::default()
+    };
+    let (ui, app) = build(&options).unwrap();
+    let store = ui.global::<Store>();
+    let saved = || State::load(&state_file).settings;
+
+    // To begin with: the usual folder, and no questions.
+    assert_eq!(store.get_downloads_dir(), dirs.downloads.display().to_string().as_str());
+    assert!(!store.get_downloads_custom() && !store.get_ask_where());
+
+    // Choosing a folder: backing out changes nothing; picking one is remembered.
+    store.invoke_choose_downloads();
+    assert!(saved().downloads_dir.is_empty());
+    let chosen = root.join("my downloads");
+    std::fs::create_dir_all(&chosen).unwrap();
+    *answer.lock().unwrap() = bilby::Picked::Folder(chosen.clone());
+    store.invoke_choose_downloads();
+    assert_eq!(saved().downloads_dir, chosen.display().to_string());
+    assert!(store.get_downloads_custom() && store.get_downloads_dir() == chosen.display().to_string().as_str());
+
+    // A download goes there.
+    app.open(&ui, "github:lumen-labs/lumen");
+    store.invoke_install(0);
+    assert!(std::fs::read_dir(&chosen).unwrap().count() >= 1, "the file was saved in the chosen folder");
+    assert!(!dirs.downloads.exists(), "and not in the usual one");
+
+    // A path can be typed instead; one that cannot be used is refused.
+    store.invoke_set_downloads("relative/folder".into());
+    assert!(store.get_toast().contains("cannot be used"), "{}", store.get_toast());
+    assert_eq!(saved().downloads_dir, chosen.display().to_string());
+    store.invoke_set_downloads("".into());
+    assert!(saved().downloads_dir.is_empty() && !store.get_downloads_custom());
+
+    // Asking each time: off until switched on; then each download asks first.
+    let before = *asked.lock().unwrap();
+    store.invoke_set_ask_where(true);
+    assert!(saved().ask_where);
+    let once = root.join("just this once");
+    std::fs::create_dir_all(&once).unwrap();
+    *answer.lock().unwrap() = bilby::Picked::Folder(once.clone());
+    app.open(&ui, "github:kestrel-sh/kestrel");
+    store.invoke_install(0);
+    assert_eq!(*asked.lock().unwrap(), before + 1);
+    assert!(std::fs::read_dir(&once).unwrap().count() >= 1, "saved where the person said");
+    assert!(saved().downloads_dir.is_empty(), "a one-off answer does not change the setting");
+    // Backing out of the question cancels the download.
+    *answer.lock().unwrap() = bilby::Picked::Cancelled;
+    app.open(&ui, "github:tidewave/tidewave");
+    store.invoke_install(0);
+    assert_eq!(store.get_install_state(), 0, "nothing was started");
 }

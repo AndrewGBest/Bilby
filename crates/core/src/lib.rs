@@ -19,6 +19,7 @@ pub mod catalog;
 pub mod compat;
 pub mod demo;
 pub mod error;
+pub mod essentials;
 pub mod github_login;
 pub mod http;
 pub mod icons;

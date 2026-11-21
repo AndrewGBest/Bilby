@@ -83,6 +83,8 @@ pub struct Options {
     pub signin: Option<SignIn>,
     /// How an address is opened in the person's browser. For tests.
     pub browser: Option<Browser>,
+    /// How the person is asked for a folder. For tests.
+    pub picker: Option<Picker>,
     /// What the system has of FUSE (looked up when not given). For tests.
     pub fuse: Option<bilby_core::needs::Fuse>,
     /// The machine whose system details and updates are shown. Defaults to this
@@ -149,6 +151,29 @@ fn plain(text: &str) -> String {
 }
 
 pub type SignIn = Arc<dyn Fn(&std::path::Path) -> bilby_core::Result<Option<String>> + Send + Sync>;
+/// The answer to "which folder?".
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Picked {
+    Folder(PathBuf),
+    Cancelled,
+    /// This system has no dialog to ask with.
+    NoDialog,
+}
+pub type Picker = Arc<dyn Fn(&std::path::Path) -> Picked + Send + Sync>;
+
+/// Ask with the system's own folder dialog. The demo and tests never reach this.
+fn system_picker(start: &std::path::Path) -> Picked {
+    let has_dialog = cfg!(any(target_os = "macos", target_os = "windows"))
+        || ["kdialog", "zenity"].iter().any(|program| {
+            std::env::var_os("PATH").is_some_and(|path| std::env::split_paths(&path).any(|d| d.join(program).is_file()))
+        });
+    match install::pick_folder(start) {
+        Some(folder) => Picked::Folder(folder),
+        None if has_dialog => Picked::Cancelled,
+        None => Picked::NoDialog,
+    }
+}
+
 pub type Browser = Arc<dyn Fn(&str) -> bilby_core::Result<()> + Send + Sync>;
 pub type Runner = Arc<dyn Fn(&std::path::Path, &[String]) -> bilby_core::Result<()> + Send + Sync>;
 
@@ -476,6 +501,8 @@ fn make_catalog(platform: &Platform, demo: bool, settings: &Settings, dirs: &Dir
     };
     catalog.include_prereleases = settings.include_prereleases;
     catalog.disabled = settings.disabled_sources.iter().filter_map(|name| source_named(name)).collect();
+    // (The made-up demo catalog has it off already: the list names real apps.)
+    catalog.essentials = catalog.essentials && !settings.hide_essentials;
     catalog.parental =
         bilby_core::parental::Policy { family_mode: settings.family_mode, adult_on_home: settings.adult_on_home };
     catalog.use_flatpak_roots(dirs.flatpak_roots.clone());
@@ -592,6 +619,10 @@ pub struct App {
     steam_generation: AtomicU64,
     /// How an address is opened in the person's browser. Tests record it instead.
     browser: Browser,
+    /// How the person is asked for a folder. Tests answer for them.
+    picker: Picker,
+    /// The folder just chosen for the one download about to start.
+    asked_folder: Mutex<Option<PathBuf>>,
     /// What is waiting on an answer at the gate (an age question or the PIN).
     pending: Mutex<Option<Guarded>>,
     /// Ids learnt to be for adults, so that opening one again asks before loading it.
@@ -1259,6 +1290,7 @@ impl App {
         store.set_show_ratings(!settings.hide_ratings);
         store.set_check_updates_on_start(!settings.skip_update_check_on_start);
         store.set_has_token(!settings.github_token.trim().is_empty());
+        store.set_show_essentials(!settings.hide_essentials);
         store.set_family_mode(settings.family_mode);
         store.set_adult_on_home(settings.adult_on_home);
         store.set_adult_uncovered(settings.adult_uncovered);
@@ -1270,7 +1302,9 @@ impl App {
         store.set_steam_available(matches!(os, Os::Windows | Os::MacOs | Os::Linux));
         store.set_steam_signed_in(steam.is_some());
         store.set_steam_summary(steam.map(|a| format!("{} games and tools", a.owned.len())).unwrap_or_default().into());
-        store.set_downloads_dir(self.dirs.downloads.display().to_string().into());
+        store.set_downloads_dir(self.downloads_folder().display().to_string().into());
+        store.set_downloads_custom(!settings.downloads_dir.trim().is_empty());
+        store.set_ask_where(settings.ask_where);
         store.set_show_welcome(!settings.welcomed);
         store.set_interface_mode(interface_mode(&settings.interface));
         store.set_sources(ModelRc::new(VecModel::from(
@@ -2483,7 +2517,7 @@ impl App {
                     &install::save_only(),
                     &asset,
                     http.as_ref(),
-                    &app.dirs,
+                    &app.dirs_for_download(),
                     app.opener.as_ref(),
                     &mut progress,
                 )
@@ -2507,6 +2541,14 @@ impl App {
         if self.needs_pin_to_install() {
             let why = "A PIN is needed to install or remove apps on this device.";
             self.ask(ui, 2, "Enter the PIN", why, Guarded::Install(index));
+            return;
+        }
+        // "Ask where to save each download": now, before anything is fetched.
+        let action = {
+            let current = self.current.lock().unwrap();
+            current.release().and_then(|r| r.options.get(index.max(0) as usize).map(|o| o.plan.action.clone()))
+        };
+        if action.is_some_and(|action| !self.ask_where_to_save(&action)) {
             return;
         }
         let (details, option, version) = {
@@ -2558,7 +2600,7 @@ impl App {
                     &work_option.plan,
                     &work_option.asset,
                     http.as_ref(),
-                    &app.dirs,
+                    &app.dirs_for_download(),
                     app.opener.as_ref(),
                     &mut progress,
                 )
@@ -2720,6 +2762,79 @@ impl App {
                 ui.global::<Store>().set_store_update(version.into());
             },
         );
+    }
+
+    /// Where downloads go: the folder the person chose in Settings, else the usual one.
+    fn downloads_folder(&self) -> PathBuf {
+        let chosen = self.state.lock().unwrap().settings.downloads_dir.trim().to_string();
+        if chosen.is_empty() {
+            self.dirs.downloads.clone()
+        } else {
+            PathBuf::from(chosen)
+        }
+    }
+
+    /// The folders for the download about to start: as usual, but saving where the
+    /// person just said to, if they were asked.
+    fn dirs_for_download(&self) -> Dirs {
+        let mut dirs = self.dirs.clone();
+        dirs.downloads = self.asked_folder.lock().unwrap().take().unwrap_or_else(|| self.downloads_folder());
+        dirs
+    }
+
+    /// With "ask where to save each download" on: ask now. False when the person
+    /// backed out, which stops the download; true otherwise (also where this system
+    /// has no dialog to ask with, so that the setting cannot block every install).
+    fn ask_where_to_save(&self, action: &Action) -> bool {
+        if !self.state.lock().unwrap().settings.ask_where || !install::saves_a_file(action) {
+            return true;
+        }
+        match (self.picker)(&self.downloads_folder()) {
+            Picked::Folder(folder) => {
+                *self.asked_folder.lock().unwrap() = Some(folder);
+                true
+            }
+            Picked::Cancelled => false,
+            Picked::NoDialog => true,
+        }
+    }
+
+    /// Choose the folder downloads go to, with the system's own dialog.
+    pub fn choose_downloads(&self, ui: &AppWindow) {
+        match (self.picker)(&self.downloads_folder()) {
+            Picked::Folder(folder) => self.set_downloads(ui, &folder.display().to_string()),
+            Picked::Cancelled => {}
+            Picked::NoDialog => self.toast(
+                ui,
+                "This system has no folder chooser Bilby can call. Type the folder's path instead.",
+                true,
+            ),
+        }
+    }
+
+    /// Set the folder downloads go to. Empty goes back to the usual one. A folder
+    /// that cannot be made or written to is refused, with the reason.
+    pub fn set_downloads(&self, ui: &AppWindow, path: &str) {
+        let path = path.trim();
+        if !path.is_empty() {
+            let folder = PathBuf::from(path);
+            let usable = folder.is_absolute()
+                && std::fs::create_dir_all(&folder).is_ok()
+                && std::fs::write(folder.join(".bilby-write-test"), b"").is_ok();
+            let _ = std::fs::remove_file(folder.join(".bilby-write-test"));
+            if !usable {
+                self.toast(
+                    ui,
+                    "That folder cannot be used: it must be a full path that this account can write to.",
+                    true,
+                );
+                return;
+            }
+        }
+        let path = path.to_string();
+        self.update_state(ui, |state| state.settings.downloads_dir = path);
+        self.refresh_settings(ui);
+        self.toast(ui, &format!("Downloads now go to {}", self.downloads_folder().display()), false);
     }
 
     /// On a Linux TV a website opens in Longboard; anywhere else in the usual browser.
@@ -3296,6 +3411,8 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         steam_generation: AtomicU64::new(0),
         elsewhere: std::sync::RwLock::new(Elsewhere::default()),
         browser: options.browser.clone().unwrap_or_else(|| Arc::new(install::open_url)),
+        picker: options.picker.clone().unwrap_or_else(|| Arc::new(system_picker)),
+        asked_folder: Mutex::new(None),
         pending: Mutex::new(None),
         known_adult: Mutex::new(HashSet::new()),
         new_pin: Mutex::new(None),
@@ -3399,7 +3516,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         app.refresh_settings(ui);
     });
     on!(on_open_downloads, |app, ui| {
-        let folder = app.dirs.downloads.clone();
+        let folder = app.downloads_folder();
         let result = std::fs::create_dir_all(&folder).map_err(Error::from).and_then(|_| (app.opener)(&folder));
         if let Err(e) = result {
             app.toast(ui, &format!("Couldn't open the downloads folder: {e}"), true);
@@ -3452,6 +3569,21 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     on!(on_set_reduce_motion, |app, ui, on| {
         app.update_state(ui, |state| state.settings.reduce_motion = on);
         app.refresh_settings(ui);
+    });
+    on!(on_choose_downloads, |app, ui| { app.choose_downloads(ui) });
+    on!(on_set_downloads, |app, ui, path| { app.set_downloads(ui, &path) });
+    on!(on_set_ask_where, |app, ui, on| {
+        app.update_state(ui, |state| state.settings.ask_where = on);
+        app.refresh_settings(ui);
+    });
+    on!(on_set_essentials, |app, ui, on| {
+        app.update_state(ui, |state| state.settings.hide_essentials = !on);
+        // What is recommended depends on it: build the catalog again and redraw.
+        app.rebuild_catalog();
+        app.collections.lock().unwrap().clear();
+        app.load_collections(ui);
+        app.refresh_settings(ui);
+        app.refresh(ui);
     });
     on!(on_set_family_mode, |app, ui, on| { app.request_setting(ui, Change::FamilyMode(on)) });
     on!(on_set_adult_on_home, |app, ui, on| { app.request_setting(ui, Change::AdultOnHome(on)) });

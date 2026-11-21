@@ -37,6 +37,9 @@ pub struct Catalog {
     /// Sources the person switched off in Settings: not searched, not on the home page.
     /// An app from one can still be opened by its link.
     pub disabled: Vec<SourceKind>,
+    /// Recommend the apps nearly everyone expects (`essentials`): rows on the home
+    /// page and extra weight in a search. On unless the person switched it off.
+    pub essentials: bool,
     /// Family mode and whether adult things may be on the home page. See `parental`.
     pub parental: crate::parental::Policy,
     /// Star ratings, once loaded, and the catalog that links packages to rated ids.
@@ -111,6 +114,7 @@ impl Catalog {
             check_limit: 8,
             include_prereleases: false,
             disabled: Vec::new(),
+            essentials: true,
             parental: crate::parental::Policy::default(),
             ratings: Arc::default(),
             appstream_dirs: Vec::new(),
@@ -141,6 +145,7 @@ impl Catalog {
             check_limit: 8,
             include_prereleases: false,
             disabled: Vec::new(),
+            essentials: true,
             parental: crate::parental::Policy::default(),
             ratings: Arc::default(),
             appstream_dirs: Vec::new(),
@@ -189,6 +194,8 @@ impl Catalog {
         for backend in crate::demo::system_repos() {
             catalog.sources.insert(0, Arc::new(SystemRepos::new(backend, platform.clone())));
         }
+        // The list of what everyone expects names real apps; this catalog is made up.
+        catalog.essentials = false;
         catalog
     }
 
@@ -236,6 +243,14 @@ impl Catalog {
             s.apps.retain(|a| active.contains(&a.id.source));
         }
         sections.retain(|s| !s.apps.is_empty());
+        // The names everyone knows come first, in the version this device can use.
+        if self.essentials {
+            let rows = crate::essentials::rows(&active, &self.platform);
+            let picked: Vec<Section> = rows.into_iter().map(|(title, apps)| Section { title, apps }).collect();
+            // On a TV, what was made for TVs stays on top.
+            let at = usize::from(sections.first().is_some_and(|s| s.title == "Made for TV"));
+            sections.splice(at..at, picked);
+        }
         // Websites sit beside the apps: the best-known first, then by what they are for.
         if active.contains(&SourceKind::Web) {
             sections.push(Section { title: "Web apps".to_string(), apps: crate::source::web::featured() });
@@ -574,7 +589,9 @@ impl Catalog {
                 app.rating = app.rating.or_else(|| self.rating_for(&app.id));
                 let related =
                     family.is_some_and(|f| f.members.iter().any(|m| m.id.eq_ignore_ascii_case(&app.id.to_string())));
-                let context = crate::rank::Context { position, of, featured: featured.contains(&app.id), related };
+                let essential = self.essentials && crate::essentials::is_essential(&app.id);
+                let context =
+                    crate::rank::Context { position, of, featured: featured.contains(&app.id), related, essential };
                 hits.push((app, context));
             }
         }
@@ -700,6 +717,28 @@ mod tests {
         assert!(d.unavailable_reason.is_none());
         let d = demo("linux-x64-debian").details(&id("github:kestrel-sh/kestrel")).unwrap();
         assert_eq!(d.release.unwrap().version, "v1.21.0");
+    }
+
+    #[test]
+    fn the_apps_everyone_expects_lead_the_home_page_and_can_be_switched_off() {
+        let platform = Platform::preset("linux-x64-debian").unwrap();
+        let mut catalog = Catalog::new(platform, Arc::new(crate::demo::DemoHttp), crate::demo::index());
+        let rows = catalog.featured();
+        assert_eq!(rows[0].title, "Essentials");
+        let first: Vec<String> = rows[0].apps.iter().map(|a| a.id.to_string()).collect();
+        assert!(
+            first.contains(&"flathub:org.mozilla.firefox".to_string()),
+            "the version this device can use: {first:?}"
+        );
+        assert!(first.contains(&"web:youtube.com".to_string()) && first.contains(&"web:netflix.com".to_string()));
+        assert!(rows.iter().any(|r| r.title == "Web browsers") && rows.iter().any(|r| r.title == "Games"));
+        // A source switched off takes its apps out of these rows too.
+        catalog.disabled = vec![SourceKind::Flathub];
+        assert!(!catalog.featured().iter().flat_map(|r| &r.apps).any(|a| a.id.source == SourceKind::Flathub));
+        catalog.disabled.clear();
+        // Switched off: only what the sources and the starter list say.
+        catalog.essentials = false;
+        assert!(!catalog.featured().iter().any(|r| r.title == "Essentials" || r.title == "Web browsers"));
     }
 
     #[test]

@@ -519,6 +519,51 @@ pub fn write_web_shortcut(dirs: &Dirs, id: &str, name: &str, url: &str) -> Resul
     Ok(path)
 }
 
+/// Does this step fetch a file into the downloads folder? Package managers, Flatpak,
+/// other stores and web apps do not: they have their own places, or none.
+pub fn saves_a_file(action: &Action) -> bool {
+    matches!(action, Action::OpenFile | Action::PlaceAppImage | Action::Reveal | Action::AndroidInstaller)
+}
+
+/// Let the person choose a folder with the system's own dialog, starting at `start`.
+/// `None` when they cancel, or when this system has no dialog the store can call
+/// (then the folder can still be typed into Settings). [Run for real with kdialog on
+/// KDE. The zenity, macOS and Windows forms are written from their documentation.]
+pub fn pick_folder(start: &Path) -> Option<PathBuf> {
+    use std::process::{Command, Stdio};
+    let on_path = |program: &str| {
+        std::env::var_os("PATH").is_some_and(|path| std::env::split_paths(&path).any(|dir| dir.join(program).is_file()))
+    };
+    let ask = |command: &mut Command| -> Option<PathBuf> {
+        let said = command.stdin(Stdio::null()).stderr(Stdio::null()).output().ok()?;
+        let text = String::from_utf8_lossy(&said.stdout).trim().to_string();
+        let path = PathBuf::from(text);
+        (said.status.success() && path.is_absolute() && path.is_dir()).then_some(path)
+    };
+    if cfg!(target_os = "macos") {
+        return ask(Command::new("osascript")
+            .args(["-e", "POSIX path of (choose folder with prompt \"Where should downloads go?\")"]));
+    }
+    if cfg!(target_os = "windows") {
+        let script = "Add-Type -AssemblyName System.Windows.Forms; $d = New-Object System.Windows.Forms.FolderBrowserDialog; $d.Description = 'Where should downloads go?'; if ($d.ShowDialog() -eq 'OK') { $d.SelectedPath }";
+        return ask(Command::new("powershell").args(["-NoProfile", "-Command", script]));
+    }
+    if on_path("kdialog") {
+        return ask(Command::new("kdialog")
+            .arg("--getexistingdirectory")
+            .arg(start)
+            .args(["--title", "Where should downloads go?"]));
+    }
+    if on_path("zenity") {
+        let mut from = start.display().to_string();
+        from.push('/');
+        return ask(Command::new("zenity")
+            .args(["--file-selection", "--directory", "--title=Where should downloads go?"])
+            .arg(format!("--filename={from}")));
+    }
+    None
+}
+
 /// Where the store's own app-menu entry goes.
 pub fn self_entry_path(dirs: &Dirs) -> PathBuf {
     dirs.menu.join("bilby.desktop")

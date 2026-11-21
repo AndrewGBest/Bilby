@@ -2070,6 +2070,28 @@ export component SettingsBody inherits Rectangle {
             }
 
             SettingsCard {
+                title: "Recommendations";
+                HorizontalLayout {
+                    spacing: 12px;
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 2px;
+                        Text { text: "Recommend the apps everyone knows"; color: Theme.text; font-size: 14px; }
+                        Text {
+                            text: "Bilby keeps a short list, chosen by people, of the apps and websites nearly everyone looks for: a browser, a video player, the big names. On, the home page starts with them in the version for this device, and they are placed a little higher in a search. Off, you get only what the sources' own figures say.";
+                            color: Theme.text-dim;
+                            font-size: 12px;
+                            wrap: word-wrap;
+                        }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle { label: "Recommend the apps everyone knows"; checked: Store.show-essentials; toggled(on) => { Store.set-essentials(on); } }
+                    }
+                }
+            }
+
+            SettingsCard {
                 title: "Family and adult content";
                 Text {
                     text: "Some games, apps and websites are meant for adults. They are kept apart: in a search they have a section of their own, each one covered until you choose it, and you are asked to confirm you are an adult before one opens.";
@@ -2461,6 +2483,57 @@ export component SettingsBody inherits Rectangle {
                     spacing: 12px;
                     Text { width: compact ? 110px : 170px; text: "Downloads go to"; color: Theme.text-dim; font-size: 13px; }
                     Text { horizontal-stretch: 1; text: Store.downloads-dir; color: Theme.text; font-size: 13px; wrap: char-wrap; }
+                }
+                Text {
+                    text: "Installers and other files Bilby downloads are saved here. Apps that run as one file (AppImages) are then moved to the Applications folder in your home folder; packages, Flatpaks and store apps go where your system puts them.";
+                    color: Theme.text-dim;
+                    font-size: 12px;
+                    wrap: word-wrap;
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+                    Button { text: "Change folder"; primary: false; accessible-label: "Change the downloads folder"; clicked => { Store.choose-downloads(); } }
+                    if Store.downloads-custom : Button { text: "Use the usual folder"; primary: false; clicked => { Store.set-downloads(""); } }
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        height: 36px;
+                        border-radius: 8px;
+                        background: Theme.bg;
+                        border-width: 1px;
+                        border-color: folder-input.has-focus ? Theme.focus : Theme.stroke;
+                        folder-input := TextInput {
+                            x: 10px;
+                            width: parent.width - 20px;
+                            height: 100%;
+                            color: Theme.text;
+                            font-size: 13px;
+                            single-line: true;
+                            vertical-alignment: center;
+                            accessible-label: "Downloads folder path";
+                            accepted => {
+                                Store.set-downloads(self.text);
+                                self.text = "";
+                            }
+                        }
+                        if folder-input.text == "" : Text { x: 10px; text: "Or type a folder's full path and press Enter"; color: Theme.text-dim; font-size: 13px; vertical-alignment: center; }
+                    }
+                }
+                HorizontalLayout {
+                    spacing: 12px;
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 2px;
+                        Text { text: "Ask where to save each download"; color: Theme.text; font-size: 14px; }
+                        Text { text: "A folder chooser opens before each file is fetched. Backing out of it cancels the download."; color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle { label: "Ask where to save each download"; checked: Store.ask-where; toggled(on) => { Store.set-ask-where(on); } }
+                    }
                 }
                 // Side by side where there is room, stacked on a phone.
                 if !compact : HorizontalLayout {

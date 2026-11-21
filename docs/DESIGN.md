@@ -310,6 +310,18 @@ thing outranks a little-used one with the word in its name; the app whose name i
 exactly what was typed gets a fixed bonus and stays first. Apps on record for a
 service (`related.json`) count as near matches for that service's name.
 
+**The apps everyone expects** (`essentials.rs`, `data/essentials.json`). The sources'
+figures say what is popular on each source. They do not say that someone setting up a
+computer wants a browser, a video player and the names everybody knows, whichever
+source carries them. That is a human judgement, so it is a hand-kept list: some sixty
+apps and sites, each with the ids it goes by at every source (every one checked to
+exist). The home page opens with them, each in the first version this device can use,
+then a row per kind; in a search they get a fixed lift, enough to put the real Firefox
+above its look-alikes and not enough to beat an exact name. One switch in Settings
+turns both off, leaving only what the sources say. [The list is one person's view of
+what "everyone" wants, and leans towards what is popular in the English-speaking
+world.]
+
 **Adult content, Family mode and the PIN** (`parental.rs`). Things meant for adults
 are part of the catalog, kept apart rather than hidden:
 
