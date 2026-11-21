@@ -46,6 +46,9 @@ pub struct Settings {
     /// Do not recommend the hand-kept list of apps nearly everyone expects: no rows
     /// of them on the home page, no extra weight in a search.
     pub hide_essentials: bool,
+    /// The kind of app to offer first on Linux: "" (what suits the system),
+    /// "flatpak", "appimage" or "system".
+    pub prefer_kind: String,
     /// Family mode: nothing for adults anywhere, in any form.
     pub family_mode: bool,
     /// Adult things may appear on the home page (covered, as everywhere).

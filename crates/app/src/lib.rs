@@ -533,6 +533,7 @@ fn make_catalog(platform: &Platform, demo: bool, settings: &Settings, dirs: &Dir
     );
     // (The made-up demo catalog has it off already: the list names real apps.)
     catalog.essentials = catalog.essentials && !settings.hide_essentials;
+    catalog.prefer = bilby_core::compat::Prefer::named(&settings.prefer_kind);
     catalog.parental =
         bilby_core::parental::Policy { family_mode: settings.family_mode, adult_on_home: settings.adult_on_home };
     catalog.use_flatpak_roots(dirs.flatpak_roots.clone());
@@ -1334,6 +1335,8 @@ impl App {
         store.set_has_token(!settings.github_token.trim().is_empty());
         store.set_sounds(!settings.mute_sounds);
         store.set_show_essentials(!settings.hide_essentials);
+        store.set_prefer_kind(bilby_core::compat::Prefer::named(&settings.prefer_kind).number());
+        store.set_prefer_applies(self.platform.read().unwrap().os == bilby_core::platform::Os::Linux);
         store.set_own_sources(ModelRc::new(VecModel::from(
             settings
                 .own_sources
@@ -3978,6 +3981,14 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     on!(on_set_ask_where, |app, ui, on| {
         app.update_state(ui, |state| state.settings.ask_where = on);
         app.refresh_settings(ui);
+    });
+    on!(on_set_prefer_kind, |app, ui, kind| {
+        let kind = bilby_core::compat::Prefer::from_number(kind);
+        app.update_state(ui, |state| state.settings.prefer_kind = kind.name().to_string());
+        // Which file is offered first depends on it: build the catalog again.
+        app.rebuild_catalog();
+        app.refresh_settings(ui);
+        app.refresh(ui);
     });
     on!(on_set_essentials, |app, ui, on| {
         app.update_state(ui, |state| state.settings.hide_essentials = !on);

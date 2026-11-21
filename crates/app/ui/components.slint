@@ -2640,6 +2640,24 @@ export component SettingsBody inherits Rectangle {
                 }
             }
 
+            if Store.prefer-applies : SettingsCard {
+                title: "Preferred kind of app";
+                Text {
+                    text: "Many apps come more than one way. Choose which Bilby offers first when there is a choice. Automatic picks what suits this system: its own packages on most, Flatpak on a read-only system such as Fedora Kinoite. You can always pick another on an app's page.";
+                    color: Theme.text-dim;
+                    font-size: 12px;
+                    wrap: word-wrap;
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+                    ChoiceChip { text: "Automatic"; selected: Store.prefer-kind == 0; clicked => { Store.set-prefer-kind(0); } }
+                    ChoiceChip { text: "Flatpak"; selected: Store.prefer-kind == 1; clicked => { Store.set-prefer-kind(1); } }
+                    ChoiceChip { text: "AppImage"; selected: Store.prefer-kind == 2; clicked => { Store.set-prefer-kind(2); } }
+                    ChoiceChip { text: "System packages"; selected: Store.prefer-kind == 3; clicked => { Store.set-prefer-kind(3); } }
+                }
+            }
+
             SettingsCard {
                 title: "About";
                 if Store.store-update != "" : HorizontalLayout {

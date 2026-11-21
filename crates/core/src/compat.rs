@@ -241,6 +241,62 @@ fn format_preference(format: Format, p: &Platform) -> i32 {
     }
 }
 
+/// The kind of app the person would rather be offered first on Linux, where one app
+/// often comes several ways. `Auto` leaves it to what suits the system.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Prefer {
+    #[default]
+    Auto,
+    Flatpak,
+    AppImage,
+    /// The system's own kind of package (.deb, .rpm, from its repositories).
+    System,
+}
+
+impl Prefer {
+    /// As kept in settings: "", "flatpak", "appimage", "system".
+    pub fn named(name: &str) -> Prefer {
+        match name {
+            "flatpak" => Prefer::Flatpak,
+            "appimage" => Prefer::AppImage,
+            "system" => Prefer::System,
+            _ => Prefer::Auto,
+        }
+    }
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Prefer::Auto => "",
+            Prefer::Flatpak => "flatpak",
+            Prefer::AppImage => "appimage",
+            Prefer::System => "system",
+        }
+    }
+
+    pub fn number(self) -> i32 {
+        self as i32
+    }
+
+    pub fn from_number(n: i32) -> Prefer {
+        [Prefer::Auto, Prefer::Flatpak, Prefer::AppImage, Prefer::System].get(n as usize).copied().unwrap_or_default()
+    }
+
+    /// Is this the kind asked for?
+    pub fn wants(self, format: crate::asset::Format) -> bool {
+        use crate::asset::Format::*;
+        match self {
+            Prefer::Auto => false,
+            Prefer::Flatpak => matches!(format, Flatpak | FlathubApp),
+            Prefer::AppImage => format == AppImage,
+            Prefer::System => matches!(format, Deb | Rpm | PacmanPkg | RepoPackage),
+        }
+    }
+
+    /// Enough to put the kind asked for ahead of any other that works here. It only
+    /// reorders what already runs on the device: nothing unusable is brought back.
+    pub const LIFT: i32 = 40;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

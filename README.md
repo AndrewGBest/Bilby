@@ -221,6 +221,10 @@ out-of-date packages, but an app is only as trustworthy as whoever published it.
 - **Reduce motion.** Settings can turn animations off.
 - **Sounds.** A quiet tick or pop as you move about and press things. Settings can
   turn them off.
+- **Your preferred kind of app.** Where an app comes more than one way on Linux
+  (a Flatpak, an AppImage, a system package), Bilby offers first what suits the
+  system: its own packages on most, Flatpak on a read-only system such as Fedora
+  Kinoite. Settings lets you choose which kind leads instead.
 - **From a terminal.** `bilby-cli` can search, show, install and check for updates, and
   can export your library to move it to another device. It does not do everything the
   app does: system updates and signing in are in the app only.

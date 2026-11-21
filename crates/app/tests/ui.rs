@@ -1973,7 +1973,7 @@ fn signing_in_to_github_shows_a_code_and_keeps_the_token_it_is_given() {
     tv.press(Key::RightArrow);
     tv.press(Key::RightArrow);
     tv.press(Key::Return);
-    for _ in 0..13 {
+    for _ in 0..14 {
         tv.press(Key::DownArrow);
     }
     tv.press(Key::Return);
@@ -2294,7 +2294,7 @@ fn the_tv_has_a_settings_tab_with_every_setting_reachable_by_remote() {
     // Sources can be switched off from the sofa too: Down to the first of them, OK.
     let sources: Vec<SourceChoice> = s.store().get_sources().iter().collect();
     assert!(sources.len() >= 2 && sources.iter().all(|c| c.on));
-    for _ in 0..16 {
+    for _ in 0..17 {
         s.press(Key::DownArrow);
     }
     s.press(Key::Return);
@@ -3134,4 +3134,29 @@ fn on_a_read_only_system_fuse_is_added_and_a_restart_is_offered() {
 
     // The age question still has its own words afterwards.
     assert!(started.lock().unwrap().is_empty());
+}
+
+#[test]
+fn the_kind_of_app_offered_first_can_be_chosen_in_settings() {
+    let s = start("linux-x64-arch", Shell::Desktop);
+    let store = s.store();
+    assert!(store.get_prefer_applies() && store.get_prefer_kind() == 0);
+    // An app that comes more than one way on this system.
+    let (id, first) = ["github:tidewave/tidewave", "github:lumen-labs/lumen", "github:kestrel-sh/kestrel"]
+        .into_iter()
+        .find_map(|id| {
+            s.app.open(&s.ui, id);
+            let labels: Vec<String> = store.get_options().iter().map(|o| o.label.to_string()).collect();
+            (labels.len() > 1 && labels.iter().skip(1).any(|l| l.contains("AppImage"))).then(|| (id, labels[0].clone()))
+        })
+        .expect("a demo app whose AppImage is not the first choice on Arch");
+    assert!(!first.contains("AppImage"));
+    // Asked for, the AppImage leads; it is remembered; Automatic puts things back.
+    store.invoke_set_prefer_kind(2);
+    assert_eq!(State::load(&s.state_file).settings.prefer_kind, "appimage");
+    s.app.open(&s.ui, id);
+    assert!(store.get_options().row_data(0).unwrap().label.contains("AppImage"));
+    store.invoke_set_prefer_kind(0);
+    s.app.open(&s.ui, id);
+    assert_eq!(store.get_options().row_data(0).unwrap().label, first.as_str());
 }

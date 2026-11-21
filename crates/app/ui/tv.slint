@@ -263,7 +263,7 @@ export component TvShell inherits Rectangle {
     // Steam's (two while there is a choice of how to sign in), then a switch per source.
     property <bool> on-settings: Store.page == 3 && !Store.details-open;
     property <int> steam-rows: !Store.steam-available ? 0 : Store.steam-signed-in || Store.steam-state != 0 ? 1 : 2;
-    property <int> src-first: 15 + root.steam-rows;
+    property <int> src-first: 16 + root.steam-rows;
     property <int> set-last: root.src-first + Store.sources.length - 1;
     changed set-last => { root.sys-row = min(root.sys-row, root.set-last); }
     // Rows below the eighth push the list up, so the focused one is always on screen.
@@ -538,32 +538,34 @@ export component TvShell inherits Rectangle {
                     } else if (root.sys-row == 6) {
                         Store.set-sounds(!Store.sounds);
                     } else if (root.sys-row == 7) {
-                        Store.set-family-mode(!Store.family-mode);
+                        Store.set-prefer-kind(Store.prefer-kind >= 3 ? 0 : Store.prefer-kind + 1);
                     } else if (root.sys-row == 8) {
+                        Store.set-family-mode(!Store.family-mode);
+                    } else if (root.sys-row == 9) {
                         if (!Store.family-mode) {
                             Store.set-adult-on-home(!Store.adult-on-home);
                         }
-                    } else if (root.sys-row == 9) {
+                    } else if (root.sys-row == 10) {
                         if (!Store.family-mode) {
                             Store.set-adult-uncovered(!Store.adult-uncovered);
                         }
-                    } else if (root.sys-row == 10) {
-                        Store.set-pin();
                     } else if (root.sys-row == 11) {
+                        Store.set-pin();
+                    } else if (root.sys-row == 12) {
                         if (Store.has-pin) {
                             Store.set-pin-for-installs(!Store.pin-for-installs);
                         }
-                    } else if (root.sys-row == 12) {
+                    } else if (root.sys-row == 13) {
                         if (Store.has-pin) {
                             Store.remove-pin();
                         }
-                    } else if (root.sys-row == 13) {
+                    } else if (root.sys-row == 14) {
                         if (Store.store-update != "") {
                             Store.view-store-update();
                         } else {
                             Store.check-store-update();
                         }
-                    } else if (root.sys-row == 14) {
+                    } else if (root.sys-row == 15) {
                         if (Store.has-token) {
                             Store.save-token("");
                         } else if (Store.signin-state == 0) {
@@ -571,7 +573,7 @@ export component TvShell inherits Rectangle {
                         } else {
                             Store.github-cancel();
                         }
-                    } else if (root.sys-row == 15 && root.steam-rows > 0) {
+                    } else if (root.sys-row == 16 && root.steam-rows > 0) {
                         if (Store.steam-state != 0) {
                             Store.steam-cancel();
                         } else if (Store.steam-signed-in) {
@@ -579,7 +581,7 @@ export component TvShell inherits Rectangle {
                         } else {
                             Store.steam-signin-qr();
                         }
-                    } else if (root.sys-row == 16 && root.steam-rows > 1) {
+                    } else if (root.sys-row == 17 && root.steam-rows > 1) {
                         // The row goes away while signing in; the highlight moves to the one that stays.
                         root.sys-row = 13;
                         Store.steam-signin();
@@ -1063,46 +1065,54 @@ export component TvShell inherits Rectangle {
                         focused: root.zone == 0 && root.sys-row == 6;
                         clicked => { Store.set-sounds(!Store.sounds); }
                     }
+                    TvSetting {
+                        u: root.u;
+                        label: "Kind of app to offer first when there is a choice";
+                        value: Store.prefer-kind == 1 ? "Flatpak" : Store.prefer-kind == 2 ? "AppImage" : Store.prefer-kind == 3 ? "System packages" : "Automatic";
+                        on: false;
+                        focused: root.zone == 0 && root.sys-row == 7;
+                        clicked => { Store.set-prefer-kind(Store.prefer-kind >= 3 ? 0 : Store.prefer-kind + 1); }
+                    }
                     Rectangle { height: 4 * u; }
                     Text { text: "Family and adult content"; color: Theme.text; font-size: 14 * u; font-weight: 700; }
                     TvSetting {
                         u: root.u;
                         label: "Family mode: nothing for adults is shown anywhere";
                         on: Store.family-mode;
-                        focused: root.zone == 0 && root.sys-row == 7;
+                        focused: root.zone == 0 && root.sys-row == 8;
                         clicked => { Store.set-family-mode(!Store.family-mode); }
                     }
                     TvSetting {
                         u: root.u;
                         label: Store.family-mode ? "Adult content on Home (off in Family mode)" : "Adult content on Home, covered until chosen";
                         on: Store.adult-on-home && !Store.family-mode;
-                        focused: root.zone == 0 && root.sys-row == 8;
+                        focused: root.zone == 0 && root.sys-row == 9;
                     }
                     TvSetting {
                         u: root.u;
                         label: Store.family-mode ? "Adult content uncovered (off in Family mode)" : "Show adult content uncovered, with no question";
                         on: Store.adult-uncovered && !Store.family-mode;
-                        focused: root.zone == 0 && root.sys-row == 9;
+                        focused: root.zone == 0 && root.sys-row == 10;
                     }
                     TvSetting {
                         u: root.u;
                         label: Store.has-pin ? "A PIN guards these settings and adult content" : "Set a PIN to guard these settings and adult content";
                         value: Store.has-pin ? "Change" : "Set a PIN";
                         on: Store.has-pin;
-                        focused: root.zone == 0 && root.sys-row == 10;
+                        focused: root.zone == 0 && root.sys-row == 11;
                     }
                     TvSetting {
                         u: root.u;
                         label: Store.has-pin ? "Ask for the PIN to install or remove apps" : "Ask for the PIN to install or remove apps (set a PIN first)";
                         on: Store.pin-for-installs;
-                        focused: root.zone == 0 && root.sys-row == 11;
+                        focused: root.zone == 0 && root.sys-row == 12;
                     }
                     TvSetting {
                         u: root.u;
                         label: Store.has-pin ? "Remove the PIN" : "No PIN is set";
                         value: Store.has-pin ? "Remove" : "—";
                         on: false;
-                        focused: root.zone == 0 && root.sys-row == 12;
+                        focused: root.zone == 0 && root.sys-row == 13;
                     }
                     Rectangle { height: 4 * u; }
                     Text { text: "This store"; color: Theme.text; font-size: 14 * u; font-weight: 700; }
@@ -1111,7 +1121,7 @@ export component TvShell inherits Rectangle {
                         label: Store.store-update != "" ? "Bilby " + Store.store-update + " is available. You have " + Store.app-version : "Bilby " + Store.app-version;
                         value: Store.store-update != "" ? "Update" : "Check for updates";
                         on: false;
-                        focused: root.zone == 0 && root.sys-row == 13;
+                        focused: root.zone == 0 && root.sys-row == 14;
                         clicked => { Store.check-store-update(); }
                     }
                     Rectangle { height: 4 * u; }
@@ -1121,7 +1131,7 @@ export component TvShell inherits Rectangle {
                         label: Store.has-token ? "Signed in to GitHub" : Store.signin-state != 0 ? "Signing in to GitHub…" : "Sign in to GitHub for more searches an hour";
                         value: Store.has-token ? "Sign out" : Store.signin-state != 0 ? "Cancel" : "Sign in";
                         on: Store.has-token;
-                        focused: root.zone == 0 && root.sys-row == 14;
+                        focused: root.zone == 0 && root.sys-row == 15;
                     }
                     // The code to enter at GitHub, on a phone or computer.
                     if Store.signin-state == 2 : VerticalLayout {
@@ -1142,14 +1152,14 @@ export component TvShell inherits Rectangle {
                         label: Store.steam-signed-in ? "Signed in to Steam  ·  " + Store.steam-summary : Store.steam-state == 3 ? "Scan the code with the Steam app on your phone" : Store.steam-state != 0 ? "Sign in on Steam's page in Longboard, then share your library" : "Sign in to Steam with a QR code, to see what you own";
                         value: Store.steam-state != 0 ? "Cancel" : Store.steam-signed-in ? "Sign out" : "Show code";
                         on: Store.steam-signed-in;
-                        focused: root.zone == 0 && root.sys-row == 15;
+                        focused: root.zone == 0 && root.sys-row == 16;
                     }
                     if root.steam-rows > 1 : TvSetting {
                         u: root.u;
                         label: "Or sign in to Steam in a browser (Longboard)";
                         value: "Open";
                         on: false;
-                        focused: root.zone == 0 && root.sys-row == 16;
+                        focused: root.zone == 0 && root.sys-row == 17;
                     }
                     Rectangle { height: 4 * u; }
                     Text { text: "Where apps come from"; color: Theme.text; font-size: 14 * u; font-weight: 700; }

@@ -300,6 +300,10 @@ export global Store {
     // The quiet sounds of moving about.
     in property <bool> sounds;
     in property <bool> show-essentials;
+    // The kind of app offered first on Linux: 0 what suits the system, 1 Flatpak,
+    // 2 AppImage, 3 the system's own packages. And whether that means anything here.
+    in property <int> prefer-kind;
+    in property <bool> prefer-applies;
     // Lists of apps on the person's own servers: `id` is the list's address.
     in property <[SourceChoice]> own-sources;
     in property <bool> family-mode;
@@ -380,6 +384,7 @@ export global Store {
     callback play(int);
     callback set-sounds(bool);
     callback set-essentials(bool);
+    callback set-prefer-kind(int);
     callback set-family-mode(bool);
     callback set-adult-on-home(bool);
     callback set-adult-uncovered(bool);

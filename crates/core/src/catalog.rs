@@ -40,6 +40,8 @@ pub struct Catalog {
     /// Recommend the apps nearly everyone expects (`essentials`): rows on the home
     /// page and extra weight in a search. On unless the person switched it off.
     pub essentials: bool,
+    /// The kind of app the person asked to be offered first, where there is a choice.
+    pub prefer: crate::compat::Prefer,
     /// Family mode and whether adult things may be on the home page. See `parental`.
     pub parental: crate::parental::Policy,
     /// Star ratings, once loaded, and the catalog that links packages to rated ids.
@@ -115,6 +117,7 @@ impl Catalog {
             include_prereleases: false,
             disabled: Vec::new(),
             essentials: true,
+            prefer: Default::default(),
             parental: crate::parental::Policy::default(),
             ratings: Arc::default(),
             appstream_dirs: Vec::new(),
@@ -146,6 +149,7 @@ impl Catalog {
             include_prereleases: false,
             disabled: Vec::new(),
             essentials: true,
+            prefer: Default::default(),
             parental: crate::parental::Policy::default(),
             ratings: Arc::default(),
             appstream_dirs: Vec::new(),
@@ -343,7 +347,10 @@ impl Catalog {
                 // Checksums, signatures, sources: not worth a line in the UI.
                 continue;
             };
-            let verdict = evaluate(&info, &self.platform);
+            let mut verdict = evaluate(&info, &self.platform);
+            if verdict.usable() && self.prefer.wants(info.format) {
+                verdict.score += crate::compat::Prefer::LIFT;
+            }
             if verdict.usable() {
                 let plan = install::plan(asset, &info, &self.platform);
                 options.push(InstallOption { asset: asset.clone(), info, verdict, plan });
