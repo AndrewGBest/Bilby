@@ -533,6 +533,22 @@ pub fn write_web_shortcut(dirs: &Dirs, id: &str, name: &str, url: &str) -> Resul
     Ok(path)
 }
 
+/// Start something, trying again for a moment if the system says its file is busy.
+/// A file only just written (a download, an update) can still be held open for
+/// writing for an instant, and a program cannot be started from one that is.
+fn not_while_busy<T>(mut start: impl FnMut() -> std::io::Result<T>) -> std::io::Result<T> {
+    let mut tries = 0;
+    loop {
+        match start() {
+            Err(e) if e.kind() == std::io::ErrorKind::ExecutableFileBusy && tries < 20 => {
+                tries += 1;
+                std::thread::sleep(std::time::Duration::from_millis(25));
+            }
+            other => return other,
+        }
+    }
+}
+
 /// The folder of an app that was unpacked, when `program` is the `AppRun` inside one.
 pub fn unpacked_folder(program: &Path) -> Option<PathBuf> {
     let folder = program.parent()?;
@@ -561,13 +577,15 @@ pub fn unpack_appimage(appimage: &Path) -> Result<PathBuf> {
     let work = home.join(format!(".unpacking-{stem}"));
     let _ = std::fs::remove_dir_all(&work);
     std::fs::create_dir_all(&work)?;
-    let ran = Command::new(appimage)
-        .arg("--appimage-extract")
-        .current_dir(&work)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status();
+    let ran = not_while_busy(|| {
+        Command::new(appimage)
+            .arg("--appimage-extract")
+            .current_dir(&work)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+    });
     let inside = work.join("squashfs-root");
     let whole = ran.is_ok_and(|status| status.success()) && inside.join("AppRun").exists();
     if !whole {
@@ -804,8 +822,10 @@ pub fn launch(path: &Path) -> Result<()> {
 pub fn launch_watched(path: &Path, args: &[String], watch: std::time::Duration) -> Result<()> {
     use std::process::{Command, Stdio};
     let log = std::env::temp_dir().join(format!("bilby-launch-{}.log", std::process::id()));
-    let errors = std::fs::File::create(&log).map(Stdio::from).unwrap_or_else(|_| Stdio::null());
-    let mut child = Command::new(path).args(args).stdin(Stdio::null()).stdout(Stdio::null()).stderr(errors).spawn()?;
+    let mut child = not_while_busy(|| {
+        let errors = std::fs::File::create(&log).map(Stdio::from).unwrap_or_else(|_| Stdio::null());
+        Command::new(path).args(args).stdin(Stdio::null()).stdout(Stdio::null()).stderr(errors).spawn()
+    })?;
     let started = std::time::Instant::now();
     let failed = loop {
         match child.try_wait() {
@@ -1411,6 +1431,7 @@ mod launch_tests {
     #[test]
     fn starting_is_watched_for_a_moment() {
         use std::os::unix::fs::PermissionsExt;
+        let _one_at_a_time = super::SCRIPTS.lock().unwrap_or_else(|e| e.into_inner());
         let dir = std::env::temp_dir().join(format!("bilby-launch-test-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let script = |name: &str, body: &str| {
@@ -1428,6 +1449,12 @@ mod launch_tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 }
+
+/// Tests that write a script and start it take turns. A script still open for writing
+/// in one test, when another test starts a program, cannot be started ("text file
+/// busy"): the new process holds the open file for a moment.
+#[cfg(all(test, unix))]
+static SCRIPTS: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 #[cfg(all(test, unix))]
 mod unpack_tests {
@@ -1449,6 +1476,7 @@ mod unpack_tests {
 
     #[test]
     fn an_appimage_is_unpacked_into_a_folder_that_runs_without_fuse() {
+        let _one_at_a_time = SCRIPTS.lock().unwrap_or_else(|e| e.into_inner());
         let root = std::env::temp_dir().join(format!("bilby-unpack-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         let dirs = Dirs {
@@ -1473,7 +1501,9 @@ mod unpack_tests {
         // Its menu entry starts the folder's program and carries its icon.
         let entry = add_menu_entry(&dirs, "own:workshop/gauge", "Gauge", &program).unwrap();
         let text = std::fs::read_to_string(entry).unwrap();
-        assert!(text.contains("Gauge-2.1.0-x86_64.AppDir/AppRun") && text.contains("Icon="), "{text}");
+        assert!(text.contains("Gauge-2.1.0-x86_64.AppDir/AppRun"), "{text}");
+        // Icons are taken out of the app only on Linux, where menu entries are used.
+        assert!(text.contains("Icon=") || !cfg!(target_os = "linux"), "{text}");
 
         // Removing it removes the whole folder, and nothing outside Applications.
         assert!(!remove_placed(&dirs, &root.join("elsewhere").join("AppRun")));
