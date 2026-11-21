@@ -209,6 +209,7 @@ impl Flathub {
             momentum: None,
             price: None,
             adult: false,
+            restricted: false,
             id: AppId::new(SourceKind::Flathub, id),
         }
     }

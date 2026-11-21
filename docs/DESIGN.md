@@ -324,7 +324,12 @@ are part of the catalog, kept apart rather than hidden:
   are then shown as they are, among everything else, and open without a question.
   Switching it on is itself the question of being an adult.
 - **Family mode** takes them out altogether: not listed, not covered, not openable,
-  and a search does not say that anything was left out.
+  and a search does not say that anything was left out. It takes gambling and piracy
+  sites out too (`AppSummary::restricted`, from two more bundled lists). Outside
+  Family mode those are shown like any other site when searched for, uncovered, and
+  are never recommended. [The gambling list has some five thousand addresses; the
+  piracy list about thirteen hundred, and it caught none of the piracy sites among
+  the thousand most visited, so it should not be relied on.]
 - A four-digit **PIN**, kept as a salted hash, replaces the age question where it is
   set, and is asked for to switch Family mode off, to change any of these settings,
   to remove itself and, if chosen, before installing or removing anything. Making

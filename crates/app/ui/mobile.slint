@@ -154,10 +154,10 @@ export component MobileShell inherits Rectangle {
                         if Store.categories.length > 1 : Flickable {
                             height: 44px;
                             HorizontalLayout {
-                                padding-left: 14px;
+                                padding-left: 16px;
                                 padding-right: 16px;
                                 padding-bottom: 12px;
-                                spacing: 6px;
+                                spacing: 8px;
                                 alignment: start;
                                 ChoiceChip { text: "All"; selected: Store.category == ""; clicked => { Store.category = ""; } }
                                 for name in Store.categories : ChoiceChip {

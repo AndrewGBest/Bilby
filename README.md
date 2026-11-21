@@ -89,8 +89,8 @@ There is no Android package yet, and no Flatpak
   section of its own, each item covered until you choose it, and choosing one asks
   you to confirm you are an adult. It appears on the home page only if you ask for
   that. Those who want no cover at all can switch it off.
-- **Family mode** removes adult content altogether: not listed, not covered, not
-  openable. A four-digit **PIN** can guard that, the other family settings, adult
+- **Family mode** removes adult content altogether, and gambling and piracy sites
+  with it: not listed, not covered, not openable. A four-digit **PIN** can guard that, the other family settings, adult
   content, and, if you want, installing or removing anything.
 
 **Install it**

@@ -95,14 +95,33 @@ pub fn top_hosts() -> &'static [&'static str] {
 /// (MIT), which merges lists by Sinfonietta, BigDargon and Clefspeare13 (MIT) and by
 /// Tiuxo and brijrajparmar27 (CC BY 4.0); fetched 2026-11-21.]
 pub fn adult_host(host: &str) -> bool {
+    static LIST: std::sync::OnceLock<Hosts> = std::sync::OnceLock::new();
+    on_list(LIST.get_or_init(|| unpack(include_bytes!("../../data/adult-hosts.txt.gz"))), host)
+}
+
+/// Is this a gambling site, or one known for piracy? Such sites are shown like any
+/// other when searched for, never recommended, and gone in Family mode. [Gambling:
+/// the "gambling" extension of StevenBlack's hosts project, from lists by BigDargon
+/// and Sinfonietta (MIT). Piracy: The Block List Project's piracy list (MIT by its own
+/// header). Fetched 2026-11-21. The piracy list is short and misses a good deal.]
+pub fn restricted_host(host: &str) -> bool {
+    static GAMBLING: std::sync::OnceLock<Hosts> = std::sync::OnceLock::new();
+    static PIRACY: std::sync::OnceLock<Hosts> = std::sync::OnceLock::new();
+    on_list(GAMBLING.get_or_init(|| unpack(include_bytes!("../../data/gambling-hosts.txt.gz"))), host)
+        || on_list(PIRACY.get_or_init(|| unpack(include_bytes!("../../data/piracy-hosts.txt.gz"))), host)
+}
+
+type Hosts = std::collections::HashSet<String>;
+
+fn unpack(packed: &[u8]) -> Hosts {
     use std::io::Read;
-    static LIST: std::sync::OnceLock<std::collections::HashSet<String>> = std::sync::OnceLock::new();
-    let list = LIST.get_or_init(|| {
-        let mut text = String::new();
-        let packed: &[u8] = include_bytes!("../../data/adult-hosts.txt.gz");
-        let _ = flate2::read::GzDecoder::new(packed).read_to_string(&mut text);
-        text.lines().map(str::to_string).collect()
-    });
+    let mut text = String::new();
+    let _ = flate2::read::GzDecoder::new(packed).read_to_string(&mut text);
+    text.lines().map(str::to_string).collect()
+}
+
+/// A site counts when it or any domain it sits under is listed.
+fn on_list(list: &Hosts, host: &str) -> bool {
     let host = host.trim_start_matches("www.").to_ascii_lowercase();
     let labels: Vec<&str> = host.split('.').collect();
     // The whole address, then each domain above it, stopping before the bare ending.
@@ -132,6 +151,7 @@ fn summary_of(host: &str) -> AppSummary {
         momentum: None,
         price: None,
         adult: known.is_some_and(|s| s.adult) || adult_host(host),
+        restricted: restricted_host(host),
     }
 }
 
@@ -324,6 +344,31 @@ mod list_tests {
         // A typed address nobody listed by hand is still marked.
         let typed = ON_TV.summary("fr.pornhub.com").unwrap();
         assert!(typed.adult);
+    }
+
+    #[test]
+    fn gambling_and_piracy_sites_are_marked_and_none_is_recommended() {
+        assert!(
+            restricted_host("bet365.com") || restricted_host("pokerstars.com"),
+            "a well-known betting site is listed"
+        );
+        assert!(restricted_host("1337x.to") || restricted_host("thepiratebay.org"), "and a well-known piracy site");
+        assert!(!restricted_host("wikipedia.org") && !restricted_host("netflix.com"));
+        // Nothing written into the list by hand is one, and so nothing on the home page.
+        assert!(
+            sites().iter().all(|site| !restricted_host(&site.host)),
+            "{:?}",
+            sites().iter().find(|s| restricted_host(&s.host)).map(|s| &s.host)
+        );
+        assert!(featured()
+            .iter()
+            .chain(rows().iter().flat_map(|(_, row)| row))
+            .all(|app| !app.restricted && !app.adult));
+        // The ones people most expect are there to be promoted.
+        let home: Vec<String> = featured().into_iter().map(|app| app.name).collect();
+        for name in ["YouTube", "Netflix", "Twitch", "Spotify", "Disney+"] {
+            assert!(home.contains(&name.to_string()), "{name}: {home:?}");
+        }
     }
 
     #[test]

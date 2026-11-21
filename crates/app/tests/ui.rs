@@ -948,6 +948,11 @@ fn assert_fits(s: &Session, what: &str) {
         for element in root.query_descendants().match_accessible_role(role).find_all() {
             let right = element.absolute_position().x + element.size().width;
             let label = element.accessible_label().unwrap_or_default();
+            // The row of filters above the lists scrolls sideways: its chips may run
+            // past the edge, and how many fit depends on the font.
+            if s.store().get_categories().iter().any(|name| name == label) {
+                continue;
+            }
             assert!(right <= width + 0.5, "{what}: \"{label}\" ends at {right}, the window is {width} wide");
         }
     }
@@ -2657,4 +2662,30 @@ fn a_tv_remote_enters_the_pin_digit_by_digit() {
     assert_eq!(s.store().get_gate(), 2);
     s.press(Key::Escape);
     assert!(s.store().get_gate() == 0 && s.store().get_has_pin());
+}
+
+#[test]
+fn family_mode_also_takes_out_gambling_and_piracy_sites() {
+    let s = start("linux-tv", Shell::Tv);
+    let betting =
+        ["bet365.com", "pokerstars.com"].into_iter().find(|h| bilby_core::source::web::restricted_host(h)).unwrap();
+    let id = format!("web:{betting}");
+    // Ordinarily it is found like any other site, uncovered: it is not adult content.
+    s.app.search(&s.ui, betting);
+    let card = s.store().get_results().iter().find(|c| c.id == id.as_str()).expect("found when searched for");
+    assert!(!card.adult);
+    // It is never on the home page.
+    s.app.search(&s.ui, "");
+    assert!(!s.store().get_sections().iter().any(|row| row.apps.iter().any(|c| c.id == id.as_str())));
+    // In Family mode it is gone, and will not open.
+    s.store().invoke_set_family_mode(true);
+    s.app.search(&s.ui, betting);
+    assert!(!s.store().get_results().iter().any(|c| c.id == id.as_str()));
+    s.app.open(&s.ui, &id);
+    assert!(
+        s.store().get_details_error().contains("Family mode") || !s.store().get_details_open(),
+        "{}",
+        s.store().get_details_error()
+    );
+    assert_eq!(s.store().get_options().row_count(), 0);
 }

@@ -264,6 +264,8 @@ impl Catalog {
                 if self.parental.family_mode || !self.parental.adult_on_home {
                     apps.retain(|app| !app.adult);
                 }
+                // Gambling and piracy are never recommended, whatever the settings.
+                apps.retain(|app| !app.restricted);
                 for app in &mut apps {
                     app.rating = app.rating.or_else(|| self.rating_for(&app.id));
                 }
@@ -455,7 +457,7 @@ impl Catalog {
             other => other,
         };
         let mut summary = source.summary(&id.key).map_err(named)?;
-        if summary.adult && self.parental.family_mode {
+        if (summary.adult || summary.restricted) && self.parental.family_mode {
             return Err(Error::Unsupported("This is not available while Family mode is on.".into()));
         }
         let releases = source.releases(&id.key).map_err(named)?;
@@ -578,7 +580,7 @@ impl Catalog {
         }
         // Family mode: nothing for adults, and no word that anything was left out.
         if self.parental.family_mode {
-            hits.retain(|(app, _)| !app.adult);
+            hits.retain(|(app, _)| !app.adult && !app.restricted);
         }
         outcome.apps = crate::rank::sort(query, hits);
         outcome

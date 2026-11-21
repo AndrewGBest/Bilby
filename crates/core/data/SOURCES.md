@@ -7,6 +7,8 @@
 | `web.json` | About ninety well-known websites, with names and what each is for | Written for Bilby; every address checked to answer | GPL-3.0-only, with Bilby |
 | `web-top.txt` | Hosts among the 1,000 most visited by Chrome's users | The Chrome UX Report, through [zakird/crux-top-lists](https://github.com/zakird/crux-top-lists); tidied (see the file's first line) | Chrome UX Report data, by Google. Stated as CC BY-SA 4.0 by the Tranco project, which uses it; Google's own licence page was not readable when this was written |
 | `adult-hosts.txt.gz` | Addresses of websites for adults | The "porn" extension of [StevenBlack/hosts](https://github.com/StevenBlack/hosts) (MIT), which merges lists by Sinfonietta, BigDargon and Clefspeare13 (MIT) and by Tiuxo and brijrajparmar27 (CC BY 4.0). Leading `www.` removed, sorted, compressed | MIT and CC BY 4.0, as above |
+| `gambling-hosts.txt.gz` | Addresses of gambling sites | The "gambling" extension of [StevenBlack/hosts](https://github.com/StevenBlack/hosts), from lists by BigDargon and Sinfonietta | MIT |
+| `piracy-hosts.txt.gz` | Addresses of sites known for piracy | [The Block List Project](https://github.com/blocklistproject/Lists)'s piracy list. Short: it misses a good deal | MIT by the list's own header (the repository is marked Unlicense) |
 
 All fetched 2026-11-21. `web-top.txt` and `adult-hosts.txt.gz` go stale and want
 refreshing now and then; nothing in Bilby fetches them at run time.

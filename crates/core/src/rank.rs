@@ -242,6 +242,7 @@ mod tests {
             momentum: None,
             price: None,
             adult: false,
+            restricted: false,
         }
     }
 

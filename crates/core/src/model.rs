@@ -274,6 +274,7 @@ impl AppSummary {
             momentum: None,
             price: None,
             adult: false,
+            restricted: false,
         }
     }
 }
@@ -319,6 +320,9 @@ pub struct AppSummary {
     /// descriptors, an age rating of 18, a site listed as adult). Hidden unless the
     /// person has said to show such things.
     pub adult: bool,
+    /// Gambling or piracy: not for adults only, but not for a family either. Shown
+    /// like anything else, never recommended, and gone in Family mode.
+    pub restricted: bool,
 }
 
 /// An average star rating and how many people gave one.

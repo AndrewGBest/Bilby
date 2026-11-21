@@ -106,6 +106,7 @@ impl From<Repo> for AppSummary {
             momentum: None,
             price: None,
             adult: false,
+            restricted: false,
         }
     }
 }
