@@ -459,6 +459,22 @@ export component TvShell inherits Rectangle {
             if (search.has-focus) {
                 return reject;
             }
+            // The search bar is highlighted and a letter, digit or symbol is typed (a
+            // keyboard, or a remote with one): the box takes it at once, no OK needed.
+            // Keys that move or act are left to the rest of this handler.
+            if (root.zone == 1 && root.tab == 2 && !Store.details-open && !event.modifiers.control
+                && !event.modifiers.alt && !event.modifiers.meta && event.text.character-count == 1
+                && event.text != Key.UpArrow && event.text != Key.DownArrow && event.text != Key.LeftArrow
+                && event.text != Key.RightArrow && event.text != Key.Return && event.text != Key.Escape
+                && event.text != Key.Backspace && event.text != Key.Back && event.text != Key.Tab
+                && event.text != Key.Delete && event.text != Key.Home && event.text != Key.End
+                && event.text != Key.PageUp && event.text != Key.PageDown) {
+                search.focus();
+                search.text = search.text + event.text;
+                // Where the next letter goes: after this one (the text is typed in order).
+                search.set-selection-offsets(search.text.character-count, search.text.character-count);
+                return accept;
+            }
             if (root.zone == 1 && !Store.details-open) {
                 if (event.text == Key.LeftArrow) {
                     // Search is its own row under the tabs, so sideways steps over it.
@@ -887,7 +903,7 @@ export component TvShell inherits Rectangle {
             }
             if search.text == "" : Text {
                 x: 44 * u;
-                text: search.has-focus ? "Type a name, then press OK" : parent.pointed ? "Press OK to search for apps and games" : "Search for apps and games";
+                text: search.has-focus ? "Type a name, then press OK" : parent.pointed ? "Start typing, or press OK to search" : "Search for apps and games";
                 color: Theme.text-dim;
                 font-size: 15 * u;
                 vertical-alignment: center;

@@ -3160,3 +3160,23 @@ fn the_kind_of_app_offered_first_can_be_chosen_in_settings() {
     s.app.open(&s.ui, id);
     assert_eq!(store.get_options().row_data(0).unwrap().label, first.as_str());
 }
+
+#[test]
+fn on_tv_typing_with_the_search_bar_highlighted_goes_straight_into_it() {
+    let s = start("linux-tv", Shell::Tv);
+    // Up to search: highlighted, not yet typing.
+    s.press(Key::UpArrow);
+    assert!(!s.store().get_query().contains('x'));
+    // A keyboard, or a remote's keys, types without OK.
+    s.press("t");
+    s.press("i");
+    s.press("d");
+    s.press("e");
+    assert_eq!(s.store().get_query(), "tide", "the letters went into the box");
+    // Keys that act are not taken into the box: an arrow still moves the highlight.
+    s.press(Key::RightArrow);
+    assert!(s.store().get_query() == "tide", "arrow keys are not typed");
+    // OK still searches, as before.
+    s.press(Key::Return);
+    assert_eq!(s.store().get_page(), 1);
+}
