@@ -3180,3 +3180,57 @@ fn on_tv_typing_with_the_search_bar_highlighted_goes_straight_into_it() {
     s.press(Key::Return);
     assert_eq!(s.store().get_page(), 1);
 }
+
+// The copy that is running proves its kind of file starts here.
+#[cfg(target_os = "linux")]
+#[test]
+fn bilby_updating_itself_is_never_unpacked_or_made_to_wait_on_fuse() {
+    use bilby_core::needs::Fuse;
+    let start_as = |store_app: &str| {
+        init_backend();
+        bilby_core::demo::DOWNLOAD_STEP_MS.store(0, Ordering::Relaxed);
+        let dirs = dirs_in(&temp_root());
+        std::fs::create_dir_all(&dirs.config).unwrap();
+        std::fs::write(dirs.config.join("demo-state.json"), r#"{"settings":{"welcomed":true}}"#).unwrap();
+        let options = Options {
+            demo: true,
+            inline: true,
+            // No FUSE 2 and no package for it: any other AppImage would be unpacked.
+            platform: Platform::preset("linux-x64-fedora"),
+            shell: Some(Shell::Desktop),
+            dirs: Some(dirs.clone()),
+            opener: Some(Arc::new(|_: &std::path::Path| Ok(()))),
+            launcher: Some(Arc::new(|_: &std::path::Path| Ok(()))),
+            fuse: Some(Fuse { library: false, mounter: true }),
+            store_app: Some(store_app.to_string()),
+            ..Default::default()
+        };
+        let (ui, app) = build(&options).unwrap();
+        (ui, app, dirs)
+    };
+    let Some(stand_in) =
+        ["github:tidewave/tidewave", "github:lumen-labs/lumen", "github:kestrel-sh/kestrel"].into_iter().find(|id| {
+            let (ui, app, _) = start_as(id);
+            app.open(&ui, id);
+            ui.global::<Store>().get_options().row_data(0).is_some_and(|o| o.label.contains("AppImage"))
+        })
+    else {
+        return;
+    };
+    let (ui, app, dirs) = start_as(stand_in);
+    let store = ui.global::<Store>();
+    app.open(&ui, stand_in);
+    assert_eq!(store.get_need_note(), "", "nothing is said about FUSE on the store's own page");
+    store.invoke_install(0);
+    assert_eq!(store.get_install_state(), 2, "{}", store.get_install_message());
+    let placed: Vec<String> = std::fs::read_dir(&dirs.applications)
+        .unwrap()
+        .flatten()
+        .map(|e| e.file_name().to_string_lossy().to_string())
+        .collect();
+    assert!(placed.iter().any(|name| name.ends_with(".AppImage")), "{placed:?}");
+    assert!(!placed.iter().any(|name| name.ends_with(".AppDir")), "it is left as the file it is: {placed:?}");
+    let entry = std::fs::read_to_string(dirs.menu.join("bilby.desktop")).unwrap();
+    assert!(entry.contains(".AppImage"), "and the menu starts that file: {entry}");
+    assert!(store.get_can_open(), "with Open to restart into it");
+}

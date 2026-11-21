@@ -533,6 +533,33 @@ pub fn write_web_shortcut(dirs: &Dirs, id: &str, name: &str, url: &str) -> Resul
     Ok(path)
 }
 
+/// What an AppImage tells the program inside it about itself: where its file is and
+/// where it is mounted. When the store runs from an AppImage these are about the
+/// store, and a program it starts must not inherit them and take them for its own.
+pub const APPIMAGE_SAYS: [&str; 4] = ["APPIMAGE", "APPDIR", "ARGV0", "OWD"];
+
+fn not_ours(command: &mut std::process::Command) {
+    for name in APPIMAGE_SAYS {
+        command.env_remove(name);
+    }
+}
+
+/// The file or folder a running program was started from, for a store that wants to
+/// know where it itself lives: the AppImage, when the program really is running out
+/// of the one named (a name inherited from whoever started it does not count), or the
+/// `AppRun` of the folder an AppImage was unpacked into.
+pub fn own_program(exe: &Path, appimage: Option<&Path>, appdir: Option<&Path>) -> Option<PathBuf> {
+    if let (Some(file), Some(mounted)) = (appimage, appdir) {
+        if file.is_file() && exe.starts_with(mounted) {
+            return Some(file.to_path_buf());
+        }
+    }
+    exe.ancestors()
+        .find(|folder| folder.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("AppDir")))
+        .map(|folder| folder.join("AppRun"))
+        .filter(|run| run.is_file())
+}
+
 /// Start something, trying again for a moment if the system says its file is busy.
 /// A file only just written (a download, an update) can still be held open for
 /// writing for an instant, and a program cannot be started from one that is.
@@ -824,7 +851,9 @@ pub fn launch_watched(path: &Path, args: &[String], watch: std::time::Duration) 
     let log = std::env::temp_dir().join(format!("bilby-launch-{}.log", std::process::id()));
     let mut child = not_while_busy(|| {
         let errors = std::fs::File::create(&log).map(Stdio::from).unwrap_or_else(|_| Stdio::null());
-        Command::new(path).args(args).stdin(Stdio::null()).stdout(Stdio::null()).stderr(errors).spawn()
+        let mut command = Command::new(path);
+        not_ours(&mut command);
+        command.args(args).stdin(Stdio::null()).stdout(Stdio::null()).stderr(errors).spawn()
     })?;
     let started = std::time::Instant::now();
     let failed = loop {
@@ -873,7 +902,9 @@ pub fn why_it_closed(said: &str) -> String {
 /// Start a program with arguments, without waiting for it.
 pub fn launch_with(path: &Path, args: &[String]) -> Result<()> {
     use std::process::{Command, Stdio};
-    Command::new(path).args(args).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn()?;
+    let mut command = Command::new(path);
+    not_ours(&mut command);
+    command.args(args).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn()?;
     Ok(())
 }
 
@@ -1472,6 +1503,51 @@ mod unpack_tests {
         std::fs::write(&path, body).unwrap();
         std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).unwrap();
         path
+    }
+
+    #[test]
+    fn a_program_knows_where_it_lives_and_is_not_told_by_whoever_started_it() {
+        let root = std::env::temp_dir().join(format!("bilby-own-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let old = root.join("Downloads").join("bilby-old.AppImage");
+        let mounted = root.join("mount_old");
+        let unpacked = root.join("Applications").join("bilby-new.AppDir");
+        for folder in [old.parent().unwrap(), &mounted.join("usr/bin"), &unpacked.join("usr/bin")] {
+            std::fs::create_dir_all(folder).unwrap();
+        }
+        for file in [&old, &mounted.join("usr/bin/bilby"), &unpacked.join("usr/bin/bilby"), &unpacked.join("AppRun")] {
+            std::fs::write(file, b"x").unwrap();
+        }
+        // Running out of the AppImage that is named: that file.
+        assert_eq!(own_program(&mounted.join("usr/bin/bilby"), Some(&old), Some(&mounted)), Some(old.clone()));
+        // An unpacked copy started by the old AppImage, which left its own name behind:
+        // it lives in its folder, not in the file that started it.
+        let exe = unpacked.join("usr/bin/bilby");
+        assert_eq!(own_program(&exe, Some(&old), Some(&mounted)), Some(unpacked.join("AppRun")));
+        assert_eq!(own_program(&exe, None, None), Some(unpacked.join("AppRun")));
+        // A plain program somewhere: nowhere in particular.
+        assert_eq!(own_program(&root.join("bin/bilby"), None, None), None);
+        assert_eq!(own_program(&root.join("bin/bilby"), Some(&old), Some(&mounted)), None);
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn what_is_started_is_not_told_it_is_the_stores_appimage() {
+        let _one_at_a_time = SCRIPTS.lock().unwrap_or_else(|e| e.into_inner());
+        let dir = std::env::temp_dir().join(format!("bilby-env-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let script = dir.join("says");
+        std::fs::write(&script, format!("#!/bin/sh\nenv > '{}/env'\n", dir.display())).unwrap();
+        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let mut command = std::process::Command::new(&script);
+        command.env("APPIMAGE", "/somewhere/store.AppImage").env("APPDIR", "/tmp/.mount_store").env("KEPT", "yes");
+        not_ours(&mut command);
+        assert!(not_while_busy(|| command.status()).unwrap().success());
+        let env = std::fs::read_to_string(dir.join("env")).unwrap();
+        assert!(!env.contains("APPIMAGE=") && !env.contains("APPDIR="), "{env}");
+        assert!(env.contains("KEPT=yes"));
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

@@ -1538,7 +1538,10 @@ impl App {
         // it is downloaded, with the package that provides it one press away.
         let mut need_note = String::new();
         let mut needed = None;
-        if helper.0.is_empty() {
+        // The store's own page: it is running, so its kind of file starts here. It is
+        // never unpacked or given a requirement on the way to updating itself.
+        let own_page = self.store_app.as_ref().is_some_and(|own| own.to_string().eq_ignore_ascii_case(&id));
+        if helper.0.is_empty() && !own_page {
             let placed = self.launchable(&id).and_then(|path| bilby_core::needs::as_appimage(&path));
             let offered = store.get_options().row_data(0).is_some_and(|option| option.label.contains("AppImage"));
             if placed.is_some() || offered {
@@ -4123,7 +4126,13 @@ pub fn run(mut options: Options) -> Result<(), Box<dyn std::error::Error>> {
     // screenshot run is not a real start and adds nothing to the app menu.
     let real = !options.demo && options.platform.is_none() && options.screenshot.is_none();
     if real && cfg!(target_os = "linux") && options.self_program.is_none() {
-        options.self_program = std::env::var_os("APPIMAGE").map(PathBuf::from).filter(|path| path.is_file());
+        // Where this copy really lives: the AppImage it is running out of, or the
+        // folder one was unpacked into. A name left behind by whoever started it (an
+        // older copy, restarting into this one) is not believed.
+        let named = |name: &str| std::env::var_os(name).map(PathBuf::from);
+        options.self_program = std::env::current_exe()
+            .ok()
+            .and_then(|exe| install::own_program(&exe, named("APPIMAGE").as_deref(), named("APPDIR").as_deref()));
     }
     let (ui, app) = build(&options)?;
     #[cfg(not(target_os = "android"))]
