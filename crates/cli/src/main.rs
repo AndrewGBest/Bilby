@@ -251,7 +251,11 @@ fn install_cmd(
         &option.asset,
         http.as_ref(),
         dirs,
-        &install::open_with_system,
+        // Tests of this program must not open a file manager on whoever runs them.
+        &|path: &std::path::Path| match std::env::var_os("BILBY_NO_OPEN") {
+            Some(_) => Ok(()),
+            None => install::open_with_system(path),
+        },
         &mut |done, total| {
             if let Some(total) = total.filter(|t| *t > 0) {
                 let pct = done * 100 / total;

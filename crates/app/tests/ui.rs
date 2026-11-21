@@ -2996,12 +2996,78 @@ fn updating_bilby_itself_repoints_its_menu_entry_and_offers_to_restart() {
     assert_eq!(entries, 1, "one entry for Bilby, not a second beside it");
     assert!(running.exists(), "the copy the person put there themselves is left alone");
 
+    // It asks at once whether to restart into it; Later leaves things as they are.
+    assert_eq!(store.get_gate(), 1);
+    assert_eq!((store.get_gate_no().as_str(), store.get_gate_yes().as_str()), ("Later", "Restart Bilby now"));
+    store.invoke_gate_answer(false);
+    assert!(store.get_gate() == 0 && started.lock().unwrap().is_empty());
+
     // Open now means: restart into the new copy.
     assert!(store.get_can_open());
     store.invoke_launch();
     let launched = started.lock().unwrap().clone();
     assert_eq!(launched.len(), 1);
     assert!(launched[0].starts_with(&dirs.applications), "{launched:?}");
+
+    // An older copy started later, from a shortcut that still points at it, finds the
+    // newer one the store placed and hands over to it. The newer one does not.
+    let state = State::load(&dirs.config.join("demo-state.json"));
+    let newer = bilby::newer_copy_in(&state, stand_in, &dirs, "0.0.1", Some(&running));
+    assert_eq!(newer.as_ref(), Some(&launched[0]));
+    assert_eq!(bilby::newer_copy_in(&state, stand_in, &dirs, "0.0.1", Some(&launched[0])), None, "not to itself");
+    assert_eq!(bilby::newer_copy_in(&state, stand_in, &dirs, "999.0.0", Some(&running)), None, "not to an older one");
+    std::fs::remove_file(&launched[0]).unwrap();
+    assert_eq!(bilby::newer_copy_in(&state, stand_in, &dirs, "0.0.1", Some(&running)), None, "not to one that is gone");
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn updating_bilby_from_the_library_also_asks_to_restart() {
+    init_backend();
+    bilby_core::demo::DOWNLOAD_STEP_MS.store(0, Ordering::Relaxed);
+    let dirs = dirs_in(&temp_root());
+    std::fs::create_dir_all(&dirs.config).unwrap();
+    let started: Arc<Mutex<Vec<PathBuf>>> = Arc::default();
+    let record = started.clone();
+    let find = |seed: Option<&str>, store_app: &str| {
+        std::fs::write(dirs.config.join("demo-state.json"), seed.unwrap_or(r#"{"settings":{"welcomed":true}}"#))
+            .unwrap();
+        let record = record.clone();
+        let options = Options {
+            demo: true,
+            inline: true,
+            platform: Platform::preset("linux-x64-arch"),
+            shell: Some(Shell::Desktop),
+            dirs: Some(dirs.clone()),
+            opener: Some(Arc::new(|_: &std::path::Path| Ok(()))),
+            launcher: Some(Arc::new(move |path: &std::path::Path| {
+                record.lock().unwrap().push(path.to_path_buf());
+                Ok(())
+            })),
+            store_app: Some(store_app.to_string()),
+            ..Default::default()
+        };
+        build(&options).unwrap()
+    };
+    let Some(stand_in) =
+        ["github:tidewave/tidewave", "github:lumen-labs/lumen", "github:kestrel-sh/kestrel"].into_iter().find(|id| {
+            let (ui, app) = find(None, id);
+            app.open(&ui, id);
+            ui.global::<Store>().get_options().row_data(0).is_some_and(|o| o.label.contains("AppImage"))
+        })
+    else {
+        return;
+    };
+    let (ui, app) = find(None, stand_in);
+    let store = ui.global::<Store>();
+    // The Library's own Update, with no app page open.
+    app.update_app(&ui, stand_in);
+    assert_eq!(store.get_gate(), 1, "the question comes up over the Library");
+    assert!(store.get_gate_text().contains("Restart Bilby"), "{}", store.get_gate_text());
+    store.invoke_gate_answer(true);
+    let launched = started.lock().unwrap().clone();
+    assert_eq!(launched.len(), 1, "Restart now starts the new copy");
+    assert!(launched[0].starts_with(&dirs.applications));
 }
 
 #[test]

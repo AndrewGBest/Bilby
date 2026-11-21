@@ -122,6 +122,9 @@ enum Guarded {
     Remove(String),
     /// Not a guard: FUSE was added and the question is whether to restart now.
     Restart,
+    /// Not a guard: a newer Bilby is in place and the question is whether to restart
+    /// Bilby into it now.
+    RestartBilby,
 }
 
 /// A change to the family and adult-content settings.
@@ -2786,6 +2789,9 @@ impl App {
                             // offers to restart into it now. No second entry is made.
                             let _ = install::register_self(&app.dirs, file, ICON_PNG);
                             *app.self_new.lock().unwrap() = Some(file.clone());
+                            // Asked wherever the update was started from, the Library
+                            // included, where there is no Open button to find.
+                            app.ask_restart_bilby(ui, &version);
                             store.set_install_message(
                                 format!("Bilby {version} is on this device. Press Open to restart into it; it also starts next time you open Bilby from your app menu.").into(),
                             );
@@ -3188,6 +3194,15 @@ impl App {
             }
             return;
         }
+        if matches!(*self.pending.lock().unwrap(), Some(Guarded::RestartBilby)) {
+            *self.pending.lock().unwrap() = None;
+            self.close_gate(ui);
+            match yes {
+                true => self.restart_into_new(ui),
+                false => self.toast(ui, "The new Bilby starts the next time you open it.", false),
+            }
+            return;
+        }
         if ui.global::<Store>().get_gate() != 1 || !yes {
             self.gate_cancel(ui);
             return;
@@ -3262,7 +3277,7 @@ impl App {
                 self.remove_from_library(ui, &id);
             }
             Guarded::Setting(change) => self.apply_setting(ui, change),
-            Guarded::Restart => {}
+            Guarded::Restart | Guarded::RestartBilby => {}
         }
     }
 
@@ -3505,6 +3520,34 @@ impl App {
         (path.starts_with(&self.dirs.applications) && path.is_file()).then_some(path)
     }
 
+    /// Start the newer copy of the store that was just placed, and leave.
+    fn restart_into_new(&self, ui: &AppWindow) {
+        let Some(path) = self.self_new.lock().unwrap().clone() else { return };
+        match (self.launcher)(&path) {
+            Ok(()) => {
+                self.toast(ui, "Restarting into the new Bilby…", false);
+                if !self.inline {
+                    let _ = slint::quit_event_loop();
+                }
+            }
+            Err(e) => self.toast(ui, &format!("The new Bilby is installed but could not be started: {e}"), true),
+        }
+    }
+
+    /// A newer Bilby is in place: restart into it now, or later?
+    fn ask_restart_bilby(&self, ui: &AppWindow, version: &str) {
+        self.ask(
+            ui,
+            1,
+            "Bilby is updated",
+            &format!("Bilby {version} is installed. Restart Bilby to start using it."),
+            Guarded::RestartBilby,
+        );
+        let store = ui.global::<Store>();
+        store.set_gate_no("Later".into());
+        store.set_gate_yes("Restart Bilby now".into());
+    }
+
     /// Start the open app, when the store installed it as a file it can run.
     pub fn launch(self: &Arc<Self>, ui: &AppWindow) {
         let store = ui.global::<Store>();
@@ -3513,15 +3556,7 @@ impl App {
         // The store's own newer copy: start it and leave, so the person is in the new
         // version at once.
         if self.store_app.as_ref().is_some_and(|own| own.to_string().eq_ignore_ascii_case(&id)) {
-            match (self.launcher)(&path) {
-                Ok(()) => {
-                    self.toast(ui, "Restarting into the new Bilby…", false);
-                    if !self.inline {
-                        let _ = slint::quit_event_loop();
-                    }
-                }
-                Err(e) => self.toast(ui, &format!("The new Bilby is installed but could not be started: {e}"), true),
-            }
+            self.restart_into_new(ui);
             return;
         }
         let started = if let Some(host) = id.strip_prefix("web:").filter(|_| !self.opens_sites_in_longboard()) {
@@ -4121,6 +4156,42 @@ fn translate_remote_keys(ui: &AppWindow) {
     });
 }
 
+/// Set for a copy that was started by an older one handing over, so that two copies
+/// can never pass the person back and forth.
+const HANDED_OVER: &str = "BILBY_HANDED_OVER";
+
+/// A newer copy of the store than the one starting, which the store itself placed and
+/// which is still there.
+fn newer_own_copy(options: &Options) -> Option<PathBuf> {
+    if std::env::var_os(HANDED_OVER).is_some() {
+        return None;
+    }
+    let dirs = options.dirs.clone().unwrap_or_else(Dirs::for_current_user);
+    let state = State::load(&options.state_file.clone().unwrap_or_else(|| dirs.config.join("state.json")));
+    let own = options
+        .store_app
+        .clone()
+        .unwrap_or_else(|| AppId::new(SourceKind::GitHub, bilby_core::catalog::STORE_REPOSITORY).to_string());
+    newer_copy_in(&state, &own, &dirs, env!("CARGO_PKG_VERSION"), options.self_program.as_deref())
+}
+
+/// The rule itself, apart from the machine: the library's record of the store, when it
+/// names a file in the store's own Applications folder, of a newer version, that is
+/// not the one already running.
+pub fn newer_copy_in(
+    state: &State,
+    own: &str,
+    dirs: &Dirs,
+    running: &str,
+    program: Option<&std::path::Path>,
+) -> Option<PathBuf> {
+    let entry = state.library.iter().find(|app| app.id.eq_ignore_ascii_case(own))?;
+    let path = PathBuf::from(entry.path.as_deref()?);
+    let placed = entry.store_managed && path.starts_with(&dirs.applications) && path.is_file();
+    let newer = bilby_core::version::is_newer(&entry.version, running);
+    (placed && newer && program != Some(path.as_path())).then_some(path)
+}
+
 pub fn run(mut options: Options) -> Result<(), Box<dyn std::error::Error>> {
     // An AppImage says where its file is. A demo, a preview of another device or a
     // screenshot run is not a real start and adds nothing to the app menu.
@@ -4133,6 +4204,20 @@ pub fn run(mut options: Options) -> Result<(), Box<dyn std::error::Error>> {
         options.self_program = std::env::current_exe()
             .ok()
             .and_then(|exe| install::own_program(&exe, named("APPIMAGE").as_deref(), named("APPDIR").as_deref()));
+    }
+    // An older copy, started from a shortcut that still points at it, hands over to
+    // the newer one the store has since placed, so an update is never undone by the
+    // way Bilby happens to be opened.
+    if real {
+        if let Some(newer) = newer_own_copy(&options) {
+            let mut command = std::process::Command::new(&newer);
+            for name in install::APPIMAGE_SAYS {
+                command.env_remove(name);
+            }
+            if command.args(std::env::args_os().skip(1)).env(HANDED_OVER, "1").spawn().is_ok() {
+                return Ok(());
+            }
+        }
     }
     let (ui, app) = build(&options)?;
     #[cfg(not(target_os = "android"))]

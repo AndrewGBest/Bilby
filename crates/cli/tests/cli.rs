@@ -34,6 +34,7 @@ fn run_in(home: &Path, args: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_bilby-cli"))
         .args(args)
         .env("HOME", home)
+        .env("BILBY_NO_OPEN", "1")
         .env("USERPROFILE", home)
         .env("XDG_CONFIG_HOME", home.join("config"))
         .env("XDG_CACHE_HOME", home.join("cache"))

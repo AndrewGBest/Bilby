@@ -187,9 +187,15 @@ pub fn fetch_site(http: &dyn Http, dir: &Path, key: &str, host: &str) -> Result<
 /// screens (large, square, opaque), then other PNG icons, larger before smaller.
 /// Addresses are made whole against `base`; only https ones are kept.
 pub fn site_icons(html: &str, base: &str) -> Vec<String> {
-    let head = &html[..html.len().min(300_000)];
+    // Cut at a character, not in the middle of one: pages are in every language.
+    let mut end = html.len().min(300_000);
+    while !html.is_char_boundary(end) {
+        end -= 1;
+    }
+    let head = &html[..end];
     let mut found: Vec<(u32, String)> = Vec::new();
-    for tag in head.split('<').filter(|t| t.len() > 5 && t[..5].eq_ignore_ascii_case("link ")) {
+    let is_link = |tag: &&str| tag.get(..5).is_some_and(|start| start.eq_ignore_ascii_case("link "));
+    for tag in head.split('<').filter(is_link) {
         let tag = tag.split('>').next().unwrap_or("");
         let attribute = |name: &str| -> Option<String> {
             let lower = tag.to_ascii_lowercase();
@@ -377,6 +383,15 @@ mod site_tests {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_page_in_any_language_is_read_without_falling_over() {
+        // A tag of a few bytes that starts with a character several bytes long, and a
+        // long page whose cut would land inside one.
+        assert!(site_icons("<星星 x><link rel=\"icon\" href=\"/a.png\">", "https://example.org/").len() <= 1);
+        let long = format!("<head>{}</head>", "星".repeat(120_000));
+        assert!(site_icons(&long, "https://example.org/").is_empty());
+    }
+
     use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
