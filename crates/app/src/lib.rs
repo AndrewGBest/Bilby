@@ -23,6 +23,7 @@ slint::include_modules!();
 
 #[cfg(target_os = "linux")]
 mod activation;
+pub mod osk;
 pub mod sound;
 
 const USAGE: &str = "\
@@ -762,6 +763,11 @@ pub struct App {
     install_when_loaded: Mutex<Option<String>>,
     toast_generation: Arc<AtomicU64>,
     cancel_install: Arc<AtomicBool>,
+    /// The app being downloaded and installed right now, if any: its id and name. Its
+    /// page shows how far that has got however often it is left and come back to.
+    installing: Mutex<Option<(String, String)>>,
+    /// The TV's on-screen keyboard: which face is up and which key is highlighted.
+    osk: Mutex<osk::Model>,
     /// The store's own app id, checked for updates like any other app. `None` in the
     /// demo, whose fictional GitHub does not have it.
     store_app: Option<AppId>,
@@ -2195,6 +2201,8 @@ impl App {
         let (state, headline) = match (state, &check) {
             (1, _) => (1, "Checking for updates…".to_string()),
             (4, _) => (4, "Installing updates…".to_string()),
+            // Begun earlier and still going (Bilby was closed and opened again).
+            (_, Some(c)) if c.installing => (4, "Installing updates…".to_string()),
             (_, None) => (0, "Not checked yet".to_string()),
             // A whole new release of the system is named, not counted.
             (_, Some(_)) if pending.iter().any(|p| p.release.is_some()) => {
@@ -2251,13 +2259,51 @@ impl App {
                         after.refresh(&ui);
                     }
                 });
+                let installing = check.installing;
                 *app.system_check.lock().unwrap() = Some(check);
                 app.show_system(ui, 0, "");
+                if installing {
+                    let store = ui.global::<Store>();
+                    store.set_system_progress(0.0);
+                    store.set_system_step("Started earlier and still going".into());
+                    app.watch_system(ui);
+                }
                 if let Err(e) = refreshed {
                     app.toast(ui, &e.to_string(), true);
                 }
             },
         );
+    }
+
+    /// An update begun before Bilby was opened is still being installed: look again
+    /// every few seconds, without the page flickering, until it is over.
+    fn watch_system(self: &Arc<Self>, ui: &AppWindow) {
+        let (app, weak) = (self.clone(), ui.as_weak());
+        slint::Timer::single_shot(std::time::Duration::from_secs(5), move || {
+            if weak.upgrade().is_none() {
+                return;
+            }
+            app.job(
+                |app| bilby_core::os::check(app.host.as_ref(), &app.system),
+                |app, ui, check| {
+                    // Something else took over meanwhile (an update started from here).
+                    if !app.system_check.lock().unwrap().as_ref().is_some_and(|c| c.installing) {
+                        return;
+                    }
+                    let (installing, restart) = (check.installing, check.restart_needed);
+                    *app.system_check.lock().unwrap() = Some(check);
+                    app.show_system(ui, 0, "");
+                    if installing {
+                        app.watch_system(ui);
+                        return;
+                    }
+                    app.refresh(ui);
+                    if restart {
+                        app.toast(ui, "Updates installed. Restart this device to finish.", false);
+                    }
+                },
+            );
+        });
     }
 
     /// Install every waiting system update, then look again.
@@ -2536,7 +2582,8 @@ impl App {
         store.set_homepage(SharedString::new());
         store.set_options(ModelRc::default());
         store.set_hidden(ModelRc::default());
-        store.set_install_state(0);
+        // Still being downloaded from an earlier visit to this page: it shows.
+        store.set_install_state(if self.installing_is(id) { 1 } else { 0 });
         store.set_installed_version(
             self.state.lock().unwrap().installed(id).map(|a| a.version.clone()).unwrap_or_default().into(),
         );
@@ -2783,7 +2830,8 @@ impl App {
         card.version = release.map(|r| r.version.as_str()).unwrap_or_default().into();
         card.badge = options.first().map(|o| o.label()).unwrap_or_default().into();
         store.set_app(at_the_top(card));
-        store.set_install_state(0);
+        let shown = store.get_app().id.to_string();
+        store.set_install_state(if self.installing_is(&shown) { 1 } else { 0 });
         store.set_options(ModelRc::new(VecModel::from(options.iter().map(option_row).collect::<Vec<_>>())));
         // Now that the kind of file is known: does this system have what it needs?
         self.show_app_sources(ui);
@@ -2862,7 +2910,10 @@ impl App {
     /// Start the next queued update, if any and if nothing is running.
     fn update_next(self: &Arc<Self>, ui: &AppWindow) {
         let store = ui.global::<Store>();
-        while store.get_updating_id().is_empty() && store.get_install_state() != 1 {
+        while store.get_updating_id().is_empty()
+            && store.get_install_state() != 1
+            && self.installing.lock().unwrap().is_none()
+        {
             let Some(id) = self.update_queue.lock().unwrap().pop_front() else { return };
             self.update_app(ui, &id);
         }
@@ -2872,7 +2923,10 @@ impl App {
     /// install the best option, without leaving the Library page.
     pub fn update_app(self: &Arc<Self>, ui: &AppWindow, id: &str) {
         let store = ui.global::<Store>();
-        if store.get_install_state() == 1 || !store.get_updating_id().is_empty() {
+        if store.get_install_state() == 1
+            || !store.get_updating_id().is_empty()
+            || self.installing.lock().unwrap().is_some()
+        {
             return;
         }
         let Some(app_id) = AppId::parse(id) else { return };
@@ -2954,9 +3008,68 @@ impl App {
         );
     }
 
+    /// Draw the on-screen keyboard as it now stands.
+    fn show_osk(&self, ui: &AppWindow) {
+        let model = *self.osk.lock().unwrap();
+        let mut keys = Vec::new();
+        for (row, line) in model.rows().iter().enumerate() {
+            let mut col = 0;
+            for key in line {
+                keys.push(OskKey {
+                    label: key.label.as_str().into(),
+                    row: row as i32,
+                    col: col as i32,
+                    span: key.span as i32,
+                    wide: key.kind != osk::Kind::Char,
+                    go: key.kind == osk::Kind::Submit,
+                });
+                col += key.span;
+            }
+        }
+        let store = ui.global::<Store>();
+        store.set_osk_keys(ModelRc::new(VecModel::from(keys)));
+        store.set_osk_at(model.flat() as i32);
+    }
+
+    /// OK on the highlighted key. True when it was the one that says "search".
+    fn osk_press(&self, ui: &AppWindow) -> bool {
+        let store = ui.global::<Store>();
+        let key = self.osk.lock().unwrap().key();
+        match key.kind {
+            osk::Kind::Submit => return true,
+            osk::Kind::Char => store.set_query(format!("{}{}", store.get_query(), key.label).into()),
+            osk::Kind::Space => store.set_query(format!("{} ", store.get_query()).into()),
+            osk::Kind::Delete => self.osk_erase(ui),
+            osk::Kind::Shift | osk::Kind::Symbols | osk::Kind::Letters => {
+                self.osk.lock().unwrap().switch_face();
+                self.show_osk(ui);
+            }
+        }
+        false
+    }
+
+    /// Take the last letter off what has been typed.
+    fn osk_erase(&self, ui: &AppWindow) {
+        let store = ui.global::<Store>();
+        let mut text = store.get_query().to_string();
+        text.pop();
+        store.set_query(text.into());
+    }
+
+    /// Is this the app being downloaded right now?
+    fn installing_is(&self, id: &str) -> bool {
+        self.installing.lock().unwrap().as_ref().is_some_and(|(busy, _)| busy.eq_ignore_ascii_case(id))
+    }
+
     pub fn install(self: &Arc<Self>, ui: &AppWindow, index: i32) {
         let store = ui.global::<Store>();
         if store.get_install_state() == 1 {
+            return;
+        }
+        // One at a time: another app's download is still going.
+        let busy = self.installing.lock().unwrap().as_ref().map(|(_, name)| name.clone());
+        if let Some(name) = busy {
+            self.toast(ui, &format!("{name} is still downloading. Start this one when it has finished."), false);
             return;
         }
         if self.needs_pin_to_install() {
@@ -2983,6 +3096,7 @@ impl App {
         store.set_install_state(1);
         store.set_install_progress(0.0);
         store.set_install_message(SharedString::new());
+        *self.installing.lock().unwrap() = Some((details.summary.id.to_string(), details.summary.name.clone()));
         self.cancel_install.store(false, Ordering::SeqCst);
 
         let cancel = self.cancel_install.clone();
@@ -3090,13 +3204,19 @@ impl App {
                 // Started from the Library page rather than an app page?
                 let updating_in_place = !store.get_updating_id().is_empty();
                 store.set_updating_id(SharedString::new());
+                *app.installing.lock().unwrap() = None;
+                // Is its page the one that is open? If the person has moved on to
+                // another app's, that page is not the place to say how this one went.
+                let on_page = store.get_app().id.as_str().eq_ignore_ascii_case(&details.summary.id.to_string());
                 match result {
                     Ok(mut outcome) => {
                         if fetched {
                             outcome.message = format!("{} Longboard was installed for it.", outcome.message);
                         }
-                        store.set_install_state(2);
-                        store.set_install_message(outcome.message.as_str().into());
+                        if on_page {
+                            store.set_install_state(2);
+                            store.set_install_message(outcome.message.as_str().into());
+                        }
                         // A command to run, or another store taking over: nothing was
                         // installed by this store, so nothing goes in its library.
                         if matches!(option.plan.action, Action::ShowCommand | Action::OpenStore | Action::RunInTerminal)
@@ -3106,12 +3226,14 @@ impl App {
                         // The system's package manager installed it and keeps track of
                         // it; the page says so, and the store's own library stays as it is.
                         if option.plan.action == Action::RunCommand {
-                            store.set_installed_version(if version.is_empty() {
-                                "installed".into()
-                            } else {
-                                version.as_str().into()
-                            });
-                            app.toast(ui, &format!("{} is installed", store.get_app().name), false);
+                            if on_page {
+                                store.set_installed_version(if version.is_empty() {
+                                    "installed".into()
+                                } else {
+                                    version.as_str().into()
+                                });
+                            }
+                            app.toast(ui, &format!("{} is installed", details.summary.name), false);
                             return;
                         }
                         // Its name as its page gives it. Updated from the Library, the
@@ -3135,6 +3257,11 @@ impl App {
                         entry.flatpak = outcome.flatpak_app.clone().unwrap_or_default();
                         let id = entry.id.clone();
                         let is_self = app.store_app.as_ref().is_some_and(|own| own.to_string().eq_ignore_ascii_case(&id));
+                        let say = |message: String| {
+                            if on_page {
+                                store.set_install_message(message.into());
+                            }
+                        };
                         if let (true, true, Some(file)) = (is_self, outcome.store_managed, outcome.file.as_ref()) {
                             // A newer copy of the store itself. Its own menu entry is pointed
                             // at the new file, so the next start is the new version, and it
@@ -3144,9 +3271,7 @@ impl App {
                             // Asked wherever the update was started from, the Library
                             // included, where there is no Open button to find.
                             app.ask_restart_bilby(ui, &version);
-                            store.set_install_message(
-                                format!("Bilby {version} is on this device. Press Open to restart into it; it also starts next time you open Bilby from your app menu.").into(),
-                            );
+                            say(format!("Bilby {version} is on this device. Press Open to restart into it; it also starts next time you open Bilby from your app menu."));
                             let previous =
                                 app.state().installed(&id).filter(|a| a.store_managed).and_then(|a| a.path.clone());
                             if let Some(previous) = previous.map(PathBuf::from) {
@@ -3157,8 +3282,7 @@ impl App {
                         } else if let (true, Some(file)) = (outcome.store_managed, outcome.file.as_ref()) {
                             // Start it from the app menu like anything else that is installed.
                             if install::add_menu_entry(&app.dirs, &id, &name, file).is_ok() {
-                                store
-                                    .set_install_message(format!("{} It is in your app menu.", outcome.message).into());
+                                say(format!("{} It is in your app menu.", outcome.message));
                             }
                             // The version this replaces was a different file: do not leave it behind.
                             let previous =
@@ -3179,11 +3303,13 @@ impl App {
                             UpdateStatus::UpToDate
                         };
                         app.updates.lock().unwrap().insert(id, status);
-                        store.set_installed_version(version.into());
+                        if on_page {
+                            store.set_installed_version(version.as_str().into());
+                        }
                         app.refresh(ui);
                         if updating_in_place {
                             store.set_install_state(0);
-                            app.toast(ui, &format!("{name} updated to {}", store.get_installed_version()), false);
+                            app.toast(ui, &format!("{name} updated to {version}"), false);
                         } else {
                             app.toast(ui, &format!("{name} is in your library"), false);
                         }
@@ -3193,6 +3319,9 @@ impl App {
                         // Cancelling one stops the rest of an "Update all" too.
                         app.update_queue.lock().unwrap().clear();
                         app.toast(ui, "Download cancelled", false);
+                    }
+                    Err(e) if !on_page => {
+                        app.toast(ui, &format!("{} could not be installed: {e}", details.summary.name), true);
                     }
                     Err(e) => {
                         if updating_in_place {
@@ -3205,9 +3334,8 @@ impl App {
                         }
                     }
                 }
-                if updating_in_place {
-                    app.update_next(ui);
-                }
+                // Whatever was waiting its turn behind this one.
+                app.update_next(ui);
             },
         );
     }
@@ -4308,6 +4436,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     // A demo or a preview of another device must never look at, let alone change, the
     // real system: it gets a made-up one.
     let pretend = options.demo || options.platform.is_some();
+    bilby_core::icons::forget_moved(&dirs.cache.join("icons"));
     let host: Arc<dyn bilby_core::os::Host> = match &options.host {
         Some(host) => host.clone(),
         None if pretend => Arc::new(bilby_core::os::demo_host(&platform)),
@@ -4337,6 +4466,8 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         install_when_loaded: Mutex::new(None),
         toast_generation: Arc::new(AtomicU64::new(0)),
         cancel_install: Arc::new(AtomicBool::new(false)),
+        installing: Mutex::new(None),
+        osk: Mutex::new(osk::Model::default()),
         store_app: match &options.store_app {
             Some(id) => AppId::parse(id),
             None if options.demo => None,
@@ -4446,6 +4577,40 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     }
     on!(on_search, |app, ui, query| { app.search(ui, &query) });
     on!(on_leave_search, |app, ui| { app.leave_search(ui) });
+    on!(on_osk_open, |app, ui| {
+        *app.osk.lock().unwrap() = osk::Model::default();
+        app.show_osk(ui);
+    });
+    on!(on_osk_move, |app, ui, dir| {
+        if let Some(dir) = osk::Dir::from(dir) {
+            app.osk.lock().unwrap().step(dir);
+            ui.global::<Store>().set_osk_at(app.osk.lock().unwrap().flat() as i32);
+        }
+    });
+    on!(on_osk_erase, |app, ui| { app.osk_erase(ui) });
+    // A letter from a real keyboard while the on-screen one is up: typed as it is,
+    // and the highlight goes to "search", so Enter then searches.
+    on!(on_osk_type, |app, ui, text| {
+        let store = ui.global::<Store>();
+        store.set_query(format!("{}{}", store.get_query(), text).into());
+        app.osk.lock().unwrap().point_to(osk::Kind::Submit);
+        store.set_osk_at(app.osk.lock().unwrap().flat() as i32);
+    });
+    for tapped in [false, true] {
+        let app = app.clone();
+        let press = move |at: i32| {
+            let Some(ui) = app.ui.upgrade() else { return false };
+            if tapped {
+                app.osk.lock().unwrap().point_at(at.max(0) as usize);
+                ui.global::<Store>().set_osk_at(app.osk.lock().unwrap().flat() as i32);
+            }
+            app.osk_press(&ui)
+        };
+        match tapped {
+            false => store.on_osk_press(move || press(0)),
+            true => store.on_osk_tap(press),
+        }
+    }
     on!(on_typing, |app, ui, text| { app.typing(ui, &text) });
     on!(on_open, |app, ui, id| { app.open(ui, &id) });
     on!(on_close_details, |app, ui| { app.close_details(ui) });

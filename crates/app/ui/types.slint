@@ -106,6 +106,18 @@ export struct VersionChoice {
 
 // A row of the TV's list of other choices on an app's page: another way to use the
 // service, or the same app from another source.
+// A key of the TV's on-screen keyboard. `col` and `span` count in tenths of its width.
+export struct OskKey {
+    label: string,
+    row: int,
+    col: int,
+    span: int,
+    // Not a letter: space, delete, shift and the like.
+    wide: bool,
+    // The key that searches.
+    go: bool,
+}
+
 export struct TvChoice {
     id: string,
     name: string,
@@ -350,6 +362,19 @@ export global Store {
     callback typing(string);
     // Out of a search and back to Home: the box emptied, the results put away.
     callback leave-search();
+    // The TV's on-screen keyboard: its keys as they now show, and which is highlighted.
+    in property <[OskKey]> osk-keys;
+    in property <int> osk-at;
+    // Show it afresh: small letters, the highlight on the first.
+    callback osk-open();
+    // 0 up, 1 down, 2 left, 3 right.
+    callback osk-move(int);
+    // OK on the highlighted key, or a tap on any key: true when it was "search".
+    callback osk-press() -> bool;
+    callback osk-tap(int) -> bool;
+    // From a real keyboard while it is up.
+    callback osk-type(string);
+    callback osk-erase();
     callback open(string);
     callback close-details();
     callback retry-details();

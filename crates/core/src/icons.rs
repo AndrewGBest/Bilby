@@ -172,6 +172,29 @@ pub fn fetch_picture(http: &dyn Http, dir: &Path, key: &str, url: &str, max_byte
     }
 }
 
+/// Pictures kept from before a site was given another address to ask for its picture
+/// (see `Site::icon_from`) may be some other service's: they are dropped, once, so the
+/// right one is fetched. A note beside them says which address they now come from.
+pub fn forget_moved(dir: &Path) {
+    if !dir.is_dir() {
+        return;
+    }
+    for site in crate::source::web::sites() {
+        let (Some(from), Some(id)) = (&site.icon_from, AppId::parse(&format!("web:{}", site.host))) else { continue };
+        let key = app_key(&id);
+        let note = dir.join(format!("{key}.from"));
+        if std::fs::read_to_string(&note).is_ok_and(|was| was == *from) {
+            continue;
+        }
+        for name in [key.clone(), format!("{key}-large")] {
+            for ext in ["png", "jpg", "none"] {
+                let _ = std::fs::remove_file(dir.join(format!("{name}.{ext}")));
+            }
+        }
+        let _ = std::fs::write(&note, from);
+    }
+}
+
 /// A website's own picture, from the site itself: the icon its front page names (the
 /// large one made for phones' home screens where there is one), else the usual
 /// addresses for one. Nothing is asked of anyone but the site. Cached like the rest,
@@ -188,6 +211,9 @@ pub fn fetch_site(http: &dyn Http, dir: &Path, key: &str, host: &str) -> Result<
         return Ok(None);
     }
     std::fs::create_dir_all(dir)?;
+    // A site that sends some visitors to another service's page is asked for its
+    // picture at an address of its own that does not.
+    let host = crate::source::web::listed(host).and_then(|site| site.icon_from.as_deref()).unwrap_or(host);
     let asked = format!("https://{host}/");
     // What the page itself says, best first; then where such pictures usually live.
     // A site often answers from another address (plex.tv from watch.plex.tv): what

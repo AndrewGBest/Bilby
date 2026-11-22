@@ -7,7 +7,7 @@
     {"host": "primevideo.com", "name": "Prime Video", "summary": "Amazon's films and series.", "kind": "watch", "featured": true},
     {"host": "disneyplus.com", "name": "Disney+", "summary": "Disney, Pixar, Marvel and Star Wars by subscription.", "kind": "watch", "featured": true},
     {"host": "max.com", "name": "Max", "summary": "HBO and Warner Bros. films and series by subscription.", "kind": "watch"},
-    {"host": "hulu.com", "name": "Hulu", "summary": "Series and films by subscription, in the United States.", "kind": "watch"},
+    {"host": "hulu.com", "name": "Hulu", "summary": "Series and films by subscription, in the United States.", "kind": "watch", "icon_from": "help.hulu.com"},
     {"host": "tv.apple.com", "name": "Apple TV", "summary": "Apple's films and series.", "kind": "watch"},
     {"host": "paramountplus.com", "name": "Paramount+", "summary": "Paramount, CBS and Nickelodeon by subscription.", "kind": "watch"},
     {"host": "peacocktv.com", "name": "Peacock", "summary": "NBCUniversal's films, series and sport.", "kind": "watch"},

@@ -925,9 +925,32 @@ pub fn remove_menu_entry(dirs: &Dirs, id: &str) {
 }
 
 /// Run Flatpak and wait for it, giving up (and stopping it) when `keep_going` says so.
-/// Flatpak reports no usable progress, so the callback is only asked whether to go on.
+/// How far it has got is read from what it prints and passed on in thousandths.
 pub fn run_flatpak(dirs: &Dirs, args: &[&str], keep_going: &mut dyn FnMut(u64, Option<u64>) -> bool) -> Result<()> {
-    run_program(&dirs.flatpak, args, "Flatpak", keep_going)
+    run_watched(&dirs.flatpak, args, "Flatpak", Some(flatpak_progress), keep_going)
+}
+
+/// How far a Flatpak install has got, in thousandths, from a line it prints as it
+/// goes: "Installing 2/5… ████  47%  30.9 MB/s" is the second of five things (the
+/// app and what it needs), 47% fetched.
+pub fn flatpak_progress(line: &str) -> Option<u64> {
+    let rest = ["Installing ", "Updating "].iter().find_map(|start| line.trim_start().strip_prefix(start))?;
+    let count: String = rest.chars().take_while(|c| c.is_ascii_digit() || *c == '/').collect();
+    let (at, of) = count.split_once('/')?;
+    let (at, of): (u64, u64) = (at.parse().ok()?, of.parse().ok()?);
+    if at == 0 || of == 0 || at > of {
+        return None;
+    }
+    let percent = rest
+        .split('%')
+        .next()
+        .filter(|_| rest.contains('%'))
+        .map(|before| before.chars().rev().take_while(|c| c.is_ascii_digit()).collect::<Vec<_>>())
+        .and_then(|digits| digits.into_iter().rev().collect::<String>().parse::<u64>().ok())
+        .unwrap_or(0)
+        .min(100);
+    // Never quite full while it is still working: the last step is not fetching.
+    Some((((at - 1) * 1000 + percent * 10) / of).min(990))
 }
 
 /// A terminal on this machine and the option that makes it run a command.
@@ -957,9 +980,25 @@ pub fn run_program(
     name: &str,
     keep_going: &mut dyn FnMut(u64, Option<u64>) -> bool,
 ) -> Result<()> {
+    run_watched(program, args, name, None, keep_going)
+}
+
+/// [`run_program`], reading how far the program has got from what it prints: `read`
+/// turns a line into thousandths done, and `keep_going` is told the latest.
+fn run_watched(
+    program: &Path,
+    args: &[&str],
+    name: &str,
+    read: Option<fn(&str) -> Option<u64>>,
+    keep_going: &mut dyn FnMut(u64, Option<u64>) -> bool,
+) -> Result<()> {
     use std::process::{Command, Stdio};
+    use std::sync::atomic::{AtomicU64, Ordering};
     let mut command = Command::new(program);
-    command.args(args).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::piped());
+    let stdout = if read.is_some() { Stdio::piped() } else { Stdio::null() };
+    command.args(args).stdin(Stdio::null()).stdout(stdout).stderr(Stdio::piped());
+    // Thousandths done, plus one; nothing while it has not said.
+    let done = std::sync::Arc::new(AtomicU64::new(0));
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
@@ -969,6 +1008,25 @@ pub fn run_program(
     let mut child = command
         .spawn()
         .map_err(|e| Error::Unsupported(format!("{name} could not be started ({e}). Is it installed?")))?;
+    if let (Some(read), Some(mut out)) = (read, child.stdout.take()) {
+        let done = done.clone();
+        // It redraws one line over and over: what ends a line is either kind of return.
+        std::thread::spawn(move || {
+            let (mut line, mut buffer) = (Vec::new(), [0u8; 4096]);
+            while let Ok(count @ 1..) = std::io::Read::read(&mut out, &mut buffer) {
+                for byte in &buffer[..count] {
+                    if matches!(byte, b'\r' | b'\n') {
+                        if let Some(so_far) = read(&String::from_utf8_lossy(&line)) {
+                            done.store(so_far + 1, Ordering::Relaxed);
+                        }
+                        line.clear();
+                    } else if line.len() < 4096 {
+                        line.push(*byte);
+                    }
+                }
+            }
+        });
+    }
     loop {
         match child.try_wait()? {
             Some(status) if status.success() => return Ok(()),
@@ -989,7 +1047,11 @@ pub fn run_program(
                 return Err(Error::Unsupported(format!("{name} could not do it: {why}")));
             }
             None => {
-                if !keep_going(0, None) {
+                let going = match done.load(Ordering::Relaxed) {
+                    0 => keep_going(0, None),
+                    so_far => keep_going(so_far - 1, Some(1000)),
+                };
+                if !going {
                     let _ = child.kill();
                     let _ = child.wait();
                     return Err(Error::Cancelled);
@@ -1291,7 +1353,9 @@ pub fn execute(
         let install = |place: &[&str], progress: &mut dyn FnMut(u64, Option<u64>) -> bool| {
             let mut args = vec!["install"];
             args.extend_from_slice(place);
-            args.extend_from_slice(&["--noninteractive", "--assumeyes", "--or-update", "flathub", id]);
+            // Not "--noninteractive": that also silences how far it has got. Nothing
+            // is asked all the same: every question is answered with yes.
+            args.extend_from_slice(&["--assumeyes", "--or-update", "flathub", id]);
             run_flatpak(dirs, &args, progress)
         };
         match install(&[], progress) {
@@ -1818,6 +1882,18 @@ mod tests {
 #[cfg(test)]
 mod launch_tests {
     use super::*;
+
+    #[test]
+    fn how_far_a_flatpak_install_has_got_is_read_from_what_it_prints() {
+        assert_eq!(flatpak_progress("Installing 1/5…"), Some(0));
+        assert_eq!(flatpak_progress("Installing 1/5… ███████████▍         47%  30.9 MB/s"), Some(94));
+        assert_eq!(flatpak_progress("Installing 4/5… ██████████▌           53%  30.9 MB/s"), Some(706));
+        assert_eq!(flatpak_progress("Updating 2/2… ████████████████████ 100%  1.0 MB/s"), Some(990));
+        assert_eq!(flatpak_progress("Installing 1/1… ████████████████████ 100%"), Some(990));
+        assert_eq!(flatpak_progress("Looking for matches…"), None);
+        assert_eq!(flatpak_progress("Installing runtime/org.freedesktop.Platform/x86_64/23.08"), None);
+        assert_eq!(flatpak_progress(" 1.\t   \ttv.plex.PlexHTPC\tstable\ti\tflathub\t< 150.7 MB"), None);
+    }
 
     #[test]
     fn a_program_that_closes_at_once_gives_its_reason() {

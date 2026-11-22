@@ -447,6 +447,9 @@ pub struct Check {
     /// When the list of available packages was last fetched, where checking relies on
     /// it (apt, and pacman without `checkupdates`).
     pub lists_fetched: Option<u64>,
+    /// An update of the system is being installed right now, by whoever started it:
+    /// one begun before Bilby was closed and opened again, say.
+    pub installing: bool,
 }
 
 /// `name old -> new`, as `checkupdates` and `pacman -Qu` print.
@@ -631,6 +634,17 @@ fn newer_release(host: &dyn Host) -> Option<Pending> {
     })
 }
 
+/// Is a whole-image system in the middle of changing itself? Its updater works on
+/// after the program that asked has gone, and says so when asked how things stand.
+pub fn image_changing(host: &dyn Host) -> bool {
+    if !host.has("rpm-ostree") || !host.exists("/run/ostree-booted") {
+        return false;
+    }
+    let Ok(out) = host.run("rpm-ostree", &["status", "--json"]) else { return false };
+    serde_json::from_str::<serde_json::Value>(&out.stdout)
+        .is_ok_and(|status| status.get("transaction").is_some_and(|t| !t.is_null()))
+}
+
 /// Has a newer image been fetched that takes over at the next start? Then the first
 /// of the system's images is not the one that is running.
 fn image_staged(host: &dyn Host) -> bool {
@@ -678,7 +692,9 @@ fn pending_for(host: &dyn Host, manager: Manager) -> Result<Vec<Pending>> {
         Manager::RpmOstree => {
             // A newer image already fetched and waiting for a restart is not waiting
             // to be installed again.
-            if image_staged(host) {
+            // Nor is anything while it is busy installing: it would only answer that
+            // it is busy.
+            if image_staged(host) || image_changing(host) {
                 return Ok(Vec::new());
             }
             // A whole new release takes the place of an update to this one: moving
@@ -752,6 +768,7 @@ pub fn check(host: &dyn Host, report: &Report) -> Check {
         }
     }
     check.restart_needed = restart_needed(host);
+    check.installing = report.managers.contains(&Manager::RpmOstree) && image_changing(host);
     check.lists_fetched = if report.managers.contains(&Manager::Apt) {
         host.modified("/var/lib/apt/periodic/update-success-stamp").or_else(|| host.modified("/var/lib/apt/lists"))
     } else if report.managers.contains(&Manager::Pacman) && !host.has("checkupdates") {
@@ -1312,6 +1329,16 @@ mod tests {
             system(&machine(image))[0].release.as_deref(),
             Some("ostree-image-signed:docker://quay.io/fedora/fedora-kinoite:45")
         );
+
+        // Still being moved to (started before Bilby was closed, say): it is being
+        // installed, not waiting, and asking again is not offered.
+        let busy = r#"{"transaction":["rebase","client","/run/x"],"deployments":[{"booted":true,"origin":"fedora:fedora/44/x86_64/kinoite"}]}"#;
+        let host = machine(busy);
+        let found = check(&host, &describe(&host, &platform("linux-x64-fedora")));
+        assert!(found.installing && found.problems.is_empty());
+        assert!(found.pending.iter().all(|p| p.manager != Manager::RpmOstree));
+        let host = machine(branch);
+        assert!(!check(&host, &describe(&host, &platform("linux-x64-fedora"))).installing);
 
         // One that follows somebody else's "stable" is left to them, and so is one
         // already on the newest.

@@ -40,6 +40,11 @@ pub struct Site {
     /// Shown on the home page.
     #[serde(default)]
     pub featured: bool,
+    /// Another address of the same service, whose picture is this service's own.
+    /// For a site whose front page sends some visitors elsewhere: outside the United
+    /// States hulu.com answers with Disney+, picture and all.
+    #[serde(default)]
+    pub icon_from: Option<String>,
 }
 
 /// The bundled list. A broken file means no list, not a store that will not start;

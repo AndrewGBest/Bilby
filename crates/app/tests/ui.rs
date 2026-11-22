@@ -67,6 +67,11 @@ fn init_backend() {
 /// Start the store as `preset` with the given interface. `seed` is written as the
 /// saved state first, to test start-up with an existing library.
 fn start_with(preset: &str, shell: Shell, seed: Option<&str>) -> Session {
+    start_on(preset, shell, seed, None)
+}
+
+/// The same, on a made-up machine of the test's own.
+fn start_on(preset: &str, shell: Shell, seed: Option<&str>, host: Option<Arc<dyn bilby_core::os::Host>>) -> Session {
     init_backend();
     bilby_core::demo::DOWNLOAD_STEP_MS.store(0, Ordering::Relaxed);
     let root = temp_root();
@@ -118,6 +123,7 @@ fn start_with(preset: &str, shell: Shell, seed: Option<&str>) -> Session {
             std::fs::write(session.join("cookies"), b"stand-in")?;
             Ok(Some(r#"{"steamid":"76561198000000001","owned":[620,440,10]}"#.to_string()))
         })),
+        host,
         ..Default::default()
     };
     let (ui, app) = build(&options).unwrap();
@@ -1598,7 +1604,7 @@ fn a_flathub_app_is_found_installed_opened_and_removed() {
     assert_eq!(s.store().get_install_state(), 2, "{}", s.store().get_install_message());
     assert_eq!(
         std::fs::read_to_string(&log).unwrap().trim(),
-        "install --noninteractive --assumeyes --or-update flathub io.quillpad.Quillpad"
+        "install --assumeyes --or-update flathub io.quillpad.Quillpad"
     );
     assert_eq!(s.saved().library[0].id, "flathub:io.quillpad.Quillpad");
 
@@ -1832,6 +1838,28 @@ fn the_system_s_updates_are_in_the_library_and_on_their_own_page() {
     assert!(!s.has("Update now"), "nothing left to press");
     s.store().set_page(2);
     assert!(!s.has("Update system") && s.has("Up to date"));
+}
+
+#[test]
+fn an_update_still_going_from_before_is_shown_as_going() {
+    // The system's updater is in the middle of a change that this Bilby did not start:
+    // it was closed and opened again while one was being installed.
+    let platform = Platform::preset("linux-x64-fedora").unwrap();
+    let busy = r#"{"transaction":["rebase","client","/run/x"],"deployments":[{"booted":true}]}"#;
+    let host = bilby_core::os::demo_host(&platform).file("/run/ostree-booted", "").program("rpm-ostree").command(
+        "rpm-ostree status --json",
+        0,
+        busy,
+    );
+    let s =
+        start_on("linux-x64-fedora", Shell::Desktop, Some(r#"{"settings":{"welcomed":true}}"#), Some(Arc::new(host)));
+    s.app.check_system(&s.ui, false);
+    assert_eq!((s.store().get_system_state(), s.store().get_system_headline().as_str()), (4, "Installing updates…"));
+    assert_eq!(s.store().get_system_step(), "Started earlier and still going");
+    s.store().set_page(4);
+    assert!(!s.has("Update now"), "not offered again while it is being installed");
+    s.app.update_system(&s.ui);
+    assert_eq!(s.store().get_system_state(), 4);
 }
 
 #[test]
