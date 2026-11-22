@@ -2141,20 +2141,67 @@ impl App {
             return;
         }
         self.show_system(ui, 4, "");
+        let store = ui.global::<Store>();
+        store.set_system_progress(0.0);
+        store.set_system_step(SharedString::new());
+        let pending = self.system_check.lock().unwrap().as_ref().map(|c| c.pending.clone()).unwrap_or_default();
+        let waiting = pending.len();
+        let (weak, inline) = (self.ui.clone(), self.inline);
         self.job(
-            |app| {
+            move |app| {
                 let mut log = Vec::new();
-                let result =
-                    bilby_core::os::update(app.host.as_ref(), &app.system, &mut |line| log.push(line.to_string()));
+                let mut progress = bilby_core::os::Progress::new(waiting);
+                let mut shown = (-1, String::new());
+                let result = bilby_core::os::update_waiting(app.host.as_ref(), &app.system, &pending, &mut |line| {
+                    log.push(line.to_string());
+                    // How far it has got and what it is on, sent to the screen when
+                    // either changes.
+                    let percent = (progress.line(line) * 100.0) as i32;
+                    let step = system_step(line).unwrap_or_else(|| shown.1.clone());
+                    if (percent, &step) == (shown.0, &shown.1) {
+                        return;
+                    }
+                    shown = (percent, step.clone());
+                    let set = move |ui: AppWindow| {
+                        let store = ui.global::<Store>();
+                        store.set_system_progress(percent as f32 / 100.0);
+                        store.set_system_step(step.as_str().into());
+                    };
+                    if inline {
+                        if let Some(ui) = weak.upgrade() {
+                            set(ui);
+                        }
+                    } else {
+                        let weak = weak.clone();
+                        let _ = slint::invoke_from_event_loop(move || {
+                            if let Some(ui) = weak.upgrade() {
+                                set(ui);
+                            }
+                        });
+                    }
+                });
                 // Long output is cut from the top: the end is where a failure explains itself.
                 let from = log.len().saturating_sub(300);
                 (result, log[from..].join("\n"), bilby_core::os::check(app.host.as_ref(), &app.system))
             },
             |app, ui, (result, log, check)| {
                 let restart = check.restart_needed;
+                let left = check.pending.len();
                 *app.system_check.lock().unwrap() = Some(check);
                 app.show_system(ui, 0, if log.is_empty() { " " } else { &log });
+                // The Library's card and the top bar say what is waiting now.
+                app.refresh(ui);
                 match result {
+                    // Said to have worked, and something is still waiting: said so, not
+                    // "up to date" over a list that has not changed.
+                    Ok(()) if left > 0 => app.toast(
+                        ui,
+                        &format!(
+                            "{} could not be installed. The details show what the updater said.",
+                            plural(left, "update")
+                        ),
+                        true,
+                    ),
                     Ok(()) if restart => app.toast(ui, "Updates installed. Restart this device to finish.", false),
                     Ok(()) => app.toast(ui, "The system is up to date.", false),
                     Err(e) => app.toast(ui, &e.to_string(), true),
@@ -4659,6 +4706,27 @@ pub fn run(mut options: Options) -> Result<(), Box<dyn std::error::Error>> {
     }
     ui.run()?;
     Ok(())
+}
+
+/// What an updater is doing, from a line it printed, in a few words for the screen:
+/// "Updating through Flatpak…", or the name of the app or package it is on.
+fn system_step(line: &str) -> Option<String> {
+    let line = line.trim();
+    if line.starts_with("Updating through ") {
+        return Some(line.to_string());
+    }
+    // Flatpak: "Updating app/org.example.App/x86_64/stable".
+    for start in ["Updating ", "Installing "] {
+        if let Some(name) = line.strip_prefix(start).and_then(|rest| rest.split('/').nth(1)) {
+            return Some(name.to_string());
+        }
+    }
+    // pacman and dnf: "(3/12) upgrading foo", "[3/12] Upgrading foo-1.2".
+    let rest = line.strip_prefix(['(', '['])?.split_once([')', ']'])?.1.trim();
+    let (verb, name) = rest.split_once(' ')?;
+    ["upgrading", "installing", "reinstalling"]
+        .contains(&verb.to_ascii_lowercase().as_str())
+        .then(|| name.split_whitespace().next().unwrap_or(name).to_string())
 }
 
 /// Replays scripted input through the window exactly as real key presses and clicks

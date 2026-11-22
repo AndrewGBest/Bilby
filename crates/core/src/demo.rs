@@ -1082,6 +1082,7 @@ pub fn index() -> Index {
             category: a.category.to_string(),
             os: a.os.iter().map(|s| s.to_string()).collect(),
             tv: a.tv,
+            tv_only: false,
             // Files of the recent releases, as an index generator would record them.
             files: a.releases.iter().flat_map(|(_, _, files)| files.iter()).map(|f| f.to_string()).collect(),
         })
@@ -1094,6 +1095,7 @@ pub fn index() -> Index {
         category: "Arch User Repository".to_string(),
         os: vec!["arch".to_string()],
         tv: false,
+        tv_only: false,
         files: vec![],
     }));
     Index { apps }

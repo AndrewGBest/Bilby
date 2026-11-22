@@ -267,6 +267,9 @@ export global Store {
     in property <[SystemUpdate]> system-updates;
     // Something already installed needs a restart to take effect.
     in property <bool> system-restart;
+    // While installing (state 4): how far it has got, 0 to 1, and what it is on now.
+    in property <float> system-progress;
+    in property <string> system-step;
     // What the updater printed the last time it ran.
     in property <string> system-log;
 

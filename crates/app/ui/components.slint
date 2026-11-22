@@ -1754,7 +1754,17 @@ export component SystemBody inherits Rectangle {
                         wrap: word-wrap;
                     }
                     if Store.system-note != "" : Text { text: Store.system-note; color: Theme.text; font-size: 13px; wrap: word-wrap; }
-                    if Store.system-state == 1 || Store.system-state == 4 : Busy { }
+                    if Store.system-state == 1 : Busy { }
+                    if Store.system-state == 4 : VerticalLayout {
+                        spacing: 6px;
+                        ProgressBar { value: Store.system-progress; }
+                        Text {
+                            text: round(Store.system-progress * 100) + "%" + (Store.system-step != "" ? "  ·  " + Store.system-step : "");
+                            color: Theme.text-dim;
+                            font-size: 12px;
+                            overflow: elide;
+                        }
+                    }
                     if Store.system-state == 4 : Text {
                         text: "You may be asked for your password. Keep the device on until this finishes.";
                         color: Theme.text-dim;

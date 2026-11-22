@@ -30,6 +30,9 @@ pub struct IndexEntry {
     /// Has a build meant for TVs (Android TV / leanback, or a couch-friendly desktop UI).
     #[serde(default)]
     pub tv: bool,
+    /// Of no use away from a TV (an Android TV app): listed on TVs only.
+    #[serde(default)]
+    pub tv_only: bool,
     /// File names of the latest release, when the index generator recorded them. With
     /// these the listing is decided by the same compatibility engine as installs, so
     /// "Linux" does not wrongly include, say, an AppImage-only app on Alpine. Without
@@ -60,6 +63,9 @@ impl Index {
     }
 
     fn listed_on(entry: &IndexEntry, p: &Platform) -> bool {
+        if entry.tv_only && p.form_factor != FormFactor::Tv {
+            return false;
+        }
         if !entry.files.is_empty() {
             return entry.files.iter().filter_map(|f| classify(f)).any(|info| evaluate(&info, p).usable());
         }

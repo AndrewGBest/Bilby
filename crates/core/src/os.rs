@@ -228,6 +228,8 @@ pub enum Manager {
     Pacman,
     Apt,
     Dnf,
+    /// A system that is one whole image (Fedora Atomic and those built on it).
+    RpmOstree,
     Flatpak,
 }
 
@@ -237,6 +239,7 @@ impl Manager {
             Manager::Pacman => "pacman",
             Manager::Apt => "apt",
             Manager::Dnf => "dnf",
+            Manager::RpmOstree => "rpm-ostree",
             Manager::Flatpak => "Flatpak",
         }
     }
@@ -376,10 +379,20 @@ pub fn describe(host: &dyn Host, platform: &Platform) -> Report {
                     report.managers.push(Manager::Dnf);
                 }
             }
+            // One that is built with rpm-ostree is updated with it: the new image is
+            // fetched beside the running one and takes over at the next start.
+            let ostree = image && host.exists("/run/ostree-booted") && host.has("rpm-ostree");
+            if ostree {
+                report.managers.push(Manager::RpmOstree);
+            }
             if host.has("flatpak") {
                 report.managers.push(Manager::Flatpak);
             }
-            if image {
+            if ostree {
+                report.note = "This system updates as one whole image. Bilby fetches the new one; it takes over \
+                               the next time this device starts."
+                    .to_string();
+            } else if image {
                 report.note = "This system updates as one whole image. Use its own updater for the system itself; \
                                apps from Flathub are updated here."
                     .to_string();
@@ -493,24 +506,66 @@ fn parse_dnf(text: &str) -> Vec<Pending> {
 }
 
 /// `application<TAB>version`, as `flatpak remote-ls --updates --columns=application,version` prints.
+/// What `flatpak update` says it would do, read from the list it prints before asking
+/// to go ahead: ` 1.\t\torg.example.App\tstable\tu\tflathub\t< 2 MB`. Only updates
+/// (`u`) are counted; what would be installed alongside them is not something waiting.
 fn parse_flatpak(text: &str) -> Vec<Pending> {
     let parse = |line: &str| {
-        let mut fields = line.split('\t');
-        let name = fields.next()?.trim();
-        (name.contains('.') && !name.contains(' ')).then(|| Pending {
+        let fields: Vec<&str> = line.split('\t').map(str::trim).filter(|f| !f.is_empty()).collect();
+        let numbered = fields.first()?.strip_suffix('.')?.chars().all(|c| c.is_ascii_digit());
+        let name = *fields.get(1)?;
+        let updating = fields.iter().skip(2).any(|f| *f == "u");
+        (numbered && updating && name.contains('.') && !name.contains(' ')).then(|| Pending {
             name: name.to_string(),
             from: String::new(),
-            to: fields.next().unwrap_or("").trim().to_string(),
+            to: String::new(),
             manager: Manager::Flatpak,
         })
     };
-    let mut pending: Vec<Pending> = text.lines().filter_map(parse).collect();
-    // The same app can be listed once for the system and once for the user.
-    pending.dedup_by(|a, b| a.name == b.name);
-    pending
+    text.lines().filter_map(parse).collect()
 }
 
-const FLATPAK_LIST: &[&str] = &["remote-ls", "--updates", "--columns=application,version"];
+/// Asked without "yes to everything" and with nobody at a terminal, Flatpak lists what
+/// an update would change and then answers its own question with "no". That list is
+/// the truth about what is waiting. (`remote-ls --updates` is not: it also names apps
+/// whose source merely describes them differently, such as the Fedora apps an Atomic
+/// desktop comes with, which no update ever clears.) Once for this person's apps and
+/// once for everyone's.
+const FLATPAK_WAITING: [&[&str]; 2] = [&["update", "--user"], &["update", "--system"]];
+
+/// What `rpm-ostree upgrade --check` says is available: one thing, the system itself.
+fn parse_rpm_ostree(text: &str) -> Vec<Pending> {
+    if !text.contains("AvailableUpdate") {
+        return Vec::new();
+    }
+    let field = |name: &str| {
+        text.lines()
+            .skip_while(|line| !line.contains("AvailableUpdate"))
+            .find_map(|line| line.trim().strip_prefix(name).map(|v| v.trim().to_string()))
+    };
+    // "41.20241112.0 (2024-11-12T01:02:03Z)": the version, without when it was built.
+    let version = field("Version:").map(|v| v.split(" (").next().unwrap_or(&v).to_string()).unwrap_or_default();
+    let what = field("Diff:").unwrap_or_default();
+    vec![Pending {
+        name: if what.is_empty() { "The system".to_string() } else { format!("The system ({what})") },
+        from: String::new(),
+        to: version,
+        manager: Manager::RpmOstree,
+    }]
+}
+
+/// Has a newer image been fetched that takes over at the next start? Then the first
+/// of the system's images is not the one that is running.
+fn image_staged(host: &dyn Host) -> bool {
+    if !host.has("rpm-ostree") || !host.exists("/run/ostree-booted") {
+        return false;
+    }
+    let Ok(out) = host.run("rpm-ostree", &["status", "--json"]) else { return false };
+    serde_json::from_str::<serde_json::Value>(&out.stdout)
+        .ok()
+        .and_then(|status| status["deployments"].as_array().and_then(|all| all.first().cloned()))
+        .is_some_and(|first| first["booted"].as_bool() == Some(false))
+}
 
 fn pending_for(host: &dyn Host, manager: Manager) -> Result<Vec<Pending>> {
     let failed = |tool: &str, out: &Output| {
@@ -543,18 +598,57 @@ fn pending_for(host: &dyn Host, manager: Manager) -> Result<Vec<Pending>> {
                 _ => Err(failed("dnf", &out)),
             }
         }
-        Manager::Flatpak => {
-            let out = host.run("flatpak", FLATPAK_LIST)?;
-            if out.code != 0 {
-                return Err(failed("Flatpak", &out));
+        Manager::RpmOstree => {
+            // A newer image already fetched and waiting for a restart is not waiting
+            // to be installed again.
+            if image_staged(host) {
+                return Ok(Vec::new());
             }
-            Ok(parse_flatpak(&out.stdout))
+            // 0: a newer image is described. 77: there is none.
+            let out = host.run("rpm-ostree", &["upgrade", "--check"])?;
+            match out.code {
+                0 => Ok(parse_rpm_ostree(&out.stdout)),
+                77 => Ok(Vec::new()),
+                _ if out.stdout.contains("No updates") || out.stdout.contains("No upgrade") => Ok(Vec::new()),
+                _ => Err(failed("rpm-ostree", &out)),
+            }
+        }
+        Manager::Flatpak => {
+            let mut pending: Vec<Pending> = Vec::new();
+            let mut answered = false;
+            let mut last = None;
+            for args in FLATPAK_WAITING {
+                let out = host.run("flatpak", args)?;
+                let found = parse_flatpak(&out.stdout);
+                // It ends with 0 when nothing is waiting and with 1 when it listed
+                // what is and then declined its own question.
+                if out.code == 0 || !found.is_empty() {
+                    answered = true;
+                    for found in found {
+                        // The same app can be there for everyone and for this person.
+                        if !pending.iter().any(|p| p.name == found.name) {
+                            pending.push(found);
+                        }
+                    }
+                } else {
+                    last = Some(out);
+                }
+            }
+            // One of the two not answering (no apps of that kind, say) is not a failure.
+            match (answered, last) {
+                (false, Some(out)) => Err(failed("Flatpak", &out)),
+                _ => Ok(pending),
+            }
         }
     }
 }
 
 /// Is the running kernel one that has since been replaced or removed?
 fn restart_needed(host: &dyn Host) -> bool {
+    // A whole-image system: a newer image is in place and waiting.
+    if image_staged(host) {
+        return true;
+    }
     // Debian and Ubuntu leave a note.
     if host.exists("/var/run/reboot-required") || host.exists("/run/reboot-required") {
         return true;
@@ -596,6 +690,9 @@ pub fn update_commands(report: &Report) -> Vec<(Manager, &'static str, Vec<&'sta
         Manager::Pacman => (*manager, "pkexec", vec!["pacman", "-Syu", "--noconfirm"]),
         Manager::Apt => (*manager, "pkexec", vec!["sh", "-c", APT]),
         Manager::Dnf => (*manager, "pkexec", vec!["dnf", "-y", "upgrade", "--refresh"]),
+        // It asks for a password itself where the system wants one, which for the
+        // person who set the device up it usually does not.
+        Manager::RpmOstree => (*manager, "rpm-ostree", vec!["upgrade"]),
         Manager::Flatpak => (*manager, "flatpak", vec!["update", "-y", "--noninteractive"]),
     };
     report.managers.iter().map(command).collect()
@@ -604,10 +701,18 @@ pub fn update_commands(report: &Report) -> Vec<(Manager, &'static str, Vec<&'sta
 /// Install every waiting update. `line` receives what the tools print. Stops at the
 /// first tool that fails.
 pub fn update(host: &dyn Host, report: &Report, line: &mut dyn FnMut(&str)) -> Result<()> {
+    update_waiting(host, report, &[], line)
+}
+
+/// The same, through only the tools that have something waiting in `pending`: with
+/// nothing but Flatpak apps to update, nobody is asked for a password for the system's
+/// packages. With nothing known to be waiting, every tool is run.
+pub fn update_waiting(host: &dyn Host, report: &Report, pending: &[Pending], line: &mut dyn FnMut(&str)) -> Result<()> {
     if report.managers.is_empty() {
         return Err(Error::Unsupported("There is nothing here that Bilby can update.".to_string()));
     }
-    for (manager, program, args) in update_commands(report) {
+    let wanted = |manager: &Manager| pending.is_empty() || pending.iter().any(|p| p.manager == *manager);
+    for (manager, program, args) in update_commands(report).into_iter().filter(|(manager, _, _)| wanted(manager)) {
         if program == "pkexec" && !host.has("pkexec") {
             return Err(Error::Unsupported(
                 "Updating the system needs a way to ask for your password (pkexec, from polkit), which is not installed."
@@ -632,6 +737,81 @@ pub fn update(host: &dyn Host, report: &Report, line: &mut dyn FnMut(&str)) -> R
         }
     }
     Ok(())
+}
+
+/// How far an update has got, worked out from what the tools print as they go.
+/// Counted in packages: `total` is how many were waiting when it began.
+pub struct Progress {
+    total: usize,
+    /// Finished by the tools that have already run.
+    before: usize,
+    /// Finished by the tool running now.
+    now: usize,
+}
+
+impl Progress {
+    pub fn new(total: usize) -> Progress {
+        Progress { total, before: 0, now: 0 }
+    }
+
+    /// Take one line of output; the answer is the share done so far, 0 to 1.
+    pub fn line(&mut self, line: &str) -> f32 {
+        let line = line.trim();
+        // "(3/12) upgrading foo" (pacman), "[ 3/12] Upgrading foo" (dnf): the tool's
+        // own count, taken as a share of what it had to do.
+        let counted = || -> Option<(usize, usize)> {
+            let inner = line.strip_prefix(['(', '['])?.split([')', ']']).next()?;
+            let (done, of) = inner.split_once('/')?;
+            Some((done.trim().parse().ok()?, of.trim().parse().ok()?))
+        };
+        let lower = line.to_ascii_lowercase();
+        let placing =
+            ["upgrading", "installing", "reinstalling", "downgrading"].iter().any(|word| lower.contains(word));
+        if line.starts_with("Updating through ") {
+            // The next tool begins (see `update`).
+            self.before += self.now;
+            self.now = 0;
+        } else if let (Some((done, of)), true) = (counted(), placing) {
+            // dnf counts steps, several to a package: as a share of what is left.
+            let left = self.total.saturating_sub(self.before);
+            self.now = if of > left && of > 0 { done * left / of } else { done };
+        } else if let Some(percent) = percent_in(line) {
+            // A tool that says how far through one thing it is (rpm-ostree fetching the
+            // system's image): that share of the one it is on.
+            return self.share_of(self.before + self.now, percent);
+        } else if line.starts_with("Setting up ") {
+            // apt, one line for each package put in place.
+            self.now += 1;
+        } else if ["Updating ", "Installing "].iter().any(|start| line.starts_with(start)) && line.contains('/') {
+            // Flatpak says so as it starts on each one: those before it are done.
+            self.now += 1;
+            return self.share(self.before + self.now - 1);
+        }
+        self.share(self.before + self.now)
+    }
+
+    fn share_of(&self, done: usize, part: f32) -> f32 {
+        match self.total {
+            0 => 0.0,
+            total => ((done as f32 + part) / total as f32).min(0.97),
+        }
+    }
+
+    fn share(&self, done: usize) -> f32 {
+        match self.total {
+            0 => 0.0,
+            // Never quite full while it is still working: the last one may take a while.
+            total => (done as f32 / total as f32).min(0.97),
+        }
+    }
+}
+
+/// "Receiving objects: 45% (120/266)": the 45, as a share.
+fn percent_in(line: &str) -> Option<f32> {
+    let before = line.split('%').next().filter(|_| line.contains('%'))?;
+    let digits: String =
+        before.chars().rev().take_while(|c| c.is_ascii_digit()).collect::<Vec<_>>().into_iter().rev().collect();
+    digits.parse::<f32>().ok().filter(|p| *p <= 100.0).map(|p| p / 100.0)
 }
 
 /// Fetch fresh package lists where a check relies on the ones on disk (apt). Asks for a
@@ -740,8 +920,14 @@ pub fn demo_host(platform: &Platform) -> FakeHost {
         _ => host,
     };
     if platform.linux.as_ref().is_some_and(|l| l.flatpak) {
-        let line = command_line("flatpak", FLATPAK_LIST);
-        host = host.program("flatpak").command(&line, 0, "io.quillpad.Quillpad\t4.2.1\n").then(&line, 0, "");
+        let user = command_line("flatpak", FLATPAK_WAITING[0]);
+        let system = command_line("flatpak", FLATPAK_WAITING[1]);
+        let waiting = "Looking for updates…\n\n 1.\t   \tio.quillpad.Quillpad\tstable\tu\tflathub\t< 2.1 MB\n\nProceed with these changes to the user installation? [Y/n]: n\n";
+        host = host
+            .program("flatpak")
+            .command(&user, 1, waiting)
+            .then(&user, 0, "Looking for updates…\n\nNothing to update.\n")
+            .command(&system, 0, "Looking for updates…\n\nNothing to update.\n");
     }
     host
 }
@@ -778,9 +964,38 @@ mod tests {
         assert_eq!(dnf.len(), 1);
         assert_eq!((dnf[0].name.as_str(), dnf[0].to.as_str()), ("kernel", "6.11.6-300.fc41"));
 
-        let flatpak =
-            parse_flatpak("org.example.App\t2.0\norg.example.App\t2.0\nApplication ID\tVersion\norg.other.Thing\t\n");
+        // What Flatpak prints before asking to go ahead: updates, and a runtime that
+        // would be installed with them, which is not something waiting.
+        let flatpak = parse_flatpak(
+            "Looking for updates…\n\n\n 1.\t   \torg.example.App\tstable\tu\tflathub\t< 192.5 kB\n 2.\t   \torg.example.Platform\t24.08\ti\tflathub\t< 80 MB\n 3.\t   \torg.other.Thing\tstable\tu\tfedora\t< 1 MB\n\nProceed with these changes to the user installation? [Y/n]: n\n",
+        );
         assert_eq!(flatpak.iter().map(|p| p.name.as_str()).collect::<Vec<_>>(), ["org.example.App", "org.other.Thing"]);
+        assert!(parse_flatpak("Looking for updates…\n\nNothing to update.\n").is_empty());
+    }
+
+    #[test]
+    fn how_far_an_update_has_got_is_read_from_what_the_tools_print() {
+        let mut progress = Progress::new(6);
+        assert_eq!(progress.line("Updating through pacman…"), 0.0);
+        assert_eq!(progress.line(":: Synchronizing package databases..."), 0.0);
+        assert_eq!(progress.line("(2/4) checking keys in keyring"), 0.0, "not a package being put in place");
+        assert!((progress.line("(2/4) upgrading linux") - 2.0 / 6.0).abs() < 0.01);
+        assert!((progress.line("(4/4) upgrading zlib") - 4.0 / 6.0).abs() < 0.01);
+        assert!((progress.line("Updating through Flatpak…") - 4.0 / 6.0).abs() < 0.01);
+        assert!((progress.line("Updating app/org.example.App/x86_64/stable") - 4.0 / 6.0).abs() < 0.01);
+        assert!((progress.line("Updating runtime/org.example.Platform/x86_64/24.08") - 5.0 / 6.0).abs() < 0.01);
+        // More happened than was counted on: it never claims to be past the end.
+        for _ in 0..5 {
+            assert!(progress.line("Installing runtime/org.example.Extra/x86_64/1") <= 1.0);
+        }
+        let mut apt = Progress::new(2);
+        apt.line("Updating through apt…");
+        assert_eq!(apt.line("Unpacking openssl (3.0.13) over (3.0.12) ..."), 0.0);
+        assert_eq!(apt.line("Setting up openssl (3.0.13) ..."), 0.5);
+        let mut dnf = Progress::new(4);
+        dnf.line("Updating through dnf…");
+        assert_eq!(dnf.line("[2/8] Upgrading kernel-0:6.11.6-300.fc41.x86_64"), 0.25, "of the steps dnf itself counts");
+        assert_eq!(Progress::new(0).line("anything"), 0.0);
     }
 
     #[test]
@@ -824,6 +1039,21 @@ mod tests {
             assert!(said.iter().any(|l| l.starts_with("Updating through")));
             assert_eq!(check(&host, &report).pending, [], "{preset}: nothing is waiting afterwards");
         }
+    }
+
+    #[test]
+    fn only_the_tools_with_something_waiting_are_run() {
+        let host = demo_host(&platform("linux-x64-arch"));
+        let report = describe(&host, &platform("linux-x64-arch"));
+        let flatpak_only: Vec<Pending> =
+            check(&host, &report).pending.into_iter().filter(|p| p.manager == Manager::Flatpak).collect();
+        assert_eq!(flatpak_only.len(), 1);
+        update_waiting(&host, &report, &flatpak_only, &mut |_| {}).unwrap();
+        assert_eq!(
+            *host.streamed.lock().unwrap(),
+            ["flatpak update -y --noninteractive"],
+            "no password prompt for pacman"
+        );
     }
 
     #[test]
@@ -888,7 +1118,52 @@ mod tests {
         let host = demo_host(&platform("linux-x64-fedora")).file("/run/ostree-booted", "");
         let report = describe(&host, &platform("linux-x64-fedora"));
         assert_eq!(report.managers, [Manager::Flatpak], "dnf must not be used on an image-based system");
-        assert!(report.note.contains("whole image"));
+        assert!(report.note.contains("whole image") && report.note.contains("own updater"));
+    }
+
+    #[test]
+    fn a_whole_image_system_is_updated_with_its_own_tool_and_then_wants_a_restart() {
+        let available = "2 metadata, 0 content objects fetched; 788 B transferred in 1 seconds; 0 bytes content written\nAvailableUpdate:\n        Version: 41.20241112.0 (2024-11-12T01:02:03Z)\n         Commit: 0123abcd\n   GPGSignature: Valid signature by 0123\n           Diff: 45 upgraded, 2 added\n";
+        let running = r#"{"deployments":[{"booted":true,"version":"41.20241101.0"}]}"#;
+        let staged = r#"{"deployments":[{"booted":false,"staged":true,"version":"41.20241112.0"},{"booted":true,"version":"41.20241101.0"}]}"#;
+        let host = demo_host(&platform("linux-x64-fedora"))
+            .file("/run/ostree-booted", "")
+            .program("rpm-ostree")
+            .command("rpm-ostree upgrade --check", 0, available)
+            .command("rpm-ostree status --json", 0, running)
+            .then("rpm-ostree status --json", 0, staged);
+        let report = describe(&host, &platform("linux-x64-fedora"));
+        assert_eq!(report.managers, [Manager::RpmOstree, Manager::Flatpak], "and never dnf");
+        assert!(report.note.contains("takes over"));
+        let before = check(&host, &report);
+        let system: Vec<&Pending> = before.pending.iter().filter(|p| p.manager == Manager::RpmOstree).collect();
+        assert_eq!(system.len(), 1);
+        assert_eq!(
+            (system[0].name.as_str(), system[0].to.as_str()),
+            ("The system (45 upgraded, 2 added)", "41.20241112.0")
+        );
+        assert!(!before.restart_needed);
+
+        update_waiting(&host, &report, &before.pending, &mut |_| {}).unwrap();
+        assert_eq!(host.streamed.lock().unwrap()[0], "rpm-ostree upgrade", "no password prompt of Bilby's own");
+        // The new image is in place: nothing is waiting but a restart.
+        let after = check(&host, &report);
+        assert!(after.pending.is_empty(), "{:?}", after.pending);
+        assert!(after.restart_needed);
+
+        // Nothing newer: its own way of saying so is not an error.
+        let current = demo_host(&platform("linux-x64-fedora"))
+            .file("/run/ostree-booted", "")
+            .program("rpm-ostree")
+            .command("rpm-ostree upgrade --check", 77, "No updates available.\n")
+            .command("rpm-ostree status --json", 0, running);
+        let report = describe(&current, &platform("linux-x64-fedora"));
+        let found = check(&current, &report);
+        assert!(found.problems.is_empty() && found.pending.iter().all(|p| p.manager == Manager::Flatpak));
+        // How far the image has come is read from what the tool prints.
+        let mut progress = Progress::new(1);
+        progress.line("Updating through rpm-ostree…");
+        assert_eq!(progress.line("Receiving objects: 45% (120/266) 1.2 MB/s 30 MB"), 0.45);
 
         let windows = describe(&demo_host(&platform("windows-x64")), &platform("windows-x64"));
         assert_eq!(windows.handoff.as_ref().map(|h| h.label), Some("Open Windows Update"));

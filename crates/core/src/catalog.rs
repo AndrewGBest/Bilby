@@ -298,6 +298,16 @@ impl Catalog {
                 None => merged.push(section),
             }
         }
+        // What was made for TVs is in its own row and nowhere else: Kodi is not there
+        // and again among the essentials under it.
+        if merged.first().is_some_and(|row| row.title == "Made for TV") {
+            let (tv, rest) = merged.split_at_mut(1);
+            for row in rest.iter_mut() {
+                row.apps
+                    .retain(|app| !tv[0].apps.iter().any(|a| a.id == app.id || a.name.eq_ignore_ascii_case(&app.name)));
+            }
+            merged.retain(|row| !row.apps.is_empty());
+        }
         merged
     }
 
