@@ -47,6 +47,7 @@ fn dirs_in(root: &std::path::Path) -> Dirs {
         elevate: root.join("elevate-program"),
         terminal: None,
         flatpak_roots: vec![root.join("flatpak")],
+        programs: Vec::new(),
         cache: root.join("cache"),
         config: root.join("config"),
     }
@@ -1287,6 +1288,16 @@ fn the_home_page_adds_the_lists_a_source_keeps() {
     let popular = s.store().get_sections().iter().find(|section| section.title == "Popular on Flathub").unwrap();
     assert_eq!(popular.apps.row_data(0).unwrap().id, "flathub:org.reelstudio.Reel", "most installed first");
 
+    // What Flathub files under a kind joins the row of that kind, among the rows of
+    // kinds and ahead of the web apps, and is not then repeated in the lists after it.
+    let tools = s.store().get_sections().iter().find(|section| section.title == "Handy tools").expect("{titles:?}");
+    let tool = tools.apps.row_data(tools.apps.row_count() - 1).unwrap().id;
+    assert!(tool.starts_with("flathub:"), "{tool}");
+    assert!(titles.iter().position(|t| t == "Handy tools") < titles.iter().position(|t| t == "Web apps"));
+    let listed =
+        s.store().get_sections().iter().filter(|section| section.apps.iter().any(|app| app.id == tool)).count();
+    assert_eq!(listed, 1, "in one row only");
+
     // Where Flathub is not a source, there are no such lists and nothing is asked for.
     let windows = start("windows-x64", Shell::Desktop);
     assert!(windows.store().get_sections().iter().all(|section| !section.title.contains("Flathub")));
@@ -1573,7 +1584,7 @@ fn a_flathub_app_is_found_installed_opened_and_removed() {
     let hit =
         s.store().get_results().iter().find(|c| c.id == "flathub:io.quillpad.Quillpad").expect("a Flathub result");
     assert_eq!(hit.source, "Flathub");
-    assert_eq!(hit.icon.size().width, 128, "Flathub's icon for the app is shown");
+    assert_eq!(hit.icon.size().width, 44, "Flathub's icon for the app is shown, at the size of a tile");
 
     // Its page has Flathub's pictures and description, and one button.
     s.app.open(&s.ui, "flathub:io.quillpad.Quillpad");

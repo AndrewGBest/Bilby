@@ -291,12 +291,50 @@ impl Source for Flathub {
             let resp: SearchResponse = serde_json::from_str(&self.http.get(&url)?)?;
             Ok(self.summaries_of(resp.hits))
         };
-        // A list that cannot be fetched is left out; the rest of the page does not wait on it.
-        LISTS
-            .iter()
-            .filter_map(|(title, path)| Some((title.to_string(), fetch(path).ok()?)))
-            .filter(|(_, apps)| !apps.is_empty())
-            .collect()
+        // Flathub files every app under what it is for. Those lists, most used first,
+        // fill the home page's rows of the same kind: the row is then everything of
+        // that kind worth having, not only the handful the store names itself.
+        const KINDS: [(&str, &[&str]); 7] = [
+            ("Web browsers", &["category/Network/subcategories?subcategory=WebBrowser&"]),
+            ("Music and video", &["category/AudioVideo?"]),
+            (
+                "Chat, calls and mail",
+                &["category/Network/subcategories?subcategory=Chat&subcategory=InstantMessaging&subcategory=Email&subcategory=VideoConference&"],
+            ),
+            ("Games", &["category/Game?"]),
+            ("Work and create", &["category/Office?", "category/Graphics?"]),
+            ("Handy tools", &["category/Utility?"]),
+            ("Developer tools", &["category/Development?"]),
+        ];
+        let of_kind = |paths: &[&str]| -> Result<Vec<AppSummary>> {
+            let per_list = (limit * 2 / paths.len()).clamp(1, 50);
+            let mut lists = Vec::new();
+            for path in paths {
+                let url = format!("{}/collection/{path}page=1&per_page={per_list}&locale=en", self.api);
+                let resp: SearchResponse = serde_json::from_str(&self.http.get(&url)?)?;
+                lists.push(self.summaries_of(resp.hits).into_iter());
+            }
+            // Two lists for one row (documents, pictures) take turns.
+            let mut apps = Vec::new();
+            while lists.iter().any(|list| list.len() > 0) {
+                apps.extend(lists.iter_mut().filter_map(Iterator::next));
+            }
+            Ok(apps)
+        };
+        // Asked all at once: the page waits as long as the slowest list, not their sum.
+        // A list that cannot be fetched is left out; the rest does not wait on it.
+        let (kinds, lists) = std::thread::scope(|scope| {
+            let kinds: Vec<_> = KINDS.iter().map(|(title, paths)| (title, scope.spawn(|| of_kind(paths)))).collect();
+            let lists: Vec<_> = LISTS.iter().map(|(title, path)| (title, scope.spawn(|| fetch(path)))).collect();
+            let done = |all: Vec<(&&str, std::thread::ScopedJoinHandle<Result<Vec<AppSummary>>>)>| {
+                all.into_iter()
+                    .filter_map(|(title, list)| Some((title.to_string(), list.join().ok()?.ok()?)))
+                    .filter(|(_, apps)| !apps.is_empty())
+                    .collect::<Vec<_>>()
+            };
+            (done(kinds), done(lists))
+        });
+        kinds.into_iter().chain(lists).collect()
     }
 
     fn summary(&self, key: &str) -> Result<AppSummary> {

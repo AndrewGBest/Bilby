@@ -94,6 +94,20 @@ impl Essential {
     }
 }
 
+/// Is this the title of one of the rows that hold a kind of app ("Games")?
+pub fn is_kind_row(title: &str) -> bool {
+    [
+        "Web browsers",
+        "Music and video",
+        "Chat, calls and mail",
+        "Games",
+        "Work and create",
+        "Handy tools",
+        "Developer tools",
+    ]
+    .contains(&title)
+}
+
 /// The row a listed website belongs in, by what the site is for: websites sit among
 /// the apps of their kind, not in rows of their own.
 fn kind_of_site(site: &crate::source::web::Site) -> &'static str {

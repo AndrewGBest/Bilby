@@ -70,6 +70,7 @@ fn start(root: &Path) -> Session {
         elevate: root.join("elevate-program"),
         terminal: None,
         flatpak_roots: vec![root.join("flatpak")],
+        programs: Vec::new(),
         cache: root.join("cache"),
         config: root.join("config"),
     };
@@ -115,10 +116,12 @@ fn pictures_appear_are_cached_and_their_absence_is_harmless() {
 
     let s = start(&root);
     // Featured apps got their own logos as soon as the store opened, without anyone
-    // opening their pages: what each project's README shows (128 pixels in the demo),
-    // in place of its owner's picture (8 pixels here).
-    assert_eq!(icon_width(&s, "Tidewave"), 128);
-    assert_eq!(icon_width(&s, "Relay"), 128);
+    // opening their pages: what each project's README shows. Whatever size a picture
+    // arrives at, it is kept at exactly the sizes it is drawn at: 44 in a tile, 88 at
+    // the top of a page. (In the demo the logos are 128 pixels and an owner's picture
+    // is 8; which one was used is checked on disk further down.)
+    assert_eq!(icon_width(&s, "Tidewave"), 44);
+    assert_eq!(icon_width(&s, "Relay"), 44);
     // No logo and no picture, or not an image: the initials stay, nothing breaks.
     assert_eq!(icon_width(&s, "Lumen"), 0);
     assert_eq!(icon_width(&s, "Kestrel"), 0);
@@ -127,14 +130,14 @@ fn pictures_appear_are_cached_and_their_absence_is_harmless() {
 
     // An app's page shows the same logo.
     s.app.open(&s.ui, "github:tidewave/tidewave");
-    assert_eq!(s.ui.global::<Store>().get_app().icon.size().width, 128);
-    assert_eq!(icon_width(&s, "Tidewave"), 128);
+    assert_eq!(s.ui.global::<Store>().get_app().icon.size().width, 88);
+    assert_eq!(icon_width(&s, "Tidewave"), 44);
     s.app.search(&s.ui, "editor");
     assert_eq!(s.downloads.load(Ordering::SeqCst), first_round, "nothing is fetched twice in a session");
 
     // An app that was not on screen before gets its picture when it is opened.
     s.app.open(&s.ui, "github:oldtimer/relic");
-    assert_eq!(s.ui.global::<Store>().get_app().icon.size().width, 128);
+    assert_eq!(s.ui.global::<Store>().get_app().icon.size().width, 88);
     assert_eq!(s.downloads.load(Ordering::SeqCst), first_round + 1);
 
     // On disk: pictures under the owner's name, and a note for owners without one.
@@ -146,8 +149,8 @@ fn pictures_appear_are_cached_and_their_absence_is_harmless() {
 
     // A second launch reads the cache: no requests at all, pictures still there.
     let again = start(&root);
-    assert_eq!(icon_width(&again, "Tidewave"), 128, "the logo found last time is still used");
-    assert_eq!(icon_width(&again, "Relay"), 128);
+    assert_eq!(icon_width(&again, "Tidewave"), 44, "the logo found last time is still used");
+    assert_eq!(icon_width(&again, "Relay"), 44);
     assert_eq!(icon_width(&again, "Lumen"), 0);
     assert_eq!(again.downloads.load(Ordering::SeqCst), 0);
 

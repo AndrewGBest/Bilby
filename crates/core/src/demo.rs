@@ -816,6 +816,13 @@ impl Http for DemoHttp {
                 .ok_or_else(not_found);
         }
         if let Some(rest) = url.strip_prefix("https://flathub.org/api/v2/collection/") {
+            // The made-up Flathub files one app by kind, its least installed, as a handy
+            // tool; the other kinds have nothing.
+            if rest.starts_with("category/") {
+                let tool = FLATPAKS.iter().min_by_key(|a| a.installs).filter(|_| rest.starts_with("category/Utility"));
+                let hits: Vec<Value> = tool.into_iter().map(flatpak_hit).collect();
+                return Ok(json!({ "hits": hits, "totalHits": hits.len() }).to_string());
+            }
             // Popular: most installed first. The other lists: the same apps, turned round.
             let mut apps: Vec<&DemoFlatpak> = FLATPAKS.iter().collect();
             apps.sort_by_key(|a| std::cmp::Reverse(a.installs));

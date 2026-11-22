@@ -432,6 +432,9 @@ pub struct Pending {
     pub from: String,
     pub to: String,
     pub manager: Manager,
+    /// Set when this is a whole new release of the system rather than an update to the
+    /// one in use: where the system moves to in order to get it.
+    pub release: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -458,6 +461,7 @@ fn parse_pacman(text: &str) -> Vec<Pending> {
                 from: from.to_string(),
                 to: to.to_string(),
                 manager: Manager::Pacman,
+                release: None,
             }),
             _ => None,
         }
@@ -474,7 +478,13 @@ fn parse_apt(text: &str) -> Vec<Pending> {
         let to = rest.split_once('(')?.1.split_whitespace().next()?;
         // A brand-new dependency has no old version in brackets before the parenthesis.
         let from = if rest.find('[') < rest.find('(') { from } else { "" };
-        Some(Pending { name: name.to_string(), from: from.to_string(), to: to.to_string(), manager: Manager::Apt })
+        Some(Pending {
+            name: name.to_string(),
+            from: from.to_string(),
+            to: to.to_string(),
+            manager: Manager::Apt,
+            release: None,
+        })
     };
     text.lines().filter_map(parse).collect()
 }
@@ -497,6 +507,7 @@ fn parse_dnf(text: &str) -> Vec<Pending> {
                         from: String::new(),
                         to: version.to_string(),
                         manager: Manager::Dnf,
+                        release: None,
                     });
                 }
             }
@@ -520,6 +531,7 @@ fn parse_flatpak(text: &str) -> Vec<Pending> {
             from: String::new(),
             to: String::new(),
             manager: Manager::Flatpak,
+            release: None,
         })
     };
     text.lines().filter_map(parse).collect()
@@ -551,7 +563,72 @@ fn parse_rpm_ostree(text: &str) -> Vec<Pending> {
         from: String::new(),
         to: version,
         manager: Manager::RpmOstree,
+        release: None,
     }]
+}
+
+/// Where Fedora lists what it has released, betas included and marked as such.
+const FEDORA_RELEASES: &str = "https://fedoraproject.org/releases.json";
+
+/// The newest finished release in Fedora's list for this flavour (all flavours when
+/// `variant` is empty). "45 Beta" is not a number and so is not counted.
+fn newest_fedora(list: &str, variant: &str) -> Option<u32> {
+    let list: serde_json::Value = serde_json::from_str(list).ok()?;
+    list.as_array()?
+        .iter()
+        .filter(|entry| {
+            variant.is_empty() || entry["variant"].as_str().is_some_and(|v| v.eq_ignore_ascii_case(variant))
+        })
+        .filter_map(|entry| entry["version"].as_str()?.parse::<u32>().ok())
+        .max()
+}
+
+/// Is there a whole new release of a Fedora image system, such as 45 for one on 44?
+/// `rpm-ostree upgrade` never says so: it only follows the release already in use.
+/// Only for systems that follow Fedora's own numbered images; one built by someone
+/// else (which follows "stable" or "latest") moves on by itself.
+fn newer_release(host: &dyn Host) -> Option<Pending> {
+    if !host.has("curl") {
+        return None;
+    }
+    let about = host.read("/etc/os-release").or_else(|| host.read("/usr/lib/os-release"))?;
+    if os_release_value(&about, "ID")? != "fedora" {
+        return None;
+    }
+    let now: u32 = os_release_value(&about, "VERSION_ID")?.parse().ok()?;
+    let status: serde_json::Value =
+        serde_json::from_str(&host.run("rpm-ostree", &["status", "--json"]).ok()?.stdout).ok()?;
+    let booted = status["deployments"].as_array()?.iter().find(|d| d["booted"].as_bool() == Some(true))?;
+    let from = booted["container-image-reference"].as_str().or_else(|| booted["origin"].as_str())?;
+    let variant = os_release_value(&about, "VARIANT_ID").unwrap_or_default();
+    let list = host.run("curl", &["-fsSL", "--max-time", "20", FEDORA_RELEASES]).ok().filter(|out| out.code == 0)?;
+    let newest = newest_fedora(&list.stdout, &variant).filter(|newest| *newest > now)?;
+    // "fedora:fedora/44/x86_64/kinoite", or "…quay.io/fedora/fedora-kinoite:44".
+    let target = if from.contains(&format!("/{now}/")) {
+        let target = from.replacen(&format!("/{now}/"), &format!("/{newest}/"), 1);
+        // The place it comes from can say whether it has that one yet.
+        if let (true, Some((remote, branch))) = (host.has("ostree"), target.split_once(':')) {
+            if let Ok(out) = host.run("ostree", &["remote", "refs", remote]) {
+                if out.code == 0 && !out.stdout.lines().any(|line| line.trim() == target || line.trim() == branch) {
+                    return None;
+                }
+            }
+        }
+        target
+    } else {
+        format!("{}:{newest}", from.strip_suffix(&format!(":{now}"))?)
+    };
+    let name = match os_release_value(&about, "VARIANT") {
+        Some(flavour) if !flavour.is_empty() => format!("Fedora {flavour} {newest}"),
+        _ => format!("Fedora Linux {newest}"),
+    };
+    Some(Pending {
+        name,
+        from: now.to_string(),
+        to: newest.to_string(),
+        manager: Manager::RpmOstree,
+        release: Some(target),
+    })
 }
 
 /// Has a newer image been fetched that takes over at the next start? Then the first
@@ -603,6 +680,11 @@ fn pending_for(host: &dyn Host, manager: Manager) -> Result<Vec<Pending>> {
             // to be installed again.
             if image_staged(host) {
                 return Ok(Vec::new());
+            }
+            // A whole new release takes the place of an update to this one: moving
+            // to it brings everything up to date.
+            if let Some(release) = newer_release(host) {
+                return Ok(vec![release]);
             }
             // 0: a newer image is described. 77: there is none.
             let out = host.run("rpm-ostree", &["upgrade", "--check"])?;
@@ -719,6 +801,12 @@ pub fn update_waiting(host: &dyn Host, report: &Report, pending: &[Pending], lin
                     .to_string(),
             ));
         }
+        // A new release of a whole-image system is moved to, not upgraded within.
+        let release = pending.iter().filter(|p| p.manager == manager).find_map(|p| p.release.as_deref());
+        let args = match release {
+            Some(target) => vec!["rebase", target],
+            None => args,
+        };
         line(&format!("Updating through {}…", manager.label()));
         match host.stream(program, &args, line)? {
             0 => {}
@@ -1176,5 +1264,60 @@ mod tests {
         assert!(mac.facts.iter().any(|f| f.name == "Memory" && f.value == "16 GB"));
         let phone = describe(&demo_host(&platform("android-arm64")), &platform("android-arm64"));
         assert!(phone.handoff.is_none() && phone.note.contains("Settings"));
+    }
+
+    #[test]
+    fn a_new_release_of_a_whole_image_system_is_offered_and_moved_to() {
+        let about = "NAME=\"Fedora Linux\"\nID=fedora\nVERSION_ID=44\nVARIANT=\"Kinoite\"\nVARIANT_ID=kinoite\n";
+        let list = r#"[{"version":"44","variant":"Kinoite"},{"version":"45","variant":"Kinoite"},
+            {"version":"46 Beta","variant":"Kinoite"},{"version":"47","variant":"Server"}]"#;
+        let curl = format!("curl -fsSL --max-time 20 {FEDORA_RELEASES}");
+        let machine = |status: &str| {
+            demo_host(&platform("linux-x64-fedora"))
+                .file("/run/ostree-booted", "")
+                .file("/etc/os-release", about)
+                .program("rpm-ostree")
+                .program("curl")
+                .program("ostree")
+                .command("rpm-ostree upgrade --check", 77, "No updates available.\n")
+                .command("rpm-ostree status --json", 0, status)
+                .command(&curl, 0, list)
+        };
+        let system = |host: &FakeHost| -> Vec<Pending> {
+            let report = describe(host, &platform("linux-x64-fedora"));
+            check(host, &report).pending.into_iter().filter(|p| p.manager == Manager::RpmOstree).collect()
+        };
+
+        // Nothing newer within 44, but 45 is out: that is what is waiting. Not the beta
+        // of 46, and not a 47 that only another flavour has.
+        let branch = r#"{"deployments":[{"booted":true,"origin":"fedora:fedora/44/x86_64/kinoite"}]}"#;
+        let host = machine(branch).command("ostree remote refs fedora", 0, "fedora:fedora/45/x86_64/kinoite\n");
+        let found = system(&host);
+        assert_eq!(found.len(), 1);
+        assert_eq!(
+            (found[0].name.as_str(), found[0].from.as_str(), found[0].to.as_str()),
+            ("Fedora Kinoite 45", "44", "45")
+        );
+        let report = describe(&host, &platform("linux-x64-fedora"));
+        update_waiting(&host, &report, &found, &mut |_| {}).unwrap();
+        assert_eq!(host.streamed.lock().unwrap()[0], "rpm-ostree rebase fedora:fedora/45/x86_64/kinoite");
+
+        // Announced, but not yet where this system gets its images: not offered.
+        assert!(system(&machine(branch).command("ostree remote refs fedora", 0, "fedora:fedora/44/x86_64/kinoite\n"))
+            .is_empty());
+
+        // A system that follows a container image moves to the next one's tag.
+        let image = r#"{"deployments":[{"booted":true,"container-image-reference":"ostree-image-signed:docker://quay.io/fedora/fedora-kinoite:44"}]}"#;
+        assert_eq!(
+            system(&machine(image))[0].release.as_deref(),
+            Some("ostree-image-signed:docker://quay.io/fedora/fedora-kinoite:45")
+        );
+
+        // One that follows somebody else's "stable" is left to them, and so is one
+        // already on the newest.
+        let other = r#"{"deployments":[{"booted":true,"container-image-reference":"ostree-image-signed:docker://ghcr.io/example/desk:stable"}]}"#;
+        assert!(system(&machine(other)).is_empty());
+        let newest = r#"{"deployments":[{"booted":true,"origin":"fedora:fedora/45/x86_64/kinoite"}]}"#;
+        assert!(system(&machine(newest).file("/etc/os-release", &about.replace("=44", "=45"))).is_empty());
     }
 }

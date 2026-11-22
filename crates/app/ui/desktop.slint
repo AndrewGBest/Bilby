@@ -111,7 +111,7 @@ component Spotlight inherits Rectangle {
         spacing: 20px;
         VerticalLayout {
             alignment: center;
-            AppIcon { initials: app.initials; tint: app.tint; icon: app.icon; size: 84px; }
+            AppIcon { initials: app.initials; tint: app.tint; icon: app.icon; size: 88px; }
         }
         VerticalLayout {
             alignment: center;
@@ -279,7 +279,7 @@ export component DesktopShell inherits Rectangle {
                         border-width: 1px;
                         border-color: Theme.stroke;
                         accessible-role: button;
-                        accessible-label: "Showing apps for " + Store.platform-title;
+                        accessible-label: Store.device-name + ". Everything shown works here.";
                         accessible-action-default => { root.go(3); }
                         dev-ta := TouchArea {
                             mouse-cursor: pointer;
@@ -290,8 +290,8 @@ export component DesktopShell inherits Rectangle {
                             padding-right: 12px;
                             alignment: center;
                             spacing: 3px;
-                            Text { text: "Showing apps for"; color: Theme.text-dim; font-size: 11px; }
-                            Text { text: Store.device-name; color: Theme.ok; font-size: 13px; font-weight: 600; overflow: elide; }
+                            Text { text: Store.device-name; color: Theme.text; font-size: 13px; font-weight: 600; overflow: elide; }
+                            Text { text: "Everything shown works here"; color: Theme.text-dim; font-size: 11px; overflow: elide; }
                         }
                     }
                 }

@@ -268,6 +268,9 @@ pub struct Dirs {
     pub terminal: Option<(PathBuf, &'static str)>,
     /// Flatpak's installations: system-wide and per-user. Installed apps are in `app/<id>`.
     pub flatpak_roots: Vec<PathBuf>,
+    /// The folders programs are looked for in (the PATH), for finding a browser that
+    /// can show a website in a window of its own.
+    pub programs: Vec<PathBuf>,
     pub cache: PathBuf,
     /// Settings and library (`state.json`).
     pub config: PathBuf,
@@ -302,6 +305,7 @@ impl Dirs {
                 PathBuf::from("/var/lib/flatpak"),
                 var("XDG_DATA_HOME").unwrap_or_else(|| home.join(".local").join("share")).join("flatpak"),
             ],
+            programs: std::env::var_os("PATH").map(|path| std::env::split_paths(&path).collect()).unwrap_or_default(),
             cache: cache.join("bilby"),
             config: config.join("bilby"),
         }
@@ -442,6 +446,70 @@ impl Longboard {
     }
 }
 
+/// A browser that can show one website in a window of its own, with no tabs or
+/// address bar: what makes a website on a computer feel like an app.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AppBrowser {
+    pub program: PathBuf,
+    /// What comes before the address (`run <id>` for a Flatpak).
+    pub before: Vec<String>,
+    /// What the browser's windows of this kind are called, by which the desktop ties
+    /// a window to its menu entry and so to its icon.
+    family: &'static str,
+}
+
+impl AppBrowser {
+    /// The whole argument list for opening `url` as an app.
+    pub fn args(&self, url: &str) -> Vec<String> {
+        self.before.iter().cloned().chain([format!("--app={url}")]).collect()
+    }
+
+    /// The name the browser gives the window it opens for `url`.
+    pub fn window_class(&self, url: &str) -> String {
+        let rest = url.trim_start_matches("https://");
+        let (host, path) = rest.split_once('/').unwrap_or((rest, ""));
+        format!("{}-{host}__{}-Default", self.family, path.replace('/', "_"))
+    }
+}
+
+/// Such a browser, when this device has one: Chrome, Chromium, Brave, Edge or Vivaldi,
+/// as a program on the PATH or as a Flatpak. (Firefox cannot do this.)
+pub fn find_app_browser(dirs: &Dirs) -> Option<AppBrowser> {
+    if !cfg!(target_os = "linux") {
+        return None;
+    }
+    const PROGRAMS: [(&str, &str); 10] = [
+        ("google-chrome-stable", "chrome"),
+        ("google-chrome", "chrome"),
+        ("chromium", "chrome"),
+        ("chromium-browser", "chrome"),
+        ("brave-browser", "brave"),
+        ("brave", "brave"),
+        ("microsoft-edge-stable", "msedge"),
+        ("microsoft-edge", "msedge"),
+        ("vivaldi-stable", "vivaldi"),
+        ("vivaldi", "vivaldi"),
+    ];
+    const FLATPAKS: [(&str, &str); 6] = [
+        ("com.google.Chrome", "chrome"),
+        ("org.chromium.Chromium", "chrome"),
+        ("com.brave.Browser", "brave"),
+        ("com.microsoft.Edge", "msedge"),
+        ("com.vivaldi.Vivaldi", "vivaldi"),
+        ("io.github.ungoogled_software.ungoogled_chromium", "chrome"),
+    ];
+    for (name, family) in PROGRAMS {
+        if let Some(program) = dirs.programs.iter().map(|dir| dir.join(name)).find(|p| p.is_file()) {
+            return Some(AppBrowser { program, before: Vec::new(), family });
+        }
+    }
+    FLATPAKS.iter().find(|(id, _)| flatpak_app_installed(dirs, id)).map(|(id, family)| AppBrowser {
+        program: dirs.flatpak.clone(),
+        before: vec!["run".to_string(), id.to_string()],
+        family,
+    })
+}
+
 /// Longboard, when it is on this device, however it got there: the AppImage the store
 /// placed (or the folder it was unpacked into), its Flatpak, or one on the PATH.
 pub fn find_longboard(dirs: &Dirs) -> Option<Longboard> {
@@ -566,7 +634,17 @@ pub fn write_web_shortcut(dirs: &Dirs, id: &str, name: &str, url: &str) -> Resul
         std::fs::write(&path, plist)?;
         return Ok(path);
     }
-    // Linux and the like: the desktop's own opener, started on the address.
+    // Linux and the like. With a browser that can do it, the site gets a window of
+    // its own; the entry says what that window is called, so it wears the site's icon.
+    if let Some(browser) = find_app_browser(dirs) {
+        let path = write_menu_entry(dirs, id, &label, &browser.program, &browser.args(url), "Network;")?;
+        if let Ok(entry) = std::fs::read_to_string(&path) {
+            let _ = std::fs::write(&path, format!("{entry}StartupWMClass={}\n", browser.window_class(url)));
+        }
+        give_entry_its_picture(dirs, id, &path);
+        return Ok(path);
+    }
+    // Without one: the desktop's own opener, started on the address.
     let opener = std::env::var_os("PATH")
         .and_then(|path| std::env::split_paths(&path).map(|dir| dir.join("xdg-open")).find(|p| p.is_file()))
         .unwrap_or_else(|| PathBuf::from("/usr/bin/xdg-open"));
@@ -1235,8 +1313,12 @@ pub fn execute(
     if plan.action == Action::WebApp && !asset.info.as_ref().is_some_and(|info| info.tv) {
         let host = asset.url.trim_start_matches("https://").trim_end_matches('/');
         let entry = write_web_shortcut(dirs, &format!("web:{host}"), &asset.name, &asset.url)?;
+        let how = match find_app_browser(dirs) {
+            Some(_) => "It opens in a window of its own.",
+            None => "It opens in your browser.",
+        };
         return Ok(Outcome {
-            message: format!("{} is among your apps. It opens in your browser.", asset.name),
+            message: format!("{} is among your apps. {how}", asset.name),
             file: Some(entry),
             store_managed: false,
             flatpak_app: None,
@@ -1370,6 +1452,42 @@ mod tests {
     }
 
     #[test]
+    #[cfg(target_os = "linux")]
+    fn a_website_gets_a_window_of_its_own_where_a_browser_can_give_it_one() {
+        // Only Firefox, or nothing: the site opens in the usual browser, as before.
+        let plain = temp_dirs("web-plain");
+        assert_eq!(find_app_browser(&plain), None);
+        let entry = write_web_shortcut(&plain, "web:plex.tv", "Plex", "https://plex.tv/").unwrap();
+        let text = std::fs::read_to_string(entry).unwrap();
+        assert!(text.contains("xdg-open\" \"https://plex.tv/\"") && !text.contains("--app="), "{text}");
+
+        // Chromium on the PATH: the entry starts it on the site as an app, and says
+        // what that window is called so the desktop gives it the site's icon.
+        let mut dirs = temp_dirs("web-app");
+        let bin = dirs.cache.join("bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        std::fs::write(bin.join("chromium"), "").unwrap();
+        dirs.programs = vec![bin.clone()];
+        let browser = find_app_browser(&dirs).unwrap();
+        assert_eq!(browser.args("https://plex.tv/"), ["--app=https://plex.tv/"]);
+        let entry = write_web_shortcut(&dirs, "web:plex.tv", "Plex", "https://plex.tv/").unwrap();
+        let text = std::fs::read_to_string(entry).unwrap();
+        assert!(
+            text.contains(&format!("Exec=\"{}\" \"--app=https://plex.tv/\"", bin.join("chromium").display())),
+            "{text}"
+        );
+        assert!(text.contains("StartupWMClass=chrome-plex.tv__-Default\n"), "{text}");
+
+        // Chrome as a Flatpak does as well.
+        let mut dirs = temp_dirs("web-flatpak");
+        std::fs::create_dir_all(dirs.flatpak_roots[0].join("app").join("com.google.Chrome")).unwrap();
+        dirs.programs.clear();
+        let browser = find_app_browser(&dirs).unwrap();
+        assert_eq!(browser.args("https://youtube.com/"), ["run", "com.google.Chrome", "--app=https://youtube.com/"]);
+        assert_eq!(browser.window_class("https://music.youtube.com/"), "chrome-music.youtube.com__-Default");
+    }
+
+    #[test]
     #[cfg(unix)]
     fn a_flathub_set_up_twice_does_not_stop_an_install() {
         use std::os::unix::fs::PermissionsExt;
@@ -1495,6 +1613,7 @@ mod tests {
             elevate: root.join("elevate-program"),
             terminal: None,
             flatpak_roots: vec![root.join("flatpak")],
+            programs: Vec::new(),
             cache: root.join("cache"),
             config: root.join("config"),
         }

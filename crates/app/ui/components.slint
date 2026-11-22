@@ -167,6 +167,9 @@ export component Button inherits Rectangle {
     in property <length> font-size: 14px;
     // 0 to 1 while the button's own action is under way: it fills like a progress bar.
     in property <float> progress: -1;
+    // A picture in place of words, for a button that has none (the favourite star).
+    in property <image> icon;
+    in property <color> icon-color: Theme.text;
     callback clicked;
     height: font-size * 2.9;
     border-radius: 10px;
@@ -223,6 +226,12 @@ export component Button inherits Rectangle {
             horizontal-alignment: center;
             vertical-alignment: center;
         }
+    }
+    if root.text == "" && root.icon.width > 0 : Image {
+        source: root.icon;
+        colorize: root.icon-color;
+        width: root.font-size * 1.45;
+        height: root.font-size * 1.45;
     }
 }
 
@@ -1140,7 +1149,9 @@ export component DetailsBody inherits Rectangle {
                         spacing: 8px;
                         Button {
                             width: 44px;
-                            text: Store.is-favourite ? "★" : "☆";
+                            text: "";
+                            icon: Store.is-favourite ? @image-url("icons/star-filled.svg") : @image-url("icons/star.svg");
+                            icon-color: Store.is-favourite ? Theme.warn : Theme.text;
                             primary: false;
                             accessible-label: Store.is-favourite ? "Remove from favourites" : "Add to favourites";
                             clicked => { Store.toggle-favourite(); }
@@ -1173,7 +1184,9 @@ export component DetailsBody inherits Rectangle {
                 Button {
                     width: root.has-option ? 48px : self.preferred-width;
                     horizontal-stretch: root.has-option ? 0 : 1;
-                    text: root.has-option ? (Store.is-favourite ? "★" : "☆") : (Store.is-favourite ? "★ In your favourites" : "☆ Add to favourites");
+                    text: root.has-option ? "" : (Store.is-favourite ? "In your favourites" : "Add to favourites");
+                    icon: Store.is-favourite ? @image-url("icons/star-filled.svg") : @image-url("icons/star.svg");
+                    icon-color: Store.is-favourite ? Theme.warn : Theme.text;
                     primary: false;
                     accessible-label: Store.is-favourite ? "Remove from favourites" : "Add to favourites";
                     clicked => { Store.toggle-favourite(); }

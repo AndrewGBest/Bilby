@@ -45,6 +45,7 @@ fn text_is_readable_in_both_themes() {
             elevate: root.join("elevate-program"),
             terminal: None,
             flatpak_roots: vec![root.join("flatpak")],
+            programs: Vec::new(),
             cache: root.join("c"),
             config: root.join("cfg"),
         }),

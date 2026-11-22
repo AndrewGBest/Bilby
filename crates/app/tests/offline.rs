@@ -74,6 +74,7 @@ fn start(seed: &str) -> Session {
         elevate: root.join("elevate-program"),
         terminal: None,
         flatpak_roots: vec![root.join("flatpak")],
+        programs: Vec::new(),
         cache: root.join("cache"),
         config: root.join("config"),
     };

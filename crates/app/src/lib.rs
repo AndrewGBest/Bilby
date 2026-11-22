@@ -570,19 +570,61 @@ impl UpdateTable {
 thread_local! {
     /// Decoded app pictures by owner. Images belong to the UI thread, so they live here
     /// rather than in `App`, which worker threads share.
-    static PICTURES: RefCell<HashMap<String, slint::Image>> = RefCell::new(HashMap::new());
+    static PICTURES: RefCell<HashMap<String, Picture>> = RefCell::new(HashMap::new());
 }
 
-/// Decode a cached PNG or JPEG into something Slint can draw. Implausible sizes are
-/// refused: an avatar is small, and a huge image would only cost memory.
-fn decode_picture(path: &std::path::Path) -> Option<slint::Image> {
-    let decoded = image::open(path).ok()?.into_rgba8();
-    let (width, height) = decoded.dimensions();
+/// A picture at the two sizes it is drawn at: in a tile, and at the top of a page.
+#[derive(Clone)]
+struct Picture {
+    small: slint::Image,
+    large: slint::Image,
+}
+
+/// How many pixels across a tile's picture and a page's picture are, on this screen
+/// and in this layout.
+fn picture_sizes(ui: &AppWindow) -> (u32, u32) {
+    let window = ui.window();
+    let scale = window.scale_factor().max(1.0);
+    let (small, large) = match ui.global::<Store>().get_shell() {
+        // The TV layout is drawn in 540ths of the screen's height.
+        Shell::Tv => {
+            let unit = window.size().height as f32 / 540.0;
+            (32.0 * unit, 60.0 * unit)
+        }
+        Shell::Mobile => (48.0 * scale, 64.0 * scale),
+        _ => (44.0 * scale, 88.0 * scale),
+    };
+    ((small.round() as u32).clamp(24, 256), (large.round() as u32).clamp(48, 512))
+}
+
+/// Decode a cached PNG or JPEG into something Slint can draw, at exactly the sizes it
+/// is shown at. The drawing code scales a picture by picking pixels, which leaves a
+/// 128-pixel icon shown at 44 jagged; scaled here, with care, it is drawn as it is.
+/// Implausible sizes are refused: a huge image would only cost memory.
+fn decode_picture(path: &std::path::Path, (small, large): (u32, u32)) -> Option<Picture> {
+    let decoded = image::open(path).ok()?;
+    let (width, height) = (decoded.width(), decoded.height());
     if width == 0 || height == 0 || width > 1024 || height > 1024 {
         return None;
     }
-    let buffer = slint::SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(decoded.as_raw(), width, height);
-    Some(slint::Image::from_rgba8(buffer))
+    let at = |edge: u32| {
+        // The shorter side fills the square it is shown in; the rest is cropped there.
+        let shorter = width.min(height) as f32;
+        let (w, h) = (
+            ((width as f32 * edge as f32 / shorter).round() as u32).max(1),
+            ((height as f32 * edge as f32 / shorter).round() as u32).max(1),
+        );
+        let sized = if (w, h) == (width, height) {
+            decoded.to_rgba8()
+        } else {
+            let filter =
+                if w < width { image::imageops::FilterType::Lanczos3 } else { image::imageops::FilterType::CatmullRom };
+            image::imageops::resize(&decoded.to_rgba8(), w, h, filter)
+        };
+        let buffer = slint::SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(sized.as_raw(), w, h);
+        slint::Image::from_rgba8(buffer)
+    };
+    Some(Picture { small: at(small), large: at(large) })
 }
 
 /// Decode a cached screenshot, scaled down to what a page can use. Tiny images are
@@ -605,8 +647,17 @@ fn decode_screenshot(path: &std::path::Path) -> Option<slint::SharedPixelBuffer<
     Some(slint::SharedPixelBuffer::<slint::Rgba8Pixel>::clone_from_slice(decoded.as_raw(), width, height))
 }
 
-/// The app's own logo when one is known, else its owner's picture.
+/// The app's own logo when one is known, else its owner's picture, at the size of a tile.
 fn picture_for(id: &str) -> slint::Image {
+    picture_at(id, false)
+}
+
+/// The same, at the size it has at the top of a page.
+fn large_picture_for(id: &str) -> slint::Image {
+    picture_at(id, true)
+}
+
+fn picture_at(id: &str, large: bool) -> slint::Image {
     let Some(id) = AppId::parse(id) else { return slint::Image::default() };
     let own = bilby_core::icons::app_key(&id);
     // The store's own picture is the one it carries, wherever it is shown: not its
@@ -621,9 +672,51 @@ fn picture_for(id: &str) -> slint::Image {
         pictures
             .get(&own)
             .or_else(|| bilby_core::icons::icon_key(&id).and_then(|owner| pictures.get(&owner)))
-            .cloned()
+            .map(|picture| if large { picture.large.clone() } else { picture.small.clone() })
             .unwrap_or_default()
     })
+}
+
+/// A website's picture. Its own, as the site offers it; but many sites offer only a
+/// tiny one (Spotify's is 32 pixels across), so where the service has a program of
+/// its own on Flathub, with a full-size icon published there, that one is used.
+fn site_picture(
+    http: &dyn bilby_core::http::Http,
+    dir: &std::path::Path,
+    key: &str,
+    id: &AppId,
+) -> bilby_core::Result<Option<PathBuf>> {
+    let own = bilby_core::icons::fetch_site(http, dir, key, &id.key);
+    let small = |path: &PathBuf| image::image_dimensions(path).is_ok_and(|(width, _)| width < 96);
+    if !matches!(&own, Ok(Some(path)) if !small(path)) {
+        let families = bilby_core::related::families();
+        let programs_icon = bilby_core::related::family_of(families, &id.to_string())
+            .and_then(|family| {
+                family
+                    .members
+                    .iter()
+                    .find(|m| m.official && m.id.starts_with("flathub:"))
+                    .and_then(|m| AppId::parse(&m.id))
+            })
+            .and_then(|program| bilby_core::icons::own_logo_url(&program));
+        if let Some(url) = programs_icon {
+            let borrowed = format!("{key}-large");
+            if let Ok(Some(path)) = bilby_core::icons::fetch_picture(http, dir, &borrowed, &url, 2 * 1024 * 1024) {
+                return Ok(Some(path));
+            }
+        }
+    }
+    own
+}
+
+/// A card for the top of a page: the same app, with its picture at that size.
+fn at_the_top(card: AppCard) -> AppCard {
+    let large = large_picture_for(&card.id);
+    if large.size().width > 0 {
+        AppCard { icon: large, ..card }
+    } else {
+        card
+    }
 }
 
 /// The app currently on the details page.
@@ -900,9 +993,11 @@ impl App {
                         .filter_map(|(key, id, own)| {
                             let fetched = match own {
                                 // No address: only what an earlier visit to its page left on disk.
-                                Some(url) if url.is_empty() => Ok(bilby_core::icons::cached(&dir, &key).flatten()),
-                                Some(url) if url == SITE_ICON => {
-                                    bilby_core::icons::fetch_site(http.as_ref(), &dir, &key, &id.key)
+                                Some(url) if url.is_empty() && id.source != SourceKind::Web => {
+                                    Ok(bilby_core::icons::cached(&dir, &key).flatten())
+                                }
+                                Some(url) if url.is_empty() || url == SITE_ICON => {
+                                    site_picture(http.as_ref(), &dir, &key, &id)
                                 }
                                 Some(url) if url == PROJECT_LOGO => {
                                     bilby_core::icons::fetch_project_logo(http.as_ref(), &dir, &key, &id)
@@ -933,10 +1028,11 @@ impl App {
                     if found.is_empty() {
                         return;
                     }
+                    let sizes = picture_sizes(ui);
                     PICTURES.with(|pictures| {
                         for (key, path) in found {
                             // A file that will not decode is simply not shown.
-                            if let Some(image) = decode_picture(&path) {
+                            if let Some(image) = decode_picture(&path, sizes) {
                                 pictures.borrow_mut().insert(key, image);
                             }
                         }
@@ -990,7 +1086,9 @@ impl App {
             (store.get_app(), Box::new(|c| store.set_app(c)) as Box<dyn Fn(AppCard)>),
             (store.get_spotlight(), Box::new(|c| store.set_spotlight(c))),
         ] {
-            if let Some(icon) = fresh(&card) {
+            let own_card = own.as_ref().is_some_and(|own| own.eq_ignore_ascii_case(card.id.as_str()));
+            let icon = large_picture_for(&card.id);
+            if !own_card && icon.size().width > 0 && icon != card.icon {
                 set(AppCard { icon, ..card });
             }
         }
@@ -1188,10 +1286,27 @@ impl App {
         // What a row above already shows is not shown again further down: the same
         // few well-known apps would otherwise fill the start of every list.
         let mut seen: HashSet<String> = featured.iter().flat_map(|s| &s.apps).map(|a| a.id.to_string()).collect();
+        let on_tv = self.platform.read().unwrap().form_factor == FormFactor::Tv;
         for mut section in self.collections.lock().unwrap().iter().cloned() {
             section.apps.retain(|app| seen.insert(app.id.to_string()));
-            if !section.apps.is_empty() {
-                featured.push(section);
+            if section.apps.is_empty() {
+                continue;
+            }
+            // A source's list of one kind of app (Flathub's games) joins the row of
+            // that kind, after the names everyone knows.
+            match featured.iter_mut().find(|row| row.title == section.title) {
+                Some(row) => row.apps.extend(section.apps),
+                // Nobody writes code from the sofa: a TV gets no rows it did not have.
+                None if on_tv && bilby_core::essentials::is_kind_row(&section.title) => {}
+                None => {
+                    // Rows of a kind stay together, ahead of "Web apps" and the
+                    // sources' own lists of what is popular.
+                    let at = match bilby_core::essentials::is_kind_row(&section.title) {
+                        true => featured.iter().position(|row| row.title == "Web apps").unwrap_or(featured.len()),
+                        false => featured.len(),
+                    };
+                    featured.insert(at, section);
+                }
             }
         }
         let to_sections = |list: &[CoreSection]| -> Vec<Section> {
@@ -1206,7 +1321,9 @@ impl App {
         if !featured.iter().any(|s| s.title == store.get_category().as_str()) {
             store.set_category(SharedString::new());
         }
-        store.set_spotlight(featured.first().and_then(|s| s.apps.first()).map(|a| self.card(a)).unwrap_or_default());
+        store.set_spotlight(at_the_top(
+            featured.first().and_then(|s| s.apps.first()).map(|a| self.card(a)).unwrap_or_default(),
+        ));
 
         let state = self.state();
         let updates = self.updates.lock().unwrap().clone();
@@ -2032,7 +2149,7 @@ impl App {
     pub fn load_collections(self: &Arc<Self>, ui: &AppWindow) {
         let _ = ui;
         self.job(
-            |app| app.catalog().collections(12),
+            |app| app.catalog().collections(24),
             |app, ui, sections| {
                 *app.collections.lock().unwrap() = sections;
                 app.refresh(ui);
@@ -2079,6 +2196,14 @@ impl App {
             (1, _) => (1, "Checking for updates…".to_string()),
             (4, _) => (4, "Installing updates…".to_string()),
             (_, None) => (0, "Not checked yet".to_string()),
+            // A whole new release of the system is named, not counted.
+            (_, Some(_)) if pending.iter().any(|p| p.release.is_some()) => {
+                let release = pending.iter().find(|p| p.release.is_some()).map(|p| p.name.clone()).unwrap_or_default();
+                match pending.len() - 1 {
+                    0 => (3, format!("{release} is available")),
+                    more => (3, format!("{release} and {} available", plural(more, "update"))),
+                }
+            }
             (_, Some(_)) if pending.len() == 1 => (3, "1 update available".to_string()),
             (_, Some(_)) if !pending.is_empty() => (3, format!("{} updates available", pending.len())),
             (_, Some(_)) if !problems.is_empty() => (5, "Could not check for updates".to_string()),
@@ -2228,7 +2353,7 @@ impl App {
                         card.rating = rating.map(bilby_core::ratings::stars_text).unwrap_or_default().into();
                         card.rating_count = rating.map(|r| ratings_text(r.count)).unwrap_or_default().into();
                         card.rating_spread = rating.map(spread_shares).unwrap_or_default();
-                        store.set_app(card);
+                        store.set_app(at_the_top(card));
                     }
                 }
             },
@@ -2432,7 +2557,7 @@ impl App {
         });
         // Library cards carry "old → new" as their version; the page shows the release's.
         card.version = SharedString::new();
-        store.set_app(card);
+        store.set_app(at_the_top(card));
         self.show_app_sources(ui);
         let Some(app_id) = AppId::parse(id) else {
             store.set_details_loading(false);
@@ -2540,7 +2665,7 @@ impl App {
                 Option<PathBuf>,
                 Vec<bilby_core::ratings::Review>,
             )| {
-                if let Some(image) = logo.as_deref().and_then(decode_picture) {
+                if let Some(image) = logo.as_deref().and_then(|path| decode_picture(path, picture_sizes(ui))) {
                     PICTURES.with(|p| p.borrow_mut().insert(key.clone(), image));
                     app.repaint_pictures(ui);
                 }
@@ -2575,7 +2700,7 @@ impl App {
                     store.set_reviews(ModelRc::new(VecModel::from(rows)));
                     let mut card = store.get_app();
                     card.icon = picture_for(&card.id);
-                    store.set_app(card);
+                    store.set_app(at_the_top(card));
                 }
             },
         );
@@ -2607,7 +2732,7 @@ impl App {
             }
             card.verified |= shown.verified;
         }
-        store.set_app(card);
+        store.set_app(at_the_top(card));
         store.set_license(plain_licence(details.summary.license.as_deref().unwrap_or_default()).into());
         store.set_homepage(details.summary.homepage.as_str().into());
         store.set_unavailable(details.unavailable_reason.clone().unwrap_or_default().into());
@@ -2657,7 +2782,7 @@ impl App {
         let mut card = store.get_app();
         card.version = release.map(|r| r.version.as_str()).unwrap_or_default().into();
         card.badge = options.first().map(|o| o.label()).unwrap_or_default().into();
-        store.set_app(card);
+        store.set_app(at_the_top(card));
         store.set_install_state(0);
         store.set_options(ModelRc::new(VecModel::from(options.iter().map(option_row).collect::<Vec<_>>())));
         // Now that the kind of file is known: does this system have what it needs?
@@ -2775,7 +2900,7 @@ impl App {
                 };
                 let selected = details.versions.iter().position(|r| r.version == picked);
                 // The install step reads the app in focus; make it this one.
-                store.set_app(app.library_card(&entry));
+                store.set_app(at_the_top(app.library_card(&entry)));
                 *app.current.lock().unwrap() = Current { id, details: Some(details), selected };
                 app.install(ui, 0);
                 // Nothing started (should not happen once an option exists): do not get stuck.
@@ -3947,7 +4072,13 @@ impl App {
             return;
         }
         let started = if let Some(host) = id.strip_prefix("web:").filter(|_| !self.opens_sites_in_longboard()) {
-            (self.browser)(&format!("https://{host}/"))
+            // A window of its own where a browser here can give it one; else a page
+            // in the usual browser.
+            let url = format!("https://{host}/");
+            match install::find_app_browser(&self.dirs) {
+                Some(browser) => (self.runner)(&browser.program, &browser.args(&url)),
+                None => (self.browser)(&url),
+            }
         } else if let Some(host) = id.strip_prefix("web:") {
             match install::find_longboard(&self.dirs) {
                 Some(longboard) => {
@@ -4649,6 +4780,11 @@ pub fn newer_copy_in(
 }
 
 pub fn run(mut options: Options) -> Result<(), Box<dyn std::error::Error>> {
+    // The window says which app it belongs to, by the name of the store's own menu
+    // entry: the desktop then gives it Bilby's icon (in the title bar, the task bar
+    // and the window switcher) where it would otherwise show a stand-in.
+    #[cfg(target_os = "linux")]
+    let _ = slint::set_xdg_app_id("bilby");
     // An AppImage says where its file is. A demo, a preview of another device or a
     // screenshot run is not a real start and adds nothing to the app menu.
     let real = !options.demo && options.platform.is_none() && options.screenshot.is_none();
@@ -4873,6 +5009,7 @@ fn android_main(android_app: slint::android::AndroidApp) {
         elevate: internal.join("elevate-program"),
         terminal: None,
         flatpak_roots: vec![internal.join("flatpak")],
+        programs: Vec::new(),
         cache: internal.join("cache"),
         config: internal.join("config"),
     };
