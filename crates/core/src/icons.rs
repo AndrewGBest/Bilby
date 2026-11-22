@@ -177,25 +177,41 @@ pub fn fetch_picture(http: &dyn Http, dir: &Path, key: &str, url: &str, max_byte
 /// addresses for one. Nothing is asked of anyone but the site. Cached like the rest,
 /// and "this site has none we can show" is remembered too.
 pub fn fetch_site(http: &dyn Http, dir: &Path, key: &str, host: &str) -> Result<Option<PathBuf>> {
-    if let Some(known) = cached(dir, key) {
-        return Ok(known);
+    match cached(dir, key) {
+        // "It has none" is believed for a week, and only as this version writes it:
+        // sites change, and earlier versions gave up on some that do have a picture.
+        Some(None) if !site_has_none(&dir.join(format!("{key}.none"))) => {}
+        Some(known) => return Ok(known),
+        None => {}
     }
     if !crate::model::valid_key(SourceKind::Web, host) {
         return Ok(None);
     }
     std::fs::create_dir_all(dir)?;
-    let base = format!("https://{host}/");
+    let asked = format!("https://{host}/");
     // What the page itself says, best first; then where such pictures usually live.
-    let mut candidates = http.get(&base).map(|html| site_icons(&html, &base)).unwrap_or_default();
+    // A site often answers from another address (plex.tv from watch.plex.tv): what
+    // the page names is relative to where it came from, not to what was asked for.
+    let (mut candidates, base) = match http.get_landed(&asked) {
+        Ok((html, landed)) => {
+            let base = origin_of(&landed).unwrap_or_else(|| asked.clone());
+            (site_icons(&html, &base), base)
+        }
+        Err(_) => (Vec::new(), asked.clone()),
+    };
+    let named = candidates.len().min(6);
+    candidates.truncate(named);
     for usual in ["apple-touch-icon.png", "apple-touch-icon-precomposed.png", "favicon.ico"] {
-        let url = format!("{base}{usual}");
-        if !candidates.contains(&url) {
-            candidates.push(url);
+        for base in [&base, &asked] {
+            let url = format!("{base}{usual}");
+            if !candidates.contains(&url) {
+                candidates.push(url);
+            }
         }
     }
     let download = dir.join(format!("{key}.download"));
     let mut unreachable = None;
-    for url in candidates.iter().take(6) {
+    for url in candidates.iter().take(10) {
         match http.download(url, &download, &mut |done, _| done < 2 * 1024 * 1024) {
             Ok(_) => {}
             Err(Error::NotFound(_)) | Err(Error::Cancelled) | Err(Error::Status { .. }) => continue,
@@ -220,12 +236,32 @@ pub fn fetch_site(http: &dyn Http, dir: &Path, key: &str, host: &str) -> Result<
     let _ = std::fs::remove_file(&download);
     // Could not be reached at all: ask again another time. Reached, with nothing usable: remember.
     match unreachable {
-        Some(e) if candidates.len() <= 3 => Err(e),
+        Some(e) if named == 0 => Err(e),
         _ => {
-            std::fs::write(dir.join(format!("{key}.none")), b"")?;
+            std::fs::write(dir.join(format!("{key}.none")), SITE_NONE)?;
             Ok(None)
         }
     }
+}
+
+/// What "this site has no picture" is written as. Earlier versions wrote nothing.
+const SITE_NONE: &[u8] = b"2";
+
+/// Is this note that a site has no picture one to believe: written by this version,
+/// within the last week?
+fn site_has_none(note: &Path) -> bool {
+    let fresh = std::fs::metadata(note)
+        .and_then(|m| m.modified())
+        .ok()
+        .and_then(|then| then.elapsed().ok())
+        .is_some_and(|age| age < std::time::Duration::from_secs(7 * 24 * 3600));
+    fresh && std::fs::read(note).is_ok_and(|said| said == SITE_NONE)
+}
+
+/// `https://host/` of an https address.
+fn origin_of(url: &str) -> Option<String> {
+    let host = url.strip_prefix("https://")?.split(['/', '?', '#']).next()?;
+    (!host.is_empty()).then(|| format!("https://{host}/"))
 }
 
 /// The icons a page names in its `<link>` tags, best first: the ones made for home
@@ -375,6 +411,46 @@ mod site_tests {
             ]
         );
         assert!(site_icons("<p>no head</p>", "https://example.org/").is_empty());
+    }
+
+    /// A site that answers from another address than the one asked for.
+    struct Moved(Web);
+    impl Http for Moved {
+        fn get(&self, url: &str) -> Result<String> {
+            self.0.get(url)
+        }
+        fn get_landed(&self, url: &str) -> Result<(String, String)> {
+            let landed = url.replace("https://example.org/", "https://watch.example.org/");
+            Ok((self.0.get(&landed)?, landed))
+        }
+        fn download(&self, url: &str, dest: &Path, p: &mut dyn FnMut(u64, Option<u64>) -> bool) -> Result<String> {
+            self.0.download(url, dest, p)
+        }
+    }
+
+    #[test]
+    fn a_page_that_answers_from_another_address_has_its_icons_looked_for_there() {
+        let dir = folder("moved");
+        let mut pages = HashMap::new();
+        pages.insert(
+            "https://watch.example.org/",
+            br#"<link rel="icon" href="/icons/big.png" sizes="512x512">"#.to_vec(),
+        );
+        pages.insert("https://watch.example.org/icons/big.png", PNG.to_vec());
+        let web = Moved(Web(pages, Mutex::new(Vec::new())));
+        let path = fetch_site(&web, &dir, "site", "example.org").unwrap().expect("the picture is found");
+        assert_eq!(std::fs::read(path).unwrap(), PNG);
+
+        // "None" from an earlier version (an empty note) is not taken as the answer.
+        let dir = folder("moved-again");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("site.none"), b"").unwrap();
+        assert!(fetch_site(&web, &dir, "site", "example.org").unwrap().is_some());
+        // One this version wrote is, for a while.
+        let nothing = Web(HashMap::new(), Mutex::new(Vec::new()));
+        let dir = folder("moved-none");
+        assert_eq!(fetch_site(&nothing, &dir, "bare", "example.org").unwrap(), None);
+        assert!(site_has_none(&dir.join("bare.none")), "and it is not asked again straight away");
     }
 
     #[test]

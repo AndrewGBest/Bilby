@@ -202,13 +202,18 @@ and on its release page is one result, marked with how many sources carry it. It
 page says which source the button uses and offers the others. Catalogs are trusted to
 have one app per name; a project on a code host joins them when it shares its owner's
 name with the app, is well known, or is a stated mirror. The rule is conservative:
-when in doubt, two entries stay separate.
+when in doubt, two entries stay separate. A website is never merged with a program:
+Plex's site and Plex's desktop app are two things to choose between, and both are
+listed.
 
 **Versions of a service** (`related.rs`, `data/related.json`). VacuumTube, FreeTube
 and NewPipe are different ways to use YouTube, and which one suits depends on the
 device. The relationship is curated in one file: a family per service, its members in
-order of preference, each with the systems and devices it runs on. Searching for the
-service shows one tile; a member's page lists the others. Every entry was checked to
+order of preference, each with the systems and devices it runs on and a label that
+tells it apart ("Plex website", "Plex for desktop", "Plex HTPC"). Searching for the
+service lists its members first, each as itself; a member's page lists the others
+under "Other ways to use" the service. That list is kept apart from "other places to
+get" the same app, so the two choices are never confused. Every entry was checked to
 exist at its source.
 
 **Search order** (`rank.rs`). How many people use an app is the largest share of its

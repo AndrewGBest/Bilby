@@ -253,7 +253,8 @@ export component TvShell inherits Rectangle {
         root.cur-row = 0;
         root.cur-col = 0;
         if (root.tab == 0) {
-            Store.page = 0;
+            // Home is Home: a search that was open is put away.
+            Store.leave-search();
             root.zone = 0;
         } else if (root.tab == 1) {
             Store.page = 2;
@@ -312,6 +313,8 @@ export component TvShell inherits Rectangle {
     // versions of the service, the other sources, and one row to change version.
     property <int> vrow: Store.versions.length > 1 ? 1 : 0;
     property <int> pre: root.choices + root.vrow;
+    // A website has nothing to pick between: adding it is the main button.
+    property <int> nfiles: Store.is-website ? 0 : Store.options.length;
     // The list of releases, open to pick one from.
     property <bool> ver-open: false;
     property <int> ver-pick: 0;
@@ -711,7 +714,7 @@ export component TvShell inherits Rectangle {
                             root.opt -= 1;
                         }
                     } else if (event.text == Key.DownArrow) {
-                        root.opt = max(0, min(root.pre + Store.options.length - 1, root.opt + 1));
+                        root.opt = max(0, min(root.pre + root.nfiles - 1, root.opt + 1));
                     } else if (event.text == Key.LeftArrow) {
                         // Left leaves the list, like everywhere else on the page.
                         root.files = false;
@@ -723,7 +726,7 @@ export component TvShell inherits Rectangle {
                         } else if (root.opt < root.pre) {
                             root.ver-pick = Store.selected-version;
                             root.ver-open = true;
-                        } else if (Store.options.length > 0) {
+                        } else if (root.nfiles > 0) {
                             Store.install(root.opt - root.pre);
                         }
                     }
@@ -842,8 +845,14 @@ export component TvShell inherits Rectangle {
                     Store.open(current.id);
                 }
             } else if (event.text == Key.Escape || event.text == Key.Back || event.text == Key.Backspace) {
-                // Back from the apps goes up to the top bar, as on other TV stores.
-                root.enter-bar();
+                if (Store.page == 1) {
+                    // Back from what a search found is Home.
+                    root.tab = 0;
+                    root.activate-tab();
+                } else {
+                    // Back from the apps goes up to the top bar, as on other TV stores.
+                    root.enter-bar();
+                }
             } else {
                 return reject;
             }
@@ -1391,7 +1400,8 @@ export component TvShell inherits Rectangle {
             alignment: start;
             animate y { duration: Theme.smooth; easing: ease-out; }
             head := VerticalLayout {
-                width: 760 * u;
+                // Narrower beside the open list of choices, so nothing runs under it.
+                width: root.files ? 440 * u : 760 * u;
                 spacing: 9 * u;
                 alignment: start;
                 HorizontalLayout {
@@ -1455,7 +1465,7 @@ export component TvShell inherits Rectangle {
                     // and still has the button when there is another way to use it.
                     if root.has-files : TvButton {
                         u: root.u;
-                        text: Store.app-family.length == 0 ? "Versions" : Store.is-website || Store.options.length == 0 ? "Other ways to use " + Store.app-family-name : "Versions and other apps";
+                        text: root.choices == 0 ? "Versions and files" : root.nfiles == 0 && Store.app-family.length > 0 ? "Other ways to use " + Store.app-family-name : "More choices";
                         focused: root.act == 2 && !root.files && !root.reading && root.sec == 0;
                         clicked => {
                             root.act = 2;
@@ -1826,8 +1836,9 @@ export component TvShell inherits Rectangle {
                 width: parent.width - self.x - margin;
                 spacing: 8 * u;
                 alignment: start;
-                Text {
-                    text: root.ver-open ? "Choose a version" : Store.app-family.length > 0 && (Store.is-website || Store.options.length == 0) ? "Other ways to use " + Store.app-family-name : "Versions and files";
+                // Each group below says what it is; with nothing but files, this does.
+                if root.ver-open || root.choices == 0 : Text {
+                    text: root.ver-open ? "Choose a version" : "Versions and files";
                     color: Theme.text;
                     font-size: 13 * u;
                     font-weight: 700;
@@ -1867,13 +1878,27 @@ export component TvShell inherits Rectangle {
                 }
                 for choice[i] in Store.tv-choices : Rectangle {
                     property <bool> focused: i == root.opt;
+                    property <length> head: choice.heading != "" ? 24 * u : 0;
                     changed focused => { if (self.focused) { root.files-at = self.y + self.height; } }
                     visible: !root.ver-open;
-                    height: root.ver-open ? 0 : 34 * u;
+                    height: root.ver-open ? 0 : 46 * u + self.head;
                     accessible-role: button;
-                    accessible-label: choice.label;
+                    accessible-label: choice.name + ", " + choice.note;
+                    if choice.heading != "" : Text {
+                        x: 0;
+                        y: 0;
+                        width: parent.width;
+                        height: 20 * u;
+                        text: choice.heading;
+                        color: Theme.text;
+                        font-size: 13 * u;
+                        font-weight: 700;
+                        vertical-alignment: center;
+                    }
                     Rectangle {
                         x: focused ? -3 * u : 0;
+                        y: parent.head;
+                        height: 46 * u;
                         width: parent.width + (focused ? 6 * u : 0);
                         border-radius: 10 * u;
                         background: focused ? Theme.surface-2 : Theme.surface;
@@ -1885,17 +1910,23 @@ export component TvShell inherits Rectangle {
                                 Store.open(choice.id);
                             }
                         }
-                        Text {
-                            x: 14 * u;
-                            width: parent.width - 28 * u;
-                            text: choice.label;
-                            color: Theme.text;
-                            font-size: 13 * u;
-                            font-weight: 600;
-                            vertical-alignment: center;
-                            overflow: elide;
+                        VerticalLayout {
+                            padding-left: 14 * u;
+                            padding-right: 14 * u;
+                            alignment: center;
+                            spacing: 2 * u;
+                            Text { text: choice.name; color: Theme.text; font-size: 13 * u; font-weight: 700; overflow: elide; }
+                            Text { text: choice.note; color: Theme.text-dim; font-size: 11.5 * u; overflow: elide; }
                         }
                     }
+                }
+                if root.choices > 0 && root.nfiles > 0 && !root.ver-open : Text {
+                    height: 20 * u;
+                    text: "Versions and files";
+                    color: Theme.text;
+                    font-size: 13 * u;
+                    font-weight: 700;
+                    vertical-alignment: center;
                 }
                 // Which release the files below belong to; OK opens the list of releases.
                 if root.vrow == 1 && !root.ver-open : Rectangle {
@@ -1928,8 +1959,8 @@ export component TvShell inherits Rectangle {
                     property <bool> focused: i == root.opt;
                     changed focused => { if (self.focused) { root.files-at = self.y + self.height; } }
                     property <bool> mine: Store.install-index == j && Store.install-state != 0;
-                    visible: !root.ver-open;
-                    height: root.ver-open ? 0 : 54 * u;
+                    visible: !root.ver-open && root.nfiles > 0;
+                    height: self.visible ? 54 * u : 0;
                     Rectangle {
                         x: focused ? -3 * u : 0;
                         width: parent.width + (focused ? 6 * u : 0);

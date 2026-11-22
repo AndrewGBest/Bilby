@@ -1313,29 +1313,21 @@ impl App {
         };
         let mut cards = cards;
         if filter.is_none() {
+            // A service was named ("youtube"): where the search found none of the ways
+            // to use it, the first that works here is put at the head of the list. Its
+            // page leads to the others.
             let available = self.catalog().available_sources();
             let families = bilby_core::related::families();
             if let Some(family) = bilby_core::related::family_named(families, &query) {
                 let platform = self.platform.read().unwrap().clone();
                 let here = family.here(&available, &platform);
-                if let Some(first) = here.first().and_then(|m| AppId::parse(&m.id).map(|id| (id, *m))) {
-                    // One tile for the service; its versions are chosen on its page.
-                    // The tile stands for the family's first choice here; its other
-                    // members stay in the results as themselves, ranked as near matches.
-                    cards.retain(|card| !card.id.as_str().eq_ignore_ascii_case(&first.1.id));
-                    let mut app = AppSummary::new(first.0, family.name.clone());
-                    app.summary = match here.len() {
-                        1 => first.1.note.clone(),
-                        n => format!("{n} versions work on this device. Choose one on its page."),
-                    };
-                    app.author = "Choose a version on its page".to_string();
-                    let mut card = self.card(&app);
-                    card.more_sources = 0;
-                    card.stat =
-                        if here.len() > 1 { format!("{} versions", here.len()).into() } else { SharedString::new() };
-                    card.headline =
-                        if here.len() > 1 { format!("{} versions", here.len()).into() } else { SharedString::new() };
-                    cards.insert(0, card);
+                let found = |id: &str| results.iter().any(|app| app.id.to_string().eq_ignore_ascii_case(id));
+                if let Some(first) = here.first().filter(|_| !here.iter().any(|m| found(&m.id))) {
+                    if let Some(id) = AppId::parse(&first.id) {
+                        let mut app = AppSummary::new(id, first.label.clone());
+                        app.summary = first.note.clone();
+                        cards.insert(0, self.card(&app));
+                    }
                 }
             }
         }
@@ -1602,18 +1594,28 @@ impl App {
         // this device can use, to choose between.
         let available = self.catalog().available_sources();
         let families = bilby_core::related::families();
-        let family = bilby_core::related::family_of(families, &id);
+        // The page may be showing the app from a source the list does not name (its AUR
+        // package, say): then it is known by one of its other sources.
+        let known_as = std::iter::once(id.clone())
+            .chain(store.get_app_sources().iter().map(|source| source.id.to_string()))
+            .find(|id| bilby_core::related::family_of(families, id).is_some())
+            .unwrap_or_else(|| id.clone());
+        let family = bilby_core::related::family_of(families, &known_as);
         // One entry per app, however many sources have it: the one being shown, or
         // the first this device can use.
         let device = self.platform.read().unwrap().clone();
         let here = family.map(|family| family.here(&available, &device)).unwrap_or_default();
-        let showing = here.iter().find(|m| m.id.eq_ignore_ascii_case(&id)).map(|m| m.label.as_str());
+        let showing = family
+            .and_then(|family| family.members.iter().find(|m| m.id.eq_ignore_ascii_case(&known_as)))
+            .map(|m| m.label.as_str());
         // The other ways to use the service: on the service's own app, everything
-        // else; on an app someone else made, the service's own.
+        // else; on an app someone else made, the service's own. Never the app being
+        // shown, from whichever source: that is a choice of source, made elsewhere.
         let versions: Vec<VersionChoice> = family
-            .map(|family| family.others(&id, &available, &device))
+            .map(|family| family.others(&known_as, &available, &device))
             .unwrap_or_default()
             .into_iter()
+            .filter(|member| !store.get_app_sources().iter().any(|source| source.id.eq_ignore_ascii_case(&member.id)))
             .map(|member| VersionChoice {
                 id: member.id.as_str().into(),
                 name: member.label.as_str().into(),
@@ -1704,19 +1706,27 @@ impl App {
         }
         store.set_need_note(need_note.into());
         *self.needed.lock().unwrap() = needed;
-        // The same choices as rows for the TV, without the one already showing.
-        let mut rows: Vec<SourceChoice> = Vec::new();
-        for other in store.get_app_family().iter() {
-            let whose = if other.official { "" } else { "  ·  unofficial" };
-            rows.push(SourceChoice {
+        // The same choices as rows for the TV, in two groups that each say what they
+        // are: other apps for the service, then other places to get this one.
+        let mut rows: Vec<TvChoice> = Vec::new();
+        let service = store.get_app_family_name();
+        for (n, other) in store.get_app_family().iter().enumerate() {
+            let whose = if other.official { "official" } else { "unofficial" };
+            rows.push(TvChoice {
                 id: other.id,
-                label: format!("Use {} instead{whose}", other.name).into(),
-                on: false,
-                count: 0,
+                name: other.name,
+                note: if other.note.is_empty() { whose.into() } else { format!("{}  ·  {whose}", other.note).into() },
+                heading: if n == 0 { format!("Other ways to use {service}").into() } else { SharedString::new() },
             });
         }
-        for source in store.get_app_sources().iter().filter(|c| !c.on) {
-            rows.push(SourceChoice { label: format!("Get it from {} instead", source.label).into(), ..source });
+        let name = store.get_app().name;
+        for (n, source) in store.get_app_sources().iter().filter(|c| !c.on).enumerate() {
+            rows.push(TvChoice {
+                id: source.id,
+                name: format!("From {}", source.label).into(),
+                note: format!("The same {name}, from another source").into(),
+                heading: if n == 0 { format!("Other places to get {name}").into() } else { SharedString::new() },
+            });
         }
         store.set_tv_choices(ModelRc::new(VecModel::from(rows)));
         store.set_helper_id(helper.0.into());
@@ -2196,6 +2206,26 @@ impl App {
             store.set_results(ModelRc::default());
         }
         store.set_suggestions(self.cards(&suggestions));
+    }
+
+    /// Out of a search and back to Home: the box is emptied and the results put away,
+    /// so Home shows the store again and not what was last looked for.
+    pub fn leave_search(&self, ui: &AppWindow) {
+        let store = ui.global::<Store>();
+        // A search still under way has nowhere to show its answer.
+        self.search_generation.fetch_add(1, Ordering::SeqCst);
+        *self.result_filter.lock().unwrap() = None;
+        *self.results.lock().unwrap() = (String::new(), Vec::new());
+        store.set_query(SharedString::new());
+        store.set_searching(false);
+        store.set_searched(false);
+        store.set_search_note(SharedString::new());
+        store.set_search_error(SharedString::new());
+        store.set_suggestions(ModelRc::default());
+        store.set_results(ModelRc::default());
+        self.close_details(ui);
+        store.set_page(0);
+        self.refresh(ui);
     }
 
     pub fn search(self: &Arc<Self>, ui: &AppWindow, query: &str) {
@@ -2912,7 +2942,14 @@ impl App {
                             app.toast(ui, &format!("{} is installed", store.get_app().name), false);
                             return;
                         }
-                        let name = store.get_app().name.to_string();
+                        // Its name as its page gives it. Updated from the Library, the
+                        // page that is open (if any) is some other app's: then its own.
+                        let shown = store.get_app();
+                        let name = if shown.id.as_str().eq_ignore_ascii_case(&details.summary.id.to_string()) {
+                            shown.name.to_string()
+                        } else {
+                            details.summary.name.clone()
+                        };
                         let mut entry = InstalledApp::new(
                             &details.summary,
                             &version,
@@ -3595,6 +3632,31 @@ impl App {
                 own.store_managed && own.path.as_deref().is_some_and(|path| std::path::Path::new(path).is_file());
             own.version == running || (placed && bilby_core::version::is_newer(&own.version, &running))
         });
+        // An earlier version could write the store's name over another app's when that
+        // app was updated from the Library. Such an entry gets its own name back.
+        let own_id = id.to_string();
+        let misnamed = |app: &InstalledApp| {
+            app.name == "Bilby"
+                && !app.id.eq_ignore_ascii_case(&own_id)
+                && AppId::parse(&app.id).is_some_and(|id| id.source.is_forge() && !id.key.ends_with("/Bilby"))
+        };
+        let renamed: Vec<InstalledApp> =
+            self.state.lock().unwrap().library.iter().filter(|a| misnamed(a)).cloned().collect();
+        if !renamed.is_empty() {
+            self.update_state(ui, |state| {
+                for app in state.library.iter_mut().filter(|a| misnamed(a)) {
+                    app.name = app.id.rsplit('/').next().unwrap_or(&app.id).to_string();
+                }
+            });
+            for app in renamed {
+                let name = app.id.rsplit('/').next().unwrap_or(&app.id).to_string();
+                if let (true, Some(path)) = (app.store_managed, app.path.as_deref().map(PathBuf::from)) {
+                    if path.exists() {
+                        let _ = install::add_menu_entry(&self.dirs, &app.id, &name, &path);
+                    }
+                }
+            }
+        }
         if unchanged {
             return;
         }
@@ -4205,6 +4267,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         };
     }
     on!(on_search, |app, ui, query| { app.search(ui, &query) });
+    on!(on_leave_search, |app, ui| { app.leave_search(ui) });
     on!(on_typing, |app, ui, text| { app.typing(ui, &text) });
     on!(on_open, |app, ui, id| { app.open(ui, &id) });
     on!(on_close_details, |app, ui| { app.close_details(ui) });

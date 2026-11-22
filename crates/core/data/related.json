@@ -1,5 +1,5 @@
 {
-  "_comment": "Apps that are different ways to use the same service: the service's own website and apps, and the best-known ones by others. Each family is shown as one app; its page lets the person pick a version that works on their device. Keep it short: only services nearly everyone knows, and only members that are widely used. Order matters: the first member this device can use is the one shown first. Mark anything not made by the service's owner as unofficial (leave 'official' out). 'os' (linux, windows, macos, android, ios) and 'form' (desktop, mobile, tv) say where a member runs; leave them out for one that runs wherever its source is. Every id was checked to exist at its source on 2026-11-21.",
+  "_comment": "Apps that are different ways to use the same service: the service's own website and apps, and the best-known ones by others. Each family is shown as one app; its page lets the person pick a version that works on their device. Keep it short: only services nearly everyone knows, and only members that are widely used. Order matters: the first member this device can use is the one shown first. Mark anything not made by the service's owner as unofficial (leave 'official' out). 'os' (linux, windows, macos, android, ios) and 'form' (desktop, mobile, tv) say where a member runs; leave them out for one that runs wherever its source is. A label is what the member is called in a list of the family, so it must tell it apart from the others: 'Plex website', 'Plex for desktop', 'Plex HTPC', never just 'Plex'. Members with the same label are one app from several sources. Every id was checked to exist at its source on 2026-11-22.",
   "families": [
     {
       "name": "YouTube",
@@ -27,10 +27,10 @@
       "name": "Spotify",
       "members": [
         { "id": "web:spotify.com", "label": "Spotify website", "note": "In your browser", "official": true },
-        { "id": "snap:spotify", "label": "Spotify", "note": "Spotify's own app", "official": true },
-        { "id": "flathub:com.spotify.Client", "label": "Spotify", "note": "Spotify's own app, packaged by Flathub's volunteers", "official": true },
-        { "id": "winget:Spotify.Spotify", "label": "Spotify", "note": "Spotify's own app", "official": true },
-        { "id": "brew:spotify", "label": "Spotify", "note": "Spotify's own app", "official": true },
+        { "id": "snap:spotify", "label": "Spotify app", "note": "Spotify's own app", "official": true },
+        { "id": "flathub:com.spotify.Client", "label": "Spotify app", "note": "Spotify's own app, packaged by Flathub's volunteers", "official": true },
+        { "id": "winget:Spotify.Spotify", "label": "Spotify app", "note": "Spotify's own app", "official": true },
+        { "id": "brew:spotify", "label": "Spotify app", "note": "Spotify's own app", "official": true },
         { "id": "github:KRTirtho/spotube", "label": "Spotube", "note": "A free player that uses Spotify's catalog", "os": [ "linux", "windows", "macos", "android" ] }
       ]
     },
@@ -38,10 +38,10 @@
       "name": "Discord",
       "members": [
         { "id": "web:discord.com", "label": "Discord website", "note": "In your browser", "official": true },
-        { "id": "flathub:com.discordapp.Discord", "label": "Discord", "note": "Discord's own app, packaged by Flathub's volunteers", "official": true },
-        { "id": "snap:discord", "label": "Discord", "note": "Discord's own app, packaged by volunteers", "official": true },
-        { "id": "winget:Discord.Discord", "label": "Discord", "note": "Discord's own app", "official": true },
-        { "id": "brew:discord", "label": "Discord", "note": "Discord's own app", "official": true },
+        { "id": "flathub:com.discordapp.Discord", "label": "Discord app", "note": "Discord's own app, packaged by Flathub's volunteers", "official": true },
+        { "id": "snap:discord", "label": "Discord app", "note": "Discord's own app, packaged by volunteers", "official": true },
+        { "id": "winget:Discord.Discord", "label": "Discord app", "note": "Discord's own app", "official": true },
+        { "id": "brew:discord", "label": "Discord app", "note": "Discord's own app", "official": true },
         { "id": "flathub:dev.vencord.Vesktop", "label": "Vesktop", "note": "Discord with screen sharing that works on Linux" }
       ]
     },
@@ -51,14 +51,14 @@
         { "id": "web:web.telegram.org", "label": "Telegram website", "note": "In your browser", "official": true },
         { "id": "flathub:org.telegram.desktop", "label": "Telegram Desktop", "note": "Telegram's own app", "official": true },
         { "id": "winget:Telegram.TelegramDesktop", "label": "Telegram Desktop", "note": "Telegram's own app", "official": true },
-        { "id": "brew:telegram", "label": "Telegram", "note": "Telegram's own app", "official": true }
+        { "id": "brew:telegram", "label": "Telegram Desktop", "note": "Telegram's own app", "official": true }
       ]
     },
     {
       "name": "WhatsApp",
       "members": [
         { "id": "web:web.whatsapp.com", "label": "WhatsApp website", "note": "In your browser", "official": true },
-        { "id": "brew:whatsapp", "label": "WhatsApp", "note": "WhatsApp's own app", "official": true },
+        { "id": "brew:whatsapp", "label": "WhatsApp app", "note": "WhatsApp's own app", "official": true },
         { "id": "flathub:com.rtosta.zapzap", "label": "ZapZap", "note": "WhatsApp's website as a desktop app" }
       ]
     },
@@ -66,9 +66,17 @@
       "name": "Plex",
       "members": [
         { "id": "web:plex.tv", "label": "Plex website", "note": "In your browser", "official": true },
-        { "id": "flathub:tv.plex.PlexDesktop", "label": "Plex", "note": "Plex's own app", "official": true },
-        { "id": "winget:Plex.Plex", "label": "Plex", "note": "Plex's own app", "official": true },
-        { "id": "brew:plex", "label": "Plex", "note": "Plex's own app", "official": true }
+        { "id": "flathub:tv.plex.PlexDesktop", "label": "Plex for desktop", "note": "Plex's own app for a computer", "official": true },
+        { "id": "snap:plex-desktop", "label": "Plex for desktop", "note": "Plex's own app for a computer", "official": true },
+        { "id": "winget:Plex.Plex", "label": "Plex for desktop", "note": "Plex's own app for a computer", "official": true },
+        { "id": "brew:plex", "label": "Plex for desktop", "note": "Plex's own app for a computer", "official": true },
+        { "id": "flathub:tv.plex.PlexHTPC", "label": "Plex HTPC", "note": "Plex's own app for a TV screen, driven with a remote", "official": true },
+        { "id": "snap:plex-htpc", "label": "Plex HTPC", "note": "Plex's own app for a TV screen, driven with a remote", "official": true },
+        { "id": "winget:Plex.PlexHTPC", "label": "Plex HTPC", "note": "Plex's own app for a TV screen, driven with a remote", "official": true },
+        { "id": "brew:plex-htpc", "label": "Plex HTPC", "note": "Plex's own app for a TV screen, driven with a remote", "official": true },
+        { "id": "flathub:com.plexamp.Plexamp", "label": "Plexamp", "note": "Plex's own music player", "official": true },
+        { "id": "winget:Plex.Plexamp", "label": "Plexamp", "note": "Plex's own music player", "official": true },
+        { "id": "brew:plexamp", "label": "Plexamp", "note": "Plex's own music player", "official": true }
       ]
     },
     {
@@ -99,23 +107,23 @@
       "name": "ChatGPT",
       "members": [
         { "id": "web:chatgpt.com", "label": "ChatGPT website", "note": "In your browser", "official": true },
-        { "id": "winget:OpenAI.ChatGPT", "label": "ChatGPT", "note": "OpenAI's own app", "official": true },
-        { "id": "brew:chatgpt", "label": "ChatGPT", "note": "OpenAI's own app", "official": true }
+        { "id": "winget:OpenAI.ChatGPT", "label": "ChatGPT app", "note": "OpenAI's own app", "official": true },
+        { "id": "brew:chatgpt", "label": "ChatGPT app", "note": "OpenAI's own app", "official": true }
       ]
     },
     {
       "name": "Claude",
       "members": [
         { "id": "web:claude.ai", "label": "Claude website", "note": "In your browser", "official": true },
-        { "id": "winget:Anthropic.Claude", "label": "Claude", "note": "Anthropic's own app", "official": true },
-        { "id": "brew:claude", "label": "Claude", "note": "Anthropic's own app", "official": true }
+        { "id": "winget:Anthropic.Claude", "label": "Claude app", "note": "Anthropic's own app", "official": true },
+        { "id": "brew:claude", "label": "Claude app", "note": "Anthropic's own app", "official": true }
       ]
     },
     {
       "name": "Wikipedia",
       "members": [
         { "id": "web:wikipedia.org", "label": "Wikipedia website", "note": "In your browser", "official": true },
-        { "id": "fdroid:org.wikipedia", "label": "Wikipedia", "note": "Wikipedia's own Android app", "official": true },
+        { "id": "fdroid:org.wikipedia", "label": "Wikipedia app", "note": "Wikipedia's own Android app", "official": true },
         { "id": "flathub:org.kiwix.desktop", "label": "Kiwix", "note": "Read Wikipedia without a connection" },
         { "id": "winget:Kiwix.KiwixJS", "label": "Kiwix", "note": "Read Wikipedia without a connection" }
       ]

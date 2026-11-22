@@ -32,6 +32,12 @@ pub trait Http: Send + Sync {
     /// GET a text (JSON) resource.
     fn get(&self, url: &str) -> Result<String>;
 
+    /// GET a page, and say where it really came from: the address after any
+    /// redirects, which is what the addresses inside the page are relative to.
+    fn get_landed(&self, url: &str) -> Result<(String, String)> {
+        Ok((self.get(url)?, url.to_string()))
+    }
+
     /// Stream a file to `dest`, reporting `(bytes so far, total if known)`. The callback
     /// returns `false` to cancel; the partial file is removed and `Error::Cancelled` returned.
     /// Returns the SHA-256 of what was written, as lowercase hex.
@@ -200,6 +206,12 @@ impl Http for NetHttp {
         self.call(url)?.into_string().map_err(|e| Error::Network(e.to_string()))
     }
 
+    fn get_landed(&self, url: &str) -> Result<(String, String)> {
+        let answer = self.call(url)?;
+        let landed = answer.get_url().to_string();
+        Ok((answer.into_string().map_err(|e| Error::Network(e.to_string()))?, landed))
+    }
+
     fn post_json(&self, url: &str, body: &str) -> Result<String> {
         match self.agent.post(url).set("Content-Type", "application/json").send_string(body) {
             Ok(resp) => resp.into_string().map_err(|e| Error::Network(e.to_string())),
@@ -315,6 +327,10 @@ impl<H: Http> Http for CachedHttp<H> {
         self.cached(url, || self.inner.get(url))
     }
 
+    fn get_landed(&self, url: &str) -> Result<(String, String)> {
+        self.inner.get_landed(url)
+    }
+
     fn post_json(&self, url: &str, body: &str) -> Result<String> {
         self.cached(&format!("{url}\n{body}"), || self.inner.post_json(url, body))
     }
@@ -355,6 +371,9 @@ impl<H: Http + ?Sized> Http for std::sync::Arc<H> {
 
     fn get(&self, url: &str) -> Result<String> {
         (**self).get(url)
+    }
+    fn get_landed(&self, url: &str) -> Result<(String, String)> {
+        (**self).get_landed(url)
     }
     fn download(&self, url: &str, dest: &Path, progress: &mut dyn FnMut(u64, Option<u64>) -> bool) -> Result<String> {
         (**self).download(url, dest, progress)

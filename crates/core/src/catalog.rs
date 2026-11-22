@@ -661,7 +661,17 @@ impl Catalog {
         if self.parental.family_mode {
             hits.retain(|(app, _)| !app.adult && !app.restricted);
         }
-        outcome.apps = crate::rank::sort(query, hits);
+        let mut apps = crate::rank::sort(query, hits);
+        // A service named outright ("plex"): every way of using it that is kept on
+        // record comes first, in the order the ranking gave them, ahead of projects
+        // that merely share the name.
+        if let Some(family) = family {
+            let member =
+                |app: &AppSummary| family.members.iter().any(|m| m.id.eq_ignore_ascii_case(&app.id.to_string()));
+            let (first, rest): (Vec<AppSummary>, Vec<AppSummary>) = apps.into_iter().partition(member);
+            apps = first.into_iter().chain(rest).collect();
+        }
+        outcome.apps = apps;
         outcome
     }
 }

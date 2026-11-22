@@ -1203,7 +1203,7 @@ export component DetailsBody inherits Rectangle {
                 }
             }
             // Always within reach of the main button, never competing with it.
-            if root.has-option || Store.hidden.length > 0 || Store.versions.length > 1 : HorizontalLayout {
+            if (root.has-option || Store.hidden.length > 0 || Store.versions.length > 1) && !Store.is-website : HorizontalLayout {
                 alignment: compact ? center : end;
                 Rectangle {
                     height: 26px;

@@ -75,6 +75,11 @@ export component MobileShell inherits Rectangle {
                 Store.page = Store.system-from;
                 return accept;
             }
+            // And a search, back to the front page.
+            if ((event.text == Key.Escape || event.text == Key.Back) && Store.page == 1) {
+                Store.leave-search();
+                return accept;
+            }
             reject
         }
 
@@ -323,7 +328,7 @@ export component MobileShell inherits Rectangle {
                         label: "Discover";
                         icon: @image-url("icons/discover.svg");
                         active: Store.page == 0;
-                        clicked => { Store.page = 0; }
+                        clicked => { Store.leave-search(); }
                     }
                     Tab {
                         label: "Search";

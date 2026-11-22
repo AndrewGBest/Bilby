@@ -52,6 +52,11 @@ pub fn same_app(a: &AppSummary, b: &AppSummary) -> bool {
     if a.id.source == b.id.source {
         return false;
     }
+    // A website is not a program: Plex's site and Plex's desktop app are two things to
+    // choose between, not one app from two places.
+    if a.id.source == SourceKind::Web || b.id.source == SourceKind::Web {
+        return false;
+    }
     let (names_a, names_b) = (names(a), names(b));
     let Some(shared) = names_a.iter().find(|n| names_b.contains(n)) else { return false };
     match (a.id.source.is_forge(), b.id.source.is_forge()) {
@@ -126,6 +131,14 @@ mod tests {
         assert_eq!(groups[0].lead.id.to_string(), "apt:vlc", "the best-placed entry leads");
         let others: Vec<String> = groups[0].others.iter().map(|a| a.id.to_string()).collect();
         assert_eq!(others, ["flathub:org.videolan.VLC", "snap:vlc", "winget:VideoLAN.VLC"]);
+    }
+
+    #[test]
+    fn a_website_is_never_one_of_a_programs_sources() {
+        let site = app("web:plex.tv", "Plex");
+        let program = app("flathub:tv.plex.PlexDesktop", "Plex");
+        assert!(!same_app(&site, &program) && !same_app(&program, &site));
+        assert_eq!(group(vec![site, program]).len(), 2, "two things to choose between, both listed");
     }
 
     #[test]

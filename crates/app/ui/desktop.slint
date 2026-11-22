@@ -170,9 +170,16 @@ export component DesktopShell inherits Rectangle {
             Store.close-details();
         } else if (Store.page == 4) {
             Store.page = Store.system-from;
+        } else if (Store.page == 1) {
+            Store.leave-search();
         }
     }
     function go(page: int) {
+        if (page == 0) {
+            // Home is Home: a search that was open is put away.
+            Store.leave-search();
+            return;
+        }
         Store.close-details();
         Store.page = page;
     }
@@ -189,12 +196,17 @@ export component DesktopShell inherits Rectangle {
                     root.back();
                     return accept;
                 }
-                if (search.has-focus) {
+                if (search.has-focus && Store.page != 1) {
                     keys.focus();
                     return accept;
                 }
+                if (Store.page == 1) {
+                    keys.focus();
+                    root.back();
+                    return accept;
+                }
             }
-            if (event.modifiers.alt && event.text == Key.LeftArrow && (Store.details-open || Store.page == 4)) {
+            if (event.modifiers.alt && event.text == Key.LeftArrow && (Store.details-open || Store.page == 4 || Store.page == 1)) {
                 root.back();
                 return accept;
             }
@@ -295,7 +307,7 @@ export component DesktopShell inherits Rectangle {
                     padding-top: 18px;
                     padding-bottom: 10px;
                     spacing: 14px;
-                    if Store.details-open || Store.page == 4 : Rectangle {
+                    if Store.details-open || Store.page == 4 || Store.page == 1 : Rectangle {
                         width: 42px;
                         height: 42px;
                         border-radius: 21px;

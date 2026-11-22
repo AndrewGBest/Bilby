@@ -792,11 +792,15 @@ fn the_library_lists_waiting_updates_first() {
 
 /// A store whose "own repository" is the given demo project.
 fn start_as_store(preset: &str, store_app: &str) -> Session {
+    start_as_store_with(preset, store_app, r#"{"settings":{"welcomed":true}}"#)
+}
+
+fn start_as_store_with(preset: &str, store_app: &str, seed: &str) -> Session {
     init_backend();
     let root = temp_root();
     let dirs = dirs_in(&root);
     std::fs::create_dir_all(&dirs.config).unwrap();
-    std::fs::write(dirs.config.join("demo-state.json"), r#"{"settings":{"welcomed":true}}"#).unwrap();
+    std::fs::write(dirs.config.join("demo-state.json"), seed).unwrap();
     let options = Options {
         demo: true,
         inline: true,
@@ -812,6 +816,65 @@ fn start_as_store(preset: &str, store_app: &str) -> Session {
     ui.show().unwrap();
     let state_file = dirs.config.join("demo-state.json");
     Session { ui, app, dirs, state_file, opened: Arc::default(), web_opened: Arc::default() }
+}
+
+#[test]
+fn an_app_that_was_given_the_stores_name_gets_its_own_back() {
+    // An earlier version could note an app updated from the Library under the name
+    // of whichever page was open: Longboard, listed as "Bilby".
+    let seed = r#"{"settings":{"welcomed":true},"library":[
+        {"id":"github:AndrewGBest/Longboard","name":"Bilby","version":"v0.3.0"},
+        {"id":"github:lumen-labs/lumen","name":"Lumen","version":"v0.19.2"}]}"#;
+    let s = start_as_store_with("linux-x64-debian", "github:kestrel-sh/kestrel", seed);
+    let names: Vec<(String, String)> = s.saved().library.iter().map(|a| (a.id.clone(), a.name.clone())).collect();
+    assert!(names.contains(&("github:AndrewGBest/Longboard".into(), "Longboard".into())), "{names:?}");
+    assert!(names.contains(&("github:lumen-labs/lumen".into(), "Lumen".into())));
+    assert_eq!(names.iter().filter(|(_, name)| name == "Bilby").count(), 1, "the store itself, and only it");
+}
+
+#[test]
+fn back_and_home_both_leave_a_search() {
+    // On a TV: Back from what was found is Home, with the box emptied.
+    let s = start("linux-tv", Shell::Tv);
+    s.app.search(&s.ui, "kestrel");
+    s.store().set_query("kestrel".into());
+    assert!(s.store().get_page() == 1 && s.store().get_results().row_count() > 0);
+    let found = s.store().get_tv_rows().row_data(0).unwrap().title;
+    assert!(found.starts_with("Top results"), "{found}");
+    s.press(Key::Escape);
+    assert_eq!(s.store().get_page(), 0);
+    assert_eq!((s.store().get_query().as_str(), s.store().get_results().row_count()), ("", 0));
+    let home = s.store().get_tv_rows().row_data(0).unwrap().title;
+    assert!(!home.starts_with("Top results"), "Home shows the store again, not the search: {home}");
+
+    // And so is the Home tab: up to the bar, across to Home, OK.
+    s.app.search(&s.ui, "kestrel");
+    s.store().set_query("kestrel".into());
+    s.press(Key::UpArrow);
+    s.press(Key::UpArrow);
+    s.press(Key::Return);
+    assert_eq!(s.store().get_page(), 0);
+    assert_eq!((s.store().get_query().as_str(), s.store().get_results().row_count()), ("", 0));
+
+    // On a desktop: the Back button beside the search box, Escape, and Discover.
+    let d = start("linux-x64-debian", Shell::Desktop);
+    for leave in ["Back", "Escape", "Discover"] {
+        d.app.search(&d.ui, "kestrel");
+        d.store().set_query("kestrel".into());
+        assert_eq!(d.store().get_page(), 1);
+        match leave {
+            "Escape" => d.press(Key::Escape),
+            label => d.click(label),
+        }
+        assert_eq!(d.store().get_page(), 0, "{leave}");
+        assert_eq!((d.store().get_query().as_str(), d.store().get_results().row_count()), ("", 0), "{leave}");
+    }
+    // Back from an app opened from a search is still the search.
+    d.app.search(&d.ui, "kestrel");
+    d.app.open(&d.ui, "github:kestrel-sh/kestrel");
+    d.press(Key::Escape);
+    assert!(d.store().get_page() == 1 && !d.store().get_details_open());
+    assert!(d.store().get_results().row_count() > 0);
 }
 
 #[test]
@@ -2178,15 +2241,17 @@ fn an_app_found_at_several_sources_is_one_result_with_its_sources_by_the_button(
 // ---- apps that are versions of one service ----
 
 #[test]
-fn a_service_with_several_apps_is_one_result_and_its_page_offers_the_versions() {
+fn a_service_with_several_apps_leads_its_results_and_its_page_offers_the_others() {
     // A Linux TV can use YouTube's own site (in Longboard) and the desktop apps on Flathub and GitHub.
     let s = start("linux-tv", Shell::Tv);
     s.app.search(&s.ui, "youtube");
     let first = s.store().get_results().row_data(0).unwrap();
-    assert_eq!(first.name, "YouTube", "the service is one tile, whatever else matched");
-    assert_eq!(first.id, "web:youtube.com", "its own site leads where that can be used");
-    assert!(first.headline.ends_with("versions"), "{}", first.headline);
-    let tiles = s.store().get_results().iter().filter(|c| c.name == "YouTube").count();
+    // The results are the apps themselves: the service's own site first, as itself,
+    // and no tile that stands for several things at once.
+    assert_eq!((first.name.as_str(), first.id.as_str()), ("YouTube", "web:youtube.com"));
+    assert_eq!(first.headline, "", "it is the website, not a bundle of versions");
+    assert_eq!(first.more_sources, 0, "and a website is never one of a program's sources");
+    let tiles = s.store().get_results().iter().filter(|c| c.id == "web:youtube.com").count();
     assert_eq!(tiles, 1);
 
     // The service's own app lists the other ways to use it, each once, and is not
@@ -2242,18 +2307,19 @@ fn a_service_with_several_apps_is_one_result_and_its_page_offers_the_versions() 
 fn a_tv_remote_can_switch_version_from_the_versions_list() {
     let s = start("linux-tv", Shell::Tv);
     s.app.open(&s.ui, "web:youtube.com");
-    let choices: Vec<SourceChoice> = s.store().get_tv_choices().iter().collect();
-    assert!(
-        choices.len() >= 2 && choices.iter().all(|c| c.label.starts_with("Use ") && c.label.contains(" instead")),
-        "{}",
-        choices.len()
-    );
+    let choices: Vec<bilby::TvChoice> = s.store().get_tv_choices().iter().collect();
+    // Each row is an app's own name with a few words on what it is; the group says
+    // what the rows are, once.
+    assert!(choices.len() >= 2, "{}", choices.len());
+    assert_eq!(choices[0].heading, "Other ways to use YouTube");
+    assert!(choices[1..].iter().all(|c| c.heading.is_empty()));
+    assert!(choices.iter().all(|c| !c.name.contains("instead") && c.note.ends_with("unofficial")));
     let first = choices[0].clone();
     // Main button, star, then Versions: OK opens the list with the choices on top.
     s.press(Key::RightArrow);
     s.press(Key::RightArrow);
     s.press(Key::Return);
-    assert!(s.has(first.label.as_str()));
+    assert!(s.has(first.name.as_str()) && s.has("Other ways to use YouTube"));
     s.press(Key::Return);
     assert_eq!(s.store().get_app().id, first.id, "OK on a version opens it");
     assert!(s.store().get_tv_choices().iter().any(|c| c.id == "web:youtube.com"), "and the way back is offered");

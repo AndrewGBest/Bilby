@@ -175,13 +175,32 @@ mod tests {
         );
         assert_eq!(
             names("discord", "web:discord.com", &sources),
-            ["Discord (flathub:com.discordapp.Discord)", "Vesktop (flathub:dev.vencord.Vesktop)"]
+            ["Discord app (flathub:com.discordapp.Discord)", "Vesktop (flathub:dev.vencord.Vesktop)"]
         );
         // Where the service's own cannot be used here, the others are still reachable.
         assert_eq!(
             names("youtube", "flathub:rocks.shy.VacuumTube", &[SourceKind::Flathub]),
             ["FreeTube (flathub:io.freetubeapp.FreeTube)"]
         );
+    }
+
+    #[test]
+    fn every_member_is_told_apart_from_its_service_and_the_others() {
+        for family in families() {
+            for member in &family.members {
+                assert_ne!(member.label, family.name, "{}: a label says which way of using it this is", member.id);
+                assert!(!member.note.is_empty(), "{}: a few words on what it is", member.id);
+            }
+        }
+        // Plex's own apps for a computer, a TV and music are all reached from its website.
+        let plex = family_named(families(), "plex").unwrap();
+        let platform = Platform::preset("linux-tv").unwrap();
+        let others: Vec<&str> = plex
+            .others("web:plex.tv", &[SourceKind::Web, SourceKind::Flathub], &platform)
+            .iter()
+            .map(|m| m.label.as_str())
+            .collect();
+        assert_eq!(others, ["Plex for desktop", "Plex HTPC", "Plexamp"]);
     }
 
     #[test]

@@ -104,6 +104,17 @@ export struct VersionChoice {
     on: bool,
 }
 
+// A row of the TV's list of other choices on an app's page: another way to use the
+// service, or the same app from another source.
+export struct TvChoice {
+    id: string,
+    name: string,
+    // A few words under the name on what this choice is.
+    note: string,
+    // Set on the first row of each group: what the group is.
+    heading: string,
+}
+
 export struct SourceChoice {
     // Its short name: "flathub", "steam".
     id: string,
@@ -181,7 +192,7 @@ export global Store {
     // install: its id and what to call it. "" when nothing is missing.
     // For the TV's Versions list: the other versions and sources as rows to choose,
     // each labelled with what choosing it does.
-    in property <[SourceChoice]> tv-choices;
+    in property <[TvChoice]> tv-choices;
     in property <string> helper-id;
     in property <string> helper-label;
     // Why that is needed, in a sentence, when it is not obvious (an AppImage and FUSE).
@@ -334,6 +345,8 @@ export global Store {
 
     callback search(string);
     callback typing(string);
+    // Out of a search and back to Home: the box emptied, the results put away.
+    callback leave-search();
     callback open(string);
     callback close-details();
     callback retry-details();
