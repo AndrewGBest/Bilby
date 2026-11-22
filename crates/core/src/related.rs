@@ -38,6 +38,10 @@ pub struct Member {
     /// The kinds of device it is made for (`desktop`, `mobile`, `tv`). Empty for any.
     #[serde(default)]
     pub form: Vec<String>,
+    /// Made to be used on a TV screen with a remote (Plex HTPC), though it may run
+    /// elsewhere too.
+    #[serde(default, rename = "tv")]
+    pub made_for_tv: bool,
 }
 
 #[derive(Deserialize)]
@@ -93,11 +97,39 @@ impl Family {
         };
         let fits =
             |wanted: &[String], have: &str| wanted.is_empty() || wanted.iter().any(|w| w.eq_ignore_ascii_case(have));
-        self.members
+        let mut here: Vec<&Member> = self
+            .members
             .iter()
             .filter(|m| AppId::parse(&m.id).is_some_and(|id| sources.contains(&id.source)))
             .filter(|m| fits(&m.os, os) && fits(&m.form, form))
-            .collect()
+            .collect();
+        // On a TV the order is by what suits one: the service's own TV app, then its
+        // website, then its other apps, and last the apps others made.
+        if platform.form_factor == FormFactor::Tv {
+            here.sort_by_key(|m| m.rank_on_tv());
+        }
+        here
+    }
+
+    /// The way of using the service this device should be offered first.
+    pub fn first_here(&self, sources: &[SourceKind], platform: &Platform) -> Option<&Member> {
+        self.here(sources, platform).into_iter().next()
+    }
+}
+
+impl Member {
+    fn is_website(&self) -> bool {
+        self.id.starts_with("web:")
+    }
+
+    /// Where it stands on a TV, lowest first.
+    fn rank_on_tv(&self) -> u8 {
+        match (self.official, self.made_for_tv, self.is_website()) {
+            (true, true, _) => 0,
+            (_, _, true) => 1,
+            (true, false, false) => 2,
+            (false, _, false) => 3,
+        }
     }
 }
 
@@ -200,7 +232,28 @@ mod tests {
             .iter()
             .map(|m| m.label.as_str())
             .collect();
-        assert_eq!(others, ["Plex for desktop", "Plex HTPC", "Plexamp"]);
+        assert_eq!(others, ["Plex HTPC", "Plex for desktop", "Plexamp"], "its TV app first, on a TV");
+    }
+
+    #[test]
+    fn on_a_tv_the_services_own_tv_app_leads_then_its_website_then_the_rest() {
+        let list = families();
+        let tv = Platform::preset("linux-tv").unwrap();
+        let sources = [SourceKind::Web, SourceKind::Flathub, SourceKind::GitHub];
+        let order = |family: &str, platform: &Platform| -> Vec<&str> {
+            let mut labels: Vec<&str> =
+                family_named(list, family).unwrap().here(&sources, platform).iter().map(|m| m.label.as_str()).collect();
+            labels.dedup();
+            labels
+        };
+        assert_eq!(order("plex", &tv), ["Plex HTPC", "Plex website", "Plex for desktop", "Plexamp"]);
+        // No TV app of YouTube's own: its website stays ahead of the apps others made.
+        assert_eq!(order("youtube", &tv), ["YouTube website", "VacuumTube", "FreeTube"]);
+        // On a computer the list's own order stands.
+        let desktop = Platform::preset("linux-x64-debian").unwrap();
+        assert_eq!(order("plex", &desktop), ["Plex website", "Plex for desktop", "Plex HTPC", "Plexamp"]);
+        let first = family_named(list, "plex").unwrap().first_here(&sources, &tv).unwrap();
+        assert_eq!(first.id, "flathub:tv.plex.PlexHTPC");
     }
 
     #[test]

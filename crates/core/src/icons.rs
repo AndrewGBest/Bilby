@@ -195,7 +195,20 @@ pub fn fetch_site(http: &dyn Http, dir: &Path, key: &str, host: &str) -> Result<
     let (mut candidates, base) = match http.get_landed(&asked) {
         Ok((html, landed)) => {
             let base = origin_of(&landed).unwrap_or_else(|| asked.clone());
-            (site_icons(&html, &base), base)
+            let mut icons = ranked_site_icons(&html, &base);
+            // And what its manifest lists, for a site that can be installed: large
+            // and square, so ahead of a page's small icons, after its home-screen ones.
+            if let Some(manifest) = site_manifest(&html, &base) {
+                let listed = http.get(&manifest).map(|json| manifest_icons(&json, &base)).unwrap_or_default();
+                for (n, icon) in listed.into_iter().take(2).enumerate() {
+                    if !icons.iter().any(|(_, seen)| *seen == icon) {
+                        icons.push((5_000 - n as u32, icon));
+                    }
+                }
+                icons.sort_by_key(|(rank, _)| std::cmp::Reverse(*rank));
+            }
+            let icons: Vec<String> = icons.into_iter().map(|(_, url)| url).collect();
+            (icons, base)
         }
         Err(_) => (Vec::new(), asked.clone()),
     };
@@ -211,7 +224,7 @@ pub fn fetch_site(http: &dyn Http, dir: &Path, key: &str, host: &str) -> Result<
     }
     let download = dir.join(format!("{key}.download"));
     let mut unreachable = None;
-    for url in candidates.iter().take(10) {
+    for url in candidates.iter().take(12) {
         match http.download(url, &download, &mut |done, _| done < 2 * 1024 * 1024) {
             Ok(_) => {}
             Err(Error::NotFound(_)) | Err(Error::Cancelled) | Err(Error::Status { .. }) => continue,
@@ -225,7 +238,7 @@ pub fn fetch_site(http: &dyn Http, dir: &Path, key: &str, host: &str) -> Result<
         // A PNG or JPEG as it is; from the older icon format, the PNG inside it.
         let picture = match sniff(&bytes) {
             Some(ext) => Some((bytes, ext)),
-            None => png_in_ico(&bytes).map(|png| (png, "png")),
+            None => png_in_ico(&bytes).or_else(|| bitmap_in_ico(&bytes)).map(|png| (png, "png")),
         };
         if let Some((bytes, ext)) = picture {
             let path = dir.join(format!("{key}.{ext}"));
@@ -234,9 +247,10 @@ pub fn fetch_site(http: &dyn Http, dir: &Path, key: &str, host: &str) -> Result<
         }
     }
     let _ = std::fs::remove_file(&download);
-    // Could not be reached at all: ask again another time. Reached, with nothing usable: remember.
+    // Something could not be reached: ask again another time, since the picture may
+    // be the one that did not answer. Everything answered, with nothing usable: remember.
     match unreachable {
-        Some(e) if named == 0 => Err(e),
+        Some(e) => Err(e),
         _ => {
             std::fs::write(dir.join(format!("{key}.none")), SITE_NONE)?;
             Ok(None)
@@ -264,12 +278,99 @@ fn origin_of(url: &str) -> Option<String> {
     (!host.is_empty()).then(|| format!("https://{host}/"))
 }
 
+/// How much of a page is looked through for its icons. Most name them in the first
+/// few thousand bytes; some that are built as they are sent (Plex) only after a
+/// megabyte of other things.
+const PAGE_READ: usize = 4_000_000;
+
+/// An address from a page, made whole against `base` (`https://host/`). Only https.
+fn whole(href: &str, base: &str) -> Option<String> {
+    if href.starts_with("https://") {
+        Some(href.to_string())
+    } else if let Some(rest) = href.strip_prefix("//") {
+        Some(format!("https://{rest}"))
+    } else if href.starts_with('/') {
+        Some(format!("{}{}", base.trim_end_matches('/'), href))
+    } else if href.contains("://") || href.starts_with("data:") {
+        None
+    } else {
+        Some(format!("{base}{href}"))
+    }
+}
+
+/// The value of one attribute of a tag, quoted or not.
+fn attribute_of(tag: &str, name: &str) -> Option<String> {
+    let lower = tag.to_ascii_lowercase();
+    let at = lower.find(&format!("{name}="))? + name.len() + 1;
+    let rest = &tag[at..];
+    let value = match rest.chars().next()? {
+        quote @ ('"' | '\'') => rest[1..].split(quote).next()?,
+        // Unquoted: up to the next space. A lone "/" closing the tag is not part of it.
+        _ => rest.split(|c: char| c.is_whitespace()).next()?.trim_end_matches('/'),
+    };
+    Some(value.trim().replace("&amp;", "&"))
+}
+
+/// The web app manifest a page names, if it names one: where sites that can be
+/// installed keep their large icons (Crunchyroll names no icon anywhere else).
+pub fn site_manifest(html: &str, base: &str) -> Option<String> {
+    let mut end = html.len().min(PAGE_READ);
+    while !html.is_char_boundary(end) {
+        end -= 1;
+    }
+    html[..end]
+        .split('<')
+        .filter(|tag| tag.get(..5).is_some_and(|start| start.eq_ignore_ascii_case("link ")))
+        .map(|tag| tag.split('>').next().unwrap_or(""))
+        .find(|tag| {
+            attribute_of(tag, "rel")
+                .is_some_and(|rel| rel.to_ascii_lowercase().split_whitespace().any(|w| w == "manifest"))
+        })
+        .and_then(|tag| attribute_of(tag, "href"))
+        .filter(|href| !href.is_empty())
+        .and_then(|href| whole(&href, base))
+}
+
+/// The PNG icons a web app manifest lists, largest first; ones drawn to be cropped
+/// to a shape ("maskable") after the plain ones.
+pub fn manifest_icons(json: &str, base: &str) -> Vec<String> {
+    let Ok(manifest) = serde_json::from_str::<serde_json::Value>(json) else { return Vec::new() };
+    let mut found: Vec<(bool, u32, String)> = Vec::new();
+    for icon in manifest["icons"].as_array().map(Vec::as_slice).unwrap_or_default() {
+        let Some(src) = icon["src"].as_str().filter(|s| !s.is_empty()) else { continue };
+        let kind = icon["type"].as_str().unwrap_or("").to_ascii_lowercase();
+        let path = src.split(['?', '#']).next().unwrap_or("").to_ascii_lowercase();
+        if !(path.ends_with(".png") || kind == "image/png") {
+            continue;
+        }
+        let size: u32 = icon["sizes"]
+            .as_str()
+            .and_then(|sizes| sizes.split_whitespace().filter_map(|s| s.split(['x', 'X']).next()?.parse().ok()).max())
+            .unwrap_or(0);
+        let maskable = icon["purpose"]
+            .as_str()
+            .is_some_and(|p| !p.split_whitespace().any(|w| w == "any") && p.contains("maskable"));
+        if let Some(url) = whole(src, base) {
+            if !found.iter().any(|(_, _, seen)| *seen == url) {
+                found.push((maskable, size, url));
+            }
+        }
+    }
+    found.sort_by_key(|(maskable, size, _)| (*maskable, std::cmp::Reverse(*size)));
+    found.into_iter().map(|(_, _, url)| url).collect()
+}
+
 /// The icons a page names in its `<link>` tags, best first: the ones made for home
 /// screens (large, square, opaque), then other PNG icons, larger before smaller.
 /// Addresses are made whole against `base`; only https ones are kept.
 pub fn site_icons(html: &str, base: &str) -> Vec<String> {
+    ranked_site_icons(html, base).into_iter().map(|(_, url)| url).collect()
+}
+
+/// The same, each with what it was ranked by (higher is better).
+fn ranked_site_icons(html: &str, base: &str) -> Vec<(u32, String)> {
     // Cut at a character, not in the middle of one: pages are in every language.
-    let mut end = html.len().min(300_000);
+    let mut end = html.len().min(PAGE_READ);
     while !html.is_char_boundary(end) {
         end -= 1;
     }
@@ -278,16 +379,7 @@ pub fn site_icons(html: &str, base: &str) -> Vec<String> {
     let is_link = |tag: &&str| tag.get(..5).is_some_and(|start| start.eq_ignore_ascii_case("link "));
     for tag in head.split('<').filter(is_link) {
         let tag = tag.split('>').next().unwrap_or("");
-        let attribute = |name: &str| -> Option<String> {
-            let lower = tag.to_ascii_lowercase();
-            let at = lower.find(&format!("{name}="))? + name.len() + 1;
-            let rest = &tag[at..];
-            let value = match rest.chars().next()? {
-                quote @ ('"' | '\'') => rest[1..].split(quote).next()?,
-                _ => rest.split(|c: char| c.is_whitespace() || c == '/').next()?,
-            };
-            Some(value.trim().replace("&amp;", "&"))
-        };
+        let attribute = |name: &str| attribute_of(tag, name);
         let rel = attribute("rel").unwrap_or_default().to_ascii_lowercase();
         let Some(href) = attribute("href").filter(|h| !h.is_empty()) else { continue };
         let touch = rel.contains("apple-touch-icon");
@@ -298,8 +390,9 @@ pub fn site_icons(html: &str, base: &str) -> Vec<String> {
         let path = href.split(['?', '#']).next().unwrap_or("").to_ascii_lowercase();
         let png = path.ends_with(".png") || kind == "image/png";
         let ico = path.ends_with(".ico") || kind.contains("icon");
-        if !touch && !png && !ico {
-            // SVG and the like: not something this can show.
+        let unshowable = [".webp", ".svg", ".avif", ".gif"].iter().any(|ext| path.ends_with(ext));
+        if unshowable || (!touch && !png && !ico) {
+            // SVG, WebP and the like: not something this can show.
             continue;
         }
         let size: u32 = attribute("sizes").and_then(|s| s.split(['x', 'X']).next()?.parse().ok()).unwrap_or(if touch {
@@ -307,17 +400,7 @@ pub fn site_icons(html: &str, base: &str) -> Vec<String> {
         } else {
             32
         });
-        let url = if href.starts_with("https://") {
-            href
-        } else if let Some(rest) = href.strip_prefix("//") {
-            format!("https://{rest}")
-        } else if href.starts_with('/') {
-            format!("{}{}", base.trim_end_matches('/'), href)
-        } else if href.contains("://") || href.starts_with("data:") {
-            continue;
-        } else {
-            format!("{base}{href}")
-        };
+        let Some(url) = whole(&href, base) else { continue };
         // Home-screen icons first, then by size; the older format last.
         let rank = if touch {
             10_000
@@ -331,7 +414,7 @@ pub fn site_icons(html: &str, base: &str) -> Vec<String> {
         }
     }
     found.sort_by_key(|(rank, _)| std::cmp::Reverse(*rank));
-    found.into_iter().map(|(_, url)| url).collect()
+    found
 }
 
 /// The largest PNG picture inside a `.ico` file, when it holds one. Modern icon files
@@ -355,6 +438,114 @@ pub fn png_in_ico(bytes: &[u8]) -> Option<Vec<u8>> {
         }
     }
     best.map(<[u8]>::to_vec)
+}
+
+/// The largest plain bitmap inside an `.ico` file, as a PNG. Most sites' `favicon.ico`
+/// is of this older kind (Google, Amazon), and nothing here can show one as it is.
+/// Handles 32-, 24- and 8-bit entries; anything else, or anything odd, is `None`.
+pub fn bitmap_in_ico(bytes: &[u8]) -> Option<Vec<u8>> {
+    if bytes.len() < 6 || bytes[..4] != [0, 0, 1, 0] {
+        return None;
+    }
+    let u16_at = |data: &[u8], at: usize| data.get(at..at + 2).map(|b| u16::from_le_bytes([b[0], b[1]]) as usize);
+    let u32_at =
+        |data: &[u8], at: usize| data.get(at..at + 4).map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]) as usize);
+    let count = u16_at(bytes, 4)?;
+    let mut best: Option<(usize, usize, Vec<u8>)> = None;
+    for entry in 0..count.min(64) {
+        let at = 6 + entry * 16;
+        let (Some(size), Some(start)) = (u32_at(bytes, at + 8), u32_at(bytes, at + 12)) else { continue };
+        let Some(data) = start.checked_add(size).and_then(|end| bytes.get(start..end)) else { continue };
+        let Some((width, height, pixels)) = bitmap_pixels(data) else { continue };
+        // The larger, and of two the same size the one with more colours.
+        let depth = u16_at(data, 14).unwrap_or(0);
+        if best.as_ref().is_none_or(|(w, d, _)| (width, depth) > (*w, *d)) {
+            let _ = height;
+            best = Some((width, depth, pixels));
+        }
+    }
+    let (width, _, pixels) = best?;
+    Some(png_of(width, pixels.len() / 4 / width, &pixels))
+}
+
+/// One bitmap of an `.ico` as RGBA, top row first: its width, height and pixels.
+fn bitmap_pixels(data: &[u8]) -> Option<(usize, usize, Vec<u8>)> {
+    let u16_at = |at: usize| data.get(at..at + 2).map(|b| u16::from_le_bytes([b[0], b[1]]) as usize);
+    let u32_at = |at: usize| data.get(at..at + 4).map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]) as usize);
+    let header = u32_at(0)?;
+    // The height counts the picture and the mask under it; no compression.
+    let (width, height, depth) = (u32_at(4)?, u32_at(8)? / 2, u16_at(14)?);
+    if header < 40 || u32_at(16)? != 0 || !(1..=256).contains(&width) || !(1..=256).contains(&height) {
+        return None;
+    }
+    let colours = match depth {
+        8 => match u32_at(32)? {
+            0 => 256,
+            n if n <= 256 => n,
+            _ => return None,
+        },
+        24 | 32 => 0,
+        _ => return None,
+    };
+    let palette = data.get(header..header + colours * 4)?;
+    let row = (width * depth).div_ceil(32) * 4;
+    let picture = data.get(header + colours * 4..header + colours * 4 + row * height)?;
+    let mask_row = width.div_ceil(32) * 4;
+    let mask = data.get(header + colours * 4 + row * height..).filter(|m| m.len() >= mask_row * height);
+    let mut pixels = Vec::with_capacity(width * height * 4);
+    for y in (0..height).rev() {
+        for x in 0..width {
+            let at = y * row + x * depth / 8;
+            let (b, g, r, a) = match depth {
+                32 => (picture[at], picture[at + 1], picture[at + 2], picture[at + 3]),
+                24 => (picture[at], picture[at + 1], picture[at + 2], 255),
+                _ => {
+                    let colour = palette.get(picture[at] as usize * 4..picture[at] as usize * 4 + 3)?;
+                    (colour[0], colour[1], colour[2], 255)
+                }
+            };
+            pixels.extend_from_slice(&[r, g, b, a]);
+        }
+    }
+    // Where the picture carries no transparency of its own, the mask says what shows.
+    let opaque_nowhere = depth == 32 && pixels.chunks(4).all(|p| p[3] == 0);
+    if depth != 32 || opaque_nowhere {
+        for y in 0..height {
+            for x in 0..width {
+                let hidden = mask.is_some_and(|m| m[(height - 1 - y) * mask_row + x / 8] & (0x80 >> (x % 8)) != 0);
+                pixels[(y * width + x) * 4 + 3] = if hidden { 0 } else { 255 };
+            }
+        }
+    }
+    Some((width, height, pixels))
+}
+
+/// RGBA pixels as a PNG file.
+fn png_of(width: usize, height: usize, pixels: &[u8]) -> Vec<u8> {
+    use std::io::Write;
+    let mut rows = Vec::with_capacity((width * 4 + 1) * height);
+    for row in pixels.chunks(width * 4) {
+        rows.push(0);
+        rows.extend_from_slice(row);
+    }
+    let mut packer = flate2::write::ZlibEncoder::new(Vec::new(), flate2::Compression::default());
+    let _ = packer.write_all(&rows);
+    let packed = packer.finish().unwrap_or_default();
+    let mut header = Vec::new();
+    header.extend_from_slice(&(width as u32).to_be_bytes());
+    header.extend_from_slice(&(height as u32).to_be_bytes());
+    header.extend_from_slice(&[8, 6, 0, 0, 0]);
+    let mut png = vec![0x89, b'P', b'N', b'G', 13, 10, 26, 10];
+    for (name, body) in [(b"IHDR", header.as_slice()), (b"IDAT", packed.as_slice()), (b"IEND", &[][..])] {
+        png.extend_from_slice(&(body.len() as u32).to_be_bytes());
+        let mut sum = flate2::Crc::new();
+        sum.update(name);
+        sum.update(body);
+        png.extend_from_slice(name);
+        png.extend_from_slice(body);
+        png.extend_from_slice(&sum.sum().to_be_bytes());
+    }
+    png
 }
 
 #[cfg(test)]
@@ -451,6 +642,114 @@ mod site_tests {
         let dir = folder("moved-none");
         assert_eq!(fetch_site(&nothing, &dir, "bare", "example.org").unwrap(), None);
         assert!(site_has_none(&dir.join("bare.none")), "and it is not asked again straight away");
+    }
+
+    #[test]
+    fn a_site_that_only_lists_icons_in_its_manifest_still_gets_its_picture() {
+        let manifest = r#"{"icons":[
+            {"src":"/pwa/192.png","sizes":"192x192","type":"image/png"},
+            {"src":"https://cdn.example.org/512-maskable.png","sizes":"512x512","type":"image/png","purpose":"maskable"},
+            {"src":"https://cdn.example.org/512.png","sizes":"512x512","type":"image/png","purpose":"any"},
+            {"src":"/logo.svg","sizes":"any","type":"image/svg+xml"}]}"#;
+        assert_eq!(
+            manifest_icons(manifest, "https://example.org/"),
+            [
+                "https://cdn.example.org/512.png",
+                "https://example.org/pwa/192.png",
+                "https://cdn.example.org/512-maskable.png"
+            ]
+        );
+        assert!(manifest_icons("not json", "https://example.org/").is_empty());
+        let page =
+            r#"<head><link rel="manifest" href="/manifest.json" /><link rel="preload" href="/font.woff2"></head>"#;
+        assert_eq!(site_manifest(page, "https://example.org/").as_deref(), Some("https://example.org/manifest.json"));
+
+        let dir = folder("manifest");
+        let mut pages = HashMap::new();
+        pages.insert("https://example.org/", page.as_bytes().to_vec());
+        pages.insert("https://example.org/manifest.json", manifest.as_bytes().to_vec());
+        pages.insert("https://cdn.example.org/512.png", PNG.to_vec());
+        let web = Web(pages, Mutex::new(Vec::new()));
+        let path = fetch_site(&web, &dir, "site", "example.org").unwrap().expect("the manifest's icon is used");
+        assert_eq!(std::fs::read(path).unwrap(), PNG);
+    }
+
+    /// Over the network, by hand: which of the listed sites still get no picture.
+    /// `BILBY_SITES_DIR=/some/empty/folder cargo test -p bilby-core listed_sites -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    #[cfg(feature = "net")]
+    fn listed_sites_and_their_pictures() {
+        let Ok(dir) = std::env::var("BILBY_SITES_DIR") else { return };
+        let http = crate::http::NetHttp::new(None);
+        if let Ok(one) = std::env::var("BILBY_SITE") {
+            let landed = http.get_landed(&format!("https://{one}/")).map(|(html, at)| (html.len(), at));
+            println!("{one}: page {landed:?}");
+            println!("{one}: {:?}", fetch_site(&http, Path::new(&dir), "one", &one));
+            return;
+        }
+        let hosts: Vec<String> = serde_json::from_str::<serde_json::Value>(include_str!("../data/web.json")).unwrap()
+            ["sites"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|site| site["host"].as_str().map(str::to_string))
+            .collect();
+        let results: Vec<(String, String)> = hosts
+            .chunks(6)
+            .flat_map(|hosts| {
+                std::thread::scope(|scope| {
+                    let handles: Vec<_> = hosts
+                        .iter()
+                        .map(|host| {
+                            let (http, dir) = (&http, &dir);
+                            scope.spawn(move || {
+                                let key = host.replace('.', "-");
+                                let said = match fetch_site(http, Path::new(dir), &key, host) {
+                                    Ok(Some(_)) => "ok".to_string(),
+                                    Ok(None) => "NONE".to_string(),
+                                    Err(e) => format!("ERR {e}"),
+                                };
+                                (host.clone(), said)
+                            })
+                        })
+                        .collect();
+                    handles.into_iter().map(|h| h.join().unwrap()).collect::<Vec<_>>()
+                })
+            })
+            .collect();
+        for (host, said) in results.iter().filter(|(_, said)| said != "ok") {
+            println!("{host}: {said}");
+        }
+        println!("{} of {} have a picture", results.iter().filter(|(_, said)| said == "ok").count(), results.len());
+    }
+
+    #[test]
+    fn an_old_style_icon_file_becomes_a_png() {
+        // One 2x2, 32-bit bitmap: red and green on the bottom row, blue and clear on top.
+        let mut ico = vec![0, 0, 1, 0, 1, 0, 2, 2, 0, 0, 1, 0, 32, 0];
+        let mut bitmap = Vec::new();
+        bitmap.extend_from_slice(&40u32.to_le_bytes());
+        bitmap.extend_from_slice(&2u32.to_le_bytes());
+        bitmap.extend_from_slice(&4u32.to_le_bytes());
+        bitmap.extend_from_slice(&[1, 0, 32, 0]);
+        bitmap.extend_from_slice(&[0; 24]);
+        bitmap.extend_from_slice(&[0, 0, 255, 255, 0, 255, 0, 255]);
+        bitmap.extend_from_slice(&[255, 0, 0, 255, 0, 0, 0, 0]);
+        bitmap.extend_from_slice(&[0; 8]);
+        ico.extend_from_slice(&(bitmap.len() as u32).to_le_bytes());
+        ico.extend_from_slice(&22u32.to_le_bytes());
+        ico.extend_from_slice(&bitmap);
+        assert!(png_in_ico(&ico).is_none());
+        let (width, height, pixels) = bitmap_pixels(&bitmap).unwrap();
+        assert_eq!((width, height), (2, 2));
+        assert_eq!(pixels, [0, 0, 255, 255, 0, 0, 0, 0, 255, 0, 0, 255, 0, 255, 0, 255], "top row first, as RGBA");
+        let png = bitmap_in_ico(&ico).unwrap();
+        assert_eq!(sniff(&png), Some("png"));
+        assert!(bitmap_in_ico(&ico[..30]).is_none() && bitmap_in_ico(b"nonsense").is_none());
+        // An address written without quotes keeps its slashes.
+        let page = "<link rel=icon type=image/png sizes=192x192 href=https://cdn.example.org/a/b.png>";
+        assert_eq!(site_icons(page, "https://example.org/"), ["https://cdn.example.org/a/b.png"]);
     }
 
     #[test]

@@ -77,9 +77,18 @@ impl Essential {
     }
 
     /// The version of it this device can use: the first id whose source applies here.
-    pub fn here(&self, sources: &[SourceKind]) -> Option<AppSummary> {
-        let id = self.ids.iter().filter_map(|id| AppId::parse(id)).find(|id| sources.contains(&id.source))?;
-        let mut app = AppSummary::new(id, self.name.clone());
+    /// On a TV, a service that has an app of its own for TVs is shown as that app
+    /// (Plex as Plex HTPC) and not as its website.
+    pub fn here(&self, sources: &[SourceKind], platform: &Platform) -> Option<AppSummary> {
+        let listed = self.ids.iter().filter_map(|id| AppId::parse(id)).find(|id| sources.contains(&id.source))?;
+        let families = crate::related::families();
+        let for_tv = (platform.form_factor == FormFactor::Tv)
+            .then(|| crate::related::family_of(families, &listed.to_string()))
+            .flatten()
+            .and_then(|family| family.first_here(sources, platform))
+            .filter(|first| first.official && first.made_for_tv)
+            .and_then(|first| AppId::parse(&first.id));
+        let mut app = AppSummary::new(for_tv.unwrap_or(listed), self.name.clone());
         app.summary = self.summary.clone();
         Some(app)
     }
@@ -106,7 +115,7 @@ pub fn rows(sources: &[SourceKind], platform: &Platform) -> Vec<(String, Vec<App
         all()
             .iter()
             .filter(|app| app.suits_device(platform) && wanted(app))
-            .filter_map(|app| app.here(sources))
+            .filter_map(|app| app.here(sources, platform))
             .collect()
     };
     let mut rows = vec![("Essentials".to_string(), pick(&|app| app.leads_on(platform)))];

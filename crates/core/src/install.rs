@@ -1210,7 +1210,20 @@ pub fn execute(
 
     if plan.action == Action::Flatpak {
         let id = asset.name.as_str();
-        run_flatpak(dirs, &["install", "--noninteractive", "--assumeyes", "--or-update", "flathub", id], progress)?;
+        let install = |place: &[&str], progress: &mut dyn FnMut(u64, Option<u64>) -> bool| {
+            let mut args = vec!["install"];
+            args.extend_from_slice(place);
+            args.extend_from_slice(&["--noninteractive", "--assumeyes", "--or-update", "flathub", id]);
+            run_flatpak(dirs, &args, progress)
+        };
+        match install(&[], progress) {
+            // Flathub is set up twice on this device, for everyone and for this person
+            // alone (installing a Flatpak file for one person adds the second), and
+            // Flatpak will not choose between them unasked. For this person, then:
+            // that never needs a password.
+            Err(Error::Unsupported(why)) if why.contains("multiple installations") => install(&["--user"], progress)?,
+            done => done?,
+        }
         return Ok(Outcome {
             message: "Installed from Flathub. It is in your app menu.".to_string(),
             file: None,
@@ -1354,6 +1367,44 @@ mod tests {
 
     fn asset(name: &str, digest: Option<String>) -> Asset {
         Asset { name: name.to_string(), size: 4, url: format!("https://example.invalid/{name}"), digest, info: None }
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn a_flathub_set_up_twice_does_not_stop_an_install() {
+        use std::os::unix::fs::PermissionsExt;
+        let root = std::env::temp_dir().join(format!("bilby-two-flathubs-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        // A Flatpak that refuses to choose an installation, as the real one does, and
+        // installs when told which.
+        let log = root.join("asked");
+        let script = format!(
+            "#!/bin/sh\necho \"$@\" >> '{}'\ncase \"$*\" in *--user*) exit 0;; esac\necho \"error: Remote 'flathub' found in multiple installations, unable to proceed in non-interactive mode\" >&2\nexit 1\n",
+            log.display()
+        );
+        let flatpak = root.join("flatpak");
+        std::fs::write(&flatpak, script).unwrap();
+        std::fs::set_permissions(&flatpak, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let dirs = Dirs { flatpak, ..temp_dirs("two-flathubs") };
+        let asset = asset("tv.plex.PlexHTPC", None);
+        let plan = InstallPlan { action: Action::Flatpak, ..save_only() };
+        struct NoWeb;
+        impl crate::http::Http for NoWeb {
+            fn get(&self, url: &str) -> Result<String> {
+                Err(Error::NotFound(url.to_string()))
+            }
+            fn download(&self, url: &str, _: &Path, _: &mut dyn FnMut(u64, Option<u64>) -> bool) -> Result<String> {
+                Err(Error::NotFound(url.to_string()))
+            }
+        }
+        let outcome = execute(&plan, &asset, &NoWeb, &dirs, &|_| Ok(()), &mut |_, _| true).unwrap();
+        assert!(outcome.message.contains("Installed from Flathub"));
+        let asked = std::fs::read_to_string(&log).unwrap();
+        let asked: Vec<&str> = asked.lines().collect();
+        assert_eq!(asked.len(), 2, "{asked:?}");
+        assert!(!asked[0].contains("--user") && asked[1].starts_with("install --user "), "{asked:?}");
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]

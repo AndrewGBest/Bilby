@@ -668,7 +668,16 @@ impl Catalog {
         if let Some(family) = family {
             let member =
                 |app: &AppSummary| family.members.iter().any(|m| m.id.eq_ignore_ascii_case(&app.id.to_string()));
-            let (first, rest): (Vec<AppSummary>, Vec<AppSummary>) = apps.into_iter().partition(member);
+            let (mut first, rest): (Vec<AppSummary>, Vec<AppSummary>) = apps.into_iter().partition(member);
+            // Among them, the one this kind of device should be offered leads: on a
+            // TV the service's own TV app, then its website.
+            let here = family.here(&self.available_sources(), &self.platform);
+            let place = |app: &AppSummary| {
+                here.iter().position(|m| m.id.eq_ignore_ascii_case(&app.id.to_string())).unwrap_or(usize::MAX)
+            };
+            if self.platform.form_factor == crate::platform::FormFactor::Tv {
+                first.sort_by_key(place);
+            }
             apps = first.into_iter().chain(rest).collect();
         }
         outcome.apps = apps;

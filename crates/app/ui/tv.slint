@@ -243,6 +243,12 @@ export component TvShell inherits Rectangle {
     property <int> sys-act: 0;
     // On the device page: 0 is the row of buttons, 1 to 3 the settings below them.
     property <int> sys-row: 0;
+    // Where the highlight lands in the row just moved to. Each row starts from its
+    // beginning, so after scrolling along one the next is entered at its first app;
+    // with nothing scrolled, the app straight above or below.
+    function col-in-next-row() -> int {
+        return root.cur-col > 2 ? 0 : max(0, min(rows[cur-row].apps.length - 1, root.cur-col));
+    }
     function enter-bar() {
         // From Home, Up lands on Search: it is what people go up there for.
         root.tab = Store.page == 2 ? 1 : Store.page == 3 ? 3 : Store.page == 4 ? 4 : 2;
@@ -829,12 +835,12 @@ export component TvShell inherits Rectangle {
             } else if (event.text == Key.DownArrow) {
                 if (root.cur-row < rows.length - 1) {
                     root.cur-row += 1;
-                    root.cur-col = max(0, min(rows[cur-row].apps.length - 1, root.cur-col));
+                    root.cur-col = root.col-in-next-row();
                 }
             } else if (event.text == Key.UpArrow) {
                 if (root.cur-row > 0) {
                     root.cur-row -= 1;
-                    root.cur-col = max(0, min(rows[cur-row].apps.length - 1, root.cur-col));
+                    root.cur-col = root.col-in-next-row();
                 } else if (root.lib-has-actions) {
                     root.zone = 2;
                 } else {

@@ -1,5 +1,5 @@
 {
-  "_comment": "Apps that are different ways to use the same service: the service's own website and apps, and the best-known ones by others. Each family is shown as one app; its page lets the person pick a version that works on their device. Keep it short: only services nearly everyone knows, and only members that are widely used. Order matters: the first member this device can use is the one shown first. Mark anything not made by the service's owner as unofficial (leave 'official' out). 'os' (linux, windows, macos, android, ios) and 'form' (desktop, mobile, tv) say where a member runs; leave them out for one that runs wherever its source is. A label is what the member is called in a list of the family, so it must tell it apart from the others: 'Plex website', 'Plex for desktop', 'Plex HTPC', never just 'Plex'. Members with the same label are one app from several sources. Every id was checked to exist at its source on 2026-11-22.",
+  "_comment": "Apps that are different ways to use the same service: the service's own website and apps, and the best-known ones by others. Each family is shown as one app; its page lets the person pick a version that works on their device. Keep it short: only services nearly everyone knows, and only members that are widely used. Order matters: the first member this device can use is the one shown first. Mark anything not made by the service's owner as unofficial (leave 'official' out). Mark the service's own app for a TV screen with 'tv': true: on a TV it is offered first, ahead of the website, which in turn is ahead of the service's other apps and of anything unofficial. 'os' (linux, windows, macos, android, ios) and 'form' (desktop, mobile, tv) say where a member runs; leave them out for one that runs wherever its source is. A label is what the member is called in a list of the family, so it must tell it apart from the others: 'Plex website', 'Plex for desktop', 'Plex HTPC', never just 'Plex'. Members with the same label are one app from several sources. Every id was checked to exist at its source on 2026-11-22.",
   "families": [
     {
       "name": "YouTube",
@@ -70,10 +70,10 @@
         { "id": "snap:plex-desktop", "label": "Plex for desktop", "note": "Plex's own app for a computer", "official": true },
         { "id": "winget:Plex.Plex", "label": "Plex for desktop", "note": "Plex's own app for a computer", "official": true },
         { "id": "brew:plex", "label": "Plex for desktop", "note": "Plex's own app for a computer", "official": true },
-        { "id": "flathub:tv.plex.PlexHTPC", "label": "Plex HTPC", "note": "Plex's own app for a TV screen, driven with a remote", "official": true },
-        { "id": "snap:plex-htpc", "label": "Plex HTPC", "note": "Plex's own app for a TV screen, driven with a remote", "official": true },
-        { "id": "winget:Plex.PlexHTPC", "label": "Plex HTPC", "note": "Plex's own app for a TV screen, driven with a remote", "official": true },
-        { "id": "brew:plex-htpc", "label": "Plex HTPC", "note": "Plex's own app for a TV screen, driven with a remote", "official": true },
+        { "id": "flathub:tv.plex.PlexHTPC", "label": "Plex HTPC", "note": "Plex's own app for a TV screen, driven with a remote", "official": true, "tv": true },
+        { "id": "snap:plex-htpc", "label": "Plex HTPC", "note": "Plex's own app for a TV screen, driven with a remote", "official": true, "tv": true },
+        { "id": "winget:Plex.PlexHTPC", "label": "Plex HTPC", "note": "Plex's own app for a TV screen, driven with a remote", "official": true, "tv": true },
+        { "id": "brew:plex-htpc", "label": "Plex HTPC", "note": "Plex's own app for a TV screen, driven with a remote", "official": true, "tv": true },
         { "id": "flathub:com.plexamp.Plexamp", "label": "Plexamp", "note": "Plex's own music player", "official": true },
         { "id": "winget:Plex.Plexamp", "label": "Plexamp", "note": "Plex's own music player", "official": true },
         { "id": "brew:plexamp", "label": "Plexamp", "note": "Plex's own music player", "official": true }

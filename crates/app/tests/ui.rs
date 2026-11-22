@@ -833,6 +833,37 @@ fn an_app_that_was_given_the_stores_name_gets_its_own_back() {
 }
 
 #[test]
+fn moving_to_another_row_after_scrolling_along_one_starts_at_its_beginning() {
+    let s = start("linux-tv", Shell::Tv);
+    let rows = s.store().get_tv_rows();
+    let long = (0..rows.row_count() - 1)
+        .find(|r| rows.row_data(*r).unwrap().apps.row_count() > 5 && rows.row_data(r + 1).unwrap().apps.row_count() > 1)
+        .unwrap_or_else(|| {
+            let sizes: Vec<usize> = rows.iter().map(|row| row.apps.row_count()).collect();
+            panic!("a long row with another under it: {sizes:?}")
+        });
+    for _ in 0..long {
+        s.press(Key::DownArrow);
+    }
+    let first_below = rows.row_data(long + 1).unwrap().apps.row_data(0).unwrap().id;
+    let second_below = rows.row_data(long + 1).unwrap().apps.row_data(1).unwrap().id;
+    // One step along, nothing has scrolled: down is the app straight below.
+    s.press(Key::RightArrow);
+    s.press(Key::DownArrow);
+    s.press(Key::Return);
+    assert_eq!(s.store().get_app().id, second_below);
+    s.press(Key::Escape);
+    s.press(Key::UpArrow);
+    // Far along the row, it has scrolled: the next row is entered at its first app.
+    for _ in 0..4 {
+        s.press(Key::RightArrow);
+    }
+    s.press(Key::DownArrow);
+    s.press(Key::Return);
+    assert_eq!(s.store().get_app().id, first_below);
+}
+
+#[test]
 fn back_and_home_both_leave_a_search() {
     // On a TV: Back from what was found is Home, with the box emptied.
     let s = start("linux-tv", Shell::Tv);
