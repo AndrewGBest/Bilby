@@ -1274,7 +1274,9 @@ mod tests {
         assert!(!missing.available_on(&Platform::preset("linux-x64-debian").unwrap()));
     }
 
+    // dpkg's file names have a colon in them, which Windows does not allow in one.
     #[test]
+    #[cfg(unix)]
     fn installed_packages_with_an_app_menu_entry_are_the_installed_apps() {
         let dir = std::env::temp_dir().join(format!("bilby-installed-apps-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);

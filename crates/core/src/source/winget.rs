@@ -457,7 +457,6 @@ mod tests {
         linux.linux.as_mut().unwrap().windows = false;
         assert!(!winget.available_on(&linux), "nothing to run them with");
         linux.linux.as_mut().unwrap().windows = true;
-        linux.offer_windows(true);
         assert!(winget.available_on(&linux));
         // Without the index there is simply nothing found.
         assert!(winget.search("vlc", 5).unwrap().is_empty());
