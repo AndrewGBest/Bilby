@@ -379,7 +379,7 @@ checksum = "ac07cdecf99051d9a5238b80f35af32cdeba5b336e55d957b318b50137e18da5"
 
 [[package]]
 name = "bilby"
-version = "0.1.32"
+version = "0.1.33"
 dependencies = [
  "bilby-core",
  "bilby-signin",
@@ -398,14 +398,14 @@ dependencies = [
 
 [[package]]
 name = "bilby-cli"
-version = "0.1.32"
+version = "0.1.33"
 dependencies = [
  "bilby-core",
 ]
 
 [[package]]
 name = "bilby-core"
-version = "0.1.32"
+version = "0.1.33"
 dependencies = [
  "flate2",
  "libc",
@@ -421,7 +421,7 @@ dependencies = [
 
 [[package]]
 name = "bilby-signin"
-version = "0.1.32"
+version = "0.1.33"
 dependencies = [
  "serde_json",
  "tao",
