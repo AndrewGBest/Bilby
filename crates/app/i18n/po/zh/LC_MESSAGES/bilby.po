@@ -1,0 +1,2006 @@
+msgid ""
+msgstr ""
+"Language: zh\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgctxt "DetailsBody"
+msgid "(confirmed by {})"
+msgstr "（已由 {} 确认）"
+
+msgctxt "TvShell"
+msgid "(confirmed by {})"
+msgstr "（已由 {} 确认）"
+
+msgctxt "FamilyRow"
+msgid ", unofficial"
+msgstr "，非官方"
+
+msgctxt "TvShell"
+msgid "A PIN guards these settings and adult content"
+msgstr "PIN 保护这些设置和成人内容"
+
+msgctxt "SettingsBody"
+msgid "A PIN is set"
+msgstr "已设置 PIN"
+
+msgctxt "SettingsBody"
+msgid "A folder chooser opens before each file is fetched. Backing out of it cancels the download."
+msgstr "每次下载文件前都会打开文件夹选择器。退出选择器即取消下载。"
+
+msgctxt "TvQuestion"
+msgid "A game controller is connected. Bilby has a layout with large text for the sofa, driven with the arrow keys of a remote or keyboard. You can change this later in Settings."
+msgstr "已连接游戏手柄。Bilby 有适合在沙发上使用的大字布局，可用遥控器或键盘的方向键操作。之后可在“设置”中更改。"
+
+msgctxt "DetailsBody"
+msgid "About"
+msgstr "关于"
+
+msgctxt "SettingsBody"
+msgid "About"
+msgstr "关于"
+
+msgctxt "TvShell"
+msgid "About"
+msgstr "关于"
+
+msgctxt "TvShell"
+msgid "About this package"
+msgstr "关于此软件包"
+
+msgctxt "WhatsNew"
+msgid "About this package"
+msgstr "关于此软件包"
+
+msgctxt "TvShell"
+msgid "About this website"
+msgstr "关于此网站"
+
+msgctxt "WhatsNew"
+msgid "About this website"
+msgstr "关于此网站"
+
+msgctxt "TvShell"
+msgid "Accounts"
+msgstr "账户"
+
+msgctxt "AppRow"
+msgid "Add"
+msgstr "添加"
+
+msgctxt "AppTile"
+msgid "Add"
+msgstr "添加"
+
+msgctxt "SettingsBody"
+msgid "Add"
+msgstr "添加"
+
+msgctxt "SettingsBody"
+msgid "Add this source"
+msgstr "添加此来源"
+
+msgctxt "DetailsBody"
+msgid "Add to favourites"
+msgstr "添加到收藏"
+
+msgctxt "SettingsBody"
+msgid "Address of a list of apps"
+msgstr "应用列表的地址"
+
+msgctxt "TvShell"
+msgid "Adult content on Home (off in Family mode)"
+msgstr "在首页显示成人内容（家庭模式下关闭）"
+
+msgctxt "TvShell"
+msgid "Adult content on Home, covered until chosen"
+msgstr "在首页显示成人内容，选中前保持遮盖"
+
+msgctxt "SettingsBody"
+msgid "Adult content on the home page"
+msgstr "首页上的成人内容"
+
+msgctxt "TvShell"
+msgid "Adult content uncovered (off in Family mode)"
+msgstr "不遮盖成人内容（家庭模式下关闭）"
+
+msgctxt "DesktopShell"
+msgid "All"
+msgstr "全部"
+
+msgctxt "MobileShell"
+msgid "All"
+msgstr "全部"
+
+msgctxt "SourceFilter"
+msgid "All"
+msgstr "全部"
+
+msgctxt "SettingsBody"
+msgid "App menu"
+msgstr "应用菜单"
+
+msgctxt "SettingsBody"
+msgid "AppImage"
+msgstr "AppImage"
+
+msgctxt "TvShell"
+msgid "AppImage"
+msgstr "AppImage"
+
+msgctxt "SettingsBody"
+msgid "Appearance"
+msgstr "外观"
+
+msgctxt "SettingsBody"
+msgid "Apps can also come from a list on your own server or storage: a small file saying what the apps are and where their files live. Add its address and its apps are searched, shown on the home page and installed like any others. Nobody but its owner vouches for what is on such a list, so add only ones you trust."
+msgstr "应用也可以来自你自己服务器或存储上的列表：一个说明有哪些应用、文件放在哪里的小文件。添加它的地址后，其中的应用就能被搜索、显示在首页，并像其他应用一样安装。这类列表上的内容只有其所有者为之担保，所以请只添加你信任的列表。"
+
+msgctxt "SettingsBody"
+msgid "Apps come from the sources listed above and are not reviewed by Bilby. Install software you trust. Made with Slint."
+msgstr "应用来自上面列出的来源，未经 Bilby 审核。请只安装你信任的软件。使用 Slint 制作。"
+
+msgctxt "LibraryBody"
+msgid "Apps you install from the store show up here, and the store can tell you when they have a new release."
+msgstr "你从商店安装的应用会显示在这里，有新版本时商店会通知你。"
+
+msgctxt "LibraryBody"
+msgid "Apps you install from the store show up here, and the store can tell you when they have a new release. Favourites are kept here too."
+msgstr "你从商店安装的应用会显示在这里，有新版本时商店会通知你。收藏也保存在这里。"
+
+msgctxt "TvShell"
+msgid "Apps you install with Bilby show up here, and so do your favourites."
+msgstr "你用 Bilby 安装的应用会显示在这里，你的收藏也在这里。"
+
+msgctxt "TvQuestion"
+msgid "Are you using this on a TV?"
+msgstr "你是在电视上使用吗？"
+
+msgctxt "SettingsBody"
+msgid "Ask for the PIN to install or remove apps"
+msgstr "安装或移除应用时要求输入 PIN"
+
+msgctxt "TvShell"
+msgid "Ask for the PIN to install or remove apps"
+msgstr "安装或移除应用时要求输入 PIN"
+
+msgctxt "TvShell"
+msgid "Ask for the PIN to install or remove apps (set a PIN first)"
+msgstr "安装或移除应用时要求输入 PIN（请先设置 PIN）"
+
+msgctxt "SettingsBody"
+msgid "Ask where to save each download"
+msgstr "每次下载都询问保存位置"
+
+msgctxt "SettingsBody"
+msgid "Automatic"
+msgstr "自动"
+
+msgctxt "TvShell"
+msgid "Automatic"
+msgstr "自动"
+
+msgctxt "DesktopShell"
+msgid "Back"
+msgstr "返回"
+
+msgctxt "MobileShell"
+msgid "Back"
+msgstr "返回"
+
+msgctxt "TvShell"
+msgid "Back cancels."
+msgstr "按返回键取消。"
+
+msgctxt "OptionCard"
+msgid "Best for this device"
+msgstr "最适合此设备"
+
+msgctxt "SettingsBody"
+msgid "Bilby adds itself to this device's list of apps the first time it runs, so it can be started like any other app. If you move its file, start it once from the new place."
+msgstr "Bilby 首次运行时会把自己添加到此设备的应用列表，这样就能像其他应用一样启动。如果你移动了它的文件，请从新位置启动一次。"
+
+msgctxt "DetailsBody"
+msgid "Bilby checks the download is the genuine file"
+msgstr "Bilby 会检查下载的是否为正版文件"
+
+msgctxt "TvShell"
+msgid "Bilby checks the download is the genuine file"
+msgstr "Bilby 会检查下载的是否为正版文件"
+
+msgctxt "OptionCard"
+msgid "Bilby checks the download is the genuine file before installing it"
+msgstr "Bilby 会在安装前检查下载的是否为正版文件"
+
+msgctxt "SettingsBody"
+msgid "Bilby goes by what its sources say: Steam's adult-only marks, an app's own age rating, and its list of well-known adult sites. A site it has never heard of is not recognised, and most sources say nothing about age at all."
+msgstr "Bilby 依据来源提供的信息判断：Steam 的仅限成人标记、应用自身的年龄分级，以及它收录的知名成人网站列表。它没听说过的网站无法识别，而且大多数来源根本不提供年龄信息。"
+
+msgctxt "SettingsBody"
+msgid "Bilby keeps a short list, chosen by people, of the apps and websites nearly everyone looks for: a browser, a video player, the big names. On, the home page starts with them in the version for this device, and they are placed a little higher in a search. Off, you get only what the sources' own figures say."
+msgstr "Bilby 有一份由人工挑选的简短列表，收录几乎人人都会找的应用和网站：浏览器、视频播放器和各大知名应用。开启后，首页会先展示它们适合此设备的版本，搜索时它们的排名也会略微靠前。关闭后，只按来源自身的数据显示。"
+
+msgctxt "TvShell"
+msgid "Bilby {0} is available. You have {1}"
+msgstr "Bilby {0} 已推出。你当前的版本是 {1}"
+
+msgctxt "SettingsBody"
+msgid "Bilby {0} is available. You have {1}."
+msgstr "Bilby {0} 已推出。你当前的版本是 {1}。"
+
+msgctxt "SettingsBody"
+msgid "Bilby {}. Everything runs on this device: there is no account and no server of ours. The store talks directly to the places apps come from, and keeps your library and settings in a file on this device."
+msgstr "Bilby {}。一切都在此设备上运行：没有账户，也没有我们的服务器。商店直接与应用的来源通信，并把你的应用库和设置保存在此设备的一个文件中。"
+
+msgctxt "LibraryBody"
+msgid "Browse apps"
+msgstr "浏览应用"
+
+msgctxt "DetailsBody"
+msgid "Cancel"
+msgstr "取消"
+
+msgctxt "GateOverlay"
+msgid "Cancel"
+msgstr "取消"
+
+msgctxt "LibraryItem"
+msgid "Cancel"
+msgstr "取消"
+
+msgctxt "OptionCard"
+msgid "Cancel"
+msgstr "取消"
+
+msgctxt "SettingsBody"
+msgid "Cancel"
+msgstr "取消"
+
+msgctxt "TvShell"
+msgid "Cancel"
+msgstr "取消"
+
+msgctxt "DetailsBody"
+msgid "Cancel downloading {}"
+msgstr "取消下载 {}"
+
+msgctxt "SettingsBody"
+msgid "Cancel signing in"
+msgstr "取消登录"
+
+msgctxt "GateOverlay"
+msgid "Cancel the PIN"
+msgstr "取消输入 PIN"
+
+msgctxt "LibraryItem"
+msgid "Cancel updating {}"
+msgstr "取消更新 {}"
+
+msgctxt "TvShell"
+msgid "Change"
+msgstr "更改"
+
+msgctxt "SettingsBody"
+msgid "Change PIN"
+msgstr "更改 PIN"
+
+msgctxt "SettingsBody"
+msgid "Change folder"
+msgstr "更改文件夹"
+
+msgctxt "SettingsBody"
+msgid "Change the downloads folder"
+msgstr "更改下载文件夹"
+
+msgctxt "TvShell"
+msgid "Change version"
+msgstr "更换版本"
+
+msgctxt "TvShell"
+msgid "Changing the system needs the password you sign in to this device with. Bilby passes it to the system and does not keep it."
+msgstr "更改系统需要你登录此设备时使用的密码。Bilby 会将它交给系统，不会保存。"
+
+msgctxt "SystemBody"
+msgid "Check again"
+msgstr "再次检查"
+
+msgctxt "TvShell"
+msgid "Check again"
+msgstr "再次检查"
+
+msgctxt "SettingsBody"
+msgid "Check for a newer Bilby"
+msgstr "检查 Bilby 新版本"
+
+msgctxt "LibraryBody"
+msgid "Check for updates"
+msgstr "检查更新"
+
+msgctxt "TvShell"
+msgid "Check for updates"
+msgstr "检查更新"
+
+msgctxt "TvShell"
+msgid "Check for updates when Bilby opens"
+msgstr "Bilby 打开时检查更新"
+
+msgctxt "SettingsBody"
+msgid "Check for updates when the store opens"
+msgstr "商店打开时检查更新"
+
+msgctxt "OptionCard"
+msgid "Checked against the publisher's SHA-256 after download"
+msgstr "下载后与发布者的 SHA-256 核对"
+
+msgctxt "LibraryBody"
+msgid "Checking for updates…"
+msgstr "正在检查更新…"
+
+msgctxt "DetailsBody"
+msgid "Checking releases against this device…"
+msgstr "正在检查适合此设备的版本…"
+
+msgctxt "TvShell"
+msgid "Checking what works on this TV…"
+msgstr "正在检查哪些能在这台电视上使用…"
+
+msgctxt "TvShell"
+msgid "Checking…"
+msgstr "正在检查…"
+
+msgctxt "TvShell"
+msgid "Choose a version"
+msgstr "选择版本"
+
+msgctxt "TvShell"
+msgid "Choose enter when it is typed. Back cancels."
+msgstr "输入完成后选择“确定”。按返回键取消。"
+
+msgctxt "GateOverlay"
+msgid "Clear"
+msgstr "清除"
+
+msgctxt "TvShell"
+msgid "Clear"
+msgstr "清除"
+
+msgctxt "SettingsBody"
+msgid "Clear cached catalog data"
+msgstr "清除缓存的目录数据"
+
+msgctxt "SearchField"
+msgid "Clear search"
+msgstr "清除搜索"
+
+msgctxt "SettingsBody"
+msgid "Clear search history"
+msgstr "清除搜索记录"
+
+msgctxt "TvShell"
+msgid "Clear the PIN"
+msgstr "清除 PIN"
+
+msgctxt "CommandBox"
+msgid "Command"
+msgstr "命令"
+
+msgctxt "OptionCard"
+msgid "Compatible"
+msgstr "兼容"
+
+msgctxt "TvShell"
+msgid "Confirm"
+msgstr "确认"
+
+msgctxt "LibraryItem"
+msgid "Confirm removing {}"
+msgstr "确认移除 {}"
+
+msgctxt "CommandBox"
+msgid "Copied"
+msgstr "已复制"
+
+msgctxt "CommandBox"
+msgid "Copy"
+msgstr "复制"
+
+msgctxt "CommandBox"
+msgid "Copy command"
+msgstr "复制命令"
+
+msgctxt "DetailsBody"
+msgid "Couldn't load this app"
+msgstr "无法加载此应用"
+
+msgctxt "SettingsBody"
+msgid "Dark"
+msgstr "深色"
+
+msgctxt "DesktopShell"
+msgid "Demo catalog"
+msgstr "演示目录"
+
+msgctxt "SettingsBody"
+msgid "Demo mode: the catalog is fictional and nothing is fetched from the network."
+msgstr "演示模式：目录内容为虚构，不会从网络获取任何内容。"
+
+msgctxt "TvShell"
+msgid "Description"
+msgstr "简介"
+
+msgctxt "SettingsBody"
+msgid "Desktop"
+msgstr "桌面"
+
+msgctxt "TvShell"
+msgid "Desktop layout"
+msgstr "桌面布局"
+
+msgctxt "LibraryItem"
+msgid "Details"
+msgstr "详情"
+
+msgctxt "LibraryItem"
+msgid "Details of {}"
+msgstr "{} 的详情"
+
+msgctxt "GateOverlay"
+msgid "Digit 0"
+msgstr "数字 0"
+
+msgctxt "GateOverlay"
+msgid "Digit {}"
+msgstr "数字 {}"
+
+msgctxt "TvShell"
+msgid "Digit {}"
+msgstr "数字 {}"
+
+msgctxt "DesktopShell"
+msgid "Discover"
+msgstr "发现"
+
+msgctxt "MobileShell"
+msgid "Discover"
+msgstr "发现"
+
+msgctxt "DetailsBody"
+msgid "Download"
+msgstr "下载"
+
+msgctxt "DetailsBody"
+msgid "Download anyway"
+msgstr "仍然下载"
+
+msgctxt "DetailsBody"
+msgid "Download anyway: {}"
+msgstr "仍然下载：{}"
+
+msgctxt "DetailsBody"
+msgid "Download size"
+msgstr "下载大小"
+
+msgctxt "TvShell"
+msgid "Download size"
+msgstr "下载大小"
+
+msgctxt "TvShell"
+msgid "Downloading…  {}%"
+msgstr "正在下载…  {}%"
+
+msgctxt "DetailsBody"
+msgid "Downloads"
+msgstr "下载"
+
+msgctxt "TvShell"
+msgid "Downloads"
+msgstr "下载"
+
+msgctxt "SettingsBody"
+msgid "Downloads folder path"
+msgstr "下载文件夹路径"
+
+msgctxt "SettingsBody"
+msgid "Downloads go to"
+msgstr "下载保存到"
+
+msgctxt "DetailsBody"
+msgid "Every way to install on {}"
+msgstr "在 {} 上安装的所有方式"
+
+msgctxt "LibraryBody"
+msgid "Everything is up to date"
+msgstr "全部已是最新"
+
+msgctxt "DesktopShell"
+msgid "Everything shown works here"
+msgstr "显示的内容都能在这里使用"
+
+msgctxt "SettingsBody"
+msgid "Everything works without signing in, but GitHub then allows only 60 requests an hour for your whole network, which a few searches can use up. Signing in raises that to 5,000. Bilby asks for no access to your account."
+msgstr "不登录也能使用全部功能，但 GitHub 对你的整个网络每小时只允许 60 次请求，搜索几次就可能用完。登录后可提高到 5,000 次。Bilby 不要求访问你的账户。"
+
+msgctxt "SettingsBody"
+msgid "Family and adult content"
+msgstr "家庭与成人内容"
+
+msgctxt "TvShell"
+msgid "Family and adult content"
+msgstr "家庭与成人内容"
+
+msgctxt "SettingsBody"
+msgid "Family mode"
+msgstr "家庭模式"
+
+msgctxt "TvShell"
+msgid "Family mode: nothing for adults is shown anywhere"
+msgstr "家庭模式：任何地方都不显示成人内容"
+
+msgctxt "LibraryBody"
+msgid "Favourites"
+msgstr "收藏"
+
+msgctxt "Spotlight"
+msgid "Featured"
+msgstr "精选"
+
+msgctxt "MobileShell"
+msgid "Featured apps"
+msgstr "精选应用"
+
+msgctxt "DesktopShell"
+msgid "Featured apps matching “{}”  ·  press Enter to search GitHub too"
+msgstr "与“{}”匹配的精选应用  ·  按 Enter 同时搜索 GitHub"
+
+msgctxt "DetailsBody"
+msgid "Files that won't work on this device"
+msgstr "无法在此设备上使用的文件"
+
+msgctxt "SettingsBody"
+msgid "Flatpak"
+msgstr "Flatpak"
+
+msgctxt "TvShell"
+msgid "Flatpak"
+msgstr "Flatpak"
+
+msgctxt "SettingsBody"
+msgid "For those who want no cover at all: adult things are shown as they are, among everything else, and open without a question."
+msgstr "适合完全不想遮盖的人：成人内容会原样显示在其他内容之中，打开时也不再询问。"
+
+msgctxt "SettingsBody"
+msgid "Four digits. With a PIN set, it is asked for to change anything in this card and to open adult content, in place of the question about being an adult."
+msgstr "四位数字。设置 PIN 后，更改此卡片中的任何设置或打开成人内容时都需要输入它，不再询问你是否成年。"
+
+msgctxt "DetailsBody"
+msgid "From"
+msgstr "来自"
+
+msgctxt "TvShell"
+msgid "From"
+msgstr "来自"
+
+msgctxt "TvShell"
+msgid "General"
+msgstr "通用"
+
+msgctxt "SettingsBody"
+msgid "GitHub access"
+msgstr "GitHub 访问"
+
+msgctxt "SettingsBody"
+msgid "GitHub token"
+msgstr "GitHub 令牌"
+
+msgctxt "Welcome"
+msgid "Got it"
+msgstr "知道了"
+
+msgctxt "DetailsBody"
+msgid "Hide other versions and files"
+msgstr "隐藏其他版本和文件"
+
+msgctxt "OptionCard"
+msgid "Hide steps"
+msgstr "隐藏步骤"
+
+msgctxt "SystemBody"
+msgid "Hide what the updater said"
+msgstr "隐藏更新程序的输出"
+
+msgctxt "DetailsBody"
+msgid "Hide {n} file for other devices"
+msgid_plural "Hide {n} files for other devices"
+msgstr[0] "隐藏 {n} 个适用于其他设备的文件"
+
+msgctxt "TvShell"
+msgid "Home"
+msgstr "首页"
+
+msgctxt "DetailsBody"
+msgid "In your favourites"
+msgstr "已收藏"
+
+msgctxt "SettingsBody"
+msgid "Include pre-releases"
+msgstr "包含预发布版"
+
+msgctxt "DetailsBody"
+msgid "Information"
+msgstr "信息"
+
+msgctxt "SystemBody"
+msgid "Information"
+msgstr "信息"
+
+msgctxt "TvShell"
+msgid "Information"
+msgstr "信息"
+
+msgctxt "AppRow"
+msgid "Install"
+msgstr "安装"
+
+msgctxt "AppTile"
+msgid "Install"
+msgstr "安装"
+
+msgctxt "DetailsBody"
+msgid "Install"
+msgstr "安装"
+
+msgctxt "OptionCard"
+msgid "Install"
+msgstr "安装"
+
+msgctxt "TvShell"
+msgid "Install again"
+msgstr "再次安装"
+
+msgctxt "AppRow"
+msgid "Install {} now"
+msgstr "立即安装 {}"
+
+msgctxt "AppTile"
+msgid "Install {} now"
+msgstr "立即安装 {}"
+
+msgctxt "AppRow"
+msgid "Installed"
+msgstr "已安装"
+
+msgctxt "AppTile"
+msgid "Installed"
+msgstr "已安装"
+
+msgctxt "DetailsBody"
+msgid "Installed"
+msgstr "已安装"
+
+msgctxt "TvShell"
+msgid "Installed"
+msgstr "已安装"
+
+msgctxt "TvTile"
+msgid "Installed"
+msgstr "已安装"
+
+msgctxt "DetailsBody"
+msgid "Installed  ·  {}"
+msgstr "已安装  ·  {}"
+
+msgctxt "TvShell"
+msgid "Installed  ·  {}"
+msgstr "已安装  ·  {}"
+
+msgctxt "SettingsBody"
+msgid "Installers and other files Bilby downloads are saved here. Apps that run as one file (AppImages) are then moved to the Applications folder in your home folder; packages, Flatpaks and store apps go where your system puts them."
+msgstr "Bilby 下载的安装程序和其他文件保存在这里。单文件运行的应用（AppImage）随后会移到主文件夹下的 Applications 文件夹；软件包、Flatpak 和商店应用则放在系统指定的位置。"
+
+msgctxt "DetailsBody"
+msgid "Installing from {}"
+msgstr "正在从 {} 安装"
+
+msgctxt "TvShell"
+msgid "Installing updates"
+msgstr "正在安装更新"
+
+msgctxt "TvQuestion"
+msgid "Keep this layout"
+msgstr "保留此布局"
+
+msgctxt "TvShell"
+msgid "Kind of app to offer first when there is a choice"
+msgstr "有多种选择时优先提供的应用类型"
+
+msgctxt "DetailsBody"
+msgid "Kind of file"
+msgstr "文件类型"
+
+msgctxt "TvShell"
+msgid "Kind of file"
+msgstr "文件类型"
+
+msgctxt "SettingsBody"
+msgid "Language"
+msgstr "语言"
+
+msgctxt "TvShell"
+msgid "Language"
+msgstr "语言"
+
+msgctxt "LibraryBody"
+msgid "Last checked {}"
+msgstr "上次检查：{}"
+
+msgctxt "SettingsBody"
+msgid "Layout"
+msgstr "布局"
+
+msgctxt "DesktopShell"
+msgid "Library"
+msgstr "应用库"
+
+msgctxt "MobileShell"
+msgid "Library"
+msgstr "应用库"
+
+msgctxt "TvShell"
+msgid "Library"
+msgstr "应用库"
+
+msgctxt "TvShell"
+msgid "Library  ·  {n} update"
+msgid_plural "Library  ·  {n} updates"
+msgstr[0] "应用库  ·  {n} 个更新"
+
+msgctxt "DetailsBody"
+msgid "Licence"
+msgstr "许可证"
+
+msgctxt "TvShell"
+msgid "Licence"
+msgstr "许可证"
+
+msgctxt "SettingsBody"
+msgid "Light"
+msgstr "浅色"
+
+msgctxt "DetailsBody"
+msgid "Made by"
+msgstr "开发者"
+
+msgctxt "TvShell"
+msgid "Made by"
+msgstr "开发者"
+
+msgctxt "SettingsBody"
+msgid "Many apps come more than one way. Choose which Bilby offers first when there is a choice. Automatic picks what suits this system: its own packages on most, Flatpak on a read-only system such as Fedora Kinoite. You can always pick another on an app's page."
+msgstr "许多应用有不止一种获取方式。请选择有多种选择时 Bilby 优先提供哪一种。“自动”会选择适合此系统的方式：多数系统用其自带的软件包，Fedora Kinoite 这类只读系统用 Flatpak。你随时可以在应用页面上另选。"
+
+msgctxt "SettingsBody"
+msgid "Match system"
+msgstr "跟随系统"
+
+msgctxt "TvShell"
+msgid "More choices"
+msgstr "更多选项"
+
+msgctxt "GateOverlay"
+msgid "No"
+msgstr "否"
+
+msgctxt "TvShell"
+msgid "No PIN is set"
+msgstr "未设置 PIN"
+
+msgctxt "DesktopShell"
+msgid "No apps for this device"
+msgstr "没有适合此设备的应用"
+
+msgctxt "MobileShell"
+msgid "No apps for this device"
+msgstr "没有适合此设备的应用"
+
+msgctxt "GateOverlay"
+msgid "No, I am not"
+msgstr "不，我不是"
+
+msgctxt "DesktopShell"
+msgid "Nothing featured for this device yet"
+msgstr "暂时没有适合此设备的精选内容"
+
+msgctxt "MobileShell"
+msgid "Nothing featured for this device yet"
+msgstr "暂时没有适合此设备的精选内容"
+
+msgctxt "SettingsBody"
+msgid "Nothing for adults is shown anywhere, not even covered, and none of it can be opened."
+msgstr "任何地方都不显示成人内容，连遮盖的也没有，而且都无法打开。"
+
+msgctxt "TvShell"
+msgid "Nothing for this TV yet. Press Up to search."
+msgstr "暂时没有适合这台电视的内容。按上键搜索。"
+
+msgctxt "TvSetting"
+msgid "Off"
+msgstr "关"
+
+msgctxt "SettingsBody"
+msgid "Off, adult things are only ever found by searching. On, they may also appear on the home page, covered like everywhere else."
+msgstr "关闭时，成人内容只能通过搜索找到。开启时，它们也可能出现在首页，并像其他地方一样被遮盖。"
+
+msgctxt "SettingsBody"
+msgid "Offer betas and release candidates as soon as they are published. They may be unstable."
+msgstr "测试版和候选版本一发布就提供。它们可能不稳定。"
+
+msgctxt "TvShell"
+msgid "Offer test versions of apps"
+msgstr "提供应用的测试版本"
+
+msgctxt "FamilyRow"
+msgid "Official"
+msgstr "官方"
+
+msgctxt "TvSetting"
+msgid "On"
+msgstr "开"
+
+msgctxt "SettingsBody"
+msgid "On this or any other device, open github.com/login/device and enter this code:"
+msgstr "在此设备或其他任何设备上打开 github.com/login/device 并输入此代码："
+
+msgctxt "TvShell"
+msgid "On your phone or computer, open github.com/login/device and enter:"
+msgstr "在手机或电脑上打开 github.com/login/device 并输入："
+
+msgctxt "TvShell"
+msgid "On-screen keyboard"
+msgstr "屏幕键盘"
+
+msgctxt "MobileShell"
+msgid "Only apps that work on this device are listed."
+msgstr "仅列出能在此设备上使用的应用。"
+
+msgctxt "DetailsBody"
+msgid "Open"
+msgstr "打开"
+
+msgctxt "TvShell"
+msgid "Open"
+msgstr "打开"
+
+msgctxt "SettingsBody"
+msgid "Open downloads folder"
+msgstr "打开下载文件夹"
+
+msgctxt "SettingsBody"
+msgid "Open folder"
+msgstr "打开文件夹"
+
+msgctxt "TvShell"
+msgid "Open link {}"
+msgstr "打开链接 {}"
+
+msgctxt "SettingsBody"
+msgid "Open that page"
+msgstr "打开该页面"
+
+msgctxt "TvShell"
+msgid "Open the Steam app on your phone, scan this code and approve the sign-in there."
+msgstr "在手机上打开 Steam 应用，扫描此二维码并在应用中批准登录。"
+
+msgctxt "TvShell"
+msgid "Opens in Longboard, driven with your remote"
+msgstr "在 Longboard 中打开，用遥控器操作"
+
+msgctxt "SettingsBody"
+msgid "Or paste a personal access token (one with no scopes is enough):"
+msgstr "或粘贴个人访问令牌（无需任何权限范围）："
+
+msgctxt "TvShell"
+msgid "Or sign in to Steam in a browser (Longboard)"
+msgstr "或在浏览器（Longboard）中登录 Steam"
+
+msgctxt "SettingsBody"
+msgid "Or type a folder's full path and press Enter"
+msgstr "或输入文件夹的完整路径并按 Enter"
+
+msgctxt "DetailsBody"
+msgid "Other versions and files"
+msgstr "其他版本和文件"
+
+msgctxt "FamilyPanel"
+msgid "Other ways to use {}"
+msgstr "使用 {} 的其他方式"
+
+msgctxt "TvShell"
+msgid "Other ways to use {}"
+msgstr "使用 {} 的其他方式"
+
+msgctxt "SettingsBody"
+msgid "PIN"
+msgstr "PIN"
+
+msgctxt "SettingsBody"
+msgid "Paste a new token to replace it"
+msgstr "粘贴新令牌以替换"
+
+msgctxt "SettingsBody"
+msgid "Paste a token"
+msgstr "粘贴令牌"
+
+msgctxt "TvShell"
+msgid "Pick letters, then choose search"
+msgstr "选择字母，然后选择搜索"
+
+msgctxt "DetailsBody"
+msgid "Picture {0} of {1}"
+msgstr "第 {0} 张图片，共 {1} 张"
+
+msgctxt "TvShell"
+msgid "Picture {0} of {1}"
+msgstr "第 {0} 张图片，共 {1} 张"
+
+msgctxt "TvShell"
+msgid "Picture {0} of {1}, large"
+msgstr "第 {0} 张图片，共 {1} 张，大图"
+
+msgctxt "TvShell"
+msgid "Pictures"
+msgstr "图片"
+
+msgctxt "DetailsBody"
+msgid "Popularity"
+msgstr "热度"
+
+msgctxt "TvShell"
+msgid "Popularity"
+msgstr "热度"
+
+msgctxt "SettingsBody"
+msgid "Preferred kind of app"
+msgstr "首选应用类型"
+
+msgctxt "TvShell"
+msgid "Press Back to stop."
+msgstr "按返回键停止。"
+
+msgctxt "TvShell"
+msgid "Press OK again to remove {} from this TV"
+msgstr "再按一次 OK，从这台电视移除 {}"
+
+msgctxt "TvShell"
+msgid "Press OK for the keyboard"
+msgstr "按 OK 打开键盘"
+
+msgctxt "TvShell"
+msgid "Press OK for the next language"
+msgstr "按 OK 切换到下一种语言"
+
+msgctxt "DetailsBody"
+msgid "Price"
+msgstr "价格"
+
+msgctxt "TvShell"
+msgid "Price"
+msgstr "价格"
+
+msgctxt "DetailsBody"
+msgid "Project page"
+msgstr "项目主页"
+
+msgctxt "SettingsBody"
+msgid "QR code to scan with the Steam app"
+msgstr "供 Steam 应用扫描的二维码"
+
+msgctxt "TvShell"
+msgid "QR code to scan with the Steam app"
+msgstr "供 Steam 应用扫描的二维码"
+
+msgctxt "DetailsBody"
+msgid "Ratings"
+msgstr "评分"
+
+msgctxt "DetailsBody"
+msgid "Ratings and reviews"
+msgstr "评分和评价"
+
+msgctxt "TvShell"
+msgid "Ratings and reviews"
+msgstr "评分和评价"
+
+msgctxt "DetailsBody"
+msgid "Ratings come from the ratings service the GNOME and KDE app stores use."
+msgstr "评分来自 GNOME 和 KDE 应用商店使用的评分服务。"
+
+msgctxt "Clamped"
+msgid "Read more"
+msgstr "查看更多"
+
+msgctxt "TvShell"
+msgid "Reading"
+msgstr "阅读"
+
+msgctxt "LibraryItem"
+msgid "Really remove?"
+msgstr "确定要移除吗？"
+
+msgctxt "DesktopShell"
+msgid "Recent"
+msgstr "最近"
+
+msgctxt "SettingsBody"
+msgid "Recommend the apps everyone knows"
+msgstr "推荐大家熟知的应用"
+
+msgctxt "TvShell"
+msgid "Recommend the apps everyone knows, on Home and in searches"
+msgstr "在首页和搜索中推荐大家熟知的应用"
+
+msgctxt "SettingsBody"
+msgid "Recommendations"
+msgstr "推荐"
+
+msgctxt "SettingsBody"
+msgid "Reduce motion"
+msgstr "减少动态效果"
+
+msgctxt "SettingsBody"
+msgid "Reduce motion: pages and buttons change at once instead of moving."
+msgstr "减少动态效果：页面和按钮直接切换，不带移动动画。"
+
+msgctxt "DetailsBody"
+msgid "Reinstall"
+msgstr "重新安装"
+
+msgctxt "OptionCard"
+msgid "Reinstall"
+msgstr "重新安装"
+
+msgctxt "DetailsBody"
+msgid "Released"
+msgstr "发布日期"
+
+msgctxt "TvShell"
+msgid "Released"
+msgstr "发布日期"
+
+msgctxt "SettingsBody"
+msgid "Releases"
+msgstr "发布版本"
+
+msgctxt "LibraryItem"
+msgid "Remove"
+msgstr "移除"
+
+msgctxt "SettingsBody"
+msgid "Remove"
+msgstr "移除"
+
+msgctxt "TvShell"
+msgid "Remove"
+msgstr "移除"
+
+msgctxt "SettingsBody"
+msgid "Remove PIN"
+msgstr "移除 PIN"
+
+msgctxt "DetailsBody"
+msgid "Remove from favourites"
+msgstr "取消收藏"
+
+msgctxt "TvShell"
+msgid "Remove the PIN"
+msgstr "移除 PIN"
+
+msgctxt "SettingsBody"
+msgid "Remove the source {}"
+msgstr "移除来源 {}"
+
+msgctxt "LibraryItem"
+msgid "Remove {}"
+msgstr "移除 {}"
+
+msgctxt "SystemBody"
+msgid "Restart now"
+msgstr "立即重启"
+
+msgctxt "TvShell"
+msgid "Restart now"
+msgstr "立即重启"
+
+msgctxt "TvShell"
+msgid "Restart this TV to finish updating."
+msgstr "重启这台电视以完成更新。"
+
+msgctxt "SystemBody"
+msgid "Restart this device to finish: something that was updated is still running in its old version."
+msgstr "重启此设备以完成更新：有些已更新的程序仍在以旧版本运行。"
+
+msgctxt "DesktopShell"
+msgid "Results"
+msgstr "结果"
+
+msgctxt "TvShell"
+msgid "Review {0} of {1}"
+msgstr "第 {0} 条评价，共 {1} 条"
+
+msgctxt "DetailsBody"
+msgid "Review {0}: {1}"
+msgstr "评价 {0}：{1}"
+
+msgctxt "TvShell"
+msgid "Review {0}: {1}"
+msgstr "评价 {0}：{1}"
+
+msgctxt "TvShell"
+msgid "Review: {}"
+msgstr "评价：{}"
+
+msgctxt "TvShell"
+msgid "Reviews"
+msgstr "评价"
+
+msgctxt "DetailsBody"
+msgid "Reviews are written by other people and come from the ratings service the GNOME and KDE app stores use."
+msgstr "评价由其他用户撰写，来自 GNOME 和 KDE 应用商店使用的评分服务。"
+
+msgctxt "TvShell"
+msgid "Reviews are written by other people and come from the ratings service the GNOME and KDE app stores use."
+msgstr "评价由其他用户撰写，来自 GNOME 和 KDE 应用商店使用的评分服务。"
+
+msgctxt "TvShell"
+msgid "Runs on this TV"
+msgstr "可在这台电视上运行"
+
+msgctxt "DetailsBody"
+msgid "Runs on this device"
+msgstr "可在此设备上运行"
+
+msgctxt "OptionCard"
+msgid "Runs on this device"
+msgstr "可在此设备上运行"
+
+msgctxt "SettingsBody"
+msgid "Save"
+msgstr "保存"
+
+msgctxt "SettingsBody"
+msgid "Save token"
+msgstr "保存令牌"
+
+msgctxt "SettingsBody"
+msgid "Saved"
+msgstr "已保存"
+
+msgctxt "SettingsBody"
+msgid "Scan a code with the Steam app on your phone. Nothing to type. Steam gives Bilby a key to your account, which Bilby uses once to read the list and then throws away."
+msgstr "用手机上的 Steam 应用扫码，无需输入。Steam 会给 Bilby 一把访问你账户的密钥，Bilby 只用它读取一次列表，随后丢弃。"
+
+msgctxt "TvShell"
+msgid "Scan the code with the Steam app on your phone"
+msgstr "用手机上的 Steam 应用扫描二维码"
+
+msgctxt "SettingsBody"
+msgid "Scan this with the Steam app on your phone and approve the sign-in there."
+msgstr "用手机上的 Steam 应用扫描此码，并在应用中批准登录。"
+
+msgctxt "SettingsBody"
+msgid "Scanned. Approve it in the Steam app."
+msgstr "已扫描。请在 Steam 应用中批准。"
+
+msgctxt "TvShell"
+msgid "Scanned. Approve it in the Steam app."
+msgstr "已扫描。请在 Steam 应用中批准。"
+
+msgctxt "DesktopShell"
+msgid "Search"
+msgstr "搜索"
+
+msgctxt "MobileShell"
+msgid "Search"
+msgstr "搜索"
+
+msgctxt "SearchField"
+msgid "Search"
+msgstr "搜索"
+
+msgctxt "TvShell"
+msgid "Search"
+msgstr "搜索"
+
+msgctxt "DesktopShell"
+msgid "Search again for {}"
+msgstr "重新搜索 {}"
+
+msgctxt "SearchField"
+msgid "Search apps"
+msgstr "搜索应用"
+
+msgctxt "DesktopShell"
+msgid "Search for an app by name, or paste a project link."
+msgstr "按名称搜索应用，或粘贴项目链接。"
+
+msgctxt "MobileShell"
+msgid "Search for an app by name, or paste a project link."
+msgstr "按名称搜索应用，或粘贴项目链接。"
+
+msgctxt "TvShell"
+msgid "Search for apps and games"
+msgstr "搜索应用和游戏"
+
+msgctxt "MobileShell"
+msgid "Search, or paste a project link"
+msgstr "搜索，或粘贴项目链接"
+
+msgctxt "DesktopShell"
+msgid "Search, or paste a project link   (Ctrl+K)"
+msgstr "搜索，或粘贴项目链接   (Ctrl+K)"
+
+msgctxt "DesktopShell"
+msgid "Searching…"
+msgstr "正在搜索…"
+
+msgctxt "MobileShell"
+msgid "Searching…"
+msgstr "正在搜索…"
+
+msgctxt "TvShell"
+msgid "Searching…"
+msgstr "正在搜索…"
+
+msgctxt "SettingsBody"
+msgid "Set a PIN"
+msgstr "设置 PIN"
+
+msgctxt "TvShell"
+msgid "Set a PIN"
+msgstr "设置 PIN"
+
+msgctxt "SettingsBody"
+msgid "Set a PIN below so that it cannot simply be switched off."
+msgstr "请在下方设置 PIN，这样它就不会被随意关闭。"
+
+msgctxt "TvShell"
+msgid "Set a PIN to guard these settings and adult content"
+msgstr "设置 PIN 以保护这些设置和成人内容"
+
+msgctxt "DesktopShell"
+msgid "Settings"
+msgstr "设置"
+
+msgctxt "MobileShell"
+msgid "Settings"
+msgstr "设置"
+
+msgctxt "TvShell"
+msgid "Settings"
+msgstr "设置"
+
+msgctxt "TvShell"
+msgid "Should run on this TV"
+msgstr "应该能在这台电视上运行"
+
+msgctxt "DetailsBody"
+msgid "Should run on this device"
+msgstr "应该能在此设备上运行"
+
+msgctxt "OptionCard"
+msgid "Should run on this device"
+msgstr "应该能在此设备上运行"
+
+msgctxt "SettingsBody"
+msgid "Show Bilby in the app menu"
+msgstr "在应用菜单中显示 Bilby"
+
+msgctxt "SettingsBody"
+msgid "Show adult content uncovered"
+msgstr "不遮盖成人内容"
+
+msgctxt "TvShell"
+msgid "Show adult content uncovered, with no question"
+msgstr "不遮盖成人内容，也不询问"
+
+msgctxt "Clamped"
+msgid "Show all of {}"
+msgstr "显示 {} 的全部内容"
+
+msgctxt "DesktopShell"
+msgid "Show all {0} in {1}"
+msgstr "显示 {1} 中的全部 {0} 项"
+
+msgctxt "MobileShell"
+msgid "Show all {0} in {1}"
+msgstr "显示 {1} 中的全部 {0} 项"
+
+msgctxt "DesktopShell"
+msgid "Show all {}"
+msgstr "显示全部 {}"
+
+msgctxt "MobileShell"
+msgid "Show all {}"
+msgstr "显示全部 {}"
+
+msgctxt "SystemBody"
+msgid "Show all {}"
+msgstr "显示全部 {}"
+
+msgctxt "SettingsBody"
+msgid "Show apps from {}"
+msgstr "显示来自 {} 的应用"
+
+msgctxt "TvShell"
+msgid "Show code"
+msgstr "显示代码"
+
+msgctxt "SystemBody"
+msgid "Show fewer"
+msgstr "显示更少"
+
+msgctxt "Clamped"
+msgid "Show less"
+msgstr "收起"
+
+msgctxt "Clamped"
+msgid "Show less of {}"
+msgstr "收起 {}"
+
+msgctxt "SettingsBody"
+msgid "Show ratings and reviews"
+msgstr "显示评分和评价"
+
+msgctxt "UpdatesBanner"
+msgid "Show updates"
+msgstr "显示更新"
+
+msgctxt "SystemBody"
+msgid "Show what the updater said"
+msgstr "显示更新程序的输出"
+
+msgctxt "DetailsBody"
+msgid "Show {n} file for other devices"
+msgid_plural "Show {n} files for other devices"
+msgstr[0] "显示 {n} 个适用于其他设备的文件"
+
+msgctxt "TvShell"
+msgid "Sign in"
+msgstr "登录"
+
+msgctxt "SettingsBody"
+msgid "Sign in in a browser"
+msgstr "在浏览器中登录"
+
+msgctxt "SettingsBody"
+msgid "Sign in on Steam's page in Longboard, then choose to share your library."
+msgstr "在 Longboard 中打开的 Steam 页面上登录，然后选择共享你的 Steam 库。"
+
+msgctxt "TvShell"
+msgid "Sign in on Steam's page in Longboard, then share your library"
+msgstr "在 Longboard 中的 Steam 页面登录，然后共享你的 Steam 库"
+
+msgctxt "SettingsBody"
+msgid "Sign in on Steam's page in the window that opened. Close it to stop."
+msgstr "在打开的窗口中的 Steam 页面上登录。关闭窗口即可停止。"
+
+msgctxt "TvShell"
+msgid "Sign in to GitHub for more searches an hour"
+msgstr "登录 GitHub，每小时可搜索更多次"
+
+msgctxt "TvShell"
+msgid "Sign in to Steam"
+msgstr "登录 Steam"
+
+msgctxt "SettingsBody"
+msgid "Sign in to Steam in a browser"
+msgstr "在浏览器中登录 Steam"
+
+msgctxt "SettingsBody"
+msgid "Sign in to Steam with a QR code"
+msgstr "用二维码登录 Steam"
+
+msgctxt "TvShell"
+msgid "Sign in to Steam with a QR code, to see what you own"
+msgstr "用二维码登录 Steam，查看你拥有的内容"
+
+msgctxt "SettingsBody"
+msgid "Sign in to see which Steam games you already own. Bilby keeps only the list of what you own, on this device. Choose how:"
+msgstr "登录后可查看你已拥有哪些 Steam 游戏。Bilby 只在此设备上保存你拥有的游戏列表。请选择方式："
+
+msgctxt "SettingsBody"
+msgid "Sign in with GitHub"
+msgstr "使用 GitHub 登录"
+
+msgctxt "SettingsBody"
+msgid "Sign in with a QR code"
+msgstr "用二维码登录"
+
+msgctxt "SettingsBody"
+msgid "Sign out"
+msgstr "退出登录"
+
+msgctxt "TvShell"
+msgid "Sign out"
+msgstr "退出登录"
+
+msgctxt "SettingsBody"
+msgid "Sign out of GitHub"
+msgstr "退出 GitHub"
+
+msgctxt "SettingsBody"
+msgid "Sign out of Steam"
+msgstr "退出 Steam"
+
+msgctxt "SettingsBody"
+msgid "Sign-in code {}"
+msgstr "登录代码 {}"
+
+msgctxt "TvShell"
+msgid "Sign-in code {}"
+msgstr "登录代码 {}"
+
+msgctxt "TvShell"
+msgid "Signed in to GitHub"
+msgstr "已登录 GitHub"
+
+msgctxt "TvShell"
+msgid "Signed in to Steam  ·  {}"
+msgstr "已登录 Steam  ·  {}"
+
+msgctxt "SettingsBody"
+msgid "Signed in. Bilby knows {} in your Steam library and marks them Owned."
+msgstr "已登录。Bilby 已知你的 Steam 库中有 {}，并将它们标记为“已拥有”。"
+
+msgctxt "TvShell"
+msgid "Signing in to GitHub…"
+msgstr "正在登录 GitHub…"
+
+msgctxt "LibraryItem"
+msgid "Skip"
+msgstr "跳过"
+
+msgctxt "LibraryItem"
+msgid "Skip this update of {}"
+msgstr "跳过 {} 的这次更新"
+
+msgctxt "LibraryItem"
+msgid "Skip this version"
+msgstr "跳过此版本"
+
+msgctxt "SettingsBody"
+msgid "So that nothing is added to or taken off this device without it."
+msgstr "这样未经它许可，就无法在此设备上添加或移除任何东西。"
+
+msgctxt "SettingsBody"
+msgid "Some games, apps and websites are meant for adults. They are kept apart: in a search they have a section of their own, each one covered until you choose it, and you are asked to confirm you are an adult before one opens."
+msgstr "有些游戏、应用和网站面向成人。它们会被单独存放：搜索时自成一栏，每一项在你选中前都保持遮盖，打开前还会请你确认已成年。"
+
+msgctxt "SettingsBody"
+msgid "Sounds"
+msgstr "声音"
+
+msgctxt "TvShell"
+msgid "Sounds: a quiet tick as you move about"
+msgstr "声音：移动时发出轻微的滴答声"
+
+msgctxt "SettingsBody"
+msgid "Sounds: a quiet tick or pop as you move about and press things."
+msgstr "声音：移动和按键时发出轻微的滴答声或啪嗒声。"
+
+msgctxt "SettingsBody"
+msgid "Steam"
+msgstr "Steam"
+
+msgctxt "TvShell"
+msgid "Steam gives Bilby a key to your account. Bilby uses it once to read what you own, then throws it away."
+msgstr "Steam 会给 Bilby 一把访问你账户的密钥。Bilby 只用它读取一次你拥有的内容，随后丢弃。"
+
+msgctxt "SettingsBody"
+msgid "Steam's own sign-in page opens in a small window. The browser asks Steam for the list, so no key ever reaches Bilby."
+msgstr "Steam 自己的登录页面会在一个小窗口中打开。由浏览器向 Steam 请求列表，因此密钥不会到达 Bilby。"
+
+msgctxt "SettingsBody"
+msgid "Stop waiting"
+msgstr "停止等待"
+
+msgctxt "SettingsBody"
+msgid "Stop waiting for Steam"
+msgstr "停止等待 Steam"
+
+msgctxt "SettingsBody"
+msgid "Storage"
+msgstr "存储"
+
+msgctxt "TvShell"
+msgid "Switch"
+msgstr "切换"
+
+msgctxt "SettingsBody"
+msgid "Switch off any place you do not want apps from. It is then left out of searches and the home page; an app from it can still be opened by its link."
+msgstr "关闭你不想从中获取应用的来源。之后搜索和首页都不再包含它；来自它的应用仍可通过链接打开。"
+
+msgctxt "DetailsBody"
+msgid "Switch to {}"
+msgstr "切换到 {}"
+
+msgctxt "SettingsBody"
+msgid "Switching it off needs the PIN."
+msgstr "关闭它需要 PIN。"
+
+msgctxt "SystemCard"
+msgid "System details"
+msgstr "系统详情"
+
+msgctxt "SettingsBody"
+msgid "System details and updates"
+msgstr "系统详情和更新"
+
+msgctxt "SettingsBody"
+msgid "System packages"
+msgstr "系统软件包"
+
+msgctxt "TvShell"
+msgid "System packages"
+msgstr "系统软件包"
+
+msgctxt "SettingsBody"
+msgid "TV"
+msgstr "电视"
+
+msgctxt "TvShell"
+msgid "That was not the password. Try again."
+msgstr "密码不正确。请重试。"
+
+msgctxt "SettingsBody"
+msgid "The TV layout has large text and is driven with the arrow keys of a remote or keyboard. To come back from it, open This TV at the top of its screen."
+msgstr "电视布局使用大字，可用遥控器或键盘的方向键操作。要从中返回，请打开屏幕顶部的“这台电视”。"
+
+msgctxt "SettingsBody"
+msgid "The code refreshes by itself."
+msgstr "二维码会自动刷新。"
+
+msgctxt "SettingsBody"
+msgid "The store only lists apps with a file that can be installed here. This is what it detected."
+msgstr "商店只列出有可在此安装的文件的应用。以下是它检测到的信息。"
+
+msgctxt "SettingsBody"
+msgid "They come from the service the GNOME and KDE app stores use (odrs.gnome.org). Star ratings arrive as one file a day for every app. Written reviews are asked for when you open the page of an app that has them, which tells that service which app it was. Nothing that identifies you is sent."
+msgstr "它们来自 GNOME 和 KDE 应用商店使用的服务（odrs.gnome.org）。星级评分每天以一个文件的形式获取，涵盖所有应用。文字评价则在你打开有评价的应用页面时请求，这会让该服务知道是哪个应用。不会发送任何能识别你身份的信息。"
+
+msgctxt "LibraryItem"
+msgid "This deletes the app's file from your Applications folder."
+msgstr "这会从你的 Applications 文件夹中删除该应用的文件。"
+
+msgctxt "MobileShell"
+msgid "This device"
+msgstr "此设备"
+
+msgctxt "SettingsBody"
+msgid "This device  ·  {}"
+msgstr "此设备  ·  {}"
+
+msgctxt "LibraryItem"
+msgid "This only forgets the app here. To uninstall it, use your system's software manager."
+msgstr "这只会让 Bilby 不再记录此应用。要卸载它，请使用系统的软件管理器。"
+
+msgctxt "TvShell"
+msgid "This store"
+msgstr "本商店"
+
+msgctxt "DesktopShell"
+msgid "Try a different name, or check the spelling. Projects without a file for {} are left out."
+msgstr "换个名称试试，或检查拼写。没有适用于 {} 的文件的项目不会列出。"
+
+msgctxt "MobileShell"
+msgid "Try a different name. Apps that do not work on this device are left out."
+msgstr "换个名称试试。无法在此设备上使用的应用不会列出。"
+
+msgctxt "DetailsBody"
+msgid "Try again"
+msgstr "重试"
+
+msgctxt "TvShell"
+msgid "Try again"
+msgstr "重试"
+
+msgctxt "DesktopShell"
+msgid "Type a name and press Enter, or paste a link to a project. Only apps that work on this device are listed."
+msgstr "输入名称并按 Enter，或粘贴项目链接。仅列出能在此设备上使用的应用。"
+
+msgctxt "TvShell"
+msgid "Type a name, then press OK"
+msgstr "输入名称，然后按 OK"
+
+msgctxt "FamilyRow"
+msgid "Unofficial"
+msgstr "非官方"
+
+msgctxt "TvShell"
+msgid "Up and Down move through the list. OK changes the highlighted setting."
+msgstr "上下键在列表中移动。OK 键更改高亮的设置。"
+
+msgctxt "AppRow"
+msgid "Update"
+msgstr "更新"
+
+msgctxt "AppTile"
+msgid "Update"
+msgstr "更新"
+
+msgctxt "DetailsBody"
+msgid "Update"
+msgstr "更新"
+
+msgctxt "LibraryItem"
+msgid "Update"
+msgstr "更新"
+
+msgctxt "OptionCard"
+msgid "Update"
+msgstr "更新"
+
+msgctxt "TvShell"
+msgid "Update"
+msgstr "更新"
+
+msgctxt "LibraryBody"
+msgid "Update all"
+msgstr "全部更新"
+
+msgctxt "TvShell"
+msgid "Update all"
+msgstr "全部更新"
+
+msgctxt "AppRow"
+msgid "Update available"
+msgstr "有可用更新"
+
+msgctxt "TvShell"
+msgid "Update available"
+msgstr "有可用更新"
+
+msgctxt "TvTile"
+msgid "Update available"
+msgstr "有可用更新"
+
+msgctxt "DetailsBody"
+msgid "Update available  ·  you have {0}, latest is {1}"
+msgstr "有可用更新  ·  当前版本 {0}，最新版本 {1}"
+
+msgctxt "TvShell"
+msgid "Update available: you have {}"
+msgstr "有可用更新：当前版本 {}"
+
+msgctxt "SystemBody"
+msgid "Update now"
+msgstr "立即更新"
+
+msgctxt "TvShell"
+msgid "Update now"
+msgstr "立即更新"
+
+msgctxt "SystemCard"
+msgid "Update system"
+msgstr "更新系统"
+
+msgctxt "LibraryItem"
+msgid "Update {}"
+msgstr "更新 {}"
+
+msgctxt "AppRow"
+msgid "Update {} now"
+msgstr "立即更新 {}"
+
+msgctxt "AppTile"
+msgid "Update {} now"
+msgstr "立即更新 {}"
+
+msgctxt "SettingsBody"
+msgid "Updates"
+msgstr "更新"
+
+msgctxt "LibraryItem"
+msgid "Updating…"
+msgstr "正在更新…"
+
+msgctxt "TvQuestion"
+msgid "Use the TV layout"
+msgstr "使用电视布局"
+
+msgctxt "TvShell"
+msgid "Use the desktop layout, for a mouse and keyboard"
+msgstr "使用桌面布局，适合鼠标和键盘"
+
+msgctxt "SettingsBody"
+msgid "Use the usual folder"
+msgstr "使用默认文件夹"
+
+msgctxt "SettingsBody"
+msgid "Uses one request per app in your library. Turn it off if GitHub's allowance is tight; you can still check from the Library page."
+msgstr "应用库中的每个应用会用掉一次请求。如果 GitHub 的额度紧张，可将其关闭；你仍可在“应用库”页面检查。"
+
+msgctxt "DetailsBody"
+msgid "Version"
+msgstr "版本"
+
+msgctxt "TvShell"
+msgid "Version"
+msgstr "版本"
+
+msgctxt "DetailsBody"
+msgid "Version {}"
+msgstr "版本 {}"
+
+msgctxt "TvShell"
+msgid "Version {}"
+msgstr "版本 {}"
+
+msgctxt "TvShell"
+msgid "Versions and files"
+msgstr "版本和文件"
+
+msgctxt "Spotlight"
+msgid "View"
+msgstr "查看"
+
+msgctxt "UpdatesBanner"
+msgid "View"
+msgstr "查看"
+
+msgctxt "SettingsBody"
+msgid "View the store's update"
+msgstr "查看商店的更新"
+
+msgctxt "SettingsBody"
+msgid "View update"
+msgstr "查看更新"
+
+msgctxt "Spotlight"
+msgid "View {}"
+msgstr "查看 {}"
+
+msgctxt "SettingsBody"
+msgid "Waiting for the Steam app…"
+msgstr "正在等待 Steam 应用…"
+
+msgctxt "TvShell"
+msgid "Waiting for the Steam app…"
+msgstr "正在等待 Steam 应用…"
+
+msgctxt "SettingsBody"
+msgid "Waiting for you to enter it. This page updates by itself."
+msgstr "正在等待你输入。此页面会自动更新。"
+
+msgctxt "SystemBody"
+msgid "Waiting to be installed"
+msgstr "等待安装"
+
+msgctxt "TvShell"
+msgid "Waiting to be installed"
+msgstr "等待安装"
+
+msgctxt "AppRow"
+msgid "Web apps"
+msgstr "网页应用"
+
+msgctxt "AppTile"
+msgid "Web apps"
+msgstr "网页应用"
+
+msgctxt "Welcome"
+msgid "Welcome to Bilby"
+msgstr "欢迎使用 Bilby"
+
+msgctxt "OptionCard"
+msgid "What happens when I install {}"
+msgstr "安装 {} 时会发生什么"
+
+msgctxt "TvShell"
+msgid "What people wrote"
+msgstr "用户评价"
+
+msgctxt "OptionCard"
+msgid "What will happen?"
+msgstr "会发生什么？"
+
+msgctxt "WhatsNew"
+msgid "What's new"
+msgstr "更新内容"
+
+msgctxt "TvShell"
+msgid "What's new in {}"
+msgstr "{} 的更新内容"
+
+msgctxt "SettingsBody"
+msgid "Where apps come from"
+msgstr "应用来源"
+
+msgctxt "TvShell"
+msgid "Where apps come from"
+msgstr "应用来源"
+
+msgctxt "DetailsBody"
+msgid "Works on"
+msgstr "适用于"
+
+msgctxt "TvShell"
+msgid "Works on"
+msgstr "适用于"
+
+msgctxt "Welcome"
+msgid "You are seeing apps for {}. Anything that cannot be installed on this device is hidden."
+msgstr "你看到的是适用于 {} 的应用。无法在此设备上安装的内容已隐藏。"
+
+msgctxt "SettingsBody"
+msgid "You are signed in. GitHub allows 5,000 requests an hour."
+msgstr "你已登录。GitHub 每小时允许 5,000 次请求。"
+
+msgctxt "TvShell"
+msgid "You may be asked for your password. Keep the TV on until this finishes."
+msgstr "可能会要求你输入密码。完成前请保持电视开启。"
+
+msgctxt "SystemBody"
+msgid "You may be asked for your password. Keep the device on until this finishes."
+msgstr "可能会要求你输入密码。完成前请保持设备开启。"
+
+msgctxt "LibraryBody"
+msgid "Your library is empty"
+msgstr "你的应用库是空的"
+
+msgctxt "SettingsBody"
+msgid "Your own sources"
+msgstr "你自己的来源"
+
+msgctxt "TvShell"
+msgid "Your password is needed"
+msgstr "需要你的密码"
+
+msgctxt "TvShell"
+msgid "an older one"
+msgstr "较旧版本"
+
+msgctxt "TvShell"
+msgid "and {} more"
+msgstr "以及另外 {} 个"
+
+msgctxt "TvShell"
+msgid "best for this TV"
+msgstr "最适合这台电视"
+
+msgctxt "DetailsBody"
+msgid "download"
+msgstr "下载"
+
+msgctxt "TvShell"
+msgid "download"
+msgstr "下载"
+
+msgctxt "DetailsBody"
+msgid "last updated"
+msgstr "最近更新"
+
+msgctxt "TvShell"
+msgid "last updated"
+msgstr "最近更新"
+
+msgctxt "DetailsBody"
+msgid "licence"
+msgstr "许可证"
+
+msgctxt "TvShell"
+msgid "newest"
+msgstr "最新"
+
+msgctxt "DetailsBody"
+msgid "on {}"
+msgstr "在 {} 上"
+
+msgctxt "TvShell"
+msgid "on {}"
+msgstr "在 {} 上"
+
+msgctxt "RatingSummary"
+msgid "out of 5"
+msgstr "满分 5 分"
+
+msgctxt "TvShell"
+msgid "space"
+msgstr "空格"
+
+msgctxt "DetailsBody"
+msgid "the description"
+msgstr "简介"
+
+msgctxt "DetailsBody"
+msgid "verified"
+msgstr "已验证"
+
+msgctxt "TvShell"
+msgid "verified"
+msgstr "已验证"
+
+msgctxt "WhatsNew"
+msgid "what is new"
+msgstr "更新内容"
+
+msgctxt "TvShell"
+msgid "{0} from {1}"
+msgstr "{0}，来自 {1}"
+
+msgctxt "TvShell"
+msgid "{0} of {1}"
+msgstr "{0}/{1}"
+
+msgctxt "DetailsBody"
+msgid "{0} on {1}"
+msgstr "{1} 上的 {0}"
+
+msgctxt "TvShell"
+msgid "{0} on {1}"
+msgstr "{1} 上的 {0}"
+
+msgctxt "RatingSummary"
+msgid "{0} out of 5, from {1}"
+msgstr "{0} 分（满分 5 分），来自 {1}"
+
+msgctxt "LibraryBody"
+msgid "{n} app"
+msgid_plural "{n} apps"
+msgstr[0] "{n} 个应用"
+
+msgctxt "UpdatesBanner"
+msgid "{n} app in your library has an update"
+msgid_plural "{n} apps in your library have updates"
+msgstr[0] "应用库中有 {n} 个应用可更新"
+
+msgctxt "TvShell"
+msgid "{n} character typed"
+msgid_plural "{n} characters typed"
+msgstr[0] "已输入 {n} 个字符"
+
+msgctxt "TvShell"
+msgid "{n} file for other devices is not listed."
+msgid_plural "{n} files for other devices are not listed."
+msgstr[0] "有 {n} 个适用于其他设备的文件未列出。"
+
+msgctxt "TvShell"
+msgid "{n} link"
+msgid_plural "{n} links"
+msgstr[0] "{n} 个链接"
+
+msgctxt "LibraryBody"
+msgid "{n} update available"
+msgid_plural "{n} updates available"
+msgstr[0] "{n} 个可用更新"
+
+msgctxt "TvShell"
+msgid "{}  Press OK to try again."
+msgstr "{}  按 OK 重试。"
+
+msgctxt "OptionCard"
+msgid "{} download"
+msgstr "{} 下载"
+
+msgctxt "AppTile"
+msgid "{} sources"
+msgstr "{} 个来源"
+
+msgctxt "DesktopShell"
+msgid "{}. Everything shown works here."
+msgstr "{}。显示的内容都能在这里使用。"
+
+msgctxt "Welcome"
+msgid "•  Apps come from many places: package managers, other stores and developers' own release pages. Bilby does not review them, so only install software you trust."
+msgstr "•  应用来自许多地方：软件包管理器、其他商店和开发者自己的发布页面。Bilby 不审核它们，所以请只安装你信任的软件。"
+
+msgctxt "Welcome"
+msgid "•  There is no account and no server of ours. Your library and settings stay in a file on this device."
+msgstr "•  没有账户，也没有我们的服务器。你的应用库和设置保存在此设备的一个文件中。"
+
+msgctxt "TvShell"
+msgid "★  In favourites"
+msgstr "★  已收藏"
+
+msgctxt "TvShell"
+msgid "☆  Favourite"
+msgstr "☆  收藏"

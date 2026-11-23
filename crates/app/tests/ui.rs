@@ -132,7 +132,7 @@ fn start_on(preset: &str, shell: Shell, seed: Option<&str>, host: Option<Arc<dyn
         Shell::Tv => (1920.0, 1080.0),
         // Tall, so a whole page is in view: the test backend only finds what is visible,
         // and how much fits in a normal window differs between systems.
-        Shell::Desktop => (1280.0, 2400.0),
+        Shell::Desktop => (1280.0, 3000.0),
     };
     ui.window().set_size(slint::LogicalSize::new(w, h));
     ui.show().unwrap();
@@ -1863,6 +1863,43 @@ fn an_update_still_going_from_before_is_shown_as_going() {
 }
 
 #[test]
+fn updates_that_wait_for_a_restart_offer_one_and_ask_first() {
+    // A whole-image system with the new image in place: nothing is waiting but a restart.
+    let platform = Platform::preset("linux-x64-fedora").unwrap();
+    let staged = r#"{"deployments":[{"booted":false,"staged":true},{"booted":true}]}"#;
+    let machine = || {
+        bilby_core::os::demo_host(&platform)
+            .file("/run/ostree-booted", "")
+            .program("rpm-ostree")
+            .command("rpm-ostree status --json", 0, staged)
+            .command("flatpak update --user", 0, "Nothing to do.\n")
+            .command("flatpak update --system", 0, "Nothing to do.\n")
+    };
+    let seed = Some(r#"{"settings":{"welcomed":true}}"#);
+    for shell in [Shell::Desktop, Shell::Tv] {
+        let s = start_on("linux-x64-fedora", shell, seed, Some(Arc::new(machine())));
+        s.app.check_system(&s.ui, false);
+        assert_eq!(s.store().get_system_headline(), "Restart to finish updating");
+        s.store().set_page(4);
+        assert!(s.has("Restart now") && !s.has("Update now"), "{shell:?}");
+        // It asks before it does it; "later" changes nothing.
+        match shell {
+            Shell::Tv => s.press(Key::Return),
+            _ => s.click("Restart now"),
+        }
+        assert_eq!(s.store().get_gate(), 1, "{shell:?}");
+        assert_eq!(s.store().get_gate_title(), "Restart to finish updating");
+        assert_eq!(
+            (s.store().get_gate_yes().as_str(), s.store().get_gate_no().as_str()),
+            ("Restart now", "Restart later")
+        );
+        s.store().invoke_gate_answer(false);
+        assert_eq!(s.store().get_gate(), 0);
+        assert!(s.has("Restart now"), "still offered");
+    }
+}
+
+#[test]
 fn systems_that_update_themselves_get_a_way_to_their_own_updater_instead() {
     let s = start("windows-x64", Shell::Desktop);
     assert!(!s.store().get_system_supported());
@@ -2555,6 +2592,14 @@ fn the_tv_has_a_settings_tab_with_every_setting_reachable_by_remote() {
     for _ in 0..40 {
         s.press(Key::DownArrow);
     }
+    // The last row is the language: OK steps to the next one in the list (from the
+    // system's own to English by name, here).
+    assert!(s.saved().settings.language.is_empty());
+    s.press(Key::Return);
+    assert_eq!(s.saved().settings.language, "en");
+    assert_eq!(s.store().get_language_name(), "English");
+    // The row above it is the last of the sources.
+    s.press(Key::UpArrow);
     s.press(Key::Return);
     assert!(!s.store().get_sources().iter().last().unwrap().on);
     for _ in 0..60 {

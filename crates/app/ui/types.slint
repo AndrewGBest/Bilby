@@ -362,6 +362,13 @@ export global Store {
     callback typing(string);
     // Out of a search and back to Home: the box emptied, the results put away.
     callback leave-search();
+    // The languages Bilby comes in, "System" first; `on` marks the one chosen.
+    in property <[SourceChoice]> languages;
+    in property <string> language-name;
+    // By code ("fr"); empty for the system's own.
+    callback set-language(string);
+    // The one after the current one, for a remote.
+    callback next-language();
     // The TV's on-screen keyboard: its keys as they now show, and which is highlighted.
     in property <[OskKey]> osk-keys;
     in property <int> osk-at;
@@ -375,6 +382,14 @@ export global Store {
     // From a real keyboard while it is up.
     callback osk-type(string);
     callback osk-erase();
+    // The system's password is wanted (TV): asked for on screen, with the keyboard.
+    in property <bool> password-ask;
+    // The one just given was not right.
+    in property <bool> password-wrong;
+    // How many characters have been typed; the password itself never comes here.
+    in property <int> password-length;
+    callback password-submit();
+    callback password-cancel();
     callback open(string);
     callback close-details();
     callback retry-details();
@@ -443,6 +458,8 @@ export global Store {
     callback set-in-menu(bool);
     callback answer-tv(bool);
     callback system-check();
+    // Updates are in place and wait for a restart: ask, then restart the device.
+    callback system-restart-now();
     callback system-update();
     callback system-handoff-open();
 }

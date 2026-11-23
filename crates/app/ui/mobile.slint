@@ -93,7 +93,7 @@ export component MobileShell inherits Rectangle {
                 Rectangle {
                     width: 48px;
                     accessible-role: button;
-                    accessible-label: "Back";
+                    accessible-label: @tr("Back");
                     accessible-action-default => { Store.close-details(); }
                     TouchArea {
                         clicked => { Store.close-details(); }
@@ -117,7 +117,7 @@ export component MobileShell inherits Rectangle {
                     if Store.page == 4 : Rectangle {
                         width: 40px;
                         accessible-role: button;
-                        accessible-label: "Back";
+                        accessible-label: @tr("Back");
                         accessible-action-default => { Store.page = Store.system-from; }
                         TouchArea {
                             clicked => { Store.page = Store.system-from; }
@@ -125,7 +125,7 @@ export component MobileShell inherits Rectangle {
                         Image { x: 0; source: @image-url("icons/back.svg"); colorize: Theme.text; width: 22px; height: 22px; }
                     }
                     Text {
-                        text: Store.page == 0 ? "Discover" : Store.page == 1 ? "Search" : Store.page == 2 ? "Library" : Store.page == 4 ? "This device" : "Settings";
+                        text: Store.page == 0 ? @tr("Discover") : Store.page == 1 ? @tr("Search") : Store.page == 2 ? @tr("Library") : Store.page == 4 ? @tr("This device") : @tr("Settings");
                         color: Theme.text;
                         font-size: 26px;
                         font-weight: 700;
@@ -139,7 +139,7 @@ export component MobileShell inherits Rectangle {
                 }
                 if Store.page == 1 : SearchField {
                     text <=> Store.query;
-                    placeholder: "Search, or paste a project link";
+                    placeholder: @tr("Search, or paste a project link");
                     accepted(text) => { Store.search(text); }
                     edited(text) => { Store.typing(text); }
                 }
@@ -164,7 +164,7 @@ export component MobileShell inherits Rectangle {
                                 padding-bottom: 12px;
                                 spacing: 8px;
                                 alignment: start;
-                                ChoiceChip { text: "All"; selected: Store.category == ""; clicked => { Store.category = ""; } }
+                                ChoiceChip { text: @tr("All"); selected: Store.category == ""; clicked => { Store.category = ""; } }
                                 for name in Store.categories : ChoiceChip {
                                     text: name;
                                     selected: Store.category == name;
@@ -212,18 +212,18 @@ export component MobileShell inherits Rectangle {
                                             padding-bottom: 8px;
                                             alignment: start;
                                             ChoiceChip {
-                                                text: "Show all " + section.apps.length;
+                                                text: @tr("Show all {}", section.apps.length);
                                                 selected: false;
-                                                accessible-label: "Show all " + section.apps.length + " in " + section.title;
+                                                accessible-label: @tr("Show all {0} in {1}", section.apps.length, section.title);
                                                 clicked => { Store.category = section.title; }
                                             }
                                         }
                                     }
                                 }
                                 if Store.sections.length == 0 : EmptyState {
-                                    title: "Nothing featured for this device yet";
-                                    body: "Search for an app by name, or paste a project link.";
-                                    action: "Search";
+                                    title: @tr("Nothing featured for this device yet");
+                                    body: @tr("Search for an app by name, or paste a project link.");
+                                    action: @tr("Search");
                                     acted => { Store.page = 1; }
                                 }
                             }
@@ -246,7 +246,7 @@ export component MobileShell inherits Rectangle {
                                 padding-top: 8px;
                                 padding-bottom: 8px;
                                 Text {
-                                    text: Store.searching ? "Searching…" : Store.search-note != "" ? Store.search-note : "Only apps that work on this device are listed.";
+                                    text: Store.searching ? @tr("Searching…") : Store.search-note != "" ? Store.search-note : @tr("Only apps that work on this device are listed.");
                                     color: Theme.text-dim;
                                     font-size: 13px;
                                     wrap: word-wrap;
@@ -284,7 +284,7 @@ export component MobileShell inherits Rectangle {
                                 HorizontalLayout {
                                     height: 36px;
                                     padding-left: 16px;
-                                    Text { text: "Featured apps"; color: Theme.text-dim; font-size: 13px; font-weight: 700; vertical-alignment: center; }
+                                    Text { text: @tr("Featured apps"); color: Theme.text-dim; font-size: 13px; font-weight: 700; vertical-alignment: center; }
                                 }
                                 for app in Store.suggestions : AppRow {
                                     app: app;
@@ -296,8 +296,8 @@ export component MobileShell inherits Rectangle {
                                 clicked => { Store.open(app.id); }
                             }
                             if Store.searched && !Store.searching && Store.results.length == 0 && Store.search-error == "" : EmptyState {
-                                title: "No apps for this device";
-                                body: "Try a different name. Apps that do not work on this device are left out.";
+                                title: @tr("No apps for this device");
+                                body: @tr("Try a different name. Apps that do not work on this device are left out.");
                             }
                         }
                     }
@@ -325,26 +325,26 @@ export component MobileShell inherits Rectangle {
                 HorizontalLayout {
                     padding-bottom: root.inset-bottom;
                     Tab {
-                        label: "Discover";
+                        label: @tr("Discover");
                         icon: @image-url("icons/discover.svg");
                         active: Store.page == 0;
                         clicked => { Store.leave-search(); }
                     }
                     Tab {
-                        label: "Search";
+                        label: @tr("Search");
                         icon: @image-url("icons/search.svg");
                         active: Store.page == 1;
                         clicked => { Store.page = 1; }
                     }
                     Tab {
-                        label: "Library";
+                        label: @tr("Library");
                         icon: @image-url("icons/library.svg");
                         badge: Store.updates-count + (Store.system-state == 3 ? 1 : 0);
                         active: Store.page == 2 || (Store.page == 4 && Store.system-from == 2);
                         clicked => { Store.page = 2; }
                     }
                     Tab {
-                        label: "Settings";
+                        label: @tr("Settings");
                         icon: @image-url("icons/settings.svg");
                         active: Store.page == 3 || (Store.page == 4 && Store.system-from == 3);
                         clicked => { Store.page = 3; }

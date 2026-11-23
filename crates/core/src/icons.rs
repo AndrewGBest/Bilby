@@ -218,6 +218,7 @@ pub fn fetch_site(http: &dyn Http, dir: &Path, key: &str, host: &str) -> Result<
     // What the page itself says, best first; then where such pictures usually live.
     // A site often answers from another address (plex.tv from watch.plex.tv): what
     // the page names is relative to where it came from, not to what was asked for.
+    let mut refused = None;
     let (mut candidates, base) = match http.get_landed(&asked) {
         Ok((html, landed)) => {
             let base = origin_of(&landed).unwrap_or_else(|| asked.clone());
@@ -236,7 +237,14 @@ pub fn fetch_site(http: &dyn Http, dir: &Path, key: &str, host: &str) -> Result<
             let icons: Vec<String> = icons.into_iter().map(|(_, url)| url).collect();
             (icons, base)
         }
-        Err(_) => (Vec::new(), asked.clone()),
+        // Turned away rather than told there is nothing (a site's guard against
+        // robots refuses some visitors some of the time): not an answer to remember.
+        Err(e) => {
+            if !matches!(e, Error::NotFound(_)) {
+                refused = Some(e);
+            }
+            (Vec::new(), asked.clone())
+        }
     };
     let named = candidates.len().min(6);
     candidates.truncate(named);
@@ -249,10 +257,15 @@ pub fn fetch_site(http: &dyn Http, dir: &Path, key: &str, host: &str) -> Result<
         }
     }
     let download = dir.join(format!("{key}.download"));
-    let mut unreachable = None;
+    let mut unreachable = refused;
     for url in candidates.iter().take(12) {
         match http.download(url, &download, &mut |done, _| done < 2 * 1024 * 1024) {
             Ok(_) => {}
+            // "Not allowed", "too many requests", "try later": the same as no answer.
+            Err(e @ Error::Status { code: 401 | 403 | 429 | 500..=599, .. }) => {
+                unreachable = Some(e);
+                continue;
+            }
             Err(Error::NotFound(_)) | Err(Error::Cancelled) | Err(Error::Status { .. }) => continue,
             Err(e) => {
                 unreachable = Some(e);
@@ -285,7 +298,7 @@ pub fn fetch_site(http: &dyn Http, dir: &Path, key: &str, host: &str) -> Result<
 }
 
 /// What "this site has no picture" is written as. Earlier versions wrote nothing.
-const SITE_NONE: &[u8] = b"2";
+const SITE_NONE: &[u8] = b"3";
 
 /// Is this note that a site has no picture one to believe: written by this version,
 /// within the last week?

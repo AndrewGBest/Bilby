@@ -139,7 +139,12 @@ impl Catalog {
     /// Tell the catalog where Flatpak keeps installed apps, so Flathub apps that are
     /// already on the device are marked as such.
     pub fn use_flatpak_roots(&mut self, roots: Vec<std::path::PathBuf>) {
-        let flathub = Arc::new(crate::source::flathub::Flathub::new(self.http.clone(), roots));
+        self.use_flatpak(roots, "en");
+    }
+
+    /// The same, and say which language Flathub's names and descriptions are wanted in.
+    pub fn use_flatpak(&mut self, roots: Vec<std::path::PathBuf>, language: &str) {
+        let flathub = Arc::new(crate::source::flathub::Flathub::new(self.http.clone(), roots).in_language(language));
         if let Some(slot) = self.sources.iter_mut().find(|s| s.kind() == SourceKind::Flathub) {
             *slot = flathub;
         }

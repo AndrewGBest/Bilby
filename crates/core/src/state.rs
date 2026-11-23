@@ -24,6 +24,9 @@ pub struct Settings {
     pub skip_update_check_on_start: bool,
     /// Do not fetch or show star ratings.
     pub hide_ratings: bool,
+    /// The language to show the store in, as a code such as `fr`. Empty: the
+    /// system's own.
+    pub language: String,
     /// Which interface to use: `desktop`, `tv`, or anything else for "decide for me".
     pub interface: String,
     /// The "is this a TV?" question was answered or dismissed; it is asked once.

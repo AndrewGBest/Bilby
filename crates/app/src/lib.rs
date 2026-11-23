@@ -23,6 +23,8 @@ slint::include_modules!();
 
 #[cfg(target_os = "linux")]
 mod activation;
+mod askpass;
+pub mod i18n;
 pub mod osk;
 pub mod sound;
 
@@ -38,6 +40,7 @@ OPTIONS:
     --search <words>           Start with a search
     --page <name>              Start on discover, search, library, settings or system
     --theme <system|light|dark>  Override the saved appearance for this run
+    --lang <code>              Override the language for this run (en, es, fr, de, ...)
     --size <WxH>               Initial window size
     --state <file>             Use this file for settings and library instead of the default
     --screenshot <file.png>    Render one frame to a PNG and exit
@@ -61,6 +64,8 @@ pub struct Options {
     pub search: Option<String>,
     pub page: Option<i32>,
     pub theme: Option<String>,
+    /// The language to run in for this once, as a code such as `fr`.
+    pub language: Option<String>,
     pub size: Option<(u32, u32)>,
     pub screenshot: Option<PathBuf>,
     /// Input to replay before the screenshot: `down right ok back click:640,300 ...`.
@@ -146,8 +151,8 @@ pub enum Change {
 fn covered(id: &str) -> AppCard {
     AppCard {
         id: id.into(),
-        name: "Adult".into(),
-        summary: "Select to view".into(),
+        name: l("Adult"),
+        summary: l("Select to view"),
         initials: "A".into(),
         tint: slint::Color::from_rgb_u8(0x55, 0x5b, 0x68),
         adult: true,
@@ -249,6 +254,7 @@ impl Options {
                         }
                     })
                 }
+                "--lang" => o.language = Some(value("--lang")?),
                 "--theme" => {
                     let v = value("--theme")?;
                     if !["system", "light", "dark"].contains(&v.as_str()) {
@@ -459,23 +465,42 @@ fn strip_inline_markup(line: &str) -> String {
 fn option_row(o: &InstallOption) -> OptionRow {
     OptionRow {
         file: o.asset.name.clone().into(),
-        label: o.label().into(),
+        label: l(o.label()),
         size: human_size(o.asset.size).into(),
-        note: o.verdict.note.clone().unwrap_or_default().into(),
+        note: l(o.verdict.note.clone().unwrap_or_default()),
         native: o.verdict.level == bilby_core::compat::Level::Native,
         verified: install::checkable_digest(&o.asset).is_some() && o.plan.action != Action::ShowCommand,
-        verb: o.plan.verb.clone().into(),
-        steps: ModelRc::new(VecModel::from(o.plan.steps.iter().map(SharedString::from).collect::<Vec<_>>())),
+        verb: l(&o.plan.verb),
+        steps: ModelRc::new(VecModel::from(o.plan.steps.iter().map(l).collect::<Vec<_>>())),
         command: o.plan.command.clone().unwrap_or_default().into(),
     }
 }
 
 fn plural(n: usize, word: &str) -> String {
-    if n == 1 {
-        format!("1 {word}")
-    } else {
-        format!("{n} {word}s")
+    i18n::trn(&format!("{{n}} {word}"), &format!("{{n}} {word}s"), n)
+}
+
+/// The language of ours that the system is set to; English when not asked to look.
+fn system_language(look: bool) -> &'static str {
+    match sys_locale::get_locale() {
+        Some(locale) if look => i18n::for_locale(&locale),
+        _ => "en",
     }
+}
+
+/// Show everything in this language from now on: the interface's own text and what
+/// the code puts on screen.
+fn apply_language(code: &str) {
+    i18n::set_language(code);
+    let _ = slint::select_bundled_translation(match i18n::language() {
+        "en" => "",
+        known => known,
+    });
+}
+
+/// Text on its way to the screen, in the language in use.
+fn l(text: impl AsRef<str>) -> SharedString {
+    i18n::tr(text.as_ref()).into()
 }
 
 fn theme_mode(name: &str) -> i32 {
@@ -542,7 +567,8 @@ fn make_catalog(platform: &Platform, demo: bool, settings: &Settings, dirs: &Dir
     catalog.prefer = bilby_core::compat::Prefer::named(&settings.prefer_kind);
     catalog.parental =
         bilby_core::parental::Policy { family_mode: settings.family_mode, adult_on_home: settings.adult_on_home };
-    catalog.use_flatpak_roots(dirs.flatpak_roots.clone());
+    // In the language Bilby is being shown in, which is set before any catalog is made.
+    catalog.use_flatpak(dirs.flatpak_roots.clone(), i18n::language());
     Arc::new(catalog)
 }
 
@@ -744,6 +770,9 @@ pub struct App {
     ui: slint::Weak<AppWindow>,
     catalog: RwLock<Arc<Catalog>>,
     platform: RwLock<Platform>,
+    /// Running on the device it describes, not showing a preview of another: then the
+    /// system's own language is the one to follow.
+    real_device: bool,
     /// What the device was found to be, before any choice of layout was applied.
     detected: FormFactor,
     /// A theme given on the command line, which outranks the saved one.
@@ -768,6 +797,11 @@ pub struct App {
     installing: Mutex<Option<(String, String)>>,
     /// The TV's on-screen keyboard: which face is up and which key is highlighted.
     osk: Mutex<osk::Model>,
+    /// The stand-in that asks for the system's password on screen, where there is one.
+    asking: Option<askpass::Asking>,
+    /// The password being typed on screen, and who is waiting for it.
+    password: Mutex<String>,
+    password_reply: Mutex<Option<std::sync::mpsc::Sender<Option<String>>>>,
     /// The store's own app id, checked for updates like any other app. `None` in the
     /// demo, whose fictional GitHub does not have it.
     store_app: Option<AppId>,
@@ -1102,7 +1136,7 @@ impl App {
 
     fn toast(&self, ui: &AppWindow, message: &str, is_error: bool) {
         let store = ui.global::<Store>();
-        store.set_toast(message.into());
+        store.set_toast(l(message));
         store.set_toast_is_error(is_error);
         let generation = self.toast_generation.fetch_add(1, Ordering::SeqCst) + 1;
         if self.inline {
@@ -1157,14 +1191,16 @@ impl App {
             Some(n) if n > 0 => format!("{} downloads", human_count(n)),
             _ => String::new(),
         };
+        let (popularity, downloads) = (i18n::tr(&popularity), i18n::tr(&downloads));
         // Downloads say "people use this" in words everyone knows; stars need explaining.
         let headline = if downloads.is_empty() { popularity.clone() } else { downloads.clone() };
         let rating = app.rating.or_else(|| self.catalog().rating_for(&app.id));
         // The one figure a tile always shows: what people think of it, else how many
         // use it, and what it costs where it costs anything.
-        let price = if self.owns(&app.id) { "Owned".to_string() } else { app.price.clone().unwrap_or_default() };
+        let price =
+            if self.owns(&app.id) { i18n::tr("Owned") } else { i18n::tr(&app.price.clone().unwrap_or_default()) };
         let mut stat = match rating {
-            Some(r) => format!("★ {}  ·  {}", bilby_core::ratings::stars_text(r), ratings_text(r.count)),
+            Some(r) => format!("★ {}  ·  {}", bilby_core::ratings::stars_text(r), i18n::tr(&ratings_text(r.count))),
             None => headline.clone(),
         };
         if !price.is_empty() {
@@ -1180,28 +1216,28 @@ impl App {
         let has_update = matches!(self.updates.lock().unwrap().get(&id), Some(UpdateStatus::Available { .. }));
         AppCard {
             adult: app.adult,
-            stat: stat.into(),
+            stat: l(stat),
             tint: tint_for(&id),
             icon: picture_for(&id),
             id: id.into(),
             name: app.name.clone().into(),
             author: app.author.clone().into(),
-            summary: app.summary.clone().into(),
+            summary: i18n::exact(&app.summary).into(),
             // A repository package says which repository; the rest say which service.
-            source: app.origin.clone().unwrap_or_else(|| app.id.source.label().to_string()).into(),
-            badge: app.install_label.clone().unwrap_or_default().into(),
+            source: l(app.origin.clone().unwrap_or_else(|| app.id.source.label().to_string())),
+            badge: l(app.install_label.clone().unwrap_or_default()),
             version: app.version.clone().unwrap_or_default().into(),
-            popularity: popularity.into(),
+            popularity: l(popularity),
             initials: initials(&app.name).into(),
             installed,
             rating: rating.map(bilby_core::ratings::stars_text).unwrap_or_default().into(),
-            rating_count: rating.map(|r| ratings_text(r.count)).unwrap_or_default().into(),
+            rating_count: l(rating.map(|r| ratings_text(r.count)).unwrap_or_default()),
             rating_spread: rating.map(spread_shares).unwrap_or_default(),
             // A forge counts the files of the releases it listed; Flathub counts every install.
-            downloads_note: if app.id.source == SourceKind::Flathub { "in total" } else { "of recent versions" }.into(),
+            downloads_note: l(if app.id.source == SourceKind::Flathub { "in total" } else { "of recent versions" }),
             downloads: downloads.into(),
-            price: price.into(),
-            headline: headline.into(),
+            price: l(price),
+            headline: l(headline),
             verified: app.verified,
             more_sources: 0,
             has_update: installed && has_update,
@@ -1222,9 +1258,9 @@ impl App {
             id: app.id.as_str().into(),
             name: app.name.as_str().into(),
             author: app.author.as_str().into(),
-            summary: app.summary.as_str().into(),
-            source: AppId::parse(&app.id).map(|id| id.source.label()).unwrap_or("").into(),
-            badge: app.label.as_str().into(),
+            summary: i18n::exact(&app.summary).into(),
+            source: l(AppId::parse(&app.id).map(|id| id.source.label()).unwrap_or("")),
+            badge: l(&app.label),
             version: version.into(),
             popularity: SharedString::new(),
             initials: initials(&app.name).into(),
@@ -1257,8 +1293,8 @@ impl App {
             id: favourite.id.as_str().into(),
             name: favourite.name.as_str().into(),
             author: favourite.author.as_str().into(),
-            summary: favourite.summary.as_str().into(),
-            source: AppId::parse(&favourite.id).map(|id| id.source.label()).unwrap_or("").into(),
+            summary: i18n::exact(&favourite.summary).into(),
+            source: l(AppId::parse(&favourite.id).map(|id| id.source.label()).unwrap_or("")),
             badge: SharedString::new(),
             version: installed.map(|a| a.version.clone()).unwrap_or_default().into(),
             popularity: SharedString::new(),
@@ -1316,15 +1352,13 @@ impl App {
             }
         }
         let to_sections = |list: &[CoreSection]| -> Vec<Section> {
-            list.iter().map(|s| Section { title: s.title.clone().into(), apps: self.cards(&s.apps) }).collect()
+            list.iter().map(|s| Section { title: l(&s.title), apps: self.cards(&s.apps) }).collect()
         };
         // Built once and shared with the TV's rows below: the same tiles, not a second set.
         let home = to_sections(&featured);
         store.set_sections(ModelRc::new(VecModel::from(home.clone())));
-        store.set_categories(ModelRc::new(VecModel::from(
-            featured.iter().map(|s| SharedString::from(&s.title)).collect::<Vec<_>>(),
-        )));
-        if !featured.iter().any(|s| s.title == store.get_category().as_str()) {
+        store.set_categories(ModelRc::new(VecModel::from(featured.iter().map(|s| l(&s.title)).collect::<Vec<_>>())));
+        if !featured.iter().any(|s| i18n::tr(&s.title) == store.get_category().as_str()) {
             store.set_category(SharedString::new());
         }
         store.set_spotlight(at_the_top(
@@ -1357,9 +1391,9 @@ impl App {
                 };
                 LibraryRow {
                     card: self.library_card(app),
-                    detail: detail.into(),
+                    detail: l(detail),
                     status,
-                    status_text: status_text.into(),
+                    status_text: l(status_text),
                     store_managed: app.store_managed,
                 }
             })
@@ -1375,15 +1409,12 @@ impl App {
         store.set_can_open(self.launchable(store.get_app().id.as_str()).is_some());
         store.set_in_library(state.installed(store.get_app().id.as_str()).is_some());
         let checked = self.last_checked.load(Ordering::SeqCst);
-        store.set_last_checked(
-            match now.saturating_sub(checked) {
-                _ if checked == 0 => String::new(),
-                s if s < 90 => "just now".to_string(),
-                s if s < 3600 => format!("{} minutes ago", s / 60),
-                s => format!("{} hours ago", s / 3600),
-            }
-            .into(),
-        );
+        store.set_last_checked(l(match now.saturating_sub(checked) {
+            _ if checked == 0 => String::new(),
+            s if s < 90 => "just now".to_string(),
+            s if s < 3600 => format!("{} minutes ago", s / 60),
+            s => format!("{} hours ago", s / 3600),
+        }));
         store.set_recent(ModelRc::new(VecModel::from(
             state.recent_searches.iter().map(SharedString::from).collect::<Vec<_>>(),
         )));
@@ -1403,12 +1434,7 @@ impl App {
         store.set_result_sources(ModelRc::new(VecModel::from(
             found
                 .iter()
-                .map(|(kind, n)| SourceChoice {
-                    id: kind.prefix().into(),
-                    label: kind.label().into(),
-                    on: true,
-                    count: *n,
-                })
+                .map(|(kind, n)| SourceChoice { id: kind.prefix().into(), label: l(kind.label()), on: true, count: *n })
                 .collect::<Vec<_>>(),
         )));
         // One app from several sources is one result; its page offers the sources.
@@ -1462,10 +1488,8 @@ impl App {
         self.show_app_sources(ui);
 
         // TV: the Library page has updates first, then the rest, then favourites.
-        let section = |title: &str, cards: Vec<AppCard>| Section {
-            title: title.into(),
-            apps: ModelRc::new(VecModel::from(cards)),
-        };
+        let section =
+            |title: &str, cards: Vec<AppCard>| Section { title: l(title), apps: ModelRc::new(VecModel::from(cards)) };
         let (waiting, current): (Vec<AppCard>, Vec<AppCard>) =
             state.library.iter().map(|a| self.library_card(a)).partition(|card| card.has_update);
         let mut tv_library = Vec::new();
@@ -1547,7 +1571,7 @@ impl App {
             let top: Vec<AppCard> = found.iter().take(TOP).cloned().collect();
             if !top.is_empty() {
                 tv.push(Section {
-                    title: format!("Top results for “{query}”").into(),
+                    title: l(format!("Top results for “{query}”")),
                     apps: ModelRc::new(VecModel::from(top)),
                 });
             }
@@ -1560,7 +1584,7 @@ impl App {
                     found.iter().skip(TOP).filter(|card| kind_of(card.id.as_str()) == kind).take(24).cloned().collect()
                 };
                 if !of_kind.is_empty() {
-                    tv.push(Section { title: kind.into(), apps: ModelRc::new(VecModel::from(of_kind)) });
+                    tv.push(Section { title: l(kind), apps: ModelRc::new(VecModel::from(of_kind)) });
                 }
             }
         }
@@ -1585,7 +1609,7 @@ impl App {
                 .iter()
                 .map(|own| SourceChoice {
                     id: own.url.as_str().into(),
-                    label: own.name.as_str().into(),
+                    label: l(own.name.as_str()),
                     on: true,
                     count: 0,
                 })
@@ -1601,19 +1625,40 @@ impl App {
         let os = self.platform.read().unwrap().os;
         store.set_steam_available(matches!(os, Os::Windows | Os::MacOs | Os::Linux));
         store.set_steam_signed_in(steam.is_some());
-        store.set_steam_summary(steam.map(|a| format!("{} games and tools", a.owned.len())).unwrap_or_default().into());
+        store.set_steam_summary(l(steam.map(|a| format!("{} games and tools", a.owned.len())).unwrap_or_default()));
         store.set_downloads_dir(self.downloads_folder().display().to_string().into());
         store.set_downloads_custom(!settings.downloads_dir.trim().is_empty());
         store.set_ask_where(settings.ask_where);
         store.set_show_welcome(!settings.welcomed);
         store.set_interface_mode(interface_mode(&settings.interface));
+        // "System" first, then every language by its own name.
+        let system = system_language(self.real_device);
+        let own_name = |code: &str| {
+            i18n::languages().into_iter().find(|(known, _)| *known == code).map(|(_, name)| name).unwrap_or("English")
+        };
+        let mut languages = vec![SourceChoice {
+            id: SharedString::new(),
+            label: format!("{} ({})", i18n::tr("System"), own_name(system)).into(),
+            on: settings.language.is_empty(),
+            count: 0,
+        }];
+        languages.extend(i18n::languages().into_iter().map(|(code, name)| SourceChoice {
+            id: code.into(),
+            label: name.into(),
+            on: settings.language == code,
+            count: 0,
+        }));
+        store.set_language_name(
+            languages.iter().find(|choice| choice.on).map(|choice| choice.label.clone()).unwrap_or_default(),
+        );
+        store.set_languages(ModelRc::new(VecModel::from(languages)));
         store.set_sources(ModelRc::new(VecModel::from(
             self.catalog()
                 .available_sources()
                 .into_iter()
                 .map(|kind| SourceChoice {
                     id: kind.prefix().into(),
-                    label: kind.label().into(),
+                    label: l(kind.label()),
                     on: !settings.disabled_sources.iter().any(|name| name == kind.prefix()),
                     count: 0,
                 })
@@ -1628,7 +1673,7 @@ impl App {
     /// Show how much of GitHub's hourly allowance is left, once GitHub has told us.
     fn refresh_quota(&self, ui: &AppWindow) {
         let text = self.catalog().quota().map(|q| q.describe(now_unix())).unwrap_or_default();
-        ui.global::<Store>().set_quota_text(text.into());
+        ui.global::<Store>().set_quota_text(l(text));
     }
 
     fn rebuild_catalog(&self) {
@@ -1663,6 +1708,9 @@ impl App {
             platform.form_factor = form;
             changed
         };
+        if let Some(asking) = &self.asking {
+            asking.on_tv(form == FormFactor::Tv);
+        }
         let store = ui.global::<Store>();
         store.set_ask_tv(false);
         store.set_shell(shell_for(form));
@@ -1683,8 +1731,8 @@ impl App {
             self.collections.lock().unwrap().clear();
             self.load_collections(ui);
             let platform = self.platform.read().unwrap().clone();
-            store.set_platform_title(platform.title().into());
-            store.set_device_name(platform.friendly().into());
+            store.set_platform_title(l(platform.title()));
+            store.set_device_name(l(platform.friendly()));
             self.refresh(ui);
         }
         self.refresh_settings(ui);
@@ -1704,7 +1752,7 @@ impl App {
                     .iter()
                     .map(|(app, label)| SourceChoice {
                         id: app.as_str().into(),
-                        label: label.as_str().into(),
+                        label: l(label.as_str()),
                         on: *app == id,
                         count: 0,
                     })
@@ -1742,7 +1790,7 @@ impl App {
             .map(|member| VersionChoice {
                 id: member.id.as_str().into(),
                 name: member.label.as_str().into(),
-                note: member.note.as_str().into(),
+                note: l(member.note.as_str()),
                 official: member.official,
                 on: false,
             })
@@ -1756,7 +1804,7 @@ impl App {
                     let source = AppId::parse(&m.id)?.source.label();
                     Some(SourceChoice {
                         id: m.id.as_str().into(),
-                        label: source.into(),
+                        label: l(source),
                         on: m.id.eq_ignore_ascii_case(&id),
                         count: 0,
                     })
@@ -1827,7 +1875,7 @@ impl App {
         if another_kind {
             need_note.clear();
         }
-        store.set_need_note(need_note.into());
+        store.set_need_note(l(need_note));
         *self.needed.lock().unwrap() = needed;
         // The same choices as rows for the TV, in two groups that each say what they
         // are: other apps for the service, then other places to get this one.
@@ -1847,13 +1895,13 @@ impl App {
             rows.push(TvChoice {
                 id: source.id,
                 name: format!("From {}", source.label).into(),
-                note: format!("The same {name}, from another source").into(),
+                note: l(format!("The same {name}, from another source")),
                 heading: if n == 0 { format!("Other places to get {name}").into() } else { SharedString::new() },
             });
         }
         store.set_tv_choices(ModelRc::new(VecModel::from(rows)));
         store.set_helper_id(helper.0.into());
-        store.set_helper_label(helper.1.into());
+        store.set_helper_label(l(helper.1));
     }
 
     /// Sign in to GitHub with a code: show it, then wait for the person to enter it at
@@ -2171,17 +2219,13 @@ impl App {
         let store = ui.global::<Store>();
         let report = &self.system;
         store.set_system_name(report.name.as_str().into());
-        store.set_system_tagline(report.tagline.as_str().into());
+        store.set_system_tagline(l(report.tagline.as_str()));
         store.set_system_facts(ModelRc::new(VecModel::from(
-            report
-                .facts
-                .iter()
-                .map(|f| Fact { name: f.name.into(), value: f.value.as_str().into() })
-                .collect::<Vec<_>>(),
+            report.facts.iter().map(|f| Fact { name: l(f.name), value: l(&f.value) }).collect::<Vec<_>>(),
         )));
         store.set_system_supported(!report.managers.is_empty());
-        store.set_system_note(report.note.as_str().into());
-        store.set_system_handoff(report.handoff.as_ref().map(|h| h.label).unwrap_or_default().into());
+        store.set_system_note(l(report.note.as_str()));
+        store.set_system_handoff(l(report.handoff.as_ref().map(|h| h.label).unwrap_or_default()));
         if !log.is_empty() {
             store.set_system_log(log.into());
         }
@@ -2228,8 +2272,8 @@ impl App {
         let detail =
             [problems, age.unwrap_or_default()].into_iter().filter(|t| !t.is_empty()).collect::<Vec<_>>().join(" ");
         store.set_system_state(state);
-        store.set_system_headline(headline.into());
-        store.set_system_detail(detail.into());
+        store.set_system_headline(l(headline));
+        store.set_system_detail(l(detail));
     }
 
     /// Look for system updates. A quiet check (`asked` false) never asks for a
@@ -2265,7 +2309,7 @@ impl App {
                 if installing {
                     let store = ui.global::<Store>();
                     store.set_system_progress(0.0);
-                    store.set_system_step("Started earlier and still going".into());
+                    store.set_system_step(l("Started earlier and still going"));
                     app.watch_system(ui);
                 }
                 if let Err(e) = refreshed {
@@ -2328,7 +2372,12 @@ impl App {
                     // How far it has got and what it is on, sent to the screen when
                     // either changes.
                     let percent = (progress.line(line) * 100.0) as i32;
-                    let step = system_step(line).unwrap_or_else(|| shown.1.clone());
+                    // What it is on: a name where one can be read, else what it
+                    // just said, so that something is seen to be happening.
+                    let said: String = line.trim().chars().take(70).collect();
+                    let step = system_step(line)
+                        .or_else(|| (said.chars().filter(|c| c.is_alphabetic()).count() > 3).then_some(said))
+                        .unwrap_or_else(|| shown.1.clone());
                     if (percent, &step) == (shown.0, &shown.1) {
                         return;
                     }
@@ -2336,7 +2385,7 @@ impl App {
                     let set = move |ui: AppWindow| {
                         let store = ui.global::<Store>();
                         store.set_system_progress(percent as f32 / 100.0);
-                        store.set_system_step(step.as_str().into());
+                        store.set_system_step(l(step.as_str()));
                     };
                     if inline {
                         if let Some(ui) = weak.upgrade() {
@@ -2464,7 +2513,7 @@ impl App {
         let store = ui.global::<Store>();
         if query.chars().count() < 2 {
             store.set_page(1);
-            store.set_search_note("Type at least two characters.".into());
+            store.set_search_note(l("Type at least two characters."));
             return;
         }
         self.close_details(ui);
@@ -2506,8 +2555,8 @@ impl App {
             }
             note.push_str(&format!("{} more matched but do not work on this device.", outcome.hidden));
         }
-        store.set_search_note(note.into());
-        store.set_search_error(outcome.errors.join("\n").into());
+        store.set_search_note(l(note));
+        store.set_search_error(l(outcome.errors.join("\n")));
         *self.results.lock().unwrap() = (query.to_string(), outcome.apps.clone());
         self.refresh(ui);
     }
@@ -2608,7 +2657,7 @@ impl App {
         self.show_app_sources(ui);
         let Some(app_id) = AppId::parse(id) else {
             store.set_details_loading(false);
-            store.set_details_error(format!("“{id}” is not an app id.").into());
+            store.set_details_error(l(format!("“{id}” is not an app id.")));
             return;
         };
         store.set_details_loading(true);
@@ -2641,7 +2690,7 @@ impl App {
                     Err(message) => {
                         let store = ui.global::<Store>();
                         store.set_details_loading(false);
-                        store.set_details_error(message.into());
+                        store.set_details_error(l(message));
                     }
                 }
             },
@@ -2738,7 +2787,7 @@ impl App {
                             ReviewRow {
                                 stars: format!("{}{}", "★".repeat(r.stars as usize), "☆".repeat(5 - r.stars as usize))
                                     .into(),
-                                title: r.title.as_str().into(),
+                                title: l(r.title.as_str()),
                                 text: r.text.as_str().into(),
                                 meta: meta.join("  ·  ").into(),
                             }
@@ -2782,7 +2831,7 @@ impl App {
         store.set_app(at_the_top(card));
         store.set_license(plain_licence(details.summary.license.as_deref().unwrap_or_default()).into());
         store.set_homepage(details.summary.homepage.as_str().into());
-        store.set_unavailable(details.unavailable_reason.clone().unwrap_or_default().into());
+        store.set_unavailable(l(details.unavailable_reason.clone().unwrap_or_default()));
         store.set_versions(ModelRc::new(VecModel::from(
             details.versions.iter().map(|r| SharedString::from(&r.version)).collect::<Vec<_>>(),
         )));
@@ -2863,8 +2912,8 @@ impl App {
         if let (true, Some(years)) = (is_newest, age.strip_suffix(" years ago").and_then(|n| n.parse::<u32>().ok())) {
             warnings.push(format!("The latest release is {years} years old. The project may no longer be maintained."));
         }
-        store.set_warning(warnings.join("\n").into());
-        store.set_release_age(age.into());
+        store.set_warning(l(warnings.join("\n")));
+        store.set_release_age(l(age));
         store.set_release_date(date.into());
     }
 
@@ -3011,12 +3060,20 @@ impl App {
     /// Draw the on-screen keyboard as it now stands.
     fn show_osk(&self, ui: &AppWindow) {
         let model = *self.osk.lock().unwrap();
+        let asking = self.password_reply.lock().unwrap().is_some();
         let mut keys = Vec::new();
         for (row, line) in model.rows().iter().enumerate() {
             let mut col = 0;
             for key in line {
+                // "search" where it searches; where a password is typed, "enter".
+                let label = match key.kind {
+                    osk::Kind::Char | osk::Kind::Symbols | osk::Kind::Letters => key.label.clone(),
+                    osk::Kind::Submit if asking => i18n::tr("enter"),
+                    osk::Kind::Shift if key.label == "SHIFT" => i18n::tr("shift").to_uppercase(),
+                    _ => i18n::tr(&key.label),
+                };
                 keys.push(OskKey {
-                    label: key.label.as_str().into(),
+                    label: label.as_str().into(),
                     row: row as i32,
                     col: col as i32,
                     span: key.span as i32,
@@ -3033,12 +3090,11 @@ impl App {
 
     /// OK on the highlighted key. True when it was the one that says "search".
     fn osk_press(&self, ui: &AppWindow) -> bool {
-        let store = ui.global::<Store>();
         let key = self.osk.lock().unwrap().key();
         match key.kind {
             osk::Kind::Submit => return true,
-            osk::Kind::Char => store.set_query(format!("{}{}", store.get_query(), key.label).into()),
-            osk::Kind::Space => store.set_query(format!("{} ", store.get_query()).into()),
+            osk::Kind::Char => self.osk_add(ui, &key.label),
+            osk::Kind::Space => self.osk_add(ui, " "),
             osk::Kind::Delete => self.osk_erase(ui),
             osk::Kind::Shift | osk::Kind::Symbols | osk::Kind::Letters => {
                 self.osk.lock().unwrap().switch_face();
@@ -3051,9 +3107,88 @@ impl App {
     /// Take the last letter off what has been typed.
     fn osk_erase(&self, ui: &AppWindow) {
         let store = ui.global::<Store>();
+        if self.password_reply.lock().unwrap().is_some() {
+            let mut password = self.password.lock().unwrap();
+            password.pop();
+            store.set_password_length(password.chars().count() as i32);
+            return;
+        }
         let mut text = store.get_query().to_string();
         text.pop();
         store.set_query(text.into());
+    }
+
+    /// Add to what is being typed: the search, or the password when one is asked for.
+    fn osk_add(&self, ui: &AppWindow, text: &str) {
+        let store = ui.global::<Store>();
+        if self.password_reply.lock().unwrap().is_some() {
+            let mut password = self.password.lock().unwrap();
+            password.push_str(text);
+            store.set_password_length(password.chars().count() as i32);
+            return;
+        }
+        store.set_query(format!("{}{}", store.get_query(), text).into());
+    }
+
+    /// Ask for the system's password on screen, with the keyboard. `again`: the one
+    /// just given was wrong. The answer goes to `reply`.
+    fn show_password(&self, ui: &AppWindow, again: bool, reply: std::sync::mpsc::Sender<Option<String>>) {
+        // One question at a time: an earlier one that was never answered is given up.
+        if let Some(earlier) = self.password_reply.lock().unwrap().replace(reply) {
+            let _ = earlier.send(None);
+        }
+        self.password.lock().unwrap().clear();
+        *self.osk.lock().unwrap() = osk::Model::default();
+        let store = ui.global::<Store>();
+        store.set_password_length(0);
+        store.set_password_wrong(again);
+        store.set_password_ask(true);
+        self.show_osk(ui);
+    }
+
+    /// The password prompt is answered (`give`) or put away.
+    fn answer_password(&self, ui: &AppWindow, give: bool) {
+        let typed = std::mem::take(&mut *self.password.lock().unwrap());
+        if let Some(reply) = self.password_reply.lock().unwrap().take() {
+            let _ = reply.send((give && !typed.is_empty()).then_some(typed));
+        }
+        let store = ui.global::<Store>();
+        store.set_password_ask(false);
+        store.set_password_length(0);
+    }
+
+    /// Change the language Bilby is shown in. An empty code means the system's own.
+    pub fn set_language(self: &Arc<Self>, ui: &AppWindow, code: &str) {
+        let known = code.is_empty() || i18n::languages().iter().any(|(known, _)| *known == code);
+        if !known {
+            return;
+        }
+        self.update_state(ui, |state| state.settings.language = code.to_string());
+        apply_language(if code.is_empty() { system_language(self.real_device) } else { code });
+        // What the stores are asked for changes with it, and so does everything the
+        // code has already put on screen.
+        self.rebuild_catalog();
+        let store = ui.global::<Store>();
+        let platform = self.platform.read().unwrap().clone();
+        store.set_platform_title(l(platform.title()));
+        store.set_device_name(l(platform.friendly()));
+        self.refresh_settings(ui);
+        self.show_system(ui, 0, "");
+        self.load_collections(ui);
+        self.refresh(ui);
+        if store.get_details_open() {
+            let id = store.get_app().id.to_string();
+            self.open(ui, &id);
+        }
+    }
+
+    /// The language after this one in the list, and round again: for a remote.
+    pub fn next_language(self: &Arc<Self>, ui: &AppWindow) {
+        let mut codes = vec![""];
+        codes.extend(i18n::languages().into_iter().map(|(code, _)| code));
+        let now = self.state().settings.language;
+        let at = codes.iter().position(|code| *code == now).unwrap_or(0);
+        self.set_language(ui, codes[(at + 1) % codes.len()]);
     }
 
     /// Is this the app being downloaded right now?
@@ -3215,7 +3350,7 @@ impl App {
                         }
                         if on_page {
                             store.set_install_state(2);
-                            store.set_install_message(outcome.message.as_str().into());
+                            store.set_install_message(l(outcome.message.as_str()));
                         }
                         // A command to run, or another store taking over: nothing was
                         // installed by this store, so nothing goes in its library.
@@ -3259,7 +3394,7 @@ impl App {
                         let is_self = app.store_app.as_ref().is_some_and(|own| own.to_string().eq_ignore_ascii_case(&id));
                         let say = |message: String| {
                             if on_page {
-                                store.set_install_message(message.into());
+                                store.set_install_message(l(message));
                             }
                         };
                         if let (true, true, Some(file)) = (is_self, outcome.store_managed, outcome.file.as_ref()) {
@@ -3330,7 +3465,7 @@ impl App {
                             app.toast(ui, &format!("Update failed: {e}"), true);
                         } else {
                             store.set_install_state(3);
-                            store.set_install_message(e.to_string().into());
+                            store.set_install_message(l(e.to_string()));
                         }
                     }
                 }
@@ -3680,11 +3815,11 @@ impl App {
     fn ask(&self, ui: &AppWindow, kind: i32, title: &str, text: &str, waiting: Guarded) {
         *self.pending.lock().unwrap() = Some(waiting);
         let store = ui.global::<Store>();
-        store.set_gate_title(title.into());
-        store.set_gate_text(text.into());
+        store.set_gate_title(l(title));
+        store.set_gate_text(l(text));
         store.set_gate_error(SharedString::new());
-        store.set_gate_no("No".into());
-        store.set_gate_yes("Yes, I am 18 or over".into());
+        store.set_gate_no(l("No"));
+        store.set_gate_yes(l("Yes, I am 18 or over"));
         store.set_gate(kind);
     }
 
@@ -3712,8 +3847,22 @@ impl App {
             Guarded::Restart,
         );
         let store = ui.global::<Store>();
-        store.set_gate_no("Restart later".into());
-        store.set_gate_yes("Restart now".into());
+        store.set_gate_no(l("Restart later"));
+        store.set_gate_yes(l("Restart now"));
+    }
+
+    /// Updates are in place and wait for a restart: offer one, and ask before doing it.
+    pub fn ask_restart_for_updates(&self, ui: &AppWindow) {
+        self.ask(
+            ui,
+            1,
+            "Restart to finish updating",
+            "Updates installed. Restart this device to finish.",
+            Guarded::Restart,
+        );
+        let store = ui.global::<Store>();
+        store.set_gate_no(l("Restart later"));
+        store.set_gate_yes(l("Restart now"));
     }
 
     fn close_gate(&self, ui: &AppWindow) {
@@ -3778,14 +3927,14 @@ impl App {
                     self.close_gate(ui);
                     self.carry_on(ui);
                 } else {
-                    store.set_gate_error("That is not the PIN. Try again.".into());
+                    store.set_gate_error(l("That is not the PIN. Try again."));
                 }
             }
             3 => {
                 if parental::valid_pin(entry) {
                     *self.new_pin.lock().unwrap() = Some(entry.to_string());
-                    store.set_gate_title("Enter the new PIN again".into());
-                    store.set_gate_text("To be sure it is the one you meant.".into());
+                    store.set_gate_title(l("Enter the new PIN again"));
+                    store.set_gate_text(l("To be sure it is the one you meant."));
                     store.set_gate_error(SharedString::new());
                     store.set_gate(4);
                 }
@@ -3804,8 +3953,8 @@ impl App {
                     self.refresh_settings(ui);
                     self.toast(ui, "The PIN is set. Remember it: it cannot be shown again.", false);
                 } else {
-                    store.set_gate_title("Choose a PIN".into());
-                    store.set_gate_text("Those two were not the same. Choose four digits.".into());
+                    store.set_gate_title(l("Choose a PIN"));
+                    store.set_gate_text(l("Those two were not the same. Choose four digits."));
                     store.set_gate(3);
                 }
             }
@@ -3867,7 +4016,7 @@ impl App {
             Change::SetPin => {
                 *self.pending.lock().unwrap() = None;
                 let store = ui.global::<Store>();
-                store.set_gate_title("Choose a PIN".into());
+                store.set_gate_title(l("Choose a PIN"));
                 store.set_gate_text(
                     "Four digits. It will be asked for to change these settings and to open adult content.".into(),
                 );
@@ -4140,8 +4289,8 @@ impl App {
             Guarded::RestartBilby,
         );
         let store = ui.global::<Store>();
-        store.set_gate_no("Later".into());
-        store.set_gate_yes("Restart Bilby now".into());
+        store.set_gate_no(l("Later"));
+        store.set_gate_yes(l("Restart Bilby now"));
     }
 
     /// Start the open app, when the store installed it as a file it can run.
@@ -4384,7 +4533,16 @@ fn find_card(store: &Store, id: &str) -> Option<AppCard> {
 pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::error::Error>> {
     let mut platform = options.platform.clone().unwrap_or_else(Platform::detect);
     let detected = platform.form_factor;
-    let dirs = options.dirs.clone().unwrap_or_else(Dirs::for_current_user);
+    let mut dirs = options.dirs.clone().unwrap_or_else(Dirs::for_current_user);
+    // On a real Linux device, what needs the system's password goes through a
+    // stand-in that asks for it on screen when the TV layout is showing (see
+    // `askpass`), since nobody can type in the system's own prompt with a remote.
+    let asking = (cfg!(target_os = "linux") && !options.demo && options.platform.is_none() && options.dirs.is_none())
+        .then(|| askpass::set_up(&dirs.cache.join("askpass")))
+        .flatten();
+    if let Some(asking) = &asking {
+        dirs.elevate = asking.elevate.clone();
+    }
     // The demo catalog gets its own library so fictional apps never mix with real ones.
     let state_path = options
         .state_file
@@ -4413,9 +4571,22 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
             make_catalog(platform, demo, settings, dirs)
         })
     });
+    // The language: what was asked for this once, else what was chosen in Settings,
+    // else the system's own on a real device (a preview of another device, and every
+    // test, is in English). Known before the catalog is made: the stores are asked
+    // for names and descriptions in it.
+    let language = options
+        .language
+        .clone()
+        .or_else(|| Some(state.settings.language.clone()))
+        .filter(|code| !code.is_empty())
+        .unwrap_or_else(|| system_language(options.platform.is_none()).to_string());
+    i18n::set_language(&language);
     let catalog = catalog_factory(&platform, &state.settings, &dirs);
 
     let ui = AppWindow::new()?;
+    // Slint's own text follows, now that there is a window to follow it.
+    apply_language(&language);
     let store = ui.global::<Store>();
     let shell = options.shell.unwrap_or_else(|| shell_for(platform.form_factor));
     store.set_shell(shell);
@@ -4424,13 +4595,13 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     store.set_ask_tv(ask_tv);
     store.set_demo(options.demo);
     store.set_app_version(env!("CARGO_PKG_VERSION").into());
-    store.set_platform_title(platform.title().into());
-    store.set_device_name(platform.friendly().into());
+    store.set_platform_title(l(platform.title()));
+    store.set_device_name(l(platform.friendly()));
     let mut facts = platform.facts();
     let sources: Vec<_> = catalog.active_sources().iter().map(|s| s.label()).collect();
     facts.push(("Sources".to_string(), sources.join(", ")));
     store.set_facts(ModelRc::new(VecModel::from(
-        facts.into_iter().map(|(name, value)| Fact { name: name.into(), value: value.into() }).collect::<Vec<_>>(),
+        facts.into_iter().map(|(name, value)| Fact { name: l(name), value: value.into() }).collect::<Vec<_>>(),
     )));
 
     // A demo or a preview of another device must never look at, let alone change, the
@@ -4440,7 +4611,12 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     let host: Arc<dyn bilby_core::os::Host> = match &options.host {
         Some(host) => host.clone(),
         None if pretend => Arc::new(bilby_core::os::demo_host(&platform)),
-        None => Arc::new(bilby_core::os::RealHost),
+        None => match &asking {
+            Some(asking) => {
+                Arc::new(askpass::AskingHost { inner: bilby_core::os::RealHost, elevate: asking.elevate.clone() })
+            }
+            None => Arc::new(bilby_core::os::RealHost),
+        },
     };
     let mut system = bilby_core::os::describe(host.as_ref(), &platform);
     if pretend && !options.demo && options.host.is_none() {
@@ -4467,7 +4643,11 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         toast_generation: Arc::new(AtomicU64::new(0)),
         cancel_install: Arc::new(AtomicBool::new(false)),
         installing: Mutex::new(None),
+        real_device: options.platform.is_none(),
         osk: Mutex::new(osk::Model::default()),
+        asking,
+        password: Mutex::new(String::new()),
+        password_reply: Mutex::new(None),
         store_app: match &options.store_app {
             Some(id) => AppId::parse(id),
             None if options.demo => None,
@@ -4553,7 +4733,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
             }
             let store = ui.global::<Store>();
             let mut facts: Vec<Fact> = store.get_facts().iter().collect();
-            facts.push(Fact { name: "System repositories".into(), value: repositories.join(", ").into() });
+            facts.push(Fact { name: l("System repositories"), value: repositories.join(", ").into() });
             store.set_facts(ModelRc::new(VecModel::from(facts)));
         },
     );
@@ -4577,6 +4757,8 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     }
     on!(on_search, |app, ui, query| { app.search(ui, &query) });
     on!(on_leave_search, |app, ui| { app.leave_search(ui) });
+    on!(on_set_language, |app, ui, code| { app.set_language(ui, &code) });
+    on!(on_next_language, |app, ui| { app.next_language(ui) });
     on!(on_osk_open, |app, ui| {
         *app.osk.lock().unwrap() = osk::Model::default();
         app.show_osk(ui);
@@ -4591,11 +4773,27 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     // A letter from a real keyboard while the on-screen one is up: typed as it is,
     // and the highlight goes to "search", so Enter then searches.
     on!(on_osk_type, |app, ui, text| {
-        let store = ui.global::<Store>();
-        store.set_query(format!("{}{}", store.get_query(), text).into());
+        app.osk_add(ui, &text);
         app.osk.lock().unwrap().point_to(osk::Kind::Submit);
-        store.set_osk_at(app.osk.lock().unwrap().flat() as i32);
+        ui.global::<Store>().set_osk_at(app.osk.lock().unwrap().flat() as i32);
     });
+    on!(on_password_submit, |app, ui| { app.answer_password(ui, true) });
+    on!(on_password_cancel, |app, ui| { app.answer_password(ui, false) });
+    // The system wants its password: asked for here, on the screen, and waited for.
+    if let Some(asking) = &app.asking {
+        asking.on_tv(shell == Shell::Tv);
+        let asker = app.clone();
+        asking.serve(move |again| {
+            let (reply, answer) = std::sync::mpsc::channel();
+            let app = asker.clone();
+            slint::invoke_from_event_loop(move || match app.ui.upgrade() {
+                Some(ui) => app.show_password(&ui, again, reply),
+                None => drop(reply),
+            })
+            .ok()?;
+            answer.recv().ok().flatten()
+        });
+    }
     for tapped in [false, true] {
         let app = app.clone();
         let press = move |at: i32| {
@@ -4792,6 +4990,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     });
     on!(on_system_check, |app, ui| { app.check_system(ui, true) });
     on!(on_system_update, |app, ui| { app.update_system(ui) });
+    on!(on_system_restart_now, |app, ui| { app.ask_restart_for_updates(ui) });
     on!(on_system_handoff_open, |app, ui| {
         if let Some(handoff) = &app.system.handoff {
             if let Err(e) = (app.opener)(std::path::Path::new(handoff.target)) {

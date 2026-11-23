@@ -218,6 +218,11 @@ out-of-date packages, but an app is only as trustworthy as whoever published it.
   folder unless you choose another folder in Settings, where you can also have Bilby
   ask each time. AppImages are then moved to `Applications` in your home folder;
   packages, Flatpaks and store apps go where your system puts them.
+- **Your language.** Bilby comes in English, Spanish, French, German, Portuguese,
+  Italian, Russian, Chinese, Japanese, Korean, Hindi and Arabic. It starts in your
+  system's language; Settings can change it. Flathub's apps are described in that
+  language where their makers have translated them. The translations have not been
+  checked by native speakers yet, and Arabic is not laid out right to left.
 - **Reduce motion.** Settings can turn animations off.
 - **Sounds.** A quiet tick or pop as you move about and press things. Settings can
   turn them off.

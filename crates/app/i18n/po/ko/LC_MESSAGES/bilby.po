@@ -1,0 +1,2006 @@
+msgid ""
+msgstr ""
+"Language: ko\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgctxt "DetailsBody"
+msgid "(confirmed by {})"
+msgstr "({}에서 확인함)"
+
+msgctxt "TvShell"
+msgid "(confirmed by {})"
+msgstr "({}에서 확인함)"
+
+msgctxt "FamilyRow"
+msgid ", unofficial"
+msgstr ", 비공식"
+
+msgctxt "TvShell"
+msgid "A PIN guards these settings and adult content"
+msgstr "PIN이 이 설정과 성인 콘텐츠를 보호합니다"
+
+msgctxt "SettingsBody"
+msgid "A PIN is set"
+msgstr "PIN이 설정되어 있습니다"
+
+msgctxt "SettingsBody"
+msgid "A folder chooser opens before each file is fetched. Backing out of it cancels the download."
+msgstr "파일을 받기 전에 매번 폴더 선택 창이 열립니다. 창을 닫으면 다운로드가 취소됩니다."
+
+msgctxt "TvQuestion"
+msgid "A game controller is connected. Bilby has a layout with large text for the sofa, driven with the arrow keys of a remote or keyboard. You can change this later in Settings."
+msgstr "게임 컨트롤러가 연결되어 있습니다. Bilby에는 소파에서 보기 좋게 글자가 큰 레이아웃이 있으며, 리모컨이나 키보드의 방향키로 조작합니다. 나중에 설정에서 바꿀 수 있습니다."
+
+msgctxt "DetailsBody"
+msgid "About"
+msgstr "정보"
+
+msgctxt "SettingsBody"
+msgid "About"
+msgstr "정보"
+
+msgctxt "TvShell"
+msgid "About"
+msgstr "정보"
+
+msgctxt "TvShell"
+msgid "About this package"
+msgstr "이 패키지 정보"
+
+msgctxt "WhatsNew"
+msgid "About this package"
+msgstr "이 패키지 정보"
+
+msgctxt "TvShell"
+msgid "About this website"
+msgstr "이 웹사이트 정보"
+
+msgctxt "WhatsNew"
+msgid "About this website"
+msgstr "이 웹사이트 정보"
+
+msgctxt "TvShell"
+msgid "Accounts"
+msgstr "계정"
+
+msgctxt "AppRow"
+msgid "Add"
+msgstr "추가"
+
+msgctxt "AppTile"
+msgid "Add"
+msgstr "추가"
+
+msgctxt "SettingsBody"
+msgid "Add"
+msgstr "추가"
+
+msgctxt "SettingsBody"
+msgid "Add this source"
+msgstr "이 소스 추가"
+
+msgctxt "DetailsBody"
+msgid "Add to favourites"
+msgstr "즐겨찾기에 추가"
+
+msgctxt "SettingsBody"
+msgid "Address of a list of apps"
+msgstr "앱 목록 주소"
+
+msgctxt "TvShell"
+msgid "Adult content on Home (off in Family mode)"
+msgstr "홈에 성인 콘텐츠 표시(가족 모드에서는 꺼짐)"
+
+msgctxt "TvShell"
+msgid "Adult content on Home, covered until chosen"
+msgstr "홈에 성인 콘텐츠 표시, 선택할 때까지 가림"
+
+msgctxt "SettingsBody"
+msgid "Adult content on the home page"
+msgstr "홈 화면의 성인 콘텐츠"
+
+msgctxt "TvShell"
+msgid "Adult content uncovered (off in Family mode)"
+msgstr "성인 콘텐츠를 가리지 않음(가족 모드에서는 꺼짐)"
+
+msgctxt "DesktopShell"
+msgid "All"
+msgstr "전체"
+
+msgctxt "MobileShell"
+msgid "All"
+msgstr "전체"
+
+msgctxt "SourceFilter"
+msgid "All"
+msgstr "전체"
+
+msgctxt "SettingsBody"
+msgid "App menu"
+msgstr "앱 메뉴"
+
+msgctxt "SettingsBody"
+msgid "AppImage"
+msgstr "AppImage"
+
+msgctxt "TvShell"
+msgid "AppImage"
+msgstr "AppImage"
+
+msgctxt "SettingsBody"
+msgid "Appearance"
+msgstr "모양"
+
+msgctxt "SettingsBody"
+msgid "Apps can also come from a list on your own server or storage: a small file saying what the apps are and where their files live. Add its address and its apps are searched, shown on the home page and installed like any others. Nobody but its owner vouches for what is on such a list, so add only ones you trust."
+msgstr "내 서버나 저장소에 있는 목록에서도 앱을 가져올 수 있습니다. 목록은 어떤 앱이 있고 파일이 어디에 있는지 알려 주는 작은 파일입니다. 주소를 추가하면 그 앱들도 다른 앱처럼 검색되고, 홈 화면에 표시되고, 설치됩니다. 이런 목록의 내용은 목록 주인 외에는 아무도 보증하지 않으므로, 믿을 수 있는 목록만 추가하세요."
+
+msgctxt "SettingsBody"
+msgid "Apps come from the sources listed above and are not reviewed by Bilby. Install software you trust. Made with Slint."
+msgstr "앱은 위에 나열된 소스에서 제공되며 Bilby가 검토하지 않습니다. 믿을 수 있는 소프트웨어만 설치하세요. Slint로 만들었습니다."
+
+msgctxt "LibraryBody"
+msgid "Apps you install from the store show up here, and the store can tell you when they have a new release."
+msgstr "스토어에서 설치한 앱이 여기에 표시되며, 새 릴리스가 나오면 스토어가 알려 줍니다."
+
+msgctxt "LibraryBody"
+msgid "Apps you install from the store show up here, and the store can tell you when they have a new release. Favourites are kept here too."
+msgstr "스토어에서 설치한 앱이 여기에 표시되며, 새 릴리스가 나오면 스토어가 알려 줍니다. 즐겨찾기도 여기에 보관됩니다."
+
+msgctxt "TvShell"
+msgid "Apps you install with Bilby show up here, and so do your favourites."
+msgstr "Bilby로 설치한 앱과 즐겨찾기가 여기에 표시됩니다."
+
+msgctxt "TvQuestion"
+msgid "Are you using this on a TV?"
+msgstr "TV에서 사용 중인가요?"
+
+msgctxt "SettingsBody"
+msgid "Ask for the PIN to install or remove apps"
+msgstr "앱을 설치하거나 제거할 때 PIN 요청"
+
+msgctxt "TvShell"
+msgid "Ask for the PIN to install or remove apps"
+msgstr "앱을 설치하거나 제거할 때 PIN 요청"
+
+msgctxt "TvShell"
+msgid "Ask for the PIN to install or remove apps (set a PIN first)"
+msgstr "앱을 설치하거나 제거할 때 PIN 요청(먼저 PIN을 설정하세요)"
+
+msgctxt "SettingsBody"
+msgid "Ask where to save each download"
+msgstr "다운로드할 때마다 저장 위치 묻기"
+
+msgctxt "SettingsBody"
+msgid "Automatic"
+msgstr "자동"
+
+msgctxt "TvShell"
+msgid "Automatic"
+msgstr "자동"
+
+msgctxt "DesktopShell"
+msgid "Back"
+msgstr "뒤로"
+
+msgctxt "MobileShell"
+msgid "Back"
+msgstr "뒤로"
+
+msgctxt "TvShell"
+msgid "Back cancels."
+msgstr "뒤로 버튼을 누르면 취소됩니다."
+
+msgctxt "OptionCard"
+msgid "Best for this device"
+msgstr "이 기기에 가장 적합"
+
+msgctxt "SettingsBody"
+msgid "Bilby adds itself to this device's list of apps the first time it runs, so it can be started like any other app. If you move its file, start it once from the new place."
+msgstr "Bilby는 처음 실행될 때 이 기기의 앱 목록에 자신을 추가하므로 다른 앱처럼 실행할 수 있습니다. 파일을 옮겼다면 새 위치에서 한 번 실행하세요."
+
+msgctxt "DetailsBody"
+msgid "Bilby checks the download is the genuine file"
+msgstr "Bilby가 다운로드한 파일이 정품인지 확인합니다"
+
+msgctxt "TvShell"
+msgid "Bilby checks the download is the genuine file"
+msgstr "Bilby가 다운로드한 파일이 정품인지 확인합니다"
+
+msgctxt "OptionCard"
+msgid "Bilby checks the download is the genuine file before installing it"
+msgstr "Bilby가 설치하기 전에 다운로드한 파일이 정품인지 확인합니다"
+
+msgctxt "SettingsBody"
+msgid "Bilby goes by what its sources say: Steam's adult-only marks, an app's own age rating, and its list of well-known adult sites. A site it has never heard of is not recognised, and most sources say nothing about age at all."
+msgstr "Bilby는 소스가 알려 주는 정보를 따릅니다. Steam의 성인 전용 표시, 앱 자체의 연령 등급, 그리고 잘 알려진 성인 사이트 목록입니다. 처음 보는 사이트는 알아보지 못하며, 대부분의 소스는 연령 정보를 전혀 제공하지 않습니다."
+
+msgctxt "SettingsBody"
+msgid "Bilby keeps a short list, chosen by people, of the apps and websites nearly everyone looks for: a browser, a video player, the big names. On, the home page starts with them in the version for this device, and they are placed a little higher in a search. Off, you get only what the sources' own figures say."
+msgstr "Bilby에는 브라우저, 동영상 플레이어, 유명 서비스처럼 거의 모든 사람이 찾는 앱과 웹사이트를 사람이 직접 고른 짧은 목록이 있습니다. 켜면 홈 화면이 이 기기에 맞는 버전의 추천 앱으로 시작하고, 검색에서도 조금 더 위에 표시됩니다. 끄면 소스 자체의 수치에 따른 결과만 표시됩니다."
+
+msgctxt "TvShell"
+msgid "Bilby {0} is available. You have {1}"
+msgstr "Bilby {0}을(를) 사용할 수 있습니다. 현재 버전: {1}"
+
+msgctxt "SettingsBody"
+msgid "Bilby {0} is available. You have {1}."
+msgstr "Bilby {0}을(를) 사용할 수 있습니다. 현재 버전은 {1}입니다."
+
+msgctxt "SettingsBody"
+msgid "Bilby {}. Everything runs on this device: there is no account and no server of ours. The store talks directly to the places apps come from, and keeps your library and settings in a file on this device."
+msgstr "Bilby {}. 모든 것이 이 기기에서 실행됩니다. 계정도 없고 저희 서버도 없습니다. 스토어는 앱을 제공하는 곳과 직접 통신하며, 라이브러리와 설정을 이 기기의 파일에 보관합니다."
+
+msgctxt "LibraryBody"
+msgid "Browse apps"
+msgstr "앱 둘러보기"
+
+msgctxt "DetailsBody"
+msgid "Cancel"
+msgstr "취소"
+
+msgctxt "GateOverlay"
+msgid "Cancel"
+msgstr "취소"
+
+msgctxt "LibraryItem"
+msgid "Cancel"
+msgstr "취소"
+
+msgctxt "OptionCard"
+msgid "Cancel"
+msgstr "취소"
+
+msgctxt "SettingsBody"
+msgid "Cancel"
+msgstr "취소"
+
+msgctxt "TvShell"
+msgid "Cancel"
+msgstr "취소"
+
+msgctxt "DetailsBody"
+msgid "Cancel downloading {}"
+msgstr "{} 다운로드 취소"
+
+msgctxt "SettingsBody"
+msgid "Cancel signing in"
+msgstr "로그인 취소"
+
+msgctxt "GateOverlay"
+msgid "Cancel the PIN"
+msgstr "PIN 입력 취소"
+
+msgctxt "LibraryItem"
+msgid "Cancel updating {}"
+msgstr "{} 업데이트 취소"
+
+msgctxt "TvShell"
+msgid "Change"
+msgstr "변경"
+
+msgctxt "SettingsBody"
+msgid "Change PIN"
+msgstr "PIN 변경"
+
+msgctxt "SettingsBody"
+msgid "Change folder"
+msgstr "폴더 변경"
+
+msgctxt "SettingsBody"
+msgid "Change the downloads folder"
+msgstr "다운로드 폴더 변경"
+
+msgctxt "TvShell"
+msgid "Change version"
+msgstr "버전 변경"
+
+msgctxt "TvShell"
+msgid "Changing the system needs the password you sign in to this device with. Bilby passes it to the system and does not keep it."
+msgstr "시스템을 변경하려면 이 기기에 로그인할 때 쓰는 비밀번호가 필요합니다. Bilby는 비밀번호를 시스템에 전달할 뿐 보관하지 않습니다."
+
+msgctxt "SystemBody"
+msgid "Check again"
+msgstr "다시 확인"
+
+msgctxt "TvShell"
+msgid "Check again"
+msgstr "다시 확인"
+
+msgctxt "SettingsBody"
+msgid "Check for a newer Bilby"
+msgstr "새 Bilby 버전 확인"
+
+msgctxt "LibraryBody"
+msgid "Check for updates"
+msgstr "업데이트 확인"
+
+msgctxt "TvShell"
+msgid "Check for updates"
+msgstr "업데이트 확인"
+
+msgctxt "TvShell"
+msgid "Check for updates when Bilby opens"
+msgstr "Bilby를 열 때 업데이트 확인"
+
+msgctxt "SettingsBody"
+msgid "Check for updates when the store opens"
+msgstr "스토어를 열 때 업데이트 확인"
+
+msgctxt "OptionCard"
+msgid "Checked against the publisher's SHA-256 after download"
+msgstr "다운로드 후 게시자의 SHA-256과 대조해 확인함"
+
+msgctxt "LibraryBody"
+msgid "Checking for updates…"
+msgstr "업데이트 확인 중…"
+
+msgctxt "DetailsBody"
+msgid "Checking releases against this device…"
+msgstr "이 기기에 맞는 릴리스 확인 중…"
+
+msgctxt "TvShell"
+msgid "Checking what works on this TV…"
+msgstr "이 TV에서 작동하는 항목 확인 중…"
+
+msgctxt "TvShell"
+msgid "Checking…"
+msgstr "확인 중…"
+
+msgctxt "TvShell"
+msgid "Choose a version"
+msgstr "버전 선택"
+
+msgctxt "TvShell"
+msgid "Choose enter when it is typed. Back cancels."
+msgstr "다 입력했으면 '확인'을 선택하세요. 뒤로 버튼을 누르면 취소됩니다."
+
+msgctxt "GateOverlay"
+msgid "Clear"
+msgstr "지우기"
+
+msgctxt "TvShell"
+msgid "Clear"
+msgstr "지우기"
+
+msgctxt "SettingsBody"
+msgid "Clear cached catalog data"
+msgstr "캐시된 카탈로그 데이터 지우기"
+
+msgctxt "SearchField"
+msgid "Clear search"
+msgstr "검색어 지우기"
+
+msgctxt "SettingsBody"
+msgid "Clear search history"
+msgstr "검색 기록 지우기"
+
+msgctxt "TvShell"
+msgid "Clear the PIN"
+msgstr "PIN 지우기"
+
+msgctxt "CommandBox"
+msgid "Command"
+msgstr "명령어"
+
+msgctxt "OptionCard"
+msgid "Compatible"
+msgstr "호환됨"
+
+msgctxt "TvShell"
+msgid "Confirm"
+msgstr "확인"
+
+msgctxt "LibraryItem"
+msgid "Confirm removing {}"
+msgstr "{} 제거 확인"
+
+msgctxt "CommandBox"
+msgid "Copied"
+msgstr "복사됨"
+
+msgctxt "CommandBox"
+msgid "Copy"
+msgstr "복사"
+
+msgctxt "CommandBox"
+msgid "Copy command"
+msgstr "명령어 복사"
+
+msgctxt "DetailsBody"
+msgid "Couldn't load this app"
+msgstr "이 앱을 불러올 수 없습니다"
+
+msgctxt "SettingsBody"
+msgid "Dark"
+msgstr "어둡게"
+
+msgctxt "DesktopShell"
+msgid "Demo catalog"
+msgstr "데모 카탈로그"
+
+msgctxt "SettingsBody"
+msgid "Demo mode: the catalog is fictional and nothing is fetched from the network."
+msgstr "데모 모드: 카탈로그는 가상이며 네트워크에서 아무것도 가져오지 않습니다."
+
+msgctxt "TvShell"
+msgid "Description"
+msgstr "설명"
+
+msgctxt "SettingsBody"
+msgid "Desktop"
+msgstr "데스크톱"
+
+msgctxt "TvShell"
+msgid "Desktop layout"
+msgstr "데스크톱 레이아웃"
+
+msgctxt "LibraryItem"
+msgid "Details"
+msgstr "세부 정보"
+
+msgctxt "LibraryItem"
+msgid "Details of {}"
+msgstr "{} 세부 정보"
+
+msgctxt "GateOverlay"
+msgid "Digit 0"
+msgstr "숫자 0"
+
+msgctxt "GateOverlay"
+msgid "Digit {}"
+msgstr "숫자 {}"
+
+msgctxt "TvShell"
+msgid "Digit {}"
+msgstr "숫자 {}"
+
+msgctxt "DesktopShell"
+msgid "Discover"
+msgstr "둘러보기"
+
+msgctxt "MobileShell"
+msgid "Discover"
+msgstr "둘러보기"
+
+msgctxt "DetailsBody"
+msgid "Download"
+msgstr "다운로드"
+
+msgctxt "DetailsBody"
+msgid "Download anyway"
+msgstr "그래도 다운로드"
+
+msgctxt "DetailsBody"
+msgid "Download anyway: {}"
+msgstr "그래도 다운로드: {}"
+
+msgctxt "DetailsBody"
+msgid "Download size"
+msgstr "다운로드 크기"
+
+msgctxt "TvShell"
+msgid "Download size"
+msgstr "다운로드 크기"
+
+msgctxt "TvShell"
+msgid "Downloading…  {}%"
+msgstr "다운로드 중…  {}%"
+
+msgctxt "DetailsBody"
+msgid "Downloads"
+msgstr "다운로드"
+
+msgctxt "TvShell"
+msgid "Downloads"
+msgstr "다운로드"
+
+msgctxt "SettingsBody"
+msgid "Downloads folder path"
+msgstr "다운로드 폴더 경로"
+
+msgctxt "SettingsBody"
+msgid "Downloads go to"
+msgstr "다운로드 위치"
+
+msgctxt "DetailsBody"
+msgid "Every way to install on {}"
+msgstr "{}에 설치하는 모든 방법"
+
+msgctxt "LibraryBody"
+msgid "Everything is up to date"
+msgstr "모두 최신 상태입니다"
+
+msgctxt "DesktopShell"
+msgid "Everything shown works here"
+msgstr "표시된 항목은 모두 이 기기에서 작동합니다"
+
+msgctxt "SettingsBody"
+msgid "Everything works without signing in, but GitHub then allows only 60 requests an hour for your whole network, which a few searches can use up. Signing in raises that to 5,000. Bilby asks for no access to your account."
+msgstr "로그인하지 않아도 모두 작동하지만, 그러면 GitHub는 네트워크 전체에 시간당 60회의 요청만 허용하며 검색 몇 번으로 다 쓸 수 있습니다. 로그인하면 5,000회로 늘어납니다. Bilby는 계정에 대한 어떤 접근 권한도 요청하지 않습니다."
+
+msgctxt "SettingsBody"
+msgid "Family and adult content"
+msgstr "가족 및 성인 콘텐츠"
+
+msgctxt "TvShell"
+msgid "Family and adult content"
+msgstr "가족 및 성인 콘텐츠"
+
+msgctxt "SettingsBody"
+msgid "Family mode"
+msgstr "가족 모드"
+
+msgctxt "TvShell"
+msgid "Family mode: nothing for adults is shown anywhere"
+msgstr "가족 모드: 성인용 항목이 어디에도 표시되지 않습니다"
+
+msgctxt "LibraryBody"
+msgid "Favourites"
+msgstr "즐겨찾기"
+
+msgctxt "Spotlight"
+msgid "Featured"
+msgstr "추천"
+
+msgctxt "MobileShell"
+msgid "Featured apps"
+msgstr "추천 앱"
+
+msgctxt "DesktopShell"
+msgid "Featured apps matching “{}”  ·  press Enter to search GitHub too"
+msgstr "“{}”와(과) 일치하는 추천 앱  ·  Enter를 누르면 GitHub에서도 검색합니다"
+
+msgctxt "DetailsBody"
+msgid "Files that won't work on this device"
+msgstr "이 기기에서 작동하지 않는 파일"
+
+msgctxt "SettingsBody"
+msgid "Flatpak"
+msgstr "Flatpak"
+
+msgctxt "TvShell"
+msgid "Flatpak"
+msgstr "Flatpak"
+
+msgctxt "SettingsBody"
+msgid "For those who want no cover at all: adult things are shown as they are, among everything else, and open without a question."
+msgstr "아무것도 가리고 싶지 않은 분을 위한 설정입니다. 성인용 항목이 다른 항목과 함께 그대로 표시되고, 묻지 않고 열립니다."
+
+msgctxt "SettingsBody"
+msgid "Four digits. With a PIN set, it is asked for to change anything in this card and to open adult content, in place of the question about being an adult."
+msgstr "숫자 네 자리입니다. PIN을 설정하면 이 카드의 설정을 바꾸거나 성인 콘텐츠를 열 때 성인인지 묻는 대신 PIN을 묻습니다."
+
+msgctxt "DetailsBody"
+msgid "From"
+msgstr "제공"
+
+msgctxt "TvShell"
+msgid "From"
+msgstr "제공"
+
+msgctxt "TvShell"
+msgid "General"
+msgstr "일반"
+
+msgctxt "SettingsBody"
+msgid "GitHub access"
+msgstr "GitHub 액세스"
+
+msgctxt "SettingsBody"
+msgid "GitHub token"
+msgstr "GitHub 토큰"
+
+msgctxt "Welcome"
+msgid "Got it"
+msgstr "확인"
+
+msgctxt "DetailsBody"
+msgid "Hide other versions and files"
+msgstr "다른 버전과 파일 숨기기"
+
+msgctxt "OptionCard"
+msgid "Hide steps"
+msgstr "단계 숨기기"
+
+msgctxt "SystemBody"
+msgid "Hide what the updater said"
+msgstr "업데이트 프로그램 출력 숨기기"
+
+msgctxt "DetailsBody"
+msgid "Hide {n} file for other devices"
+msgid_plural "Hide {n} files for other devices"
+msgstr[0] "다른 기기용 파일 {n}개 숨기기"
+
+msgctxt "TvShell"
+msgid "Home"
+msgstr "홈"
+
+msgctxt "DetailsBody"
+msgid "In your favourites"
+msgstr "즐겨찾기에 있음"
+
+msgctxt "SettingsBody"
+msgid "Include pre-releases"
+msgstr "사전 릴리스 포함"
+
+msgctxt "DetailsBody"
+msgid "Information"
+msgstr "정보"
+
+msgctxt "SystemBody"
+msgid "Information"
+msgstr "정보"
+
+msgctxt "TvShell"
+msgid "Information"
+msgstr "정보"
+
+msgctxt "AppRow"
+msgid "Install"
+msgstr "설치"
+
+msgctxt "AppTile"
+msgid "Install"
+msgstr "설치"
+
+msgctxt "DetailsBody"
+msgid "Install"
+msgstr "설치"
+
+msgctxt "OptionCard"
+msgid "Install"
+msgstr "설치"
+
+msgctxt "TvShell"
+msgid "Install again"
+msgstr "다시 설치"
+
+msgctxt "AppRow"
+msgid "Install {} now"
+msgstr "지금 {} 설치"
+
+msgctxt "AppTile"
+msgid "Install {} now"
+msgstr "지금 {} 설치"
+
+msgctxt "AppRow"
+msgid "Installed"
+msgstr "설치됨"
+
+msgctxt "AppTile"
+msgid "Installed"
+msgstr "설치됨"
+
+msgctxt "DetailsBody"
+msgid "Installed"
+msgstr "설치됨"
+
+msgctxt "TvShell"
+msgid "Installed"
+msgstr "설치됨"
+
+msgctxt "TvTile"
+msgid "Installed"
+msgstr "설치됨"
+
+msgctxt "DetailsBody"
+msgid "Installed  ·  {}"
+msgstr "설치됨  ·  {}"
+
+msgctxt "TvShell"
+msgid "Installed  ·  {}"
+msgstr "설치됨  ·  {}"
+
+msgctxt "SettingsBody"
+msgid "Installers and other files Bilby downloads are saved here. Apps that run as one file (AppImages) are then moved to the Applications folder in your home folder; packages, Flatpaks and store apps go where your system puts them."
+msgstr "Bilby가 다운로드하는 설치 파일과 기타 파일이 여기에 저장됩니다. 파일 하나로 실행되는 앱(AppImage)은 이후 홈 폴더의 Applications 폴더로 옮겨지고, 패키지, Flatpak, 스토어 앱은 시스템이 정한 위치에 설치됩니다."
+
+msgctxt "DetailsBody"
+msgid "Installing from {}"
+msgstr "{}에서 설치 중"
+
+msgctxt "TvShell"
+msgid "Installing updates"
+msgstr "업데이트 설치 중"
+
+msgctxt "TvQuestion"
+msgid "Keep this layout"
+msgstr "이 레이아웃 유지"
+
+msgctxt "TvShell"
+msgid "Kind of app to offer first when there is a choice"
+msgstr "선택할 수 있을 때 먼저 제안할 앱 종류"
+
+msgctxt "DetailsBody"
+msgid "Kind of file"
+msgstr "파일 종류"
+
+msgctxt "TvShell"
+msgid "Kind of file"
+msgstr "파일 종류"
+
+msgctxt "SettingsBody"
+msgid "Language"
+msgstr "언어"
+
+msgctxt "TvShell"
+msgid "Language"
+msgstr "언어"
+
+msgctxt "LibraryBody"
+msgid "Last checked {}"
+msgstr "마지막 확인: {}"
+
+msgctxt "SettingsBody"
+msgid "Layout"
+msgstr "레이아웃"
+
+msgctxt "DesktopShell"
+msgid "Library"
+msgstr "라이브러리"
+
+msgctxt "MobileShell"
+msgid "Library"
+msgstr "라이브러리"
+
+msgctxt "TvShell"
+msgid "Library"
+msgstr "라이브러리"
+
+msgctxt "TvShell"
+msgid "Library  ·  {n} update"
+msgid_plural "Library  ·  {n} updates"
+msgstr[0] "라이브러리  ·  업데이트 {n}개"
+
+msgctxt "DetailsBody"
+msgid "Licence"
+msgstr "라이선스"
+
+msgctxt "TvShell"
+msgid "Licence"
+msgstr "라이선스"
+
+msgctxt "SettingsBody"
+msgid "Light"
+msgstr "밝게"
+
+msgctxt "DetailsBody"
+msgid "Made by"
+msgstr "제작"
+
+msgctxt "TvShell"
+msgid "Made by"
+msgstr "제작"
+
+msgctxt "SettingsBody"
+msgid "Many apps come more than one way. Choose which Bilby offers first when there is a choice. Automatic picks what suits this system: its own packages on most, Flatpak on a read-only system such as Fedora Kinoite. You can always pick another on an app's page."
+msgstr "많은 앱이 여러 형태로 제공됩니다. 선택할 수 있을 때 Bilby가 무엇을 먼저 제안할지 고르세요. 자동은 이 시스템에 맞는 것을 고릅니다. 대부분은 시스템 자체 패키지를, Fedora Kinoite 같은 읽기 전용 시스템에서는 Flatpak을 고릅니다. 앱 페이지에서 언제든지 다른 것을 고를 수 있습니다."
+
+msgctxt "SettingsBody"
+msgid "Match system"
+msgstr "시스템 설정 따르기"
+
+msgctxt "TvShell"
+msgid "More choices"
+msgstr "다른 선택지"
+
+msgctxt "GateOverlay"
+msgid "No"
+msgstr "아니요"
+
+msgctxt "TvShell"
+msgid "No PIN is set"
+msgstr "PIN이 설정되어 있지 않습니다"
+
+msgctxt "DesktopShell"
+msgid "No apps for this device"
+msgstr "이 기기용 앱이 없습니다"
+
+msgctxt "MobileShell"
+msgid "No apps for this device"
+msgstr "이 기기용 앱이 없습니다"
+
+msgctxt "GateOverlay"
+msgid "No, I am not"
+msgstr "아니요, 아닙니다"
+
+msgctxt "DesktopShell"
+msgid "Nothing featured for this device yet"
+msgstr "아직 이 기기용 추천 항목이 없습니다"
+
+msgctxt "MobileShell"
+msgid "Nothing featured for this device yet"
+msgstr "아직 이 기기용 추천 항목이 없습니다"
+
+msgctxt "SettingsBody"
+msgid "Nothing for adults is shown anywhere, not even covered, and none of it can be opened."
+msgstr "성인용 항목은 가려진 상태로도 어디에도 표시되지 않으며, 열 수도 없습니다."
+
+msgctxt "TvShell"
+msgid "Nothing for this TV yet. Press Up to search."
+msgstr "아직 이 TV용 항목이 없습니다. 위쪽 버튼을 눌러 검색하세요."
+
+msgctxt "TvSetting"
+msgid "Off"
+msgstr "끔"
+
+msgctxt "SettingsBody"
+msgid "Off, adult things are only ever found by searching. On, they may also appear on the home page, covered like everywhere else."
+msgstr "끄면 성인용 항목은 검색으로만 찾을 수 있습니다. 켜면 홈 화면에도 나타날 수 있으며, 다른 곳과 마찬가지로 가려져 있습니다."
+
+msgctxt "SettingsBody"
+msgid "Offer betas and release candidates as soon as they are published. They may be unstable."
+msgstr "베타와 릴리스 후보를 게시되는 대로 제안합니다. 불안정할 수 있습니다."
+
+msgctxt "TvShell"
+msgid "Offer test versions of apps"
+msgstr "앱의 테스트 버전 제안"
+
+msgctxt "FamilyRow"
+msgid "Official"
+msgstr "공식"
+
+msgctxt "TvSetting"
+msgid "On"
+msgstr "켬"
+
+msgctxt "SettingsBody"
+msgid "On this or any other device, open github.com/login/device and enter this code:"
+msgstr "이 기기나 다른 기기에서 github.com/login/device를 열고 이 코드를 입력하세요:"
+
+msgctxt "TvShell"
+msgid "On your phone or computer, open github.com/login/device and enter:"
+msgstr "휴대폰이나 컴퓨터에서 github.com/login/device를 열고 다음을 입력하세요:"
+
+msgctxt "TvShell"
+msgid "On-screen keyboard"
+msgstr "화면 키보드"
+
+msgctxt "MobileShell"
+msgid "Only apps that work on this device are listed."
+msgstr "이 기기에서 작동하는 앱만 표시됩니다."
+
+msgctxt "DetailsBody"
+msgid "Open"
+msgstr "열기"
+
+msgctxt "TvShell"
+msgid "Open"
+msgstr "열기"
+
+msgctxt "SettingsBody"
+msgid "Open downloads folder"
+msgstr "다운로드 폴더 열기"
+
+msgctxt "SettingsBody"
+msgid "Open folder"
+msgstr "폴더 열기"
+
+msgctxt "TvShell"
+msgid "Open link {}"
+msgstr "{} 링크 열기"
+
+msgctxt "SettingsBody"
+msgid "Open that page"
+msgstr "해당 페이지 열기"
+
+msgctxt "TvShell"
+msgid "Open the Steam app on your phone, scan this code and approve the sign-in there."
+msgstr "휴대폰에서 Steam 앱을 열고 이 코드를 스캔한 다음 앱에서 로그인을 승인하세요."
+
+msgctxt "TvShell"
+msgid "Opens in Longboard, driven with your remote"
+msgstr "Longboard에서 열리며 리모컨으로 조작합니다"
+
+msgctxt "SettingsBody"
+msgid "Or paste a personal access token (one with no scopes is enough):"
+msgstr "또는 개인 액세스 토큰을 붙여 넣으세요(범위가 없는 토큰이면 충분합니다):"
+
+msgctxt "TvShell"
+msgid "Or sign in to Steam in a browser (Longboard)"
+msgstr "또는 브라우저(Longboard)에서 Steam에 로그인"
+
+msgctxt "SettingsBody"
+msgid "Or type a folder's full path and press Enter"
+msgstr "또는 폴더의 전체 경로를 입력하고 Enter를 누르세요"
+
+msgctxt "DetailsBody"
+msgid "Other versions and files"
+msgstr "다른 버전과 파일"
+
+msgctxt "FamilyPanel"
+msgid "Other ways to use {}"
+msgstr "{}을(를) 사용하는 다른 방법"
+
+msgctxt "TvShell"
+msgid "Other ways to use {}"
+msgstr "{}을(를) 사용하는 다른 방법"
+
+msgctxt "SettingsBody"
+msgid "PIN"
+msgstr "PIN"
+
+msgctxt "SettingsBody"
+msgid "Paste a new token to replace it"
+msgstr "바꾸려면 새 토큰을 붙여 넣으세요"
+
+msgctxt "SettingsBody"
+msgid "Paste a token"
+msgstr "토큰 붙여 넣기"
+
+msgctxt "TvShell"
+msgid "Pick letters, then choose search"
+msgstr "글자를 고른 다음 검색을 선택하세요"
+
+msgctxt "DetailsBody"
+msgid "Picture {0} of {1}"
+msgstr "사진 {0}/{1}"
+
+msgctxt "TvShell"
+msgid "Picture {0} of {1}"
+msgstr "사진 {0}/{1}"
+
+msgctxt "TvShell"
+msgid "Picture {0} of {1}, large"
+msgstr "사진 {0}/{1}, 크게 보기"
+
+msgctxt "TvShell"
+msgid "Pictures"
+msgstr "사진"
+
+msgctxt "DetailsBody"
+msgid "Popularity"
+msgstr "인기도"
+
+msgctxt "TvShell"
+msgid "Popularity"
+msgstr "인기도"
+
+msgctxt "SettingsBody"
+msgid "Preferred kind of app"
+msgstr "선호하는 앱 종류"
+
+msgctxt "TvShell"
+msgid "Press Back to stop."
+msgstr "중지하려면 뒤로 버튼을 누르세요."
+
+msgctxt "TvShell"
+msgid "Press OK again to remove {} from this TV"
+msgstr "이 TV에서 {}을(를) 제거하려면 OK를 다시 누르세요"
+
+msgctxt "TvShell"
+msgid "Press OK for the keyboard"
+msgstr "OK를 누르면 키보드가 열립니다"
+
+msgctxt "TvShell"
+msgid "Press OK for the next language"
+msgstr "OK를 누르면 다음 언어로 바뀝니다"
+
+msgctxt "DetailsBody"
+msgid "Price"
+msgstr "가격"
+
+msgctxt "TvShell"
+msgid "Price"
+msgstr "가격"
+
+msgctxt "DetailsBody"
+msgid "Project page"
+msgstr "프로젝트 페이지"
+
+msgctxt "SettingsBody"
+msgid "QR code to scan with the Steam app"
+msgstr "Steam 앱으로 스캔할 QR 코드"
+
+msgctxt "TvShell"
+msgid "QR code to scan with the Steam app"
+msgstr "Steam 앱으로 스캔할 QR 코드"
+
+msgctxt "DetailsBody"
+msgid "Ratings"
+msgstr "평점"
+
+msgctxt "DetailsBody"
+msgid "Ratings and reviews"
+msgstr "평점 및 리뷰"
+
+msgctxt "TvShell"
+msgid "Ratings and reviews"
+msgstr "평점 및 리뷰"
+
+msgctxt "DetailsBody"
+msgid "Ratings come from the ratings service the GNOME and KDE app stores use."
+msgstr "평점은 GNOME과 KDE 앱 스토어가 사용하는 평점 서비스에서 가져옵니다."
+
+msgctxt "Clamped"
+msgid "Read more"
+msgstr "더 보기"
+
+msgctxt "TvShell"
+msgid "Reading"
+msgstr "읽는 중"
+
+msgctxt "LibraryItem"
+msgid "Really remove?"
+msgstr "정말 제거할까요?"
+
+msgctxt "DesktopShell"
+msgid "Recent"
+msgstr "최근"
+
+msgctxt "SettingsBody"
+msgid "Recommend the apps everyone knows"
+msgstr "누구나 아는 앱 추천"
+
+msgctxt "TvShell"
+msgid "Recommend the apps everyone knows, on Home and in searches"
+msgstr "홈과 검색에서 누구나 아는 앱 추천"
+
+msgctxt "SettingsBody"
+msgid "Recommendations"
+msgstr "추천"
+
+msgctxt "SettingsBody"
+msgid "Reduce motion"
+msgstr "동작 줄이기"
+
+msgctxt "SettingsBody"
+msgid "Reduce motion: pages and buttons change at once instead of moving."
+msgstr "동작 줄이기: 페이지와 버튼이 움직이지 않고 바로 바뀝니다."
+
+msgctxt "DetailsBody"
+msgid "Reinstall"
+msgstr "다시 설치"
+
+msgctxt "OptionCard"
+msgid "Reinstall"
+msgstr "다시 설치"
+
+msgctxt "DetailsBody"
+msgid "Released"
+msgstr "출시일"
+
+msgctxt "TvShell"
+msgid "Released"
+msgstr "출시일"
+
+msgctxt "SettingsBody"
+msgid "Releases"
+msgstr "릴리스"
+
+msgctxt "LibraryItem"
+msgid "Remove"
+msgstr "제거"
+
+msgctxt "SettingsBody"
+msgid "Remove"
+msgstr "제거"
+
+msgctxt "TvShell"
+msgid "Remove"
+msgstr "제거"
+
+msgctxt "SettingsBody"
+msgid "Remove PIN"
+msgstr "PIN 제거"
+
+msgctxt "DetailsBody"
+msgid "Remove from favourites"
+msgstr "즐겨찾기에서 제거"
+
+msgctxt "TvShell"
+msgid "Remove the PIN"
+msgstr "PIN 제거"
+
+msgctxt "SettingsBody"
+msgid "Remove the source {}"
+msgstr "소스 {} 제거"
+
+msgctxt "LibraryItem"
+msgid "Remove {}"
+msgstr "{} 제거"
+
+msgctxt "SystemBody"
+msgid "Restart now"
+msgstr "지금 다시 시작"
+
+msgctxt "TvShell"
+msgid "Restart now"
+msgstr "지금 다시 시작"
+
+msgctxt "TvShell"
+msgid "Restart this TV to finish updating."
+msgstr "업데이트를 마치려면 이 TV를 다시 시작하세요."
+
+msgctxt "SystemBody"
+msgid "Restart this device to finish: something that was updated is still running in its old version."
+msgstr "마치려면 이 기기를 다시 시작하세요. 업데이트된 항목 중 일부가 아직 이전 버전으로 실행 중입니다."
+
+msgctxt "DesktopShell"
+msgid "Results"
+msgstr "결과"
+
+msgctxt "TvShell"
+msgid "Review {0} of {1}"
+msgstr "리뷰 {0}/{1}"
+
+msgctxt "DetailsBody"
+msgid "Review {0}: {1}"
+msgstr "리뷰 {0}: {1}"
+
+msgctxt "TvShell"
+msgid "Review {0}: {1}"
+msgstr "리뷰 {0}: {1}"
+
+msgctxt "TvShell"
+msgid "Review: {}"
+msgstr "리뷰: {}"
+
+msgctxt "TvShell"
+msgid "Reviews"
+msgstr "리뷰"
+
+msgctxt "DetailsBody"
+msgid "Reviews are written by other people and come from the ratings service the GNOME and KDE app stores use."
+msgstr "리뷰는 다른 사람들이 작성한 것이며 GNOME과 KDE 앱 스토어가 사용하는 평점 서비스에서 가져옵니다."
+
+msgctxt "TvShell"
+msgid "Reviews are written by other people and come from the ratings service the GNOME and KDE app stores use."
+msgstr "리뷰는 다른 사람들이 작성한 것이며 GNOME과 KDE 앱 스토어가 사용하는 평점 서비스에서 가져옵니다."
+
+msgctxt "TvShell"
+msgid "Runs on this TV"
+msgstr "이 TV에서 실행됨"
+
+msgctxt "DetailsBody"
+msgid "Runs on this device"
+msgstr "이 기기에서 실행됨"
+
+msgctxt "OptionCard"
+msgid "Runs on this device"
+msgstr "이 기기에서 실행됨"
+
+msgctxt "SettingsBody"
+msgid "Save"
+msgstr "저장"
+
+msgctxt "SettingsBody"
+msgid "Save token"
+msgstr "토큰 저장"
+
+msgctxt "SettingsBody"
+msgid "Saved"
+msgstr "저장됨"
+
+msgctxt "SettingsBody"
+msgid "Scan a code with the Steam app on your phone. Nothing to type. Steam gives Bilby a key to your account, which Bilby uses once to read the list and then throws away."
+msgstr "휴대폰의 Steam 앱으로 코드를 스캔하세요. 입력할 것이 없습니다. Steam이 Bilby에 계정 키를 주며, Bilby는 목록을 읽는 데 한 번만 쓰고 버립니다."
+
+msgctxt "TvShell"
+msgid "Scan the code with the Steam app on your phone"
+msgstr "휴대폰의 Steam 앱으로 코드를 스캔하세요"
+
+msgctxt "SettingsBody"
+msgid "Scan this with the Steam app on your phone and approve the sign-in there."
+msgstr "휴대폰의 Steam 앱으로 이 코드를 스캔하고 앱에서 로그인을 승인하세요."
+
+msgctxt "SettingsBody"
+msgid "Scanned. Approve it in the Steam app."
+msgstr "스캔했습니다. Steam 앱에서 승인하세요."
+
+msgctxt "TvShell"
+msgid "Scanned. Approve it in the Steam app."
+msgstr "스캔했습니다. Steam 앱에서 승인하세요."
+
+msgctxt "DesktopShell"
+msgid "Search"
+msgstr "검색"
+
+msgctxt "MobileShell"
+msgid "Search"
+msgstr "검색"
+
+msgctxt "SearchField"
+msgid "Search"
+msgstr "검색"
+
+msgctxt "TvShell"
+msgid "Search"
+msgstr "검색"
+
+msgctxt "DesktopShell"
+msgid "Search again for {}"
+msgstr "{} 다시 검색"
+
+msgctxt "SearchField"
+msgid "Search apps"
+msgstr "앱 검색"
+
+msgctxt "DesktopShell"
+msgid "Search for an app by name, or paste a project link."
+msgstr "이름으로 앱을 검색하거나 프로젝트 링크를 붙여 넣으세요."
+
+msgctxt "MobileShell"
+msgid "Search for an app by name, or paste a project link."
+msgstr "이름으로 앱을 검색하거나 프로젝트 링크를 붙여 넣으세요."
+
+msgctxt "TvShell"
+msgid "Search for apps and games"
+msgstr "앱과 게임 검색"
+
+msgctxt "MobileShell"
+msgid "Search, or paste a project link"
+msgstr "검색하거나 프로젝트 링크 붙여 넣기"
+
+msgctxt "DesktopShell"
+msgid "Search, or paste a project link   (Ctrl+K)"
+msgstr "검색하거나 프로젝트 링크 붙여 넣기   (Ctrl+K)"
+
+msgctxt "DesktopShell"
+msgid "Searching…"
+msgstr "검색 중…"
+
+msgctxt "MobileShell"
+msgid "Searching…"
+msgstr "검색 중…"
+
+msgctxt "TvShell"
+msgid "Searching…"
+msgstr "검색 중…"
+
+msgctxt "SettingsBody"
+msgid "Set a PIN"
+msgstr "PIN 설정"
+
+msgctxt "TvShell"
+msgid "Set a PIN"
+msgstr "PIN 설정"
+
+msgctxt "SettingsBody"
+msgid "Set a PIN below so that it cannot simply be switched off."
+msgstr "간단히 끌 수 없도록 아래에서 PIN을 설정하세요."
+
+msgctxt "TvShell"
+msgid "Set a PIN to guard these settings and adult content"
+msgstr "PIN을 설정해 이 설정과 성인 콘텐츠 보호"
+
+msgctxt "DesktopShell"
+msgid "Settings"
+msgstr "설정"
+
+msgctxt "MobileShell"
+msgid "Settings"
+msgstr "설정"
+
+msgctxt "TvShell"
+msgid "Settings"
+msgstr "설정"
+
+msgctxt "TvShell"
+msgid "Should run on this TV"
+msgstr "이 TV에서 실행될 것으로 보임"
+
+msgctxt "DetailsBody"
+msgid "Should run on this device"
+msgstr "이 기기에서 실행될 것으로 보임"
+
+msgctxt "OptionCard"
+msgid "Should run on this device"
+msgstr "이 기기에서 실행될 것으로 보임"
+
+msgctxt "SettingsBody"
+msgid "Show Bilby in the app menu"
+msgstr "앱 메뉴에 Bilby 표시"
+
+msgctxt "SettingsBody"
+msgid "Show adult content uncovered"
+msgstr "성인 콘텐츠를 가리지 않고 표시"
+
+msgctxt "TvShell"
+msgid "Show adult content uncovered, with no question"
+msgstr "성인 콘텐츠를 묻지 않고 가리지 않은 채 표시"
+
+msgctxt "Clamped"
+msgid "Show all of {}"
+msgstr "{} 모두 보기"
+
+msgctxt "DesktopShell"
+msgid "Show all {0} in {1}"
+msgstr "{1}의 {0}개 모두 보기"
+
+msgctxt "MobileShell"
+msgid "Show all {0} in {1}"
+msgstr "{1}의 {0}개 모두 보기"
+
+msgctxt "DesktopShell"
+msgid "Show all {}"
+msgstr "{}개 모두 보기"
+
+msgctxt "MobileShell"
+msgid "Show all {}"
+msgstr "{}개 모두 보기"
+
+msgctxt "SystemBody"
+msgid "Show all {}"
+msgstr "{}개 모두 보기"
+
+msgctxt "SettingsBody"
+msgid "Show apps from {}"
+msgstr "{}의 앱 표시"
+
+msgctxt "TvShell"
+msgid "Show code"
+msgstr "코드 표시"
+
+msgctxt "SystemBody"
+msgid "Show fewer"
+msgstr "간략히 보기"
+
+msgctxt "Clamped"
+msgid "Show less"
+msgstr "접기"
+
+msgctxt "Clamped"
+msgid "Show less of {}"
+msgstr "{} 접기"
+
+msgctxt "SettingsBody"
+msgid "Show ratings and reviews"
+msgstr "평점 및 리뷰 표시"
+
+msgctxt "UpdatesBanner"
+msgid "Show updates"
+msgstr "업데이트 표시"
+
+msgctxt "SystemBody"
+msgid "Show what the updater said"
+msgstr "업데이트 프로그램 출력 보기"
+
+msgctxt "DetailsBody"
+msgid "Show {n} file for other devices"
+msgid_plural "Show {n} files for other devices"
+msgstr[0] "다른 기기용 파일 {n}개 표시"
+
+msgctxt "TvShell"
+msgid "Sign in"
+msgstr "로그인"
+
+msgctxt "SettingsBody"
+msgid "Sign in in a browser"
+msgstr "브라우저에서 로그인"
+
+msgctxt "SettingsBody"
+msgid "Sign in on Steam's page in Longboard, then choose to share your library."
+msgstr "Longboard에 열린 Steam 페이지에서 로그인한 다음 라이브러리 공유를 선택하세요."
+
+msgctxt "TvShell"
+msgid "Sign in on Steam's page in Longboard, then share your library"
+msgstr "Longboard에 열린 Steam 페이지에서 로그인한 다음 라이브러리를 공유하세요"
+
+msgctxt "SettingsBody"
+msgid "Sign in on Steam's page in the window that opened. Close it to stop."
+msgstr "열린 창의 Steam 페이지에서 로그인하세요. 중지하려면 창을 닫으세요."
+
+msgctxt "TvShell"
+msgid "Sign in to GitHub for more searches an hour"
+msgstr "GitHub에 로그인해 시간당 검색 횟수 늘리기"
+
+msgctxt "TvShell"
+msgid "Sign in to Steam"
+msgstr "Steam에 로그인"
+
+msgctxt "SettingsBody"
+msgid "Sign in to Steam in a browser"
+msgstr "브라우저에서 Steam에 로그인"
+
+msgctxt "SettingsBody"
+msgid "Sign in to Steam with a QR code"
+msgstr "QR 코드로 Steam에 로그인"
+
+msgctxt "TvShell"
+msgid "Sign in to Steam with a QR code, to see what you own"
+msgstr "QR 코드로 Steam에 로그인해 보유한 게임 보기"
+
+msgctxt "SettingsBody"
+msgid "Sign in to see which Steam games you already own. Bilby keeps only the list of what you own, on this device. Choose how:"
+msgstr "로그인하면 이미 보유한 Steam 게임을 확인할 수 있습니다. Bilby는 보유 목록만 이 기기에 보관합니다. 방법을 선택하세요:"
+
+msgctxt "SettingsBody"
+msgid "Sign in with GitHub"
+msgstr "GitHub로 로그인"
+
+msgctxt "SettingsBody"
+msgid "Sign in with a QR code"
+msgstr "QR 코드로 로그인"
+
+msgctxt "SettingsBody"
+msgid "Sign out"
+msgstr "로그아웃"
+
+msgctxt "TvShell"
+msgid "Sign out"
+msgstr "로그아웃"
+
+msgctxt "SettingsBody"
+msgid "Sign out of GitHub"
+msgstr "GitHub에서 로그아웃"
+
+msgctxt "SettingsBody"
+msgid "Sign out of Steam"
+msgstr "Steam에서 로그아웃"
+
+msgctxt "SettingsBody"
+msgid "Sign-in code {}"
+msgstr "로그인 코드 {}"
+
+msgctxt "TvShell"
+msgid "Sign-in code {}"
+msgstr "로그인 코드 {}"
+
+msgctxt "TvShell"
+msgid "Signed in to GitHub"
+msgstr "GitHub에 로그인됨"
+
+msgctxt "TvShell"
+msgid "Signed in to Steam  ·  {}"
+msgstr "Steam에 로그인됨  ·  {}"
+
+msgctxt "SettingsBody"
+msgid "Signed in. Bilby knows {} in your Steam library and marks them Owned."
+msgstr "로그인했습니다. Bilby가 Steam 라이브러리의 {}을(를) 확인하고 ‘보유 중’으로 표시합니다."
+
+msgctxt "TvShell"
+msgid "Signing in to GitHub…"
+msgstr "GitHub에 로그인 중…"
+
+msgctxt "LibraryItem"
+msgid "Skip"
+msgstr "건너뛰기"
+
+msgctxt "LibraryItem"
+msgid "Skip this update of {}"
+msgstr "{}의 이번 업데이트 건너뛰기"
+
+msgctxt "LibraryItem"
+msgid "Skip this version"
+msgstr "이 버전 건너뛰기"
+
+msgctxt "SettingsBody"
+msgid "So that nothing is added to or taken off this device without it."
+msgstr "PIN 없이는 이 기기에 아무것도 추가하거나 제거할 수 없게 합니다."
+
+msgctxt "SettingsBody"
+msgid "Some games, apps and websites are meant for adults. They are kept apart: in a search they have a section of their own, each one covered until you choose it, and you are asked to confirm you are an adult before one opens."
+msgstr "일부 게임, 앱, 웹사이트는 성인용입니다. 이런 항목은 따로 관리됩니다. 검색에서는 별도 섹션에 표시되고, 선택하기 전까지 각각 가려져 있으며, 열기 전에 성인인지 확인합니다."
+
+msgctxt "SettingsBody"
+msgid "Sounds"
+msgstr "소리"
+
+msgctxt "TvShell"
+msgid "Sounds: a quiet tick as you move about"
+msgstr "소리: 이동할 때 조용한 틱 소리"
+
+msgctxt "SettingsBody"
+msgid "Sounds: a quiet tick or pop as you move about and press things."
+msgstr "소리: 이동하거나 누를 때 조용한 틱 또는 팝 소리가 납니다."
+
+msgctxt "SettingsBody"
+msgid "Steam"
+msgstr "Steam"
+
+msgctxt "TvShell"
+msgid "Steam gives Bilby a key to your account. Bilby uses it once to read what you own, then throws it away."
+msgstr "Steam이 Bilby에 계정 키를 줍니다. Bilby는 보유 목록을 읽는 데 한 번만 쓰고 버립니다."
+
+msgctxt "SettingsBody"
+msgid "Steam's own sign-in page opens in a small window. The browser asks Steam for the list, so no key ever reaches Bilby."
+msgstr "Steam의 로그인 페이지가 작은 창에서 열립니다. 브라우저가 Steam에 목록을 요청하므로 키가 Bilby에 전달되지 않습니다."
+
+msgctxt "SettingsBody"
+msgid "Stop waiting"
+msgstr "기다리지 않기"
+
+msgctxt "SettingsBody"
+msgid "Stop waiting for Steam"
+msgstr "Steam 기다리지 않기"
+
+msgctxt "SettingsBody"
+msgid "Storage"
+msgstr "저장 공간"
+
+msgctxt "TvShell"
+msgid "Switch"
+msgstr "전환"
+
+msgctxt "SettingsBody"
+msgid "Switch off any place you do not want apps from. It is then left out of searches and the home page; an app from it can still be opened by its link."
+msgstr "앱을 받고 싶지 않은 곳은 끄세요. 그러면 검색과 홈 화면에서 제외됩니다. 그곳의 앱은 링크로는 여전히 열 수 있습니다."
+
+msgctxt "DetailsBody"
+msgid "Switch to {}"
+msgstr "{}(으)로 전환"
+
+msgctxt "SettingsBody"
+msgid "Switching it off needs the PIN."
+msgstr "끄려면 PIN이 필요합니다."
+
+msgctxt "SystemCard"
+msgid "System details"
+msgstr "시스템 정보"
+
+msgctxt "SettingsBody"
+msgid "System details and updates"
+msgstr "시스템 정보 및 업데이트"
+
+msgctxt "SettingsBody"
+msgid "System packages"
+msgstr "시스템 패키지"
+
+msgctxt "TvShell"
+msgid "System packages"
+msgstr "시스템 패키지"
+
+msgctxt "SettingsBody"
+msgid "TV"
+msgstr "TV"
+
+msgctxt "TvShell"
+msgid "That was not the password. Try again."
+msgstr "비밀번호가 맞지 않습니다. 다시 시도하세요."
+
+msgctxt "SettingsBody"
+msgid "The TV layout has large text and is driven with the arrow keys of a remote or keyboard. To come back from it, open This TV at the top of its screen."
+msgstr "TV 레이아웃은 글자가 크고 리모컨이나 키보드의 방향키로 조작합니다. 돌아오려면 화면 위쪽의 ‘이 TV’를 여세요."
+
+msgctxt "SettingsBody"
+msgid "The code refreshes by itself."
+msgstr "코드는 자동으로 새로 고쳐집니다."
+
+msgctxt "SettingsBody"
+msgid "The store only lists apps with a file that can be installed here. This is what it detected."
+msgstr "스토어는 이 기기에 설치할 수 있는 파일이 있는 앱만 표시합니다. 감지한 내용은 다음과 같습니다."
+
+msgctxt "SettingsBody"
+msgid "They come from the service the GNOME and KDE app stores use (odrs.gnome.org). Star ratings arrive as one file a day for every app. Written reviews are asked for when you open the page of an app that has them, which tells that service which app it was. Nothing that identifies you is sent."
+msgstr "GNOME과 KDE 앱 스토어가 사용하는 서비스(odrs.gnome.org)에서 가져옵니다. 별점은 모든 앱에 대해 하루에 한 번 파일 하나로 받습니다. 글로 된 리뷰는 리뷰가 있는 앱의 페이지를 열 때 요청하며, 이때 어떤 앱인지 해당 서비스에 전달됩니다. 사용자를 식별할 수 있는 정보는 보내지 않습니다."
+
+msgctxt "LibraryItem"
+msgid "This deletes the app's file from your Applications folder."
+msgstr "Applications 폴더에서 앱 파일을 삭제합니다."
+
+msgctxt "MobileShell"
+msgid "This device"
+msgstr "이 기기"
+
+msgctxt "SettingsBody"
+msgid "This device  ·  {}"
+msgstr "이 기기  ·  {}"
+
+msgctxt "LibraryItem"
+msgid "This only forgets the app here. To uninstall it, use your system's software manager."
+msgstr "여기에서 앱 기록만 지웁니다. 앱을 제거하려면 시스템의 소프트웨어 관리자를 사용하세요."
+
+msgctxt "TvShell"
+msgid "This store"
+msgstr "이 스토어"
+
+msgctxt "DesktopShell"
+msgid "Try a different name, or check the spelling. Projects without a file for {} are left out."
+msgstr "다른 이름으로 검색하거나 철자를 확인하세요. {}용 파일이 없는 프로젝트는 제외됩니다."
+
+msgctxt "MobileShell"
+msgid "Try a different name. Apps that do not work on this device are left out."
+msgstr "다른 이름으로 검색해 보세요. 이 기기에서 작동하지 않는 앱은 제외됩니다."
+
+msgctxt "DetailsBody"
+msgid "Try again"
+msgstr "다시 시도"
+
+msgctxt "TvShell"
+msgid "Try again"
+msgstr "다시 시도"
+
+msgctxt "DesktopShell"
+msgid "Type a name and press Enter, or paste a link to a project. Only apps that work on this device are listed."
+msgstr "이름을 입력하고 Enter를 누르거나 프로젝트 링크를 붙여 넣으세요. 이 기기에서 작동하는 앱만 표시됩니다."
+
+msgctxt "TvShell"
+msgid "Type a name, then press OK"
+msgstr "이름을 입력한 다음 OK를 누르세요"
+
+msgctxt "FamilyRow"
+msgid "Unofficial"
+msgstr "비공식"
+
+msgctxt "TvShell"
+msgid "Up and Down move through the list. OK changes the highlighted setting."
+msgstr "위/아래 버튼으로 목록을 이동합니다. OK를 누르면 선택한 설정이 바뀝니다."
+
+msgctxt "AppRow"
+msgid "Update"
+msgstr "업데이트"
+
+msgctxt "AppTile"
+msgid "Update"
+msgstr "업데이트"
+
+msgctxt "DetailsBody"
+msgid "Update"
+msgstr "업데이트"
+
+msgctxt "LibraryItem"
+msgid "Update"
+msgstr "업데이트"
+
+msgctxt "OptionCard"
+msgid "Update"
+msgstr "업데이트"
+
+msgctxt "TvShell"
+msgid "Update"
+msgstr "업데이트"
+
+msgctxt "LibraryBody"
+msgid "Update all"
+msgstr "모두 업데이트"
+
+msgctxt "TvShell"
+msgid "Update all"
+msgstr "모두 업데이트"
+
+msgctxt "AppRow"
+msgid "Update available"
+msgstr "업데이트 가능"
+
+msgctxt "TvShell"
+msgid "Update available"
+msgstr "업데이트 가능"
+
+msgctxt "TvTile"
+msgid "Update available"
+msgstr "업데이트 가능"
+
+msgctxt "DetailsBody"
+msgid "Update available  ·  you have {0}, latest is {1}"
+msgstr "업데이트 가능  ·  현재 {0}, 최신 {1}"
+
+msgctxt "TvShell"
+msgid "Update available: you have {}"
+msgstr "업데이트 가능: 현재 {}"
+
+msgctxt "SystemBody"
+msgid "Update now"
+msgstr "지금 업데이트"
+
+msgctxt "TvShell"
+msgid "Update now"
+msgstr "지금 업데이트"
+
+msgctxt "SystemCard"
+msgid "Update system"
+msgstr "시스템 업데이트"
+
+msgctxt "LibraryItem"
+msgid "Update {}"
+msgstr "{} 업데이트"
+
+msgctxt "AppRow"
+msgid "Update {} now"
+msgstr "지금 {} 업데이트"
+
+msgctxt "AppTile"
+msgid "Update {} now"
+msgstr "지금 {} 업데이트"
+
+msgctxt "SettingsBody"
+msgid "Updates"
+msgstr "업데이트"
+
+msgctxt "LibraryItem"
+msgid "Updating…"
+msgstr "업데이트 중…"
+
+msgctxt "TvQuestion"
+msgid "Use the TV layout"
+msgstr "TV 레이아웃 사용"
+
+msgctxt "TvShell"
+msgid "Use the desktop layout, for a mouse and keyboard"
+msgstr "마우스와 키보드용 데스크톱 레이아웃 사용"
+
+msgctxt "SettingsBody"
+msgid "Use the usual folder"
+msgstr "기본 폴더 사용"
+
+msgctxt "SettingsBody"
+msgid "Uses one request per app in your library. Turn it off if GitHub's allowance is tight; you can still check from the Library page."
+msgstr "라이브러리의 앱 하나당 요청을 한 번 사용합니다. GitHub 허용량이 부족하면 끄세요. 라이브러리 페이지에서 직접 확인할 수 있습니다."
+
+msgctxt "DetailsBody"
+msgid "Version"
+msgstr "버전"
+
+msgctxt "TvShell"
+msgid "Version"
+msgstr "버전"
+
+msgctxt "DetailsBody"
+msgid "Version {}"
+msgstr "버전 {}"
+
+msgctxt "TvShell"
+msgid "Version {}"
+msgstr "버전 {}"
+
+msgctxt "TvShell"
+msgid "Versions and files"
+msgstr "버전과 파일"
+
+msgctxt "Spotlight"
+msgid "View"
+msgstr "보기"
+
+msgctxt "UpdatesBanner"
+msgid "View"
+msgstr "보기"
+
+msgctxt "SettingsBody"
+msgid "View the store's update"
+msgstr "스토어 업데이트 보기"
+
+msgctxt "SettingsBody"
+msgid "View update"
+msgstr "업데이트 보기"
+
+msgctxt "Spotlight"
+msgid "View {}"
+msgstr "{} 보기"
+
+msgctxt "SettingsBody"
+msgid "Waiting for the Steam app…"
+msgstr "Steam 앱을 기다리는 중…"
+
+msgctxt "TvShell"
+msgid "Waiting for the Steam app…"
+msgstr "Steam 앱을 기다리는 중…"
+
+msgctxt "SettingsBody"
+msgid "Waiting for you to enter it. This page updates by itself."
+msgstr "코드 입력을 기다리는 중입니다. 이 페이지는 자동으로 업데이트됩니다."
+
+msgctxt "SystemBody"
+msgid "Waiting to be installed"
+msgstr "설치 대기 중"
+
+msgctxt "TvShell"
+msgid "Waiting to be installed"
+msgstr "설치 대기 중"
+
+msgctxt "AppRow"
+msgid "Web apps"
+msgstr "웹 앱"
+
+msgctxt "AppTile"
+msgid "Web apps"
+msgstr "웹 앱"
+
+msgctxt "Welcome"
+msgid "Welcome to Bilby"
+msgstr "Bilby에 오신 것을 환영합니다"
+
+msgctxt "OptionCard"
+msgid "What happens when I install {}"
+msgstr "{}을(를) 설치하면 일어나는 일"
+
+msgctxt "TvShell"
+msgid "What people wrote"
+msgstr "사람들이 쓴 글"
+
+msgctxt "OptionCard"
+msgid "What will happen?"
+msgstr "어떻게 되나요?"
+
+msgctxt "WhatsNew"
+msgid "What's new"
+msgstr "새로운 기능"
+
+msgctxt "TvShell"
+msgid "What's new in {}"
+msgstr "{}의 새로운 기능"
+
+msgctxt "SettingsBody"
+msgid "Where apps come from"
+msgstr "앱을 가져오는 곳"
+
+msgctxt "TvShell"
+msgid "Where apps come from"
+msgstr "앱을 가져오는 곳"
+
+msgctxt "DetailsBody"
+msgid "Works on"
+msgstr "지원 기기"
+
+msgctxt "TvShell"
+msgid "Works on"
+msgstr "지원 기기"
+
+msgctxt "Welcome"
+msgid "You are seeing apps for {}. Anything that cannot be installed on this device is hidden."
+msgstr "{}용 앱을 보고 있습니다. 이 기기에 설치할 수 없는 항목은 숨겨집니다."
+
+msgctxt "SettingsBody"
+msgid "You are signed in. GitHub allows 5,000 requests an hour."
+msgstr "로그인되어 있습니다. GitHub가 시간당 5,000회의 요청을 허용합니다."
+
+msgctxt "TvShell"
+msgid "You may be asked for your password. Keep the TV on until this finishes."
+msgstr "비밀번호를 물을 수 있습니다. 끝날 때까지 TV를 켜 두세요."
+
+msgctxt "SystemBody"
+msgid "You may be asked for your password. Keep the device on until this finishes."
+msgstr "비밀번호를 물을 수 있습니다. 끝날 때까지 기기를 켜 두세요."
+
+msgctxt "LibraryBody"
+msgid "Your library is empty"
+msgstr "라이브러리가 비어 있습니다"
+
+msgctxt "SettingsBody"
+msgid "Your own sources"
+msgstr "내 소스"
+
+msgctxt "TvShell"
+msgid "Your password is needed"
+msgstr "비밀번호가 필요합니다"
+
+msgctxt "TvShell"
+msgid "an older one"
+msgstr "이전 버전"
+
+msgctxt "TvShell"
+msgid "and {} more"
+msgstr "외 {}개"
+
+msgctxt "TvShell"
+msgid "best for this TV"
+msgstr "이 TV에 가장 적합"
+
+msgctxt "DetailsBody"
+msgid "download"
+msgstr "다운로드"
+
+msgctxt "TvShell"
+msgid "download"
+msgstr "다운로드"
+
+msgctxt "DetailsBody"
+msgid "last updated"
+msgstr "마지막 업데이트"
+
+msgctxt "TvShell"
+msgid "last updated"
+msgstr "마지막 업데이트"
+
+msgctxt "DetailsBody"
+msgid "licence"
+msgstr "라이선스"
+
+msgctxt "TvShell"
+msgid "newest"
+msgstr "최신"
+
+msgctxt "DetailsBody"
+msgid "on {}"
+msgstr "{} 기준"
+
+msgctxt "TvShell"
+msgid "on {}"
+msgstr "{} 기준"
+
+msgctxt "RatingSummary"
+msgid "out of 5"
+msgstr "5점 만점"
+
+msgctxt "TvShell"
+msgid "space"
+msgstr "스페이스"
+
+msgctxt "DetailsBody"
+msgid "the description"
+msgstr "설명"
+
+msgctxt "DetailsBody"
+msgid "verified"
+msgstr "확인됨"
+
+msgctxt "TvShell"
+msgid "verified"
+msgstr "확인됨"
+
+msgctxt "WhatsNew"
+msgid "what is new"
+msgstr "새로운 기능"
+
+msgctxt "TvShell"
+msgid "{0} from {1}"
+msgstr "{0} ({1})"
+
+msgctxt "TvShell"
+msgid "{0} of {1}"
+msgstr "{0}/{1}"
+
+msgctxt "DetailsBody"
+msgid "{0} on {1}"
+msgstr "{0} ({1} 기준)"
+
+msgctxt "TvShell"
+msgid "{0} on {1}"
+msgstr "{0} ({1} 기준)"
+
+msgctxt "RatingSummary"
+msgid "{0} out of 5, from {1}"
+msgstr "5점 만점에 {0}점, {1}"
+
+msgctxt "LibraryBody"
+msgid "{n} app"
+msgid_plural "{n} apps"
+msgstr[0] "앱 {n}개"
+
+msgctxt "UpdatesBanner"
+msgid "{n} app in your library has an update"
+msgid_plural "{n} apps in your library have updates"
+msgstr[0] "라이브러리의 앱 {n}개에 업데이트가 있습니다"
+
+msgctxt "TvShell"
+msgid "{n} character typed"
+msgid_plural "{n} characters typed"
+msgstr[0] "{n}자 입력됨"
+
+msgctxt "TvShell"
+msgid "{n} file for other devices is not listed."
+msgid_plural "{n} files for other devices are not listed."
+msgstr[0] "다른 기기용 파일 {n}개는 표시되지 않습니다."
+
+msgctxt "TvShell"
+msgid "{n} link"
+msgid_plural "{n} links"
+msgstr[0] "링크 {n}개"
+
+msgctxt "LibraryBody"
+msgid "{n} update available"
+msgid_plural "{n} updates available"
+msgstr[0] "업데이트 {n}개 사용 가능"
+
+msgctxt "TvShell"
+msgid "{}  Press OK to try again."
+msgstr "{}  OK를 눌러 다시 시도하세요."
+
+msgctxt "OptionCard"
+msgid "{} download"
+msgstr "다운로드 {}"
+
+msgctxt "AppTile"
+msgid "{} sources"
+msgstr "소스 {}개"
+
+msgctxt "DesktopShell"
+msgid "{}. Everything shown works here."
+msgstr "{}. 표시된 항목은 모두 이 기기에서 작동합니다."
+
+msgctxt "Welcome"
+msgid "•  Apps come from many places: package managers, other stores and developers' own release pages. Bilby does not review them, so only install software you trust."
+msgstr "•  앱은 패키지 관리자, 다른 스토어, 개발자의 릴리스 페이지 등 여러 곳에서 제공됩니다. Bilby는 앱을 검토하지 않으므로 믿을 수 있는 소프트웨어만 설치하세요."
+
+msgctxt "Welcome"
+msgid "•  There is no account and no server of ours. Your library and settings stay in a file on this device."
+msgstr "•  계정도 없고 저희 서버도 없습니다. 라이브러리와 설정은 이 기기의 파일에 보관됩니다."
+
+msgctxt "TvShell"
+msgid "★  In favourites"
+msgstr "★  즐겨찾기에 있음"
+
+msgctxt "TvShell"
+msgid "☆  Favourite"
+msgstr "☆  즐겨찾기"

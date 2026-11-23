@@ -26,6 +26,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev libxkbcommon-dev libxkbcommon-x11-0 xvfb libwebkit2gtk-4.1-dev libgtk-3-dev libasound2-dev
       - run: cargo fmt --all -- --check
+      # Every text in the interface has been gathered for translating, and what Slint
+      # reads matches the translations.
+      - run: python3 scripts/i18n.py --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
 
   test:

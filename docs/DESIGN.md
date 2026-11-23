@@ -588,7 +588,7 @@ An app's page follows the order of the App Store and Google Play:
 |---|---|---|
 | Top | Icon, name, developer, one button | The same. The button says Install, Update or Open |
 | Key facts | Rating, size, age rating, chart position | Rating, downloads, size, last updated, licence |
-| Reassurance | "Works on this iPhone" | "Made for this device", and that the download is checked |
+| Reassurance | "Works on this iPhone" | "Runs on this device", and that Bilby checks the download is the genuine file |
 | Screenshots | Up to ten | The source's own (Flathub), else up to four from the project's README, fetched only from the project's own host |
 | Description | First lines, then "more" | The start of the description, with "Read more" |
 | What's New | On the page and in Updates | Release notes, shown above the description once the app is installed |
@@ -730,6 +730,51 @@ long a row is.
 The TV layout was shaped by use: the project's owner runs it on a Linux TV with a
 physical remote, and the navigation above is the result of that feedback.
 
+### The system's password on a TV (`askpass.rs`)
+
+Changing the system (its packages, a new release of it) needs the password of someone
+allowed to. The system's own prompt is a box nobody can type in with a remote. So in
+the TV layout Bilby asks itself, with its on-screen keyboard, and hands the answer to
+`sudo` through the helper `sudo -A` asks with: a small program that reads from a pipe
+Bilby waits at. The password goes from the screen to `sudo` and nowhere else; only
+the number of characters typed is shown or held by the interface. In the desktop
+layout the same stand-in runs the system's `pkexec` as before. It needs `sudo` and a
+person allowed to use it.
+
+### Languages (`i18n.rs`, `scripts/i18n.py`)
+
+Bilby comes in twelve languages: English, Spanish, French, German, Portuguese
+(Brazil), Italian, Russian, Chinese (Simplified), Japanese, Korean, Hindi and Arabic.
+It starts in the system's own where that is one of them, and Settings has the list
+(on a TV, a row that steps through it). The heading of that setting is always in
+English as well, so it can be found by someone who cannot read the language Bilby
+is in. `--lang <code>` sets it for one run.
+
+Text is written once, in English, where it is used:
+
+- The interface's own text is `@tr("...")` in the `.slint` files. Slint builds the
+  translations into the program from `i18n/po/<language>/LC_MESSAGES/bilby.po`.
+- What the code puts on screen (notices, errors, what an install did, the summaries
+  in the lists Bilby carries) passes through `i18n::tr` on its way to the screen. A
+  message with something filled in ("Plex is in your library") is recognised by its
+  pattern ("{} is in your library"), so the code that makes messages, the core
+  included, is unchanged and still speaks English to logs and tests.
+
+`scripts/i18n.py` gathers the English into `i18n/en.json` and writes the `.po` files
+from `i18n/<language>.json`, one file per language: English text to translated text,
+or a list of forms for text that counts things (Russian has three, Arabic six). CI
+runs it with `--check`; a test holds every language to saying everything, with the
+same things filled in.
+
+Names and descriptions of apps are the stores' own. Flathub is asked for them in the
+language in use and gives them where an app's makers published them; everything else
+(most projects on GitHub, reviews) stays as it was written. Nothing is sent to a
+translation service.
+
+Not done: Arabic is written right to left but the layout is not mirrored; the
+translations were written without a native speaker's review; dates and large numbers
+keep their English form.
+
 ## 8. Testing
 
 336 tests, none needing the internet. CI runs them on Linux, Windows and macOS on
@@ -840,7 +885,8 @@ no Slint dependency and could be licensed separately if that were ever wanted.
 7. Writing reviews, top charts, and Open for packages the system installed.
 8. More sources: the Microsoft Store through winget, self-hosted Forgejo and Gitea,
    Nix.
-9. Translations.
+9. Languages: a native speaker's review of each, mirrored layout for Arabic, more
+   languages.
 
 [COMPARISON.md](COMPARISON.md) sets Bilby beside Komi Store, Obtainium, UniGetUI and
 others, feature by feature.

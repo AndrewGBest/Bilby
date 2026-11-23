@@ -1,0 +1,2015 @@
+msgid ""
+msgstr ""
+"Language: es\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgctxt "DetailsBody"
+msgid "(confirmed by {})"
+msgstr "(confirmado por {})"
+
+msgctxt "TvShell"
+msgid "(confirmed by {})"
+msgstr "(confirmado por {})"
+
+msgctxt "FamilyRow"
+msgid ", unofficial"
+msgstr ", no oficial"
+
+msgctxt "TvShell"
+msgid "A PIN guards these settings and adult content"
+msgstr "Un PIN protege estos ajustes y el contenido para adultos"
+
+msgctxt "SettingsBody"
+msgid "A PIN is set"
+msgstr "Hay un PIN definido"
+
+msgctxt "SettingsBody"
+msgid "A folder chooser opens before each file is fetched. Backing out of it cancels the download."
+msgstr "Antes de descargar cada archivo se abre un selector de carpetas. Si sales de él, la descarga se cancela."
+
+msgctxt "TvQuestion"
+msgid "A game controller is connected. Bilby has a layout with large text for the sofa, driven with the arrow keys of a remote or keyboard. You can change this later in Settings."
+msgstr "Hay un mando de juego conectado. Bilby tiene un diseño con texto grande para el sofá, que se maneja con las flechas de un control remoto o del teclado. Puedes cambiarlo después en Ajustes."
+
+msgctxt "DetailsBody"
+msgid "About"
+msgstr "Acerca de"
+
+msgctxt "SettingsBody"
+msgid "About"
+msgstr "Acerca de"
+
+msgctxt "TvShell"
+msgid "About"
+msgstr "Acerca de"
+
+msgctxt "TvShell"
+msgid "About this package"
+msgstr "Acerca de este paquete"
+
+msgctxt "WhatsNew"
+msgid "About this package"
+msgstr "Acerca de este paquete"
+
+msgctxt "TvShell"
+msgid "About this website"
+msgstr "Acerca de este sitio web"
+
+msgctxt "WhatsNew"
+msgid "About this website"
+msgstr "Acerca de este sitio web"
+
+msgctxt "TvShell"
+msgid "Accounts"
+msgstr "Cuentas"
+
+msgctxt "AppRow"
+msgid "Add"
+msgstr "Añadir"
+
+msgctxt "AppTile"
+msgid "Add"
+msgstr "Añadir"
+
+msgctxt "SettingsBody"
+msgid "Add"
+msgstr "Añadir"
+
+msgctxt "SettingsBody"
+msgid "Add this source"
+msgstr "Añadir esta fuente"
+
+msgctxt "DetailsBody"
+msgid "Add to favourites"
+msgstr "Añadir a favoritos"
+
+msgctxt "SettingsBody"
+msgid "Address of a list of apps"
+msgstr "Dirección de una lista de apps"
+
+msgctxt "TvShell"
+msgid "Adult content on Home (off in Family mode)"
+msgstr "Contenido para adultos en Inicio (desactivado en el modo familiar)"
+
+msgctxt "TvShell"
+msgid "Adult content on Home, covered until chosen"
+msgstr "Contenido para adultos en Inicio, cubierto hasta que lo elijas"
+
+msgctxt "SettingsBody"
+msgid "Adult content on the home page"
+msgstr "Contenido para adultos en la página de inicio"
+
+msgctxt "TvShell"
+msgid "Adult content uncovered (off in Family mode)"
+msgstr "Contenido para adultos sin cubrir (desactivado en el modo familiar)"
+
+msgctxt "DesktopShell"
+msgid "All"
+msgstr "Todo"
+
+msgctxt "MobileShell"
+msgid "All"
+msgstr "Todo"
+
+msgctxt "SourceFilter"
+msgid "All"
+msgstr "Todo"
+
+msgctxt "SettingsBody"
+msgid "App menu"
+msgstr "Menú de apps"
+
+msgctxt "SettingsBody"
+msgid "AppImage"
+msgstr "AppImage"
+
+msgctxt "TvShell"
+msgid "AppImage"
+msgstr "AppImage"
+
+msgctxt "SettingsBody"
+msgid "Appearance"
+msgstr "Apariencia"
+
+msgctxt "SettingsBody"
+msgid "Apps can also come from a list on your own server or storage: a small file saying what the apps are and where their files live. Add its address and its apps are searched, shown on the home page and installed like any others. Nobody but its owner vouches for what is on such a list, so add only ones you trust."
+msgstr "Las apps también pueden venir de una lista en tu propio servidor o almacenamiento: un archivo pequeño que dice qué apps hay y dónde están sus archivos. Añade su dirección y sus apps se buscan, se muestran en la página de inicio y se instalan como cualquier otra. Nadie más que su dueño responde por lo que hay en una lista así, de modo que añade solo las que sean de tu confianza."
+
+msgctxt "SettingsBody"
+msgid "Apps come from the sources listed above and are not reviewed by Bilby. Install software you trust. Made with Slint."
+msgstr "Las apps vienen de las fuentes indicadas arriba y Bilby no las revisa. Instala software en el que confíes. Hecho con Slint."
+
+msgctxt "LibraryBody"
+msgid "Apps you install from the store show up here, and the store can tell you when they have a new release."
+msgstr "Las apps que instalas desde la tienda aparecen aquí, y la tienda puede avisarte cuando tengan una versión nueva."
+
+msgctxt "LibraryBody"
+msgid "Apps you install from the store show up here, and the store can tell you when they have a new release. Favourites are kept here too."
+msgstr "Las apps que instalas desde la tienda aparecen aquí, y la tienda puede avisarte cuando tengan una versión nueva. Aquí también se guardan tus favoritos."
+
+msgctxt "TvShell"
+msgid "Apps you install with Bilby show up here, and so do your favourites."
+msgstr "Las apps que instalas con Bilby aparecen aquí, igual que tus favoritos."
+
+msgctxt "TvQuestion"
+msgid "Are you using this on a TV?"
+msgstr "¿Estás usando esto en un televisor?"
+
+msgctxt "SettingsBody"
+msgid "Ask for the PIN to install or remove apps"
+msgstr "Pedir el PIN para instalar o quitar apps"
+
+msgctxt "TvShell"
+msgid "Ask for the PIN to install or remove apps"
+msgstr "Pedir el PIN para instalar o quitar apps"
+
+msgctxt "TvShell"
+msgid "Ask for the PIN to install or remove apps (set a PIN first)"
+msgstr "Pedir el PIN para instalar o quitar apps (primero define un PIN)"
+
+msgctxt "SettingsBody"
+msgid "Ask where to save each download"
+msgstr "Preguntar dónde guardar cada descarga"
+
+msgctxt "SettingsBody"
+msgid "Automatic"
+msgstr "Automático"
+
+msgctxt "TvShell"
+msgid "Automatic"
+msgstr "Automático"
+
+msgctxt "DesktopShell"
+msgid "Back"
+msgstr "Atrás"
+
+msgctxt "MobileShell"
+msgid "Back"
+msgstr "Atrás"
+
+msgctxt "TvShell"
+msgid "Back cancels."
+msgstr "Atrás cancela."
+
+msgctxt "OptionCard"
+msgid "Best for this device"
+msgstr "Lo mejor para este dispositivo"
+
+msgctxt "SettingsBody"
+msgid "Bilby adds itself to this device's list of apps the first time it runs, so it can be started like any other app. If you move its file, start it once from the new place."
+msgstr "Bilby se añade a la lista de apps de este dispositivo la primera vez que se ejecuta, para que puedas abrirlo como cualquier otra app. Si mueves su archivo, ábrelo una vez desde el nuevo lugar."
+
+msgctxt "DetailsBody"
+msgid "Bilby checks the download is the genuine file"
+msgstr "Bilby comprueba que la descarga es el archivo auténtico"
+
+msgctxt "TvShell"
+msgid "Bilby checks the download is the genuine file"
+msgstr "Bilby comprueba que la descarga es el archivo auténtico"
+
+msgctxt "OptionCard"
+msgid "Bilby checks the download is the genuine file before installing it"
+msgstr "Bilby comprueba que la descarga es el archivo auténtico antes de instalarlo"
+
+msgctxt "SettingsBody"
+msgid "Bilby goes by what its sources say: Steam's adult-only marks, an app's own age rating, and its list of well-known adult sites. A site it has never heard of is not recognised, and most sources say nothing about age at all."
+msgstr "Bilby se guía por lo que dicen sus fuentes: las marcas de solo para adultos de Steam, la clasificación por edad de cada app y su lista de sitios para adultos conocidos. Un sitio del que nunca ha oído hablar no se reconoce, y la mayoría de las fuentes no dicen nada sobre la edad."
+
+msgctxt "SettingsBody"
+msgid "Bilby keeps a short list, chosen by people, of the apps and websites nearly everyone looks for: a browser, a video player, the big names. On, the home page starts with them in the version for this device, and they are placed a little higher in a search. Off, you get only what the sources' own figures say."
+msgstr "Bilby mantiene una lista breve, elegida por personas, de las apps y sitios web que casi todo el mundo busca: un navegador, un reproductor de video, los grandes nombres. Activado, la página de inicio empieza con ellos en la versión para este dispositivo y aparecen un poco más arriba en las búsquedas. Desactivado, solo ves lo que dicen las cifras de las propias fuentes."
+
+msgctxt "TvShell"
+msgid "Bilby {0} is available. You have {1}"
+msgstr "Bilby {0} está disponible. Tienes la {1}"
+
+msgctxt "SettingsBody"
+msgid "Bilby {0} is available. You have {1}."
+msgstr "Bilby {0} está disponible. Tienes la {1}."
+
+msgctxt "SettingsBody"
+msgid "Bilby {}. Everything runs on this device: there is no account and no server of ours. The store talks directly to the places apps come from, and keeps your library and settings in a file on this device."
+msgstr "Bilby {}. Todo funciona en este dispositivo: no hay cuenta ni servidor nuestro. La tienda habla directamente con los lugares de donde vienen las apps y guarda tu biblioteca y tus ajustes en un archivo en este dispositivo."
+
+msgctxt "LibraryBody"
+msgid "Browse apps"
+msgstr "Explorar apps"
+
+msgctxt "DetailsBody"
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "GateOverlay"
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "LibraryItem"
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "OptionCard"
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "SettingsBody"
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "TvShell"
+msgid "Cancel"
+msgstr "Cancelar"
+
+msgctxt "DetailsBody"
+msgid "Cancel downloading {}"
+msgstr "Cancelar la descarga de {}"
+
+msgctxt "SettingsBody"
+msgid "Cancel signing in"
+msgstr "Cancelar el inicio de sesión"
+
+msgctxt "GateOverlay"
+msgid "Cancel the PIN"
+msgstr "Cancelar el PIN"
+
+msgctxt "LibraryItem"
+msgid "Cancel updating {}"
+msgstr "Cancelar la actualización de {}"
+
+msgctxt "TvShell"
+msgid "Change"
+msgstr "Cambiar"
+
+msgctxt "SettingsBody"
+msgid "Change PIN"
+msgstr "Cambiar PIN"
+
+msgctxt "SettingsBody"
+msgid "Change folder"
+msgstr "Cambiar carpeta"
+
+msgctxt "SettingsBody"
+msgid "Change the downloads folder"
+msgstr "Cambiar la carpeta de descargas"
+
+msgctxt "TvShell"
+msgid "Change version"
+msgstr "Cambiar versión"
+
+msgctxt "TvShell"
+msgid "Changing the system needs the password you sign in to this device with. Bilby passes it to the system and does not keep it."
+msgstr "Para cambiar el sistema se necesita la contraseña con la que inicias sesión en este dispositivo. Bilby se la pasa al sistema y no la guarda."
+
+msgctxt "SystemBody"
+msgid "Check again"
+msgstr "Comprobar de nuevo"
+
+msgctxt "TvShell"
+msgid "Check again"
+msgstr "Comprobar de nuevo"
+
+msgctxt "SettingsBody"
+msgid "Check for a newer Bilby"
+msgstr "Buscar una versión más reciente de Bilby"
+
+msgctxt "LibraryBody"
+msgid "Check for updates"
+msgstr "Buscar actualizaciones"
+
+msgctxt "TvShell"
+msgid "Check for updates"
+msgstr "Buscar actualizaciones"
+
+msgctxt "TvShell"
+msgid "Check for updates when Bilby opens"
+msgstr "Buscar actualizaciones al abrir Bilby"
+
+msgctxt "SettingsBody"
+msgid "Check for updates when the store opens"
+msgstr "Buscar actualizaciones al abrir la tienda"
+
+msgctxt "OptionCard"
+msgid "Checked against the publisher's SHA-256 after download"
+msgstr "Se compara con el SHA-256 del editor tras la descarga"
+
+msgctxt "LibraryBody"
+msgid "Checking for updates…"
+msgstr "Buscando actualizaciones…"
+
+msgctxt "DetailsBody"
+msgid "Checking releases against this device…"
+msgstr "Comparando las versiones con este dispositivo…"
+
+msgctxt "TvShell"
+msgid "Checking what works on this TV…"
+msgstr "Comprobando qué funciona en este televisor…"
+
+msgctxt "TvShell"
+msgid "Checking…"
+msgstr "Comprobando…"
+
+msgctxt "TvShell"
+msgid "Choose a version"
+msgstr "Elige una versión"
+
+msgctxt "TvShell"
+msgid "Choose enter when it is typed. Back cancels."
+msgstr "Elige «intro» cuando la hayas escrito. Atrás cancela."
+
+msgctxt "GateOverlay"
+msgid "Clear"
+msgstr "Borrar"
+
+msgctxt "TvShell"
+msgid "Clear"
+msgstr "Borrar"
+
+msgctxt "SettingsBody"
+msgid "Clear cached catalog data"
+msgstr "Borrar los datos del catálogo en caché"
+
+msgctxt "SearchField"
+msgid "Clear search"
+msgstr "Borrar búsqueda"
+
+msgctxt "SettingsBody"
+msgid "Clear search history"
+msgstr "Borrar el historial de búsqueda"
+
+msgctxt "TvShell"
+msgid "Clear the PIN"
+msgstr "Borrar el PIN"
+
+msgctxt "CommandBox"
+msgid "Command"
+msgstr "Comando"
+
+msgctxt "OptionCard"
+msgid "Compatible"
+msgstr "Compatible"
+
+msgctxt "TvShell"
+msgid "Confirm"
+msgstr "Confirmar"
+
+msgctxt "LibraryItem"
+msgid "Confirm removing {}"
+msgstr "Confirmar que se quita {}"
+
+msgctxt "CommandBox"
+msgid "Copied"
+msgstr "Copiado"
+
+msgctxt "CommandBox"
+msgid "Copy"
+msgstr "Copiar"
+
+msgctxt "CommandBox"
+msgid "Copy command"
+msgstr "Copiar comando"
+
+msgctxt "DetailsBody"
+msgid "Couldn't load this app"
+msgstr "No se pudo cargar esta app"
+
+msgctxt "SettingsBody"
+msgid "Dark"
+msgstr "Oscuro"
+
+msgctxt "DesktopShell"
+msgid "Demo catalog"
+msgstr "Catálogo de demostración"
+
+msgctxt "SettingsBody"
+msgid "Demo mode: the catalog is fictional and nothing is fetched from the network."
+msgstr "Modo de demostración: el catálogo es ficticio y no se descarga nada de la red."
+
+msgctxt "TvShell"
+msgid "Description"
+msgstr "Descripción"
+
+msgctxt "SettingsBody"
+msgid "Desktop"
+msgstr "Escritorio"
+
+msgctxt "TvShell"
+msgid "Desktop layout"
+msgstr "Diseño de escritorio"
+
+msgctxt "LibraryItem"
+msgid "Details"
+msgstr "Detalles"
+
+msgctxt "LibraryItem"
+msgid "Details of {}"
+msgstr "Detalles de {}"
+
+msgctxt "GateOverlay"
+msgid "Digit 0"
+msgstr "Dígito 0"
+
+msgctxt "GateOverlay"
+msgid "Digit {}"
+msgstr "Dígito {}"
+
+msgctxt "TvShell"
+msgid "Digit {}"
+msgstr "Dígito {}"
+
+msgctxt "DesktopShell"
+msgid "Discover"
+msgstr "Descubrir"
+
+msgctxt "MobileShell"
+msgid "Discover"
+msgstr "Descubrir"
+
+msgctxt "DetailsBody"
+msgid "Download"
+msgstr "Descargar"
+
+msgctxt "DetailsBody"
+msgid "Download anyway"
+msgstr "Descargar de todos modos"
+
+msgctxt "DetailsBody"
+msgid "Download anyway: {}"
+msgstr "Descargar de todos modos: {}"
+
+msgctxt "DetailsBody"
+msgid "Download size"
+msgstr "Tamaño de la descarga"
+
+msgctxt "TvShell"
+msgid "Download size"
+msgstr "Tamaño de la descarga"
+
+msgctxt "TvShell"
+msgid "Downloading…  {}%"
+msgstr "Descargando…  {}%"
+
+msgctxt "DetailsBody"
+msgid "Downloads"
+msgstr "Descargas"
+
+msgctxt "TvShell"
+msgid "Downloads"
+msgstr "Descargas"
+
+msgctxt "SettingsBody"
+msgid "Downloads folder path"
+msgstr "Ruta de la carpeta de descargas"
+
+msgctxt "SettingsBody"
+msgid "Downloads go to"
+msgstr "Las descargas van a"
+
+msgctxt "DetailsBody"
+msgid "Every way to install on {}"
+msgstr "Todas las formas de instalar en {}"
+
+msgctxt "LibraryBody"
+msgid "Everything is up to date"
+msgstr "Todo está al día"
+
+msgctxt "DesktopShell"
+msgid "Everything shown works here"
+msgstr "Todo lo que se muestra funciona aquí"
+
+msgctxt "SettingsBody"
+msgid "Everything works without signing in, but GitHub then allows only 60 requests an hour for your whole network, which a few searches can use up. Signing in raises that to 5,000. Bilby asks for no access to your account."
+msgstr "Todo funciona sin iniciar sesión, pero entonces GitHub solo permite 60 solicitudes por hora para toda tu red, y unas pocas búsquedas pueden agotarlas. Al iniciar sesión, el límite sube a 5000. Bilby no pide ningún acceso a tu cuenta."
+
+msgctxt "SettingsBody"
+msgid "Family and adult content"
+msgstr "Familia y contenido para adultos"
+
+msgctxt "TvShell"
+msgid "Family and adult content"
+msgstr "Familia y contenido para adultos"
+
+msgctxt "SettingsBody"
+msgid "Family mode"
+msgstr "Modo familiar"
+
+msgctxt "TvShell"
+msgid "Family mode: nothing for adults is shown anywhere"
+msgstr "Modo familiar: no se muestra nada para adultos en ningún lugar"
+
+msgctxt "LibraryBody"
+msgid "Favourites"
+msgstr "Favoritos"
+
+msgctxt "Spotlight"
+msgid "Featured"
+msgstr "Destacados"
+
+msgctxt "MobileShell"
+msgid "Featured apps"
+msgstr "Apps destacadas"
+
+msgctxt "DesktopShell"
+msgid "Featured apps matching “{}”  ·  press Enter to search GitHub too"
+msgstr "Apps destacadas que coinciden con “{}”  ·  pulsa Enter para buscar también en GitHub"
+
+msgctxt "DetailsBody"
+msgid "Files that won't work on this device"
+msgstr "Archivos que no funcionan en este dispositivo"
+
+msgctxt "SettingsBody"
+msgid "Flatpak"
+msgstr "Flatpak"
+
+msgctxt "TvShell"
+msgid "Flatpak"
+msgstr "Flatpak"
+
+msgctxt "SettingsBody"
+msgid "For those who want no cover at all: adult things are shown as they are, among everything else, and open without a question."
+msgstr "Para quien no quiere nada cubierto: el contenido para adultos se muestra tal cual, entre todo lo demás, y se abre sin preguntar."
+
+msgctxt "SettingsBody"
+msgid "Four digits. With a PIN set, it is asked for to change anything in this card and to open adult content, in place of the question about being an adult."
+msgstr "Cuatro dígitos. Con un PIN definido, se pide para cambiar cualquier cosa de esta tarjeta y para abrir contenido para adultos, en lugar de la pregunta sobre si eres adulto."
+
+msgctxt "DetailsBody"
+msgid "From"
+msgstr "De"
+
+msgctxt "TvShell"
+msgid "From"
+msgstr "De"
+
+msgctxt "TvShell"
+msgid "General"
+msgstr "General"
+
+msgctxt "SettingsBody"
+msgid "GitHub access"
+msgstr "Acceso a GitHub"
+
+msgctxt "SettingsBody"
+msgid "GitHub token"
+msgstr "Token de GitHub"
+
+msgctxt "Welcome"
+msgid "Got it"
+msgstr "Entendido"
+
+msgctxt "DetailsBody"
+msgid "Hide other versions and files"
+msgstr "Ocultar otras versiones y archivos"
+
+msgctxt "OptionCard"
+msgid "Hide steps"
+msgstr "Ocultar pasos"
+
+msgctxt "SystemBody"
+msgid "Hide what the updater said"
+msgstr "Ocultar lo que dijo el actualizador"
+
+msgctxt "DetailsBody"
+msgid "Hide {n} file for other devices"
+msgid_plural "Hide {n} files for other devices"
+msgstr[0] "Ocultar {n} archivo para otros dispositivos"
+msgstr[1] "Ocultar {n} archivos para otros dispositivos"
+
+msgctxt "TvShell"
+msgid "Home"
+msgstr "Inicio"
+
+msgctxt "DetailsBody"
+msgid "In your favourites"
+msgstr "En tus favoritos"
+
+msgctxt "SettingsBody"
+msgid "Include pre-releases"
+msgstr "Incluir versiones preliminares"
+
+msgctxt "DetailsBody"
+msgid "Information"
+msgstr "Información"
+
+msgctxt "SystemBody"
+msgid "Information"
+msgstr "Información"
+
+msgctxt "TvShell"
+msgid "Information"
+msgstr "Información"
+
+msgctxt "AppRow"
+msgid "Install"
+msgstr "Instalar"
+
+msgctxt "AppTile"
+msgid "Install"
+msgstr "Instalar"
+
+msgctxt "DetailsBody"
+msgid "Install"
+msgstr "Instalar"
+
+msgctxt "OptionCard"
+msgid "Install"
+msgstr "Instalar"
+
+msgctxt "TvShell"
+msgid "Install again"
+msgstr "Instalar de nuevo"
+
+msgctxt "AppRow"
+msgid "Install {} now"
+msgstr "Instalar {} ahora"
+
+msgctxt "AppTile"
+msgid "Install {} now"
+msgstr "Instalar {} ahora"
+
+msgctxt "AppRow"
+msgid "Installed"
+msgstr "Instalada"
+
+msgctxt "AppTile"
+msgid "Installed"
+msgstr "Instalada"
+
+msgctxt "DetailsBody"
+msgid "Installed"
+msgstr "Instalada"
+
+msgctxt "TvShell"
+msgid "Installed"
+msgstr "Instalada"
+
+msgctxt "TvTile"
+msgid "Installed"
+msgstr "Instalada"
+
+msgctxt "DetailsBody"
+msgid "Installed  ·  {}"
+msgstr "Instalada  ·  {}"
+
+msgctxt "TvShell"
+msgid "Installed  ·  {}"
+msgstr "Instalada  ·  {}"
+
+msgctxt "SettingsBody"
+msgid "Installers and other files Bilby downloads are saved here. Apps that run as one file (AppImages) are then moved to the Applications folder in your home folder; packages, Flatpaks and store apps go where your system puts them."
+msgstr "Los instaladores y otros archivos que Bilby descarga se guardan aquí. Las apps que funcionan como un solo archivo (AppImage) se mueven después a la carpeta Applications de tu carpeta personal; los paquetes, los Flatpak y las apps de tiendas van adonde los pone tu sistema."
+
+msgctxt "DetailsBody"
+msgid "Installing from {}"
+msgstr "Instalando desde {}"
+
+msgctxt "TvShell"
+msgid "Installing updates"
+msgstr "Instalando actualizaciones"
+
+msgctxt "TvQuestion"
+msgid "Keep this layout"
+msgstr "Mantener este diseño"
+
+msgctxt "TvShell"
+msgid "Kind of app to offer first when there is a choice"
+msgstr "Tipo de app que se ofrece primero cuando hay varias opciones"
+
+msgctxt "DetailsBody"
+msgid "Kind of file"
+msgstr "Tipo de archivo"
+
+msgctxt "TvShell"
+msgid "Kind of file"
+msgstr "Tipo de archivo"
+
+msgctxt "SettingsBody"
+msgid "Language"
+msgstr "Idioma"
+
+msgctxt "TvShell"
+msgid "Language"
+msgstr "Idioma"
+
+msgctxt "LibraryBody"
+msgid "Last checked {}"
+msgstr "Última comprobación: {}"
+
+msgctxt "SettingsBody"
+msgid "Layout"
+msgstr "Diseño"
+
+msgctxt "DesktopShell"
+msgid "Library"
+msgstr "Biblioteca"
+
+msgctxt "MobileShell"
+msgid "Library"
+msgstr "Biblioteca"
+
+msgctxt "TvShell"
+msgid "Library"
+msgstr "Biblioteca"
+
+msgctxt "TvShell"
+msgid "Library  ·  {n} update"
+msgid_plural "Library  ·  {n} updates"
+msgstr[0] "Biblioteca  ·  {n} actualización"
+msgstr[1] "Biblioteca  ·  {n} actualizaciones"
+
+msgctxt "DetailsBody"
+msgid "Licence"
+msgstr "Licencia"
+
+msgctxt "TvShell"
+msgid "Licence"
+msgstr "Licencia"
+
+msgctxt "SettingsBody"
+msgid "Light"
+msgstr "Claro"
+
+msgctxt "DetailsBody"
+msgid "Made by"
+msgstr "Creado por"
+
+msgctxt "TvShell"
+msgid "Made by"
+msgstr "Creado por"
+
+msgctxt "SettingsBody"
+msgid "Many apps come more than one way. Choose which Bilby offers first when there is a choice. Automatic picks what suits this system: its own packages on most, Flatpak on a read-only system such as Fedora Kinoite. You can always pick another on an app's page."
+msgstr "Muchas apps están disponibles de más de una forma. Elige cuál ofrece Bilby primero cuando hay varias opciones. Automático elige lo que mejor va con este sistema: sus propios paquetes en la mayoría, Flatpak en un sistema de solo lectura como Fedora Kinoite. Siempre puedes elegir otra en la página de la app."
+
+msgctxt "SettingsBody"
+msgid "Match system"
+msgstr "Igual que el sistema"
+
+msgctxt "TvShell"
+msgid "More choices"
+msgstr "Más opciones"
+
+msgctxt "GateOverlay"
+msgid "No"
+msgstr "No"
+
+msgctxt "TvShell"
+msgid "No PIN is set"
+msgstr "No hay ningún PIN definido"
+
+msgctxt "DesktopShell"
+msgid "No apps for this device"
+msgstr "No hay apps para este dispositivo"
+
+msgctxt "MobileShell"
+msgid "No apps for this device"
+msgstr "No hay apps para este dispositivo"
+
+msgctxt "GateOverlay"
+msgid "No, I am not"
+msgstr "No, no lo soy"
+
+msgctxt "DesktopShell"
+msgid "Nothing featured for this device yet"
+msgstr "Aún no hay nada destacado para este dispositivo"
+
+msgctxt "MobileShell"
+msgid "Nothing featured for this device yet"
+msgstr "Aún no hay nada destacado para este dispositivo"
+
+msgctxt "SettingsBody"
+msgid "Nothing for adults is shown anywhere, not even covered, and none of it can be opened."
+msgstr "No se muestra nada para adultos en ningún lugar, ni siquiera cubierto, y nada de ello se puede abrir."
+
+msgctxt "TvShell"
+msgid "Nothing for this TV yet. Press Up to search."
+msgstr "Aún no hay nada para este televisor. Pulsa Arriba para buscar."
+
+msgctxt "TvSetting"
+msgid "Off"
+msgstr "Desactivado"
+
+msgctxt "SettingsBody"
+msgid "Off, adult things are only ever found by searching. On, they may also appear on the home page, covered like everywhere else."
+msgstr "Desactivado, el contenido para adultos solo se encuentra buscándolo. Activado, también puede aparecer en la página de inicio, cubierto como en todas partes."
+
+msgctxt "SettingsBody"
+msgid "Offer betas and release candidates as soon as they are published. They may be unstable."
+msgstr "Ofrece betas y candidatas a versión final en cuanto se publican. Pueden ser inestables."
+
+msgctxt "TvShell"
+msgid "Offer test versions of apps"
+msgstr "Ofrecer versiones de prueba de las apps"
+
+msgctxt "FamilyRow"
+msgid "Official"
+msgstr "Oficial"
+
+msgctxt "TvSetting"
+msgid "On"
+msgstr "Activado"
+
+msgctxt "SettingsBody"
+msgid "On this or any other device, open github.com/login/device and enter this code:"
+msgstr "En este u otro dispositivo, abre github.com/login/device e introduce este código:"
+
+msgctxt "TvShell"
+msgid "On your phone or computer, open github.com/login/device and enter:"
+msgstr "En tu teléfono o computadora, abre github.com/login/device e introduce:"
+
+msgctxt "TvShell"
+msgid "On-screen keyboard"
+msgstr "Teclado en pantalla"
+
+msgctxt "MobileShell"
+msgid "Only apps that work on this device are listed."
+msgstr "Solo se muestran las apps que funcionan en este dispositivo."
+
+msgctxt "DetailsBody"
+msgid "Open"
+msgstr "Abrir"
+
+msgctxt "TvShell"
+msgid "Open"
+msgstr "Abrir"
+
+msgctxt "SettingsBody"
+msgid "Open downloads folder"
+msgstr "Abrir la carpeta de descargas"
+
+msgctxt "SettingsBody"
+msgid "Open folder"
+msgstr "Abrir carpeta"
+
+msgctxt "TvShell"
+msgid "Open link {}"
+msgstr "Abrir el enlace {}"
+
+msgctxt "SettingsBody"
+msgid "Open that page"
+msgstr "Abrir esa página"
+
+msgctxt "TvShell"
+msgid "Open the Steam app on your phone, scan this code and approve the sign-in there."
+msgstr "Abre la app de Steam en tu teléfono, escanea este código y aprueba allí el inicio de sesión."
+
+msgctxt "TvShell"
+msgid "Opens in Longboard, driven with your remote"
+msgstr "Se abre en Longboard y se maneja con tu control remoto"
+
+msgctxt "SettingsBody"
+msgid "Or paste a personal access token (one with no scopes is enough):"
+msgstr "O pega un token de acceso personal (basta con uno sin permisos):"
+
+msgctxt "TvShell"
+msgid "Or sign in to Steam in a browser (Longboard)"
+msgstr "O inicia sesión en Steam en un navegador (Longboard)"
+
+msgctxt "SettingsBody"
+msgid "Or type a folder's full path and press Enter"
+msgstr "O escribe la ruta completa de una carpeta y pulsa Enter"
+
+msgctxt "DetailsBody"
+msgid "Other versions and files"
+msgstr "Otras versiones y archivos"
+
+msgctxt "FamilyPanel"
+msgid "Other ways to use {}"
+msgstr "Otras formas de usar {}"
+
+msgctxt "TvShell"
+msgid "Other ways to use {}"
+msgstr "Otras formas de usar {}"
+
+msgctxt "SettingsBody"
+msgid "PIN"
+msgstr "PIN"
+
+msgctxt "SettingsBody"
+msgid "Paste a new token to replace it"
+msgstr "Pega un token nuevo para reemplazarlo"
+
+msgctxt "SettingsBody"
+msgid "Paste a token"
+msgstr "Pegar un token"
+
+msgctxt "TvShell"
+msgid "Pick letters, then choose search"
+msgstr "Elige letras y luego elige buscar"
+
+msgctxt "DetailsBody"
+msgid "Picture {0} of {1}"
+msgstr "Imagen {0} de {1}"
+
+msgctxt "TvShell"
+msgid "Picture {0} of {1}"
+msgstr "Imagen {0} de {1}"
+
+msgctxt "TvShell"
+msgid "Picture {0} of {1}, large"
+msgstr "Imagen {0} de {1}, grande"
+
+msgctxt "TvShell"
+msgid "Pictures"
+msgstr "Imágenes"
+
+msgctxt "DetailsBody"
+msgid "Popularity"
+msgstr "Popularidad"
+
+msgctxt "TvShell"
+msgid "Popularity"
+msgstr "Popularidad"
+
+msgctxt "SettingsBody"
+msgid "Preferred kind of app"
+msgstr "Tipo de app preferido"
+
+msgctxt "TvShell"
+msgid "Press Back to stop."
+msgstr "Pulsa Atrás para detener."
+
+msgctxt "TvShell"
+msgid "Press OK again to remove {} from this TV"
+msgstr "Pulsa OK otra vez para quitar {} de este televisor"
+
+msgctxt "TvShell"
+msgid "Press OK for the keyboard"
+msgstr "Pulsa OK para abrir el teclado"
+
+msgctxt "TvShell"
+msgid "Press OK for the next language"
+msgstr "Pulsa OK para el siguiente idioma"
+
+msgctxt "DetailsBody"
+msgid "Price"
+msgstr "Precio"
+
+msgctxt "TvShell"
+msgid "Price"
+msgstr "Precio"
+
+msgctxt "DetailsBody"
+msgid "Project page"
+msgstr "Página del proyecto"
+
+msgctxt "SettingsBody"
+msgid "QR code to scan with the Steam app"
+msgstr "Código QR para escanear con la app de Steam"
+
+msgctxt "TvShell"
+msgid "QR code to scan with the Steam app"
+msgstr "Código QR para escanear con la app de Steam"
+
+msgctxt "DetailsBody"
+msgid "Ratings"
+msgstr "Valoraciones"
+
+msgctxt "DetailsBody"
+msgid "Ratings and reviews"
+msgstr "Valoraciones y reseñas"
+
+msgctxt "TvShell"
+msgid "Ratings and reviews"
+msgstr "Valoraciones y reseñas"
+
+msgctxt "DetailsBody"
+msgid "Ratings come from the ratings service the GNOME and KDE app stores use."
+msgstr "Las valoraciones vienen del servicio de valoraciones que usan las tiendas de apps de GNOME y KDE."
+
+msgctxt "Clamped"
+msgid "Read more"
+msgstr "Leer más"
+
+msgctxt "TvShell"
+msgid "Reading"
+msgstr "Lectura"
+
+msgctxt "LibraryItem"
+msgid "Really remove?"
+msgstr "¿Quitar de verdad?"
+
+msgctxt "DesktopShell"
+msgid "Recent"
+msgstr "Recientes"
+
+msgctxt "SettingsBody"
+msgid "Recommend the apps everyone knows"
+msgstr "Recomendar las apps que todos conocen"
+
+msgctxt "TvShell"
+msgid "Recommend the apps everyone knows, on Home and in searches"
+msgstr "Recomendar las apps que todos conocen, en Inicio y en las búsquedas"
+
+msgctxt "SettingsBody"
+msgid "Recommendations"
+msgstr "Recomendaciones"
+
+msgctxt "SettingsBody"
+msgid "Reduce motion"
+msgstr "Reducir movimiento"
+
+msgctxt "SettingsBody"
+msgid "Reduce motion: pages and buttons change at once instead of moving."
+msgstr "Reducir movimiento: las páginas y los botones cambian al instante en lugar de moverse."
+
+msgctxt "DetailsBody"
+msgid "Reinstall"
+msgstr "Reinstalar"
+
+msgctxt "OptionCard"
+msgid "Reinstall"
+msgstr "Reinstalar"
+
+msgctxt "DetailsBody"
+msgid "Released"
+msgstr "Publicación"
+
+msgctxt "TvShell"
+msgid "Released"
+msgstr "Publicación"
+
+msgctxt "SettingsBody"
+msgid "Releases"
+msgstr "Lanzamientos"
+
+msgctxt "LibraryItem"
+msgid "Remove"
+msgstr "Quitar"
+
+msgctxt "SettingsBody"
+msgid "Remove"
+msgstr "Quitar"
+
+msgctxt "TvShell"
+msgid "Remove"
+msgstr "Quitar"
+
+msgctxt "SettingsBody"
+msgid "Remove PIN"
+msgstr "Quitar PIN"
+
+msgctxt "DetailsBody"
+msgid "Remove from favourites"
+msgstr "Quitar de favoritos"
+
+msgctxt "TvShell"
+msgid "Remove the PIN"
+msgstr "Quitar el PIN"
+
+msgctxt "SettingsBody"
+msgid "Remove the source {}"
+msgstr "Quitar la fuente {}"
+
+msgctxt "LibraryItem"
+msgid "Remove {}"
+msgstr "Quitar {}"
+
+msgctxt "SystemBody"
+msgid "Restart now"
+msgstr "Reiniciar ahora"
+
+msgctxt "TvShell"
+msgid "Restart now"
+msgstr "Reiniciar ahora"
+
+msgctxt "TvShell"
+msgid "Restart this TV to finish updating."
+msgstr "Reinicia este televisor para terminar la actualización."
+
+msgctxt "SystemBody"
+msgid "Restart this device to finish: something that was updated is still running in its old version."
+msgstr "Reinicia este dispositivo para terminar: algo que se actualizó sigue funcionando en su versión anterior."
+
+msgctxt "DesktopShell"
+msgid "Results"
+msgstr "Resultados"
+
+msgctxt "TvShell"
+msgid "Review {0} of {1}"
+msgstr "Reseña {0} de {1}"
+
+msgctxt "DetailsBody"
+msgid "Review {0}: {1}"
+msgstr "Reseña {0}: {1}"
+
+msgctxt "TvShell"
+msgid "Review {0}: {1}"
+msgstr "Reseña {0}: {1}"
+
+msgctxt "TvShell"
+msgid "Review: {}"
+msgstr "Reseña: {}"
+
+msgctxt "TvShell"
+msgid "Reviews"
+msgstr "Reseñas"
+
+msgctxt "DetailsBody"
+msgid "Reviews are written by other people and come from the ratings service the GNOME and KDE app stores use."
+msgstr "Las reseñas las escriben otras personas y vienen del servicio de valoraciones que usan las tiendas de apps de GNOME y KDE."
+
+msgctxt "TvShell"
+msgid "Reviews are written by other people and come from the ratings service the GNOME and KDE app stores use."
+msgstr "Las reseñas las escriben otras personas y vienen del servicio de valoraciones que usan las tiendas de apps de GNOME y KDE."
+
+msgctxt "TvShell"
+msgid "Runs on this TV"
+msgstr "Funciona en este televisor"
+
+msgctxt "DetailsBody"
+msgid "Runs on this device"
+msgstr "Funciona en este dispositivo"
+
+msgctxt "OptionCard"
+msgid "Runs on this device"
+msgstr "Funciona en este dispositivo"
+
+msgctxt "SettingsBody"
+msgid "Save"
+msgstr "Guardar"
+
+msgctxt "SettingsBody"
+msgid "Save token"
+msgstr "Guardar token"
+
+msgctxt "SettingsBody"
+msgid "Saved"
+msgstr "Guardado"
+
+msgctxt "SettingsBody"
+msgid "Scan a code with the Steam app on your phone. Nothing to type. Steam gives Bilby a key to your account, which Bilby uses once to read the list and then throws away."
+msgstr "Escanea un código con la app de Steam en tu teléfono. No hay que escribir nada. Steam le da a Bilby una llave de tu cuenta, que Bilby usa una vez para leer la lista y luego desecha."
+
+msgctxt "TvShell"
+msgid "Scan the code with the Steam app on your phone"
+msgstr "Escanea el código con la app de Steam en tu teléfono"
+
+msgctxt "SettingsBody"
+msgid "Scan this with the Steam app on your phone and approve the sign-in there."
+msgstr "Escanea esto con la app de Steam en tu teléfono y aprueba allí el inicio de sesión."
+
+msgctxt "SettingsBody"
+msgid "Scanned. Approve it in the Steam app."
+msgstr "Escaneado. Apruébalo en la app de Steam."
+
+msgctxt "TvShell"
+msgid "Scanned. Approve it in the Steam app."
+msgstr "Escaneado. Apruébalo en la app de Steam."
+
+msgctxt "DesktopShell"
+msgid "Search"
+msgstr "Buscar"
+
+msgctxt "MobileShell"
+msgid "Search"
+msgstr "Buscar"
+
+msgctxt "SearchField"
+msgid "Search"
+msgstr "Buscar"
+
+msgctxt "TvShell"
+msgid "Search"
+msgstr "Buscar"
+
+msgctxt "DesktopShell"
+msgid "Search again for {}"
+msgstr "Buscar {} de nuevo"
+
+msgctxt "SearchField"
+msgid "Search apps"
+msgstr "Buscar apps"
+
+msgctxt "DesktopShell"
+msgid "Search for an app by name, or paste a project link."
+msgstr "Busca una app por su nombre o pega el enlace de un proyecto."
+
+msgctxt "MobileShell"
+msgid "Search for an app by name, or paste a project link."
+msgstr "Busca una app por su nombre o pega el enlace de un proyecto."
+
+msgctxt "TvShell"
+msgid "Search for apps and games"
+msgstr "Buscar apps y juegos"
+
+msgctxt "MobileShell"
+msgid "Search, or paste a project link"
+msgstr "Busca o pega el enlace de un proyecto"
+
+msgctxt "DesktopShell"
+msgid "Search, or paste a project link   (Ctrl+K)"
+msgstr "Busca o pega el enlace de un proyecto   (Ctrl+K)"
+
+msgctxt "DesktopShell"
+msgid "Searching…"
+msgstr "Buscando…"
+
+msgctxt "MobileShell"
+msgid "Searching…"
+msgstr "Buscando…"
+
+msgctxt "TvShell"
+msgid "Searching…"
+msgstr "Buscando…"
+
+msgctxt "SettingsBody"
+msgid "Set a PIN"
+msgstr "Definir un PIN"
+
+msgctxt "TvShell"
+msgid "Set a PIN"
+msgstr "Definir un PIN"
+
+msgctxt "SettingsBody"
+msgid "Set a PIN below so that it cannot simply be switched off."
+msgstr "Define un PIN abajo para que no se pueda desactivar sin más."
+
+msgctxt "TvShell"
+msgid "Set a PIN to guard these settings and adult content"
+msgstr "Define un PIN para proteger estos ajustes y el contenido para adultos"
+
+msgctxt "DesktopShell"
+msgid "Settings"
+msgstr "Ajustes"
+
+msgctxt "MobileShell"
+msgid "Settings"
+msgstr "Ajustes"
+
+msgctxt "TvShell"
+msgid "Settings"
+msgstr "Ajustes"
+
+msgctxt "TvShell"
+msgid "Should run on this TV"
+msgstr "Debería funcionar en este televisor"
+
+msgctxt "DetailsBody"
+msgid "Should run on this device"
+msgstr "Debería funcionar en este dispositivo"
+
+msgctxt "OptionCard"
+msgid "Should run on this device"
+msgstr "Debería funcionar en este dispositivo"
+
+msgctxt "SettingsBody"
+msgid "Show Bilby in the app menu"
+msgstr "Mostrar Bilby en el menú de apps"
+
+msgctxt "SettingsBody"
+msgid "Show adult content uncovered"
+msgstr "Mostrar contenido para adultos sin cubrir"
+
+msgctxt "TvShell"
+msgid "Show adult content uncovered, with no question"
+msgstr "Mostrar contenido para adultos sin cubrir, sin preguntar"
+
+msgctxt "Clamped"
+msgid "Show all of {}"
+msgstr "Mostrar todo: {}"
+
+msgctxt "DesktopShell"
+msgid "Show all {0} in {1}"
+msgstr "Mostrar todo ({0}) en {1}"
+
+msgctxt "MobileShell"
+msgid "Show all {0} in {1}"
+msgstr "Mostrar todo ({0}) en {1}"
+
+msgctxt "DesktopShell"
+msgid "Show all {}"
+msgstr "Mostrar todo ({})"
+
+msgctxt "MobileShell"
+msgid "Show all {}"
+msgstr "Mostrar todo ({})"
+
+msgctxt "SystemBody"
+msgid "Show all {}"
+msgstr "Mostrar todo ({})"
+
+msgctxt "SettingsBody"
+msgid "Show apps from {}"
+msgstr "Mostrar apps de {}"
+
+msgctxt "TvShell"
+msgid "Show code"
+msgstr "Mostrar código"
+
+msgctxt "SystemBody"
+msgid "Show fewer"
+msgstr "Mostrar menos"
+
+msgctxt "Clamped"
+msgid "Show less"
+msgstr "Mostrar menos"
+
+msgctxt "Clamped"
+msgid "Show less of {}"
+msgstr "Mostrar menos: {}"
+
+msgctxt "SettingsBody"
+msgid "Show ratings and reviews"
+msgstr "Mostrar valoraciones y reseñas"
+
+msgctxt "UpdatesBanner"
+msgid "Show updates"
+msgstr "Mostrar actualizaciones"
+
+msgctxt "SystemBody"
+msgid "Show what the updater said"
+msgstr "Mostrar lo que dijo el actualizador"
+
+msgctxt "DetailsBody"
+msgid "Show {n} file for other devices"
+msgid_plural "Show {n} files for other devices"
+msgstr[0] "Mostrar {n} archivo para otros dispositivos"
+msgstr[1] "Mostrar {n} archivos para otros dispositivos"
+
+msgctxt "TvShell"
+msgid "Sign in"
+msgstr "Iniciar sesión"
+
+msgctxt "SettingsBody"
+msgid "Sign in in a browser"
+msgstr "Iniciar sesión en un navegador"
+
+msgctxt "SettingsBody"
+msgid "Sign in on Steam's page in Longboard, then choose to share your library."
+msgstr "Inicia sesión en la página de Steam en Longboard y luego elige compartir tu biblioteca."
+
+msgctxt "TvShell"
+msgid "Sign in on Steam's page in Longboard, then share your library"
+msgstr "Inicia sesión en la página de Steam en Longboard y luego comparte tu biblioteca"
+
+msgctxt "SettingsBody"
+msgid "Sign in on Steam's page in the window that opened. Close it to stop."
+msgstr "Inicia sesión en la página de Steam en la ventana que se abrió. Ciérrala para detener."
+
+msgctxt "TvShell"
+msgid "Sign in to GitHub for more searches an hour"
+msgstr "Inicia sesión en GitHub para tener más búsquedas por hora"
+
+msgctxt "TvShell"
+msgid "Sign in to Steam"
+msgstr "Iniciar sesión en Steam"
+
+msgctxt "SettingsBody"
+msgid "Sign in to Steam in a browser"
+msgstr "Iniciar sesión en Steam en un navegador"
+
+msgctxt "SettingsBody"
+msgid "Sign in to Steam with a QR code"
+msgstr "Iniciar sesión en Steam con un código QR"
+
+msgctxt "TvShell"
+msgid "Sign in to Steam with a QR code, to see what you own"
+msgstr "Iniciar sesión en Steam con un código QR, para ver lo que tienes"
+
+msgctxt "SettingsBody"
+msgid "Sign in to see which Steam games you already own. Bilby keeps only the list of what you own, on this device. Choose how:"
+msgstr "Inicia sesión para ver qué juegos de Steam ya tienes. Bilby solo guarda la lista de lo que tienes, en este dispositivo. Elige cómo:"
+
+msgctxt "SettingsBody"
+msgid "Sign in with GitHub"
+msgstr "Iniciar sesión con GitHub"
+
+msgctxt "SettingsBody"
+msgid "Sign in with a QR code"
+msgstr "Iniciar sesión con un código QR"
+
+msgctxt "SettingsBody"
+msgid "Sign out"
+msgstr "Cerrar sesión"
+
+msgctxt "TvShell"
+msgid "Sign out"
+msgstr "Cerrar sesión"
+
+msgctxt "SettingsBody"
+msgid "Sign out of GitHub"
+msgstr "Cerrar sesión en GitHub"
+
+msgctxt "SettingsBody"
+msgid "Sign out of Steam"
+msgstr "Cerrar sesión en Steam"
+
+msgctxt "SettingsBody"
+msgid "Sign-in code {}"
+msgstr "Código de inicio de sesión {}"
+
+msgctxt "TvShell"
+msgid "Sign-in code {}"
+msgstr "Código de inicio de sesión {}"
+
+msgctxt "TvShell"
+msgid "Signed in to GitHub"
+msgstr "Sesión iniciada en GitHub"
+
+msgctxt "TvShell"
+msgid "Signed in to Steam  ·  {}"
+msgstr "Sesión iniciada en Steam  ·  {}"
+
+msgctxt "SettingsBody"
+msgid "Signed in. Bilby knows {} in your Steam library and marks them Owned."
+msgstr "Sesión iniciada. Bilby conoce {} de tu biblioteca de Steam y los marca como Adquirido."
+
+msgctxt "TvShell"
+msgid "Signing in to GitHub…"
+msgstr "Iniciando sesión en GitHub…"
+
+msgctxt "LibraryItem"
+msgid "Skip"
+msgstr "Omitir"
+
+msgctxt "LibraryItem"
+msgid "Skip this update of {}"
+msgstr "Omitir esta actualización de {}"
+
+msgctxt "LibraryItem"
+msgid "Skip this version"
+msgstr "Omitir esta versión"
+
+msgctxt "SettingsBody"
+msgid "So that nothing is added to or taken off this device without it."
+msgstr "Para que no se añada ni se quite nada de este dispositivo sin él."
+
+msgctxt "SettingsBody"
+msgid "Some games, apps and websites are meant for adults. They are kept apart: in a search they have a section of their own, each one covered until you choose it, and you are asked to confirm you are an adult before one opens."
+msgstr "Algunos juegos, apps y sitios web son para adultos. Se mantienen aparte: en una búsqueda tienen su propia sección, cada uno cubierto hasta que lo eliges, y se te pide confirmar que eres adulto antes de abrir uno."
+
+msgctxt "SettingsBody"
+msgid "Sounds"
+msgstr "Sonidos"
+
+msgctxt "TvShell"
+msgid "Sounds: a quiet tick as you move about"
+msgstr "Sonidos: un clic suave al moverte"
+
+msgctxt "SettingsBody"
+msgid "Sounds: a quiet tick or pop as you move about and press things."
+msgstr "Sonidos: un clic o un pop suave al moverte y pulsar cosas."
+
+msgctxt "SettingsBody"
+msgid "Steam"
+msgstr "Steam"
+
+msgctxt "TvShell"
+msgid "Steam gives Bilby a key to your account. Bilby uses it once to read what you own, then throws it away."
+msgstr "Steam le da a Bilby una llave de tu cuenta. Bilby la usa una vez para leer lo que tienes y luego la desecha."
+
+msgctxt "SettingsBody"
+msgid "Steam's own sign-in page opens in a small window. The browser asks Steam for the list, so no key ever reaches Bilby."
+msgstr "La página de inicio de sesión de Steam se abre en una ventana pequeña. El navegador le pide la lista a Steam, así que ninguna llave llega a Bilby."
+
+msgctxt "SettingsBody"
+msgid "Stop waiting"
+msgstr "Dejar de esperar"
+
+msgctxt "SettingsBody"
+msgid "Stop waiting for Steam"
+msgstr "Dejar de esperar a Steam"
+
+msgctxt "SettingsBody"
+msgid "Storage"
+msgstr "Almacenamiento"
+
+msgctxt "TvShell"
+msgid "Switch"
+msgstr "Cambiar"
+
+msgctxt "SettingsBody"
+msgid "Switch off any place you do not want apps from. It is then left out of searches and the home page; an app from it can still be opened by its link."
+msgstr "Desactiva cualquier lugar del que no quieras apps. Así queda fuera de las búsquedas y de la página de inicio; una app de ese lugar aún se puede abrir con su enlace."
+
+msgctxt "DetailsBody"
+msgid "Switch to {}"
+msgstr "Cambiar a {}"
+
+msgctxt "SettingsBody"
+msgid "Switching it off needs the PIN."
+msgstr "Para desactivarlo se necesita el PIN."
+
+msgctxt "SystemCard"
+msgid "System details"
+msgstr "Detalles del sistema"
+
+msgctxt "SettingsBody"
+msgid "System details and updates"
+msgstr "Detalles del sistema y actualizaciones"
+
+msgctxt "SettingsBody"
+msgid "System packages"
+msgstr "Paquetes del sistema"
+
+msgctxt "TvShell"
+msgid "System packages"
+msgstr "Paquetes del sistema"
+
+msgctxt "SettingsBody"
+msgid "TV"
+msgstr "TV"
+
+msgctxt "TvShell"
+msgid "That was not the password. Try again."
+msgstr "Esa no era la contraseña. Inténtalo de nuevo."
+
+msgctxt "SettingsBody"
+msgid "The TV layout has large text and is driven with the arrow keys of a remote or keyboard. To come back from it, open This TV at the top of its screen."
+msgstr "El diseño para TV tiene texto grande y se maneja con las flechas de un control remoto o del teclado. Para volver, abre Este televisor en la parte superior de su pantalla."
+
+msgctxt "SettingsBody"
+msgid "The code refreshes by itself."
+msgstr "El código se renueva solo."
+
+msgctxt "SettingsBody"
+msgid "The store only lists apps with a file that can be installed here. This is what it detected."
+msgstr "La tienda solo muestra apps con un archivo que se puede instalar aquí. Esto es lo que detectó."
+
+msgctxt "SettingsBody"
+msgid "They come from the service the GNOME and KDE app stores use (odrs.gnome.org). Star ratings arrive as one file a day for every app. Written reviews are asked for when you open the page of an app that has them, which tells that service which app it was. Nothing that identifies you is sent."
+msgstr "Vienen del servicio que usan las tiendas de apps de GNOME y KDE (odrs.gnome.org). Las valoraciones con estrellas llegan en un archivo al día para todas las apps. Las reseñas escritas se piden cuando abres la página de una app que las tiene, lo que le indica a ese servicio qué app era. No se envía nada que te identifique."
+
+msgctxt "LibraryItem"
+msgid "This deletes the app's file from your Applications folder."
+msgstr "Esto elimina el archivo de la app de tu carpeta Applications."
+
+msgctxt "MobileShell"
+msgid "This device"
+msgstr "Este dispositivo"
+
+msgctxt "SettingsBody"
+msgid "This device  ·  {}"
+msgstr "Este dispositivo  ·  {}"
+
+msgctxt "LibraryItem"
+msgid "This only forgets the app here. To uninstall it, use your system's software manager."
+msgstr "Esto solo hace que la app se olvide aquí. Para desinstalarla, usa el gestor de software de tu sistema."
+
+msgctxt "TvShell"
+msgid "This store"
+msgstr "Esta tienda"
+
+msgctxt "DesktopShell"
+msgid "Try a different name, or check the spelling. Projects without a file for {} are left out."
+msgstr "Prueba con otro nombre o revisa la ortografía. Los proyectos sin un archivo para {} quedan fuera."
+
+msgctxt "MobileShell"
+msgid "Try a different name. Apps that do not work on this device are left out."
+msgstr "Prueba con otro nombre. Las apps que no funcionan en este dispositivo quedan fuera."
+
+msgctxt "DetailsBody"
+msgid "Try again"
+msgstr "Reintentar"
+
+msgctxt "TvShell"
+msgid "Try again"
+msgstr "Reintentar"
+
+msgctxt "DesktopShell"
+msgid "Type a name and press Enter, or paste a link to a project. Only apps that work on this device are listed."
+msgstr "Escribe un nombre y pulsa Enter, o pega el enlace de un proyecto. Solo se muestran las apps que funcionan en este dispositivo."
+
+msgctxt "TvShell"
+msgid "Type a name, then press OK"
+msgstr "Escribe un nombre y pulsa OK"
+
+msgctxt "FamilyRow"
+msgid "Unofficial"
+msgstr "No oficial"
+
+msgctxt "TvShell"
+msgid "Up and Down move through the list. OK changes the highlighted setting."
+msgstr "Arriba y Abajo recorren la lista. OK cambia el ajuste resaltado."
+
+msgctxt "AppRow"
+msgid "Update"
+msgstr "Actualizar"
+
+msgctxt "AppTile"
+msgid "Update"
+msgstr "Actualizar"
+
+msgctxt "DetailsBody"
+msgid "Update"
+msgstr "Actualizar"
+
+msgctxt "LibraryItem"
+msgid "Update"
+msgstr "Actualizar"
+
+msgctxt "OptionCard"
+msgid "Update"
+msgstr "Actualizar"
+
+msgctxt "TvShell"
+msgid "Update"
+msgstr "Actualizar"
+
+msgctxt "LibraryBody"
+msgid "Update all"
+msgstr "Actualizar todo"
+
+msgctxt "TvShell"
+msgid "Update all"
+msgstr "Actualizar todo"
+
+msgctxt "AppRow"
+msgid "Update available"
+msgstr "Actualización disponible"
+
+msgctxt "TvShell"
+msgid "Update available"
+msgstr "Actualización disponible"
+
+msgctxt "TvTile"
+msgid "Update available"
+msgstr "Actualización disponible"
+
+msgctxt "DetailsBody"
+msgid "Update available  ·  you have {0}, latest is {1}"
+msgstr "Actualización disponible  ·  tienes la {0}, la más reciente es la {1}"
+
+msgctxt "TvShell"
+msgid "Update available: you have {}"
+msgstr "Actualización disponible: tienes la {}"
+
+msgctxt "SystemBody"
+msgid "Update now"
+msgstr "Actualizar ahora"
+
+msgctxt "TvShell"
+msgid "Update now"
+msgstr "Actualizar ahora"
+
+msgctxt "SystemCard"
+msgid "Update system"
+msgstr "Actualizar el sistema"
+
+msgctxt "LibraryItem"
+msgid "Update {}"
+msgstr "Actualizar {}"
+
+msgctxt "AppRow"
+msgid "Update {} now"
+msgstr "Actualizar {} ahora"
+
+msgctxt "AppTile"
+msgid "Update {} now"
+msgstr "Actualizar {} ahora"
+
+msgctxt "SettingsBody"
+msgid "Updates"
+msgstr "Actualizaciones"
+
+msgctxt "LibraryItem"
+msgid "Updating…"
+msgstr "Actualizando…"
+
+msgctxt "TvQuestion"
+msgid "Use the TV layout"
+msgstr "Usar el diseño para TV"
+
+msgctxt "TvShell"
+msgid "Use the desktop layout, for a mouse and keyboard"
+msgstr "Usar el diseño de escritorio, para ratón y teclado"
+
+msgctxt "SettingsBody"
+msgid "Use the usual folder"
+msgstr "Usar la carpeta habitual"
+
+msgctxt "SettingsBody"
+msgid "Uses one request per app in your library. Turn it off if GitHub's allowance is tight; you can still check from the Library page."
+msgstr "Usa una solicitud por cada app de tu biblioteca. Desactívalo si el límite de GitHub es ajustado; aún puedes comprobarlo desde la página Biblioteca."
+
+msgctxt "DetailsBody"
+msgid "Version"
+msgstr "Versión"
+
+msgctxt "TvShell"
+msgid "Version"
+msgstr "Versión"
+
+msgctxt "DetailsBody"
+msgid "Version {}"
+msgstr "Versión {}"
+
+msgctxt "TvShell"
+msgid "Version {}"
+msgstr "Versión {}"
+
+msgctxt "TvShell"
+msgid "Versions and files"
+msgstr "Versiones y archivos"
+
+msgctxt "Spotlight"
+msgid "View"
+msgstr "Ver"
+
+msgctxt "UpdatesBanner"
+msgid "View"
+msgstr "Ver"
+
+msgctxt "SettingsBody"
+msgid "View the store's update"
+msgstr "Ver la actualización de la tienda"
+
+msgctxt "SettingsBody"
+msgid "View update"
+msgstr "Ver actualización"
+
+msgctxt "Spotlight"
+msgid "View {}"
+msgstr "Ver {}"
+
+msgctxt "SettingsBody"
+msgid "Waiting for the Steam app…"
+msgstr "Esperando a la app de Steam…"
+
+msgctxt "TvShell"
+msgid "Waiting for the Steam app…"
+msgstr "Esperando a la app de Steam…"
+
+msgctxt "SettingsBody"
+msgid "Waiting for you to enter it. This page updates by itself."
+msgstr "Esperando a que lo introduzcas. Esta página se actualiza sola."
+
+msgctxt "SystemBody"
+msgid "Waiting to be installed"
+msgstr "En espera de instalación"
+
+msgctxt "TvShell"
+msgid "Waiting to be installed"
+msgstr "En espera de instalación"
+
+msgctxt "AppRow"
+msgid "Web apps"
+msgstr "Apps web"
+
+msgctxt "AppTile"
+msgid "Web apps"
+msgstr "Apps web"
+
+msgctxt "Welcome"
+msgid "Welcome to Bilby"
+msgstr "Te damos la bienvenida a Bilby"
+
+msgctxt "OptionCard"
+msgid "What happens when I install {}"
+msgstr "Qué pasa cuando instalo {}"
+
+msgctxt "TvShell"
+msgid "What people wrote"
+msgstr "Lo que escribió la gente"
+
+msgctxt "OptionCard"
+msgid "What will happen?"
+msgstr "¿Qué pasará?"
+
+msgctxt "WhatsNew"
+msgid "What's new"
+msgstr "Novedades"
+
+msgctxt "TvShell"
+msgid "What's new in {}"
+msgstr "Novedades de {}"
+
+msgctxt "SettingsBody"
+msgid "Where apps come from"
+msgstr "De dónde vienen las apps"
+
+msgctxt "TvShell"
+msgid "Where apps come from"
+msgstr "De dónde vienen las apps"
+
+msgctxt "DetailsBody"
+msgid "Works on"
+msgstr "Funciona en"
+
+msgctxt "TvShell"
+msgid "Works on"
+msgstr "Funciona en"
+
+msgctxt "Welcome"
+msgid "You are seeing apps for {}. Anything that cannot be installed on this device is hidden."
+msgstr "Estás viendo apps para {}. Todo lo que no se puede instalar en este dispositivo está oculto."
+
+msgctxt "SettingsBody"
+msgid "You are signed in. GitHub allows 5,000 requests an hour."
+msgstr "Has iniciado sesión. GitHub permite 5000 solicitudes por hora."
+
+msgctxt "TvShell"
+msgid "You may be asked for your password. Keep the TV on until this finishes."
+msgstr "Puede que se te pida tu contraseña. Mantén el televisor encendido hasta que termine."
+
+msgctxt "SystemBody"
+msgid "You may be asked for your password. Keep the device on until this finishes."
+msgstr "Puede que se te pida tu contraseña. Mantén el dispositivo encendido hasta que termine."
+
+msgctxt "LibraryBody"
+msgid "Your library is empty"
+msgstr "Tu biblioteca está vacía"
+
+msgctxt "SettingsBody"
+msgid "Your own sources"
+msgstr "Tus propias fuentes"
+
+msgctxt "TvShell"
+msgid "Your password is needed"
+msgstr "Se necesita tu contraseña"
+
+msgctxt "TvShell"
+msgid "an older one"
+msgstr "una anterior"
+
+msgctxt "TvShell"
+msgid "and {} more"
+msgstr "y {} más"
+
+msgctxt "TvShell"
+msgid "best for this TV"
+msgstr "lo mejor para este televisor"
+
+msgctxt "DetailsBody"
+msgid "download"
+msgstr "descarga"
+
+msgctxt "TvShell"
+msgid "download"
+msgstr "descarga"
+
+msgctxt "DetailsBody"
+msgid "last updated"
+msgstr "última actualización"
+
+msgctxt "TvShell"
+msgid "last updated"
+msgstr "última actualización"
+
+msgctxt "DetailsBody"
+msgid "licence"
+msgstr "licencia"
+
+msgctxt "TvShell"
+msgid "newest"
+msgstr "la más reciente"
+
+msgctxt "DetailsBody"
+msgid "on {}"
+msgstr "en {}"
+
+msgctxt "TvShell"
+msgid "on {}"
+msgstr "en {}"
+
+msgctxt "RatingSummary"
+msgid "out of 5"
+msgstr "de 5"
+
+msgctxt "TvShell"
+msgid "space"
+msgstr "espacio"
+
+msgctxt "DetailsBody"
+msgid "the description"
+msgstr "la descripción"
+
+msgctxt "DetailsBody"
+msgid "verified"
+msgstr "verificado"
+
+msgctxt "TvShell"
+msgid "verified"
+msgstr "verificado"
+
+msgctxt "WhatsNew"
+msgid "what is new"
+msgstr "las novedades"
+
+msgctxt "TvShell"
+msgid "{0} from {1}"
+msgstr "{0} de {1}"
+
+msgctxt "TvShell"
+msgid "{0} of {1}"
+msgstr "{0} de {1}"
+
+msgctxt "DetailsBody"
+msgid "{0} on {1}"
+msgstr "{0} en {1}"
+
+msgctxt "TvShell"
+msgid "{0} on {1}"
+msgstr "{0} en {1}"
+
+msgctxt "RatingSummary"
+msgid "{0} out of 5, from {1}"
+msgstr "{0} de 5, según {1}"
+
+msgctxt "LibraryBody"
+msgid "{n} app"
+msgid_plural "{n} apps"
+msgstr[0] "{n} app"
+msgstr[1] "{n} apps"
+
+msgctxt "UpdatesBanner"
+msgid "{n} app in your library has an update"
+msgid_plural "{n} apps in your library have updates"
+msgstr[0] "{n} app de tu biblioteca tiene una actualización"
+msgstr[1] "{n} apps de tu biblioteca tienen actualizaciones"
+
+msgctxt "TvShell"
+msgid "{n} character typed"
+msgid_plural "{n} characters typed"
+msgstr[0] "{n} carácter escrito"
+msgstr[1] "{n} caracteres escritos"
+
+msgctxt "TvShell"
+msgid "{n} file for other devices is not listed."
+msgid_plural "{n} files for other devices are not listed."
+msgstr[0] "No se muestra {n} archivo para otros dispositivos."
+msgstr[1] "No se muestran {n} archivos para otros dispositivos."
+
+msgctxt "TvShell"
+msgid "{n} link"
+msgid_plural "{n} links"
+msgstr[0] "{n} enlace"
+msgstr[1] "{n} enlaces"
+
+msgctxt "LibraryBody"
+msgid "{n} update available"
+msgid_plural "{n} updates available"
+msgstr[0] "{n} actualización disponible"
+msgstr[1] "{n} actualizaciones disponibles"
+
+msgctxt "TvShell"
+msgid "{}  Press OK to try again."
+msgstr "{}  Pulsa OK para reintentar."
+
+msgctxt "OptionCard"
+msgid "{} download"
+msgstr "Descarga de {}"
+
+msgctxt "AppTile"
+msgid "{} sources"
+msgstr "{} fuentes"
+
+msgctxt "DesktopShell"
+msgid "{}. Everything shown works here."
+msgstr "{}. Todo lo que se muestra funciona aquí."
+
+msgctxt "Welcome"
+msgid "•  Apps come from many places: package managers, other stores and developers' own release pages. Bilby does not review them, so only install software you trust."
+msgstr "•  Las apps vienen de muchos lugares: gestores de paquetes, otras tiendas y las páginas de versiones de los propios desarrolladores. Bilby no las revisa, así que instala solo software en el que confíes."
+
+msgctxt "Welcome"
+msgid "•  There is no account and no server of ours. Your library and settings stay in a file on this device."
+msgstr "•  No hay cuenta ni servidor nuestro. Tu biblioteca y tus ajustes se quedan en un archivo en este dispositivo."
+
+msgctxt "TvShell"
+msgid "★  In favourites"
+msgstr "★  En favoritos"
+
+msgctxt "TvShell"
+msgid "☆  Favourite"
+msgstr "☆  Favorito"

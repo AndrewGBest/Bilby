@@ -63,7 +63,7 @@ component FamilyRow inherits Rectangle {
     border-width: 1px;
     border-color: fs.has-focus ? Theme.focus : Theme.stroke;
     accessible-role: button;
-    accessible-label: choice.name + (choice.official ? "" : ", unofficial");
+    accessible-label: choice.name + (choice.official ? "" : @tr(", unofficial"));
     fs := FocusScope {
         focus-on-click: false;
         key-pressed(event) => {
@@ -90,7 +90,7 @@ component FamilyRow inherits Rectangle {
             Text { text: choice.note; color: Theme.text-dim; font-size: 12px; overflow: elide; }
         }
         Text {
-            text: choice.official ? "Official" : "Unofficial";
+            text: choice.official ? @tr("Official") : @tr("Unofficial");
             color: choice.official ? Theme.accent : Theme.text-dim;
             font-size: 12px;
             vertical-alignment: center;
@@ -105,7 +105,7 @@ export component FamilyPanel inherits VerticalLayout {
     callback chosen(string);
     spacing: 8px;
     Text {
-        text: "Other ways to use " + service;
+        text: @tr("Other ways to use {}", service);
         color: Theme.text-dim;
         font-size: 13px;
         font-weight: 600;
@@ -379,7 +379,7 @@ export component Toggle inherits Rectangle {
 
 export component SearchField inherits Rectangle {
     in-out property <string> text <=> input.text;
-    in property <string> placeholder: "Search apps";
+    in property <string> placeholder: @tr("Search apps");
     out property <bool> has-focus: input.has-focus;
     callback accepted(string);
     callback edited(string);
@@ -423,7 +423,7 @@ export component SearchField inherits Rectangle {
                 font-size: 15px;
                 single-line: true;
                 vertical-alignment: center;
-                accessible-label: "Search";
+                accessible-label: @tr("Search");
                 accepted => { root.accepted(self.text); }
                 edited => { root.edited(self.text); }
             }
@@ -431,7 +431,7 @@ export component SearchField inherits Rectangle {
         if input.text != "" : Rectangle {
             width: 28px;
             accessible-role: button;
-            accessible-label: "Clear search";
+            accessible-label: @tr("Clear search");
             TouchArea {
                 mouse-cursor: pointer;
                 clicked => {
@@ -523,12 +523,12 @@ export component AppTile inherits Rectangle {
                 HorizontalLayout {
                     spacing: 6px;
                     alignment: start;
-                    if app.installed && !app.has-update : Chip { text: "Installed"; tone: Theme.accent; }
+                    if app.installed && !app.has-update : Chip { text: @tr("Installed"); tone: Theme.accent; }
                     // The score, and how many people gave one: the second is the popularity.
                     if app.rating != "" : Chip { text: "★ " + app.rating + "  ·  " + app.rating-count; }
                     if app.rating == "" && app.headline != "" : Chip { text: app.headline; }
                     if app.rating == "" && app.headline == "" && app.price != "" : Chip { text: app.price; }
-                    if app.more-sources > 0 : Chip { text: (app.more-sources + 1) + " sources"; }
+                    if app.more-sources > 0 : Chip { text: @tr("{} sources", app.more-sources + 1); }
                 }
             }
             Rectangle { horizontal-stretch: 1; }
@@ -537,9 +537,9 @@ export component AppTile inherits Rectangle {
                 font-size: 12px;
                 min-width: 76px;
                 // A website is added, not installed: nothing is downloaded.
-                text: app.has-update ? "Update" : app.source == "Web apps" ? "Add" : "Install";
+                text: app.has-update ? @tr("Update") : app.source == @tr("Web apps") ? @tr("Add") : @tr("Install");
                 primary: app.has-update;
-                accessible-label: (app.has-update ? "Update " : "Install ") + app.name + " now";
+                accessible-label: (app.has-update ? @tr("Update {} now", app.name) : @tr("Install {} now", app.name));
                 clicked => { Store.quick-install(app.id); }
             }
         }
@@ -574,7 +574,7 @@ export component AppRow inherits Rectangle {
             Text { text: app.name; color: Theme.text; font-size: 16px; font-weight: 600; overflow: elide; }
             Text { text: app.summary; color: Theme.text-dim; font-size: 13px; overflow: elide; }
             Text {
-                text: (app.has-update ? "Update available · " : app.installed ? "Installed · " : "") + (app.rating != "" ? "★ " + app.rating + " (" + app.rating-count + ") · " : app.headline != "" ? app.headline + " · " : "") + (app.author != "" ? app.author : app.source);
+                text: (app.has-update ? @tr("Update available") + " · " : app.installed ? @tr("Installed") + " · " : "") + (app.rating != "" ? "★ " + app.rating + " (" + app.rating-count + ") · " : app.headline != "" ? app.headline + " · " : "") + (app.author != "" ? app.author : app.source);
                 color: app.has-update || app.installed ? Theme.accent : Theme.text-dim;
                 font-size: 11px;
                 font-weight: 600;
@@ -587,9 +587,9 @@ export component AppRow inherits Rectangle {
                 font-size: 12px;
                 width: 72px;
                 // A website is added, not installed: nothing is downloaded.
-                text: app.has-update ? "Update" : app.source == "Web apps" ? "Add" : "Install";
+                text: app.has-update ? @tr("Update") : app.source == @tr("Web apps") ? @tr("Add") : @tr("Install");
                 primary: app.has-update;
-                accessible-label: (app.has-update ? "Update " : "Install ") + app.name + " now";
+                accessible-label: (app.has-update ? @tr("Update {} now", app.name) : @tr("Install {} now", app.name));
                 clicked => { Store.quick-install(app.id); }
             }
         }
@@ -620,12 +620,12 @@ component CommandBox inherits Rectangle {
             wrap: char-wrap;
             single-line: false;
             vertical-alignment: center;
-            accessible-label: "Command";
+            accessible-label: @tr("Command");
         }
         Rectangle {
             width: 54px;
             accessible-role: button;
-            accessible-label: "Copy command";
+            accessible-label: @tr("Copy command");
             TouchArea {
                 mouse-cursor: pointer;
                 clicked => {
@@ -636,7 +636,7 @@ component CommandBox inherits Rectangle {
                 }
             }
             Text {
-                text: root.copied ? "Copied" : "Copy";
+                text: root.copied ? @tr("Copied") : @tr("Copy");
                 color: root.copied ? Theme.ok : Theme.accent;
                 font-size: 12px;
                 font-weight: 600;
@@ -678,17 +678,17 @@ export component OptionCard inherits Rectangle {
                     Text {
                         // What kind of file it is matters to some people; that it fits
                         // this device matters to everyone.
-                        text: plain ? (option.native ? "Made for this device" : "Works on this device") : option.label;
+                        text: plain ? (option.native ? @tr("Runs on this device") : @tr("Should run on this device")) : option.label;
                         color: Theme.text;
                         font-size: 15px;
                         font-weight: 600;
                         vertical-alignment: center;
                         overflow: elide;
                     }
-                    if recommended && !compact && !plain : Chip { text: "Best for this device"; tone: Theme.accent; }
-                    if !option.native && !compact && !plain : Chip { text: "Compatible"; tone: Theme.warn; }
+                    if recommended && !compact && !plain : Chip { text: @tr("Best for this device"); tone: Theme.accent; }
+                    if !option.native && !compact && !plain : Chip { text: @tr("Compatible"); tone: Theme.warn; }
                 }
-                if plain && option.size != "" : Text { text: option.size + " download"; color: Theme.text-dim; font-size: 12px; overflow: elide; }
+                if plain && option.size != "" : Text { text: @tr("{} download", option.size); color: Theme.text-dim; font-size: 12px; overflow: elide; }
                 if !plain : Text {
                     text: option.size != "" ? option.file + "  ·  " + option.size : option.file;
                     color: Theme.text-dim;
@@ -699,10 +699,10 @@ export component OptionCard inherits Rectangle {
             VerticalLayout {
                 alignment: center;
                 Button {
-                    text: mine && busy ? "Cancel" : recommended && Store.installed-version != "" && Store.installed-version != Store.app.version ? "Update" : recommended && Store.installed-version != "" && option.verb == "Install" ? "Reinstall" : option.verb;
+                    text: mine && busy ? @tr("Cancel") : recommended && Store.installed-version != "" && Store.installed-version != Store.app.version ? @tr("Update") : recommended && Store.installed-version != "" && option.verb == @tr("Install") ? @tr("Reinstall") : option.verb;
                     primary: recommended && !(mine && busy);
                     enabled: !busy || mine;
-                    accessible-label: (mine && busy ? "Cancel" : option.verb) + " " + option.label;
+                    accessible-label: (mine && busy ? @tr("Cancel") : option.verb) + " " + option.label;
                     clicked => {
                         if (mine && busy) {
                             Store.cancel-install();
@@ -715,7 +715,7 @@ export component OptionCard inherits Rectangle {
         }
         if recommended && compact && !plain : HorizontalLayout {
             alignment: start;
-            Chip { text: "Best for this device"; tone: Theme.accent; }
+            Chip { text: @tr("Best for this device"); tone: Theme.accent; }
         }
         if option.note != "" : Text { text: option.note; color: Theme.warn; font-size: 12px; wrap: word-wrap; }
         if option.command != "" && (!plain || Store.is-package) : CommandBox { command: option.command; }
@@ -727,7 +727,7 @@ export component OptionCard inherits Rectangle {
                 Image { source: @image-url("icons/shield.svg"); colorize: Theme.ok; width: 13px; height: 13px; }
             }
             Text {
-                text: plain ? "The download is checked before it is installed" : "Checksum is checked after download";
+                text: plain ? @tr("Bilby checks the download is the genuine file before installing it") : @tr("Checked against the publisher's SHA-256 after download");
                 color: Theme.ok;
                 font-size: 11px;
                 font-weight: 600;
@@ -741,7 +741,7 @@ export component OptionCard inherits Rectangle {
                 height: 18px;
                 width: steps-label.preferred-width;
                 accessible-role: button;
-                accessible-label: "What happens when I install " + option.label;
+                accessible-label: @tr("What happens when I install {}", option.label);
                 accessible-expandable: true;
                 accessible-expanded: root.show-steps;
                 accessible-action-default => { root.show-steps = !root.show-steps; }
@@ -750,7 +750,7 @@ export component OptionCard inherits Rectangle {
                     clicked => { root.show-steps = !root.show-steps; }
                 }
                 steps-label := Text {
-                    text: root.show-steps ? "Hide steps" : "What will happen?";
+                    text: root.show-steps ? @tr("Hide steps") : @tr("What will happen?");
                     color: Theme.text-dim;
                     font-size: 11px;
                     font-weight: 600;
@@ -823,7 +823,7 @@ export component UpdatesBanner inherits Rectangle {
     border-width: fs.has-focus ? 2px : 0px;
     border-color: Theme.focus;
     accessible-role: button;
-    accessible-label: "Show updates";
+    accessible-label: @tr("Show updates");
     accessible-action-default => { Store.page = 2; }
     fs := FocusScope {
         focus-on-click: false;
@@ -845,14 +845,14 @@ export component UpdatesBanner inherits Rectangle {
         spacing: 8px;
         Text {
             horizontal-stretch: 1;
-            text: Store.updates-count == 1 ? "1 app in your library has an update" : Store.updates-count + " apps in your library have updates";
+            text: @tr("{n} app in your library has an update" | "{n} apps in your library have updates" % Store.updates-count);
             color: Theme.accent;
             font-size: 13px;
             font-weight: 600;
             vertical-alignment: center;
             overflow: elide;
         }
-        Text { text: "View"; color: Theme.accent; font-size: 13px; font-weight: 700; vertical-alignment: center; }
+        Text { text: @tr("View"); color: Theme.accent; font-size: 13px; font-weight: 700; vertical-alignment: center; }
     }
 }
 
@@ -866,21 +866,21 @@ export component Welcome inherits Rectangle {
     VerticalLayout {
         padding: compact ? 14px : 20px;
         spacing: 8px;
-        Text { text: "Welcome to Bilby"; color: Theme.text; font-size: 17px; font-weight: 700; }
+        Text { text: @tr("Welcome to Bilby"); color: Theme.text; font-size: 17px; font-weight: 700; }
         Text {
-            text: "•  You are seeing apps for " + Store.platform-title + ". Anything that cannot be installed on this device is hidden.";
+            text: "•  " + @tr("You are seeing apps for {}. Anything that cannot be installed on this device is hidden.", Store.platform-title);
             color: Theme.text;
             font-size: 13px;
             wrap: word-wrap;
         }
         Text {
-            text: "•  Apps come from many places: package managers, other stores and developers' own release pages. Bilby does not review them, so only install software you trust.";
+            text: @tr("•  Apps come from many places: package managers, other stores and developers' own release pages. Bilby does not review them, so only install software you trust.");
             color: Theme.text;
             font-size: 13px;
             wrap: word-wrap;
         }
         Text {
-            text: "•  There is no account and no server of ours. Your library and settings stay in a file on this device.";
+            text: @tr("•  There is no account and no server of ours. Your library and settings stay in a file on this device.");
             color: Theme.text;
             font-size: 13px;
             wrap: word-wrap;
@@ -888,7 +888,7 @@ export component Welcome inherits Rectangle {
         HorizontalLayout {
             alignment: start;
             padding-top: 4px;
-            Button { text: "Got it"; clicked => { Store.dismiss-welcome(); } }
+            Button { text: @tr("Got it"); clicked => { Store.dismiss-welcome(); } }
         }
     }
 }
@@ -901,7 +901,7 @@ export component SourceFilter inherits Flickable {
         alignment: start;
         chips := HorizontalLayout {
             spacing: 8px;
-            ChoiceChip { text: "All"; selected: Store.source-filter == ""; clicked => { Store.filter-results(""); } }
+            ChoiceChip { text: @tr("All"); selected: Store.source-filter == ""; clicked => { Store.filter-results(""); } }
             for source in Store.result-sources : ChoiceChip {
                 text: source.label + "  " + source.count;
                 selected: Store.source-filter == source.id;
@@ -921,9 +921,9 @@ export component TvQuestion inherits Rectangle {
     VerticalLayout {
         padding: compact ? 14px : 20px;
         spacing: 8px;
-        Text { text: "Are you using this on a TV?"; color: Theme.text; font-size: 17px; font-weight: 700; wrap: word-wrap; }
+        Text { text: @tr("Are you using this on a TV?"); color: Theme.text; font-size: 17px; font-weight: 700; wrap: word-wrap; }
         Text {
-            text: "A game controller is connected. Bilby has a layout with large text for the sofa, driven with the arrow keys of a remote or keyboard. You can change this later in Settings.";
+            text: @tr("A game controller is connected. Bilby has a layout with large text for the sofa, driven with the arrow keys of a remote or keyboard. You can change this later in Settings.");
             color: Theme.text;
             font-size: 13px;
             wrap: word-wrap;
@@ -932,8 +932,8 @@ export component TvQuestion inherits Rectangle {
             alignment: start;
             spacing: 8px;
             padding-top: 4px;
-            Button { text: "Use the TV layout"; clicked => { Store.answer-tv(true); } }
-            Button { text: "Keep this layout"; primary: false; clicked => { Store.answer-tv(false); } }
+            Button { text: @tr("Use the TV layout"); clicked => { Store.answer-tv(true); } }
+            Button { text: @tr("Keep this layout"); primary: false; clicked => { Store.answer-tv(false); } }
         }
     }
 }
@@ -955,12 +955,12 @@ component RatingSummary inherits HorizontalLayout {
     spacing: 20px;
     alignment: start;
     accessible-role: text;
-    accessible-label: Store.app.rating + " out of 5, from " + Store.app.rating-count;
+    accessible-label: @tr("{0} out of 5, from {1}", Store.app.rating, Store.app.rating-count);
     VerticalLayout {
         alignment: center;
         spacing: 2px;
         Text { text: Store.app.rating; color: Theme.text; font-size: 40px; font-weight: 700; horizontal-alignment: center; }
-        Text { text: "out of 5"; color: Theme.text-dim; font-size: 11px; horizontal-alignment: center; }
+        Text { text: @tr("out of 5"); color: Theme.text-dim; font-size: 11px; horizontal-alignment: center; }
         Text { text: Store.app.rating-count; color: Theme.text-dim; font-size: 11px; horizontal-alignment: center; }
     }
     VerticalLayout {
@@ -1049,7 +1049,7 @@ component Clamped inherits VerticalLayout {
         height: self.needed ? 28px : 0px;
         visible: self.needed;
         accessible-role: button;
-        accessible-label: (root.open ? "Show less of " : "Show all of ") + root.what;
+        accessible-label: (root.open ? @tr("Show less of {}", root.what) : @tr("Show all of {}", root.what));
         accessible-expandable: true;
         accessible-expanded: root.open;
         accessible-action-default => { root.open = !root.open; }
@@ -1059,7 +1059,7 @@ component Clamped inherits VerticalLayout {
         }
         Text {
             x: 0;
-            text: root.open ? "Show less" : "Read more";
+            text: root.open ? @tr("Show less") : @tr("Read more");
             color: Theme.accent;
             font-size: 13px;
             font-weight: 600;
@@ -1078,7 +1078,7 @@ component WhatsNew inherits Rectangle {
             spacing: 10px;
             Text {
                 horizontal-stretch: 1;
-                text: Store.is-website ? "About this website" : Store.is-package ? "About this package" : "What's new";
+                text: Store.is-website ? @tr("About this website") : Store.is-package ? @tr("About this package") : @tr("What's new");
                 color: Theme.text;
                 font-size: 17px;
                 font-weight: 700;
@@ -1090,7 +1090,7 @@ component WhatsNew inherits Rectangle {
                 vertical-alignment: center;
             }
         }
-        Clamped { text: Store.notes; limit: 70px; what: "what is new"; key: Store.app.id + Store.app.version; }
+        Clamped { text: Store.notes; limit: 70px; what: @tr("what is new"); key: Store.app.id + Store.app.version; }
     }
 }
 
@@ -1116,7 +1116,7 @@ export component DetailsBody inherits Rectangle {
     // "installed" alone means the system has it but did not say which version.
     property <bool> is-update: Store.installed-version != "" && Store.installed-version != "installed" && Store.app.version != "" && Store.installed-version != Store.app.version;
     property <bool> open-instead: Store.can-open && !is-update && !(mine && busy);
-    property <string> action: mine && busy ? "Cancel" : open-instead ? "Open" : is-update ? "Update" : Store.installed-version != "" && best.verb == "Install" ? "Reinstall" : best.verb;
+    property <string> action: mine && busy ? @tr("Cancel") : open-instead ? @tr("Open") : is-update ? @tr("Update") : Store.installed-version != "" && best.verb == @tr("Install") ? @tr("Reinstall") : best.verb;
     function act() {
         if (mine && busy) {
             Store.cancel-install();
@@ -1141,7 +1141,7 @@ export component DetailsBody inherits Rectangle {
                     spacing: 4px;
                     horizontal-stretch: 1;
                     Text { text: Store.app.name; color: Theme.text; font-size: compact ? 24px : 30px; font-weight: 700; overflow: elide; }
-                    Text { text: Store.app.author + (Store.app.verified ? "  ✓ verified" : ""); color: Theme.text-dim; font-size: 14px; overflow: elide; }
+                    Text { text: Store.app.author + (Store.app.verified ? "  ✓ " + @tr("verified") : ""); color: Theme.text-dim; font-size: 14px; overflow: elide; }
                 }
                 if !compact : VerticalLayout {
                     alignment: center;
@@ -1153,7 +1153,7 @@ export component DetailsBody inherits Rectangle {
                             icon: Store.is-favourite ? @image-url("icons/star-filled.svg") : @image-url("icons/star.svg");
                             icon-color: Store.is-favourite ? Theme.warn : Theme.text;
                             primary: false;
-                            accessible-label: Store.is-favourite ? "Remove from favourites" : "Add to favourites";
+                            accessible-label: Store.is-favourite ? @tr("Remove from favourites") : @tr("Add to favourites");
                             clicked => { Store.toggle-favourite(); }
                         }
                         if root.has-option : Button {
@@ -1163,7 +1163,7 @@ export component DetailsBody inherits Rectangle {
                             progress: root.mine && root.busy ? Store.install-progress : -1;
                             primary: !(root.mine && root.busy);
                             enabled: !root.busy || root.mine;
-                            accessible-label: (root.mine && root.busy ? "Cancel" : root.open-instead ? "Open" : root.best.verb) + " " + (root.open-instead ? Store.app.name : root.best.label);
+                            accessible-label: (root.mine && root.busy ? @tr("Cancel") : root.open-instead ? @tr("Open") : root.best.verb) + " " + (root.open-instead ? Store.app.name : root.best.label);
                             clicked => { root.act(); }
                         }
                     }
@@ -1178,17 +1178,17 @@ export component DetailsBody inherits Rectangle {
                     progress: root.mine && root.busy ? Store.install-progress : -1;
                     primary: !(root.mine && root.busy);
                     enabled: !root.busy || root.mine;
-                    accessible-label: (root.mine && root.busy ? "Cancel" : root.open-instead ? "Open" : root.best.verb) + " " + (root.open-instead ? Store.app.name : root.best.label);
+                    accessible-label: (root.mine && root.busy ? @tr("Cancel") : root.open-instead ? @tr("Open") : root.best.verb) + " " + (root.open-instead ? Store.app.name : root.best.label);
                     clicked => { root.act(); }
                 }
                 Button {
                     width: root.has-option ? 48px : self.preferred-width;
                     horizontal-stretch: root.has-option ? 0 : 1;
-                    text: root.has-option ? "" : (Store.is-favourite ? "In your favourites" : "Add to favourites");
+                    text: root.has-option ? "" : (Store.is-favourite ? @tr("In your favourites") : @tr("Add to favourites"));
                     icon: Store.is-favourite ? @image-url("icons/star-filled.svg") : @image-url("icons/star.svg");
                     icon-color: Store.is-favourite ? Theme.warn : Theme.text;
                     primary: false;
-                    accessible-label: Store.is-favourite ? "Remove from favourites" : "Add to favourites";
+                    accessible-label: Store.is-favourite ? @tr("Remove from favourites") : @tr("Add to favourites");
                     clicked => { Store.toggle-favourite(); }
                 }
             }
@@ -1203,11 +1203,11 @@ export component DetailsBody inherits Rectangle {
             if Store.app-sources.length > 1 : HorizontalLayout {
                 alignment: compact ? center : end;
                 spacing: 8px;
-                Text { text: "From"; color: Theme.text-dim; font-size: 12px; vertical-alignment: center; }
+                Text { text: @tr("From"); color: Theme.text-dim; font-size: 12px; vertical-alignment: center; }
                 for source in Store.app-sources : ChoiceChip {
                     text: source.label;
                     selected: source.on;
-                    accessible-label: source.on ? "Installing from " + source.label : "Switch to " + source.label;
+                    accessible-label: source.on ? @tr("Installing from {}", source.label) : @tr("Switch to {}", source.label);
                     clicked => {
                         if (!source.on) {
                             Store.open(source.id);
@@ -1222,7 +1222,7 @@ export component DetailsBody inherits Rectangle {
                     height: 26px;
                     width: more-label.preferred-width;
                     accessible-role: button;
-                    accessible-label: "Other versions and files";
+                    accessible-label: @tr("Other versions and files");
                     accessible-expandable: true;
                     accessible-expanded: root.more;
                     accessible-action-default => { root.more = !root.more; }
@@ -1231,7 +1231,7 @@ export component DetailsBody inherits Rectangle {
                         clicked => { root.more = !root.more; }
                     }
                     more-label := Text {
-                        text: root.more ? "Hide other versions and files  ▴" : "Other versions and files  ▾";
+                        text: root.more ? @tr("Hide other versions and files") + "  ▴" : @tr("Other versions and files") + "  ▾";
                         color: Theme.accent;
                         font-size: 13px;
                         font-weight: 600;
@@ -1246,12 +1246,12 @@ export component DetailsBody inherits Rectangle {
                     alignment: start;
                     VerticalLayout {
                         alignment: center;
-                        Text { text: "Version"; color: Theme.text-dim; font-size: 12px; font-weight: 700; }
+                        Text { text: @tr("Version"); color: Theme.text-dim; font-size: 12px; font-weight: 700; }
                     }
                     for version[i] in Store.versions : ChoiceChip {
                         text: version;
                         selected: i == Store.selected-version;
-                        accessible-label: "Version " + version;
+                        accessible-label: @tr("Version {}", version);
                         clicked => { Store.select-version(i); }
                     }
                 }
@@ -1261,7 +1261,7 @@ export component DetailsBody inherits Rectangle {
 
             if root.more && root.has-option : VerticalLayout {
                 spacing: 10px;
-                Text { text: "Every way to install on " + Store.platform-title; color: Theme.text-dim; font-size: 12px; font-weight: 700; }
+                Text { text: @tr("Every way to install on {}", Store.platform-title); color: Theme.text-dim; font-size: 12px; font-weight: 700; }
                 for option[i] in Store.options : OptionCard {
                     option: option;
                     index: i;
@@ -1275,7 +1275,7 @@ export component DetailsBody inherits Rectangle {
                 Rectangle {
                     height: 32px;
                     accessible-role: button;
-                    accessible-label: "Files that won't work on this device";
+                    accessible-label: @tr("Files that won't work on this device");
                     accessible-expandable: true;
                     accessible-expanded: root.show-hidden;
                     accessible-action-default => { root.show-hidden = !root.show-hidden; }
@@ -1285,7 +1285,7 @@ export component DetailsBody inherits Rectangle {
                     }
                     Text {
                         x: 0;
-                        text: (root.show-hidden ? "Hide " : "Show ") + Store.hidden.length + (Store.hidden.length == 1 ? " file" : " files") + " for other devices";
+                        text: (root.show-hidden ? @tr("Hide {n} file for other devices" | "Hide {n} files for other devices" % Store.hidden.length) : @tr("Show {n} file for other devices" | "Show {n} files for other devices" % Store.hidden.length));
                         color: Theme.accent;
                         font-size: 13px;
                         font-weight: 600;
@@ -1308,10 +1308,10 @@ export component DetailsBody inherits Rectangle {
                             Button {
                                 property <bool> mine: Store.install-state == 1 && Store.install-index == 1000 + i;
                                 font-size: 12px;
-                                text: self.mine ? "Cancel" : compact ? "Download" : "Download anyway";
+                                text: self.mine ? @tr("Cancel") : compact ? @tr("Download") : @tr("Download anyway");
                                 primary: false;
                                 enabled: Store.install-state != 1 || self.mine;
-                                accessible-label: (self.mine ? "Cancel downloading " : "Download anyway: ") + row.file;
+                                accessible-label: (self.mine ? @tr("Cancel downloading {}", row.file) : @tr("Download anyway: {}", row.file));
                                 clicked => {
                                     if (self.mine) {
                                         Store.cancel-install();
@@ -1355,13 +1355,13 @@ export component DetailsBody inherits Rectangle {
                 spacing: compact ? 16px : 36px;
                 alignment: start;
                 if Store.app.rating != "" : StatCell { value: "★ " + Store.app.rating; caption: Store.app.rating-count; }
-                if Store.app.price != "" : StatCell { value: Store.app.price; caption: "on " + Store.app.source; }
+                if Store.app.price != "" : StatCell { value: Store.app.price; caption: @tr("on {}", Store.app.source); }
                 if Store.app.downloads != "" : StatCell { value: Store.app.downloads; caption: Store.app.downloads-note; }
-                if Store.app.popularity != "" && !(compact && Store.app.downloads != "") : StatCell { value: Store.app.popularity; caption: "on " + Store.app.source; }
-                if root.has-option && root.best.size != "" : StatCell { value: root.best.size; caption: "download"; }
+                if Store.app.popularity != "" && !(compact && Store.app.downloads != "") : StatCell { value: Store.app.popularity; caption: @tr("on {}", Store.app.source); }
+                if root.has-option && root.best.size != "" : StatCell { value: root.best.size; caption: @tr("download"); }
                 // On a phone the row holds three facts; the date is under "What's new" too.
-                if Store.release-age != "" && !(compact && Store.app.rating != "" && (Store.app.downloads != "" || Store.app.popularity != "")) : StatCell { value: Store.release-age; caption: "last updated"; }
-                if Store.license != "" && !compact : StatCell { value: Store.license; caption: "licence"; }
+                if Store.release-age != "" && !(compact && Store.app.rating != "" && (Store.app.downloads != "" || Store.app.popularity != "")) : StatCell { value: Store.release-age; caption: @tr("last updated"); }
+                if Store.license != "" && !compact : StatCell { value: Store.license; caption: @tr("licence"); }
             }
 
             if root.has-option : HorizontalLayout {
@@ -1372,7 +1372,7 @@ export component DetailsBody inherits Rectangle {
                     Image { source: @image-url("icons/shield.svg"); colorize: Theme.ok; width: 14px; height: 14px; }
                 }
                 Text {
-                    text: (root.best.native ? "Made for this device" : "Works on this device") + (root.best.verified ? "  ·  the download is checked before it is installed" : "");
+                    text: (root.best.native ? @tr("Runs on this device") : @tr("Should run on this device")) + (root.best.verified ? "  ·  " + @tr("Bilby checks the download is the genuine file") : "");
                     color: Theme.ok;
                     font-size: 12px;
                     font-weight: 600;
@@ -1400,7 +1400,7 @@ export component DetailsBody inherits Rectangle {
                             height: parent.height;
                             image-fit: cover;
                             accessible-role: image;
-                            accessible-label: "Picture " + (i + 1) + " of " + Store.app.name;
+                            accessible-label: @tr("Picture {0} of {1}", i + 1, Store.app.name);
                         }
                     }
                 }
@@ -1417,7 +1417,7 @@ export component DetailsBody inherits Rectangle {
                     width: parent.width - 28px;
                     height: parent.height;
                     wrap: word-wrap;
-                    text: Store.installed-version == "installed" ? "Installed" : Store.installed-version == Store.app.version || Store.app.version == "" ? "Installed  ·  " + Store.installed-version : "Update available  ·  you have " + Store.installed-version + ", latest is " + Store.app.version;
+                    text: Store.installed-version == "installed" ? @tr("Installed") : Store.installed-version == Store.app.version || Store.app.version == "" ? @tr("Installed  ·  {}", Store.installed-version) : @tr("Update available  ·  you have {0}, latest is {1}", Store.installed-version, Store.app.version);
                     color: Theme.accent;
                     font-size: 13px;
                     font-weight: 600;
@@ -1428,14 +1428,14 @@ export component DetailsBody inherits Rectangle {
 
             if Store.details-loading : VerticalLayout {
                 spacing: 10px;
-                Text { text: "Checking releases against this device…"; color: Theme.text-dim; font-size: 14px; }
+                Text { text: @tr("Checking releases against this device…"); color: Theme.text-dim; font-size: 14px; }
                 Busy { }
             }
             if Store.details-error != "" : EmptyState {
                 error: true;
-                title: "Couldn't load this app";
+                title: @tr("Couldn't load this app");
                 body: Store.details-error;
-                action: "Try again";
+                action: @tr("Try again");
                 acted => { Store.retry-details(); }
             }
             if Store.warning != "" : Text { text: Store.warning; color: Theme.warn; font-size: 13px; wrap: word-wrap; }
@@ -1467,8 +1467,8 @@ export component DetailsBody inherits Rectangle {
 
             if Store.about != "" : VerticalLayout {
                 spacing: 8px;
-                Text { text: "About"; color: Theme.text; font-size: 17px; font-weight: 700; }
-                Clamped { text: Store.about; what: "the description"; key: Store.app.id; }
+                Text { text: @tr("About"); color: Theme.text; font-size: 17px; font-weight: 700; }
+                Clamped { text: Store.about; what: @tr("the description"); key: Store.app.id; }
             }
 
             // Someone who has not installed it reads what it is first.
@@ -1477,7 +1477,7 @@ export component DetailsBody inherits Rectangle {
             // What people who use it wrote. Only apps a ratings service knows have any.
             if Store.reviews.length > 0 || Store.app.rating-spread.length > 0 : VerticalLayout {
                 spacing: 10px;
-                Text { text: Store.reviews.length > 0 ? "Ratings and reviews" : "Ratings"; color: Theme.text; font-size: 17px; font-weight: 700; }
+                Text { text: Store.reviews.length > 0 ? @tr("Ratings and reviews") : @tr("Ratings"); color: Theme.text; font-size: 17px; font-weight: 700; }
                 // The score with how the stars are spread, as the big stores show it: an
                 // average says little until you see how many people it is an average of.
                 if Store.app.rating-spread.length > 0 : RatingSummary { }
@@ -1493,7 +1493,7 @@ export component DetailsBody inherits Rectangle {
                     border-color: Theme.stroke;
                     height: body.preferred-height;
                     accessible-role: text;
-                    accessible-label: "Review " + (i + 1) + ": " + review.title;
+                    accessible-label: @tr("Review {0}: {1}", i + 1, review.title);
                     body := VerticalLayout {
                         width: parent.width;
                         padding: 14px;
@@ -1516,7 +1516,7 @@ export component DetailsBody inherits Rectangle {
                     }
                 }
                 Text {
-                    text: Store.reviews.length > 0 ? "Reviews are written by other people and come from the ratings service the GNOME and KDE app stores use." : "Ratings come from the ratings service the GNOME and KDE app stores use.";
+                    text: Store.reviews.length > 0 ? @tr("Reviews are written by other people and come from the ratings service the GNOME and KDE app stores use.") : @tr("Ratings come from the ratings service the GNOME and KDE app stores use.");
                     color: Theme.text-dim;
                     font-size: 11px;
                     wrap: word-wrap;
@@ -1526,26 +1526,26 @@ export component DetailsBody inherits Rectangle {
             // Everything else, where the stores put it: a plain table at the bottom.
             if root.has-option || Store.license != "" || Store.app.source != "" : VerticalLayout {
                 spacing: 0px;
-                Text { text: "Information"; color: Theme.text; font-size: 17px; font-weight: 700; }
+                Text { text: @tr("Information"); color: Theme.text; font-size: 17px; font-weight: 700; }
                 Rectangle { height: 6px; }
-                if Store.app.source != "" : InfoRow { name: "From"; value: Store.app.source; }
-                if Store.app.author != "" && Store.app.author != Store.app.source : InfoRow { name: "Made by"; value: Store.app.author + (Store.app.verified ? " (confirmed by " + Store.app.source + ")" : ""); }
-                if Store.app.price != "" : InfoRow { name: "Price"; value: Store.app.price + " on " + Store.app.source; }
-                if Store.app.downloads != "" : InfoRow { name: "Downloads"; value: Store.app.downloads + " " + Store.app.downloads-note; }
-                if Store.app.popularity != "" : InfoRow { name: "Popularity"; value: Store.app.popularity + " on " + Store.app.source; }
-                if Store.app.version != "" : InfoRow { name: "Version"; value: Store.app.version; }
-                if Store.release-date != "" : InfoRow { name: "Released"; value: Store.release-date; }
-                if Store.license != "" : InfoRow { name: "Licence"; value: Store.license; }
-                if root.has-option : InfoRow { name: "Works on"; value: Store.platform-title; }
-                if root.has-option : InfoRow { name: "Kind of file"; value: root.best.label; }
-                if root.has-option && root.best.size != "" : InfoRow { name: "Download size"; value: root.best.size; }
+                if Store.app.source != "" : InfoRow { name: @tr("From"); value: Store.app.source; }
+                if Store.app.author != "" && Store.app.author != Store.app.source : InfoRow { name: @tr("Made by"); value: Store.app.author + (Store.app.verified ? " " + @tr("(confirmed by {})", Store.app.source) : ""); }
+                if Store.app.price != "" : InfoRow { name: @tr("Price"); value: @tr("{0} on {1}", Store.app.price, Store.app.source); }
+                if Store.app.downloads != "" : InfoRow { name: @tr("Downloads"); value: Store.app.downloads + " " + Store.app.downloads-note; }
+                if Store.app.popularity != "" : InfoRow { name: @tr("Popularity"); value: @tr("{0} on {1}", Store.app.popularity, Store.app.source); }
+                if Store.app.version != "" : InfoRow { name: @tr("Version"); value: Store.app.version; }
+                if Store.release-date != "" : InfoRow { name: @tr("Released"); value: Store.release-date; }
+                if Store.license != "" : InfoRow { name: @tr("Licence"); value: Store.license; }
+                if root.has-option : InfoRow { name: @tr("Works on"); value: Store.platform-title; }
+                if root.has-option : InfoRow { name: @tr("Kind of file"); value: root.best.label; }
+                if root.has-option && root.best.size != "" : InfoRow { name: @tr("Download size"); value: root.best.size; }
             }
 
             if !compact : HorizontalLayout {
                 spacing: 10px;
                 alignment: start;
                 if Store.homepage != "" : Button {
-                    text: "Project page";
+                    text: @tr("Project page");
                     primary: false;
                     clicked => { Store.open-url(Store.homepage); }
                 }
@@ -1553,7 +1553,7 @@ export component DetailsBody inherits Rectangle {
 
             // Side by side they are wider than a small phone.
             if compact && Store.homepage != "" : Button {
-                text: "Project page";
+                text: @tr("Project page");
                 primary: false;
                 clicked => { Store.open-url(Store.homepage); }
             }
@@ -1596,7 +1596,7 @@ component LibraryItem inherits Rectangle {
                 spacing: 3px;
                 horizontal-stretch: 1;
                 Text { text: entry.card.name; color: Theme.text; font-size: 15px; font-weight: 600; overflow: elide; }
-                Text { text: updating ? "Updating…" : entry.detail; color: Theme.text-dim; font-size: 12px; overflow: elide; }
+                Text { text: updating ? @tr("Updating…") : entry.detail; color: Theme.text-dim; font-size: 12px; overflow: elide; }
                 if entry.status != 0 : Text {
                     text: entry.status-text;
                     color: entry.status == 3 ? Theme.accent : entry.status == 4 ? Theme.warn : entry.status == 2 ? Theme.ok : Theme.text-dim;
@@ -1610,29 +1610,29 @@ component LibraryItem inherits Rectangle {
                 VerticalLayout {
                     alignment: center;
                     Button {
-                        text: entry.status != 3 ? "Details" : updating ? "Cancel" : "Update";
+                        text: entry.status != 3 ? @tr("Details") : updating ? @tr("Cancel") : @tr("Update");
                         primary: entry.status == 3 && !updating;
                         enabled: root.can-act;
-                        accessible-label: (entry.status != 3 ? "Details of " : updating ? "Cancel updating " : "Update ") + entry.card.name;
+                        accessible-label: (entry.status != 3 ? @tr("Details of {}", entry.card.name) : updating ? @tr("Cancel updating {}", entry.card.name) : @tr("Update {}", entry.card.name));
                         clicked => { root.act(); }
                     }
                 }
                 if entry.status == 3 && !updating : VerticalLayout {
                     alignment: center;
                     Button {
-                        text: "Skip";
+                        text: @tr("Skip");
                         primary: false;
-                        accessible-label: "Skip this update of " + entry.card.name;
+                        accessible-label: @tr("Skip this update of {}", entry.card.name);
                         clicked => { Store.skip-update(entry.card.id); }
                     }
                 }
                 VerticalLayout {
                     alignment: center;
                     Button {
-                        text: root.confirm ? "Really remove?" : "Remove";
+                        text: root.confirm ? @tr("Really remove?") : @tr("Remove");
                         primary: false;
                         danger: true;
-                        accessible-label: (root.confirm ? "Confirm removing " : "Remove ") + entry.card.name;
+                        accessible-label: (root.confirm ? @tr("Confirm removing {}", entry.card.name) : @tr("Remove {}", entry.card.name));
                         clicked => {
                             if (root.confirm) {
                                 Store.remove-from-library(entry.card.id);
@@ -1647,18 +1647,18 @@ component LibraryItem inherits Rectangle {
             spacing: 8px;
             Button {
                 horizontal-stretch: 1;
-                text: entry.status != 3 ? "Details" : updating ? "Cancel" : "Update";
+                text: entry.status != 3 ? @tr("Details") : updating ? @tr("Cancel") : @tr("Update");
                 primary: entry.status == 3 && !updating;
                 enabled: root.can-act;
-                accessible-label: (entry.status != 3 ? "Details of " : updating ? "Cancel updating " : "Update ") + entry.card.name;
+                accessible-label: (entry.status != 3 ? @tr("Details of {}", entry.card.name) : updating ? @tr("Cancel updating {}", entry.card.name) : @tr("Update {}", entry.card.name));
                 clicked => { root.act(); }
             }
             Button {
                 horizontal-stretch: 1;
-                text: root.confirm ? "Really remove?" : "Remove";
+                text: root.confirm ? @tr("Really remove?") : @tr("Remove");
                 primary: false;
                 danger: true;
-                accessible-label: (root.confirm ? "Confirm removing " : "Remove ") + entry.card.name;
+                accessible-label: (root.confirm ? @tr("Confirm removing {}", entry.card.name) : @tr("Remove {}", entry.card.name));
                 clicked => {
                     if (root.confirm) {
                         Store.remove-from-library(entry.card.id);
@@ -1669,14 +1669,14 @@ component LibraryItem inherits Rectangle {
         }
         // Three buttons do not fit side by side on a narrow phone.
         if compact && entry.status == 3 && !updating : Button {
-            text: "Skip this version";
+            text: @tr("Skip this version");
             primary: false;
-            accessible-label: "Skip this update of " + entry.card.name;
+            accessible-label: @tr("Skip this update of {}", entry.card.name);
             clicked => { Store.skip-update(entry.card.id); }
         }
         if updating : ProgressBar { value: Store.install-progress; }
         if root.confirm : Text {
-            text: entry.store-managed ? "This deletes the app's file from your Applications folder." : "This only forgets the app here. To uninstall it, use your system's software manager.";
+            text: entry.store-managed ? @tr("This deletes the app's file from your Applications folder.") : @tr("This only forgets the app here. To uninstall it, use your system's software manager.");
             color: Theme.text-dim;
             font-size: 12px;
             wrap: word-wrap;
@@ -1717,15 +1717,15 @@ export component SystemCard inherits Rectangle {
             }
             if !compact && Store.system-state == 3 : VerticalLayout {
                 alignment: center;
-                Button { text: "Update system"; clicked => { Store.system-update(); } }
+                Button { text: @tr("Update system"); clicked => { Store.system-update(); } }
             }
             if !compact : VerticalLayout {
                 alignment: center;
-                Button { text: "System details"; primary: false; clicked => { Store.system-from = 2; Store.page = 4; } }
+                Button { text: @tr("System details"); primary: false; clicked => { Store.system-from = 2; Store.page = 4; } }
             }
         }
-        if compact && Store.system-state == 3 : Button { text: "Update system"; clicked => { Store.system-update(); } }
-        if compact : Button { text: "System details"; primary: false; clicked => { Store.system-from = 2; Store.page = 4; } }
+        if compact && Store.system-state == 3 : Button { text: @tr("Update system"); clicked => { Store.system-update(); } }
+        if compact : Button { text: @tr("System details"); primary: false; clicked => { Store.system-from = 2; Store.page = 4; } }
     }
 }
 
@@ -1761,7 +1761,7 @@ export component SystemBody inherits Rectangle {
                     if Store.system-supported : SystemHeadline { font-size: compact ? 18px : 22px; accessible-role: text; }
                     if Store.system-detail != "" : Text { text: Store.system-detail; color: Theme.text-dim; font-size: 13px; wrap: word-wrap; }
                     if Store.system-restart : Text {
-                        text: "Restart this device to finish: something that was updated is still running in its old version.";
+                        text: @tr("Restart this device to finish: something that was updated is still running in its old version.");
                         color: Theme.warn;
                         font-size: 13px;
                         wrap: word-wrap;
@@ -1772,14 +1772,14 @@ export component SystemBody inherits Rectangle {
                         spacing: 6px;
                         ProgressBar { value: Store.system-progress; }
                         Text {
-                            text: round(Store.system-progress * 100) + "%" + (Store.system-step != "" ? "  ·  " + Store.system-step : "");
+                            text: (Store.system-progress <= 0.01 ? "" : round(Store.system-progress * 100) + "%" + (Store.system-step != "" ? "  ·  " : "")) + Store.system-step;
                             color: Theme.text-dim;
                             font-size: 12px;
                             overflow: elide;
                         }
                     }
                     if Store.system-state == 4 : Text {
-                        text: "You may be asked for your password. Keep the device on until this finishes.";
+                        text: @tr("You may be asked for your password. Keep the device on until this finishes.");
                         color: Theme.text-dim;
                         font-size: 12px;
                         wrap: word-wrap;
@@ -1787,18 +1787,20 @@ export component SystemBody inherits Rectangle {
                     if !compact : HorizontalLayout {
                         spacing: 10px;
                         alignment: start;
-                        if Store.system-state == 3 : Button { text: "Update now"; clicked => { Store.system-update(); } }
+                        if Store.system-state == 3 : Button { text: @tr("Update now"); clicked => { Store.system-update(); } }
+                        if Store.system-restart && Store.system-state != 3 && Store.system-state != 4 : Button { text: @tr("Restart now"); clicked => { Store.system-restart-now(); } }
                         if Store.system-supported : Button {
-                            text: "Check again";
+                            text: @tr("Check again");
                             primary: false;
                             enabled: Store.system-state != 1 && Store.system-state != 4;
                             clicked => { Store.system-check(); }
                         }
                         if Store.system-handoff != "" : Button { text: Store.system-handoff; primary: false; clicked => { Store.system-handoff-open(); } }
                     }
-                    if compact && Store.system-state == 3 : Button { text: "Update now"; clicked => { Store.system-update(); } }
+                    if compact && Store.system-state == 3 : Button { text: @tr("Update now"); clicked => { Store.system-update(); } }
+                    if compact && Store.system-restart && Store.system-state != 3 && Store.system-state != 4 : Button { text: @tr("Restart now"); clicked => { Store.system-restart-now(); } }
                     if compact && Store.system-supported : Button {
-                        text: "Check again";
+                        text: @tr("Check again");
                         primary: false;
                         enabled: Store.system-state != 1 && Store.system-state != 4;
                         clicked => { Store.system-check(); }
@@ -1810,7 +1812,7 @@ export component SystemBody inherits Rectangle {
             // What is waiting. The first few are enough for most people.
             if Store.system-updates.length > 0 : VerticalLayout {
                 spacing: 0px;
-                Text { text: "Waiting to be installed"; color: Theme.text; font-size: 17px; font-weight: 700; }
+                Text { text: @tr("Waiting to be installed"); color: Theme.text; font-size: 17px; font-weight: 700; }
                 Rectangle { height: 6px; }
                 for update[i] in Store.system-updates : Rectangle {
                     visible: i < root.shown;
@@ -1828,7 +1830,7 @@ export component SystemBody inherits Rectangle {
                     alignment: start;
                     padding-top: 8px;
                     Button {
-                        text: root.all-updates ? "Show fewer" : "Show all " + Store.system-updates.length;
+                        text: root.all-updates ? @tr("Show fewer") : @tr("Show all {}", Store.system-updates.length);
                         primary: false;
                         clicked => { root.all-updates = !root.all-updates; }
                     }
@@ -1841,7 +1843,7 @@ export component SystemBody inherits Rectangle {
                 HorizontalLayout {
                     alignment: start;
                     Button {
-                        text: root.show-log ? "Hide what the updater said" : "Show what the updater said";
+                        text: root.show-log ? @tr("Hide what the updater said") : @tr("Show what the updater said");
                         primary: false;
                         clicked => { root.show-log = !root.show-log; }
                     }
@@ -1856,7 +1858,7 @@ export component SystemBody inherits Rectangle {
 
             VerticalLayout {
                 spacing: 0px;
-                Text { text: "Information"; color: Theme.text; font-size: 17px; font-weight: 700; }
+                Text { text: @tr("Information"); color: Theme.text; font-size: 17px; font-weight: 700; }
                 Rectangle { height: 6px; }
                 for fact in Store.system-facts : InfoRow { name: fact.name; value: fact.value; }
                 InfoRow { name: "Bilby"; value: Store.app-version; }
@@ -1868,9 +1870,9 @@ export component SystemBody inherits Rectangle {
 export component LibraryBody inherits Rectangle {
     in property <bool> compact;
     if Store.library.length == 0 && Store.favourites.length == 0 && !Store.system-supported : EmptyState {
-        title: "Your library is empty";
-        body: "Apps you install from the store show up here, and the store can tell you when they have a new release. Favourites are kept here too.";
-        action: "Browse apps";
+        title: @tr("Your library is empty");
+        body: @tr("Apps you install from the store show up here, and the store can tell you when they have a new release. Favourites are kept here too.");
+        action: @tr("Browse apps");
         acted => { Store.page = 0; }
     }
     if Store.library.length > 0 || Store.favourites.length > 0 || Store.system-supported : Flickable {
@@ -1882,14 +1884,14 @@ export component LibraryBody inherits Rectangle {
             // The system itself comes first: it is the update that matters most.
             if Store.system-supported : SystemCard { compact: root.compact; }
             if Store.library.length == 0 && Store.favourites.length == 0 : Text {
-                text: "Apps you install from the store show up here, and the store can tell you when they have a new release.";
+                text: @tr("Apps you install from the store show up here, and the store can tell you when they have a new release.");
                 color: Theme.text-dim;
                 font-size: 13px;
                 wrap: word-wrap;
             }
             if Store.library.length == 0 && Store.favourites.length == 0 : HorizontalLayout {
                 alignment: start;
-                Button { text: "Browse apps"; primary: false; clicked => { Store.page = 0; } }
+                Button { text: @tr("Browse apps"); primary: false; clicked => { Store.page = 0; } }
             }
             if Store.library.length > 0 : HorizontalLayout {
                 spacing: 12px;
@@ -1898,14 +1900,14 @@ export component LibraryBody inherits Rectangle {
                     horizontal-stretch: 1;
                     spacing: 2px;
                     Text {
-                        text: Store.checking-updates ? "Checking for updates…" : Store.updates-count == 0 ? (Store.last-checked != "" ? "Everything is up to date" : Store.library.length + (Store.library.length == 1 ? " app" : " apps")) : Store.updates-count == 1 ? "1 update available" : Store.updates-count + " updates available";
+                        text: Store.checking-updates ? @tr("Checking for updates…") : Store.updates-count == 0 ? (Store.last-checked != "" ? @tr("Everything is up to date") : @tr("{n} app" | "{n} apps" % Store.library.length)) : @tr("{n} update available" | "{n} updates available" % Store.updates-count);
                         color: Theme.text;
                         font-size: compact ? 16px : 20px;
                         font-weight: 700;
                         overflow: elide;
                     }
                     if Store.last-checked != "" : Text {
-                        text: "Last checked " + Store.last-checked;
+                        text: @tr("Last checked {}", Store.last-checked);
                         color: Theme.text-dim;
                         font-size: 12px;
                         overflow: elide;
@@ -1915,7 +1917,7 @@ export component LibraryBody inherits Rectangle {
                 if !compact && Store.updates-count > 1 : VerticalLayout {
                     alignment: center;
                     Button {
-                        text: "Update all";
+                        text: @tr("Update all");
                         enabled: Store.updating-id == "";
                         clicked => { Store.update-all(); }
                     }
@@ -1923,7 +1925,7 @@ export component LibraryBody inherits Rectangle {
                 if !compact : VerticalLayout {
                     alignment: center;
                     Button {
-                        text: "Check for updates";
+                        text: @tr("Check for updates");
                         primary: false;
                         enabled: !Store.checking-updates && Store.updating-id == "";
                         clicked => { Store.check-updates(); }
@@ -1931,12 +1933,12 @@ export component LibraryBody inherits Rectangle {
                 }
             }
             if compact && Store.updates-count > 1 : Button {
-                text: "Update all";
+                text: @tr("Update all");
                 enabled: Store.updating-id == "";
                 clicked => { Store.update-all(); }
             }
             if compact && Store.library.length > 0 : Button {
-                text: "Check for updates";
+                text: @tr("Check for updates");
                 primary: false;
                 enabled: !Store.checking-updates && Store.updating-id == "";
                 clicked => { Store.check-updates(); }
@@ -1944,7 +1946,7 @@ export component LibraryBody inherits Rectangle {
             if Store.checking-updates : Busy { }
             for item in Store.library : LibraryItem { entry: item; compact: root.compact; }
             if Store.favourites.length > 0 : Text {
-                text: "Favourites";
+                text: @tr("Favourites");
                 color: Theme.text;
                 font-size: compact ? 16px : 20px;
                 font-weight: 700;
@@ -1992,9 +1994,9 @@ export component SettingsBody inherits Rectangle {
             alignment: start;
 
             SettingsCard {
-                title: "This device  ·  " + Store.platform-title;
+                title: @tr("This device  ·  {}", Store.platform-title);
                 Text {
-                    text: "The store only lists apps with a file that can be installed here. This is what it detected.";
+                    text: @tr("The store only lists apps with a file that can be installed here. This is what it detected.");
                     color: Theme.text-dim;
                     font-size: 13px;
                     wrap: word-wrap;
@@ -2006,17 +2008,17 @@ export component SettingsBody inherits Rectangle {
                 }
                 HorizontalLayout {
                     alignment: start;
-                    Button { text: "System details and updates"; primary: false; clicked => { Store.system-from = 3; Store.page = 4; } }
+                    Button { text: @tr("System details and updates"); primary: false; clicked => { Store.system-from = 3; Store.page = 4; } }
                 }
             }
 
             if Store.can-register : SettingsCard {
-                title: "App menu";
+                title: @tr("App menu");
                 HorizontalLayout {
                     spacing: 12px;
                     Text {
                         horizontal-stretch: 1;
-                        text: "Bilby adds itself to this device's list of apps the first time it runs, so it can be started like any other app. If you move its file, start it once from the new place.";
+                        text: @tr("Bilby adds itself to this device's list of apps the first time it runs, so it can be started like any other app. If you move its file, start it once from the new place.");
                         color: Theme.text-dim;
                         font-size: 13px;
                         wrap: word-wrap;
@@ -2024,7 +2026,7 @@ export component SettingsBody inherits Rectangle {
                     VerticalLayout {
                         alignment: center;
                         Toggle {
-                            label: "Show Bilby in the app menu";
+                            label: @tr("Show Bilby in the app menu");
                             checked: Store.in-menu;
                             toggled(on) => { Store.set-in-menu(on); }
                         }
@@ -2033,9 +2035,9 @@ export component SettingsBody inherits Rectangle {
             }
 
             SettingsCard {
-                title: "Where apps come from";
+                title: @tr("Where apps come from");
                 Text {
-                    text: "Switch off any place you do not want apps from. It is then left out of searches and the home page; an app from it can still be opened by its link.";
+                    text: @tr("Switch off any place you do not want apps from. It is then left out of searches and the home page; an app from it can still be opened by its link.");
                     color: Theme.text-dim;
                     font-size: 13px;
                     wrap: word-wrap;
@@ -2046,7 +2048,7 @@ export component SettingsBody inherits Rectangle {
                     VerticalLayout {
                         alignment: center;
                         Toggle {
-                            label: "Show apps from " + source.label;
+                            label: @tr("Show apps from {}", source.label);
                             checked: source.on;
                             toggled(on) => { Store.set-source(source.id, on); }
                         }
@@ -2055,9 +2057,9 @@ export component SettingsBody inherits Rectangle {
             }
 
             SettingsCard {
-                title: "Your own sources";
+                title: @tr("Your own sources");
                 Text {
-                    text: "Apps can also come from a list on your own server or storage: a small file saying what the apps are and where their files live. Add its address and its apps are searched, shown on the home page and installed like any others. Nobody but its owner vouches for what is on such a list, so add only ones you trust.";
+                    text: @tr("Apps can also come from a list on your own server or storage: a small file saying what the apps are and where their files live. Add its address and its apps are searched, shown on the home page and installed like any others. Nobody but its owner vouches for what is on such a list, so add only ones you trust.");
                     color: Theme.text-dim;
                     font-size: 13px;
                     wrap: word-wrap;
@@ -2073,7 +2075,7 @@ export component SettingsBody inherits Rectangle {
                     }
                     VerticalLayout {
                         alignment: center;
-                        Button { text: "Remove"; primary: false; accessible-label: "Remove the source " + own.label; clicked => { Store.remove-own-source(own.id); } }
+                        Button { text: @tr("Remove"); primary: false; accessible-label: @tr("Remove the source {}", own.label); clicked => { Store.remove-own-source(own.id); } }
                     }
                 }
                 HorizontalLayout {
@@ -2093,7 +2095,7 @@ export component SettingsBody inherits Rectangle {
                             font-size: 13px;
                             single-line: true;
                             vertical-alignment: center;
-                            accessible-label: "Address of a list of apps";
+                            accessible-label: @tr("Address of a list of apps");
                             accepted => {
                                 Store.add-own-source(self.text);
                                 self.text = "";
@@ -2102,8 +2104,8 @@ export component SettingsBody inherits Rectangle {
                         if own-input.text == "" : Text { x: 10px; text: "https://your-server/apps.json"; color: Theme.text-dim; font-size: 13px; vertical-alignment: center; }
                     }
                     Button {
-                        text: "Add";
-                        accessible-label: "Add this source";
+                        text: @tr("Add");
+                        accessible-label: @tr("Add this source");
                         clicked => {
                             Store.add-own-source(own-input.text);
                             own-input.text = "";
@@ -2113,15 +2115,15 @@ export component SettingsBody inherits Rectangle {
             }
 
             SettingsCard {
-                title: "Recommendations";
+                title: @tr("Recommendations");
                 HorizontalLayout {
                     spacing: 12px;
                     VerticalLayout {
                         horizontal-stretch: 1;
                         spacing: 2px;
-                        Text { text: "Recommend the apps everyone knows"; color: Theme.text; font-size: 14px; }
+                        Text { text: @tr("Recommend the apps everyone knows"); color: Theme.text; font-size: 14px; }
                         Text {
-                            text: "Bilby keeps a short list, chosen by people, of the apps and websites nearly everyone looks for: a browser, a video player, the big names. On, the home page starts with them in the version for this device, and they are placed a little higher in a search. Off, you get only what the sources' own figures say.";
+                            text: @tr("Bilby keeps a short list, chosen by people, of the apps and websites nearly everyone looks for: a browser, a video player, the big names. On, the home page starts with them in the version for this device, and they are placed a little higher in a search. Off, you get only what the sources' own figures say.");
                             color: Theme.text-dim;
                             font-size: 12px;
                             wrap: word-wrap;
@@ -2129,15 +2131,15 @@ export component SettingsBody inherits Rectangle {
                     }
                     VerticalLayout {
                         alignment: center;
-                        Toggle { label: "Recommend the apps everyone knows"; checked: Store.show-essentials; toggled(on) => { Store.set-essentials(on); } }
+                        Toggle { label: @tr("Recommend the apps everyone knows"); checked: Store.show-essentials; toggled(on) => { Store.set-essentials(on); } }
                     }
                 }
             }
 
             SettingsCard {
-                title: "Family and adult content";
+                title: @tr("Family and adult content");
                 Text {
-                    text: "Some games, apps and websites are meant for adults. They are kept apart: in a search they have a section of their own, each one covered until you choose it, and you are asked to confirm you are an adult before one opens.";
+                    text: @tr("Some games, apps and websites are meant for adults. They are kept apart: in a search they have a section of their own, each one covered until you choose it, and you are asked to confirm you are an adult before one opens.");
                     color: Theme.text-dim;
                     font-size: 13px;
                     wrap: word-wrap;
@@ -2147,12 +2149,12 @@ export component SettingsBody inherits Rectangle {
                     VerticalLayout {
                         horizontal-stretch: 1;
                         spacing: 2px;
-                        Text { text: "Family mode"; color: Theme.text; font-size: 14px; }
-                        Text { text: "Nothing for adults is shown anywhere, not even covered, and none of it can be opened." + (Store.has-pin ? " Switching it off needs the PIN." : " Set a PIN below so that it cannot simply be switched off."); color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
+                        Text { text: @tr("Family mode"); color: Theme.text; font-size: 14px; }
+                        Text { text: @tr("Nothing for adults is shown anywhere, not even covered, and none of it can be opened.") + " " + (Store.has-pin ? @tr("Switching it off needs the PIN.") : @tr("Set a PIN below so that it cannot simply be switched off.")); color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
                     }
                     VerticalLayout {
                         alignment: center;
-                        Toggle { label: "Family mode"; checked: Store.family-mode; toggled(on) => { Store.set-family-mode(on); } }
+                        Toggle { label: @tr("Family mode"); checked: Store.family-mode; toggled(on) => { Store.set-family-mode(on); } }
                     }
                 }
                 if !Store.family-mode : HorizontalLayout {
@@ -2160,12 +2162,12 @@ export component SettingsBody inherits Rectangle {
                     VerticalLayout {
                         horizontal-stretch: 1;
                         spacing: 2px;
-                        Text { text: "Adult content on the home page"; color: Theme.text; font-size: 14px; }
-                        Text { text: "Off, adult things are only ever found by searching. On, they may also appear on the home page, covered like everywhere else."; color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
+                        Text { text: @tr("Adult content on the home page"); color: Theme.text; font-size: 14px; }
+                        Text { text: @tr("Off, adult things are only ever found by searching. On, they may also appear on the home page, covered like everywhere else."); color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
                     }
                     VerticalLayout {
                         alignment: center;
-                        Toggle { label: "Adult content on the home page"; checked: Store.adult-on-home; toggled(on) => { Store.set-adult-on-home(on); } }
+                        Toggle { label: @tr("Adult content on the home page"); checked: Store.adult-on-home; toggled(on) => { Store.set-adult-on-home(on); } }
                     }
                 }
                 if !Store.family-mode : HorizontalLayout {
@@ -2173,12 +2175,12 @@ export component SettingsBody inherits Rectangle {
                     VerticalLayout {
                         horizontal-stretch: 1;
                         spacing: 2px;
-                        Text { text: "Show adult content uncovered"; color: Theme.text; font-size: 14px; }
-                        Text { text: "For those who want no cover at all: adult things are shown as they are, among everything else, and open without a question."; color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
+                        Text { text: @tr("Show adult content uncovered"); color: Theme.text; font-size: 14px; }
+                        Text { text: @tr("For those who want no cover at all: adult things are shown as they are, among everything else, and open without a question."); color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
                     }
                     VerticalLayout {
                         alignment: center;
-                        Toggle { label: "Show adult content uncovered"; checked: Store.adult-uncovered; toggled(on) => { Store.set-adult-uncovered(on); } }
+                        Toggle { label: @tr("Show adult content uncovered"); checked: Store.adult-uncovered; toggled(on) => { Store.set-adult-uncovered(on); } }
                     }
                 }
                 HorizontalLayout {
@@ -2186,15 +2188,15 @@ export component SettingsBody inherits Rectangle {
                     VerticalLayout {
                         horizontal-stretch: 1;
                         spacing: 2px;
-                        Text { text: Store.has-pin ? "A PIN is set" : "PIN"; color: Theme.text; font-size: 14px; }
-                        Text { text: "Four digits. With a PIN set, it is asked for to change anything in this card and to open adult content, in place of the question about being an adult."; color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
+                        Text { text: Store.has-pin ? @tr("A PIN is set") : @tr("PIN"); color: Theme.text; font-size: 14px; }
+                        Text { text: @tr("Four digits. With a PIN set, it is asked for to change anything in this card and to open adult content, in place of the question about being an adult."); color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
                     }
                     VerticalLayout {
                         alignment: center;
                         HorizontalLayout {
                             spacing: 8px;
-                            Button { text: Store.has-pin ? "Change PIN" : "Set a PIN"; primary: !Store.has-pin; clicked => { Store.set-pin(); } }
-                            if Store.has-pin : Button { text: "Remove PIN"; primary: false; clicked => { Store.remove-pin(); } }
+                            Button { text: Store.has-pin ? @tr("Change PIN") : @tr("Set a PIN"); primary: !Store.has-pin; clicked => { Store.set-pin(); } }
+                            if Store.has-pin : Button { text: @tr("Remove PIN"); primary: false; clicked => { Store.remove-pin(); } }
                         }
                     }
                 }
@@ -2203,16 +2205,16 @@ export component SettingsBody inherits Rectangle {
                     VerticalLayout {
                         horizontal-stretch: 1;
                         spacing: 2px;
-                        Text { text: "Ask for the PIN to install or remove apps"; color: Theme.text; font-size: 14px; }
-                        Text { text: "So that nothing is added to or taken off this device without it."; color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
+                        Text { text: @tr("Ask for the PIN to install or remove apps"); color: Theme.text; font-size: 14px; }
+                        Text { text: @tr("So that nothing is added to or taken off this device without it."); color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
                     }
                     VerticalLayout {
                         alignment: center;
-                        Toggle { label: "Ask for the PIN to install or remove apps"; checked: Store.pin-for-installs; toggled(on) => { Store.set-pin-for-installs(on); } }
+                        Toggle { label: @tr("Ask for the PIN to install or remove apps"); checked: Store.pin-for-installs; toggled(on) => { Store.set-pin-for-installs(on); } }
                     }
                 }
                 Text {
-                    text: "Bilby goes by what its sources say: Steam's adult-only marks, an app's own age rating, and its list of well-known adult sites. A site it has never heard of is not recognised, and most sources say nothing about age at all.";
+                    text: @tr("Bilby goes by what its sources say: Steam's adult-only marks, an app's own age rating, and its list of well-known adult sites. A site it has never heard of is not recognised, and most sources say nothing about age at all.");
                     color: Theme.text-dim;
                     font-size: 12px;
                     wrap: word-wrap;
@@ -2220,9 +2222,9 @@ export component SettingsBody inherits Rectangle {
             }
 
             SettingsCard {
-                title: "Layout";
+                title: @tr("Layout");
                 Text {
-                    text: "The TV layout has large text and is driven with the arrow keys of a remote or keyboard. To come back from it, open This TV at the top of its screen.";
+                    text: @tr("The TV layout has large text and is driven with the arrow keys of a remote or keyboard. To come back from it, open This TV at the top of its screen.");
                     color: Theme.text-dim;
                     font-size: 13px;
                     wrap: word-wrap;
@@ -2230,26 +2232,44 @@ export component SettingsBody inherits Rectangle {
                 HorizontalLayout {
                     spacing: 8px;
                     alignment: start;
-                    ChoiceChip { text: "Automatic"; selected: Store.interface-mode == 0; clicked => { Store.set-interface(0); } }
-                    ChoiceChip { text: "Desktop"; selected: Store.interface-mode == 1; clicked => { Store.set-interface(1); } }
-                    ChoiceChip { text: "TV"; selected: Store.interface-mode == 2; clicked => { Store.set-interface(2); } }
+                    ChoiceChip { text: @tr("Automatic"); selected: Store.interface-mode == 0; clicked => { Store.set-interface(0); } }
+                    ChoiceChip { text: @tr("Desktop"); selected: Store.interface-mode == 1; clicked => { Store.set-interface(1); } }
+                    ChoiceChip { text: @tr("TV"); selected: Store.interface-mode == 2; clicked => { Store.set-interface(2); } }
                 }
             }
 
             SettingsCard {
-                title: "Appearance";
+                // In English as well, always: findable by someone who cannot read
+                // the language Bilby is in.
+                title: @tr("Language") == "Language" ? "Language" : @tr("Language") + "  ·  Language";
+                property <int> per-row: compact ? 3 : 5;
+                for r in Math.ceil(Store.languages.length / self.per-row) : HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+                    for choice[i] in Store.languages : ChoiceChip {
+                        visible: Math.floor(i / per-row) == r;
+                        width: self.visible ? self.preferred-width : 0;
+                        text: choice.label;
+                        selected: choice.on;
+                        clicked => { Store.set-language(choice.id); }
+                    }
+                }
+            }
+
+            SettingsCard {
+                title: @tr("Appearance");
                 HorizontalLayout {
                     spacing: 8px;
                     alignment: start;
-                    ChoiceChip { text: "Match system"; selected: Store.theme-mode == 0; clicked => { Store.set-theme(0); } }
-                    ChoiceChip { text: "Light"; selected: Store.theme-mode == 1; clicked => { Store.set-theme(1); } }
-                    ChoiceChip { text: "Dark"; selected: Store.theme-mode == 2; clicked => { Store.set-theme(2); } }
+                    ChoiceChip { text: @tr("Match system"); selected: Store.theme-mode == 0; clicked => { Store.set-theme(0); } }
+                    ChoiceChip { text: @tr("Light"); selected: Store.theme-mode == 1; clicked => { Store.set-theme(1); } }
+                    ChoiceChip { text: @tr("Dark"); selected: Store.theme-mode == 2; clicked => { Store.set-theme(2); } }
                 }
                 HorizontalLayout {
                     spacing: 12px;
                     Text {
                         horizontal-stretch: 1;
-                        text: "Sounds: a quiet tick or pop as you move about and press things.";
+                        text: @tr("Sounds: a quiet tick or pop as you move about and press things.");
                         color: Theme.text-dim;
                         font-size: 13px;
                         wrap: word-wrap;
@@ -2258,7 +2278,7 @@ export component SettingsBody inherits Rectangle {
                     VerticalLayout {
                         alignment: center;
                         Toggle {
-                            label: "Sounds";
+                            label: @tr("Sounds");
                             checked: Store.sounds;
                             toggled(on) => { Store.set-sounds(on); }
                         }
@@ -2268,7 +2288,7 @@ export component SettingsBody inherits Rectangle {
                     spacing: 12px;
                     Text {
                         horizontal-stretch: 1;
-                        text: "Reduce motion: pages and buttons change at once instead of moving.";
+                        text: @tr("Reduce motion: pages and buttons change at once instead of moving.");
                         color: Theme.text-dim;
                         font-size: 13px;
                         wrap: word-wrap;
@@ -2277,7 +2297,7 @@ export component SettingsBody inherits Rectangle {
                     VerticalLayout {
                         alignment: center;
                         Toggle {
-                            label: "Reduce motion";
+                            label: @tr("Reduce motion");
                             checked: Theme.reduce-motion;
                             toggled(on) => { Store.set-reduce-motion(on); }
                         }
@@ -2286,15 +2306,15 @@ export component SettingsBody inherits Rectangle {
             }
 
             SettingsCard {
-                title: "Releases";
+                title: @tr("Releases");
                 HorizontalLayout {
                     spacing: 12px;
                     VerticalLayout {
                         horizontal-stretch: 1;
                         spacing: 3px;
-                        Text { text: "Include pre-releases"; color: Theme.text; font-size: 14px; }
+                        Text { text: @tr("Include pre-releases"); color: Theme.text; font-size: 14px; }
                         Text {
-                            text: "Offer betas and release candidates as soon as they are published. They may be unstable.";
+                            text: @tr("Offer betas and release candidates as soon as they are published. They may be unstable.");
                             color: Theme.text-dim;
                             font-size: 12px;
                             wrap: word-wrap;
@@ -2303,7 +2323,7 @@ export component SettingsBody inherits Rectangle {
                     VerticalLayout {
                         alignment: center;
                         Toggle {
-                            label: "Include pre-releases";
+                            label: @tr("Include pre-releases");
                             checked: Store.include-prereleases;
                             toggled(on) => { Store.set-prereleases(on); }
                         }
@@ -2314,9 +2334,9 @@ export component SettingsBody inherits Rectangle {
                     VerticalLayout {
                         horizontal-stretch: 1;
                         spacing: 3px;
-                        Text { text: "Show ratings and reviews"; color: Theme.text; font-size: 14px; }
+                        Text { text: @tr("Show ratings and reviews"); color: Theme.text; font-size: 14px; }
                         Text {
-                            text: "They come from the service the GNOME and KDE app stores use (odrs.gnome.org). Star ratings arrive as one file a day for every app. Written reviews are asked for when you open the page of an app that has them, which tells that service which app it was. Nothing that identifies you is sent.";
+                            text: @tr("They come from the service the GNOME and KDE app stores use (odrs.gnome.org). Star ratings arrive as one file a day for every app. Written reviews are asked for when you open the page of an app that has them, which tells that service which app it was. Nothing that identifies you is sent.");
                             color: Theme.text-dim;
                             font-size: 12px;
                             wrap: word-wrap;
@@ -2325,7 +2345,7 @@ export component SettingsBody inherits Rectangle {
                     VerticalLayout {
                         alignment: center;
                         Toggle {
-                            label: "Show ratings and reviews";
+                            label: @tr("Show ratings and reviews");
                             checked: Store.show-ratings;
                             toggled(on) => { Store.set-ratings(on); }
                         }
@@ -2334,15 +2354,15 @@ export component SettingsBody inherits Rectangle {
             }
 
             SettingsCard {
-                title: "Updates";
+                title: @tr("Updates");
                 HorizontalLayout {
                     spacing: 12px;
                     VerticalLayout {
                         horizontal-stretch: 1;
                         spacing: 3px;
-                        Text { text: "Check for updates when the store opens"; color: Theme.text; font-size: 14px; wrap: word-wrap; }
+                        Text { text: @tr("Check for updates when the store opens"); color: Theme.text; font-size: 14px; wrap: word-wrap; }
                         Text {
-                            text: "Uses one request per app in your library. Turn it off if GitHub's allowance is tight; you can still check from the Library page.";
+                            text: @tr("Uses one request per app in your library. Turn it off if GitHub's allowance is tight; you can still check from the Library page.");
                             color: Theme.text-dim;
                             font-size: 12px;
                             wrap: word-wrap;
@@ -2351,7 +2371,7 @@ export component SettingsBody inherits Rectangle {
                     VerticalLayout {
                         alignment: center;
                         Toggle {
-                            label: "Check for updates when the store opens";
+                            label: @tr("Check for updates when the store opens");
                             checked: Store.check-updates-on-start;
                             toggled(on) => { Store.set-check-on-start(on); }
                         }
@@ -2360,9 +2380,9 @@ export component SettingsBody inherits Rectangle {
             }
 
             if Store.steam-available : SettingsCard {
-                title: "Steam";
+                title: @tr("Steam");
                 Text {
-                    text: Store.steam-signed-in ? "Signed in. Bilby knows " + Store.steam-summary + " in your Steam library and marks them Owned." : Store.steam-state == 1 ? "Sign in on Steam's page in the window that opened. Close it to stop." : Store.steam-state == 2 ? "Sign in on Steam's page in Longboard, then choose to share your library." : Store.steam-state == 3 ? "Scan this with the Steam app on your phone and approve the sign-in there." : "Sign in to see which Steam games you already own. Bilby keeps only the list of what you own, on this device. Choose how:";
+                    text: Store.steam-signed-in ? @tr("Signed in. Bilby knows {} in your Steam library and marks them Owned.", Store.steam-summary) : Store.steam-state == 1 ? @tr("Sign in on Steam's page in the window that opened. Close it to stop.") : Store.steam-state == 2 ? @tr("Sign in on Steam's page in Longboard, then choose to share your library.") : Store.steam-state == 3 ? @tr("Scan this with the Steam app on your phone and approve the sign-in there.") : @tr("Sign in to see which Steam games you already own. Bilby keeps only the list of what you own, on this device. Choose how:");
                     color: Theme.text-dim;
                     font-size: 13px;
                     wrap: word-wrap;
@@ -2373,17 +2393,17 @@ export component SettingsBody inherits Rectangle {
                         spacing: 12px;
                         VerticalLayout {
                             alignment: center;
-                            Button { text: "Sign in with a QR code"; min-width: 200px; accessible-label: "Sign in to Steam with a QR code"; clicked => { Store.steam-signin-qr(); } }
+                            Button { text: @tr("Sign in with a QR code"); min-width: 200px; accessible-label: @tr("Sign in to Steam with a QR code"); clicked => { Store.steam-signin-qr(); } }
                         }
-                        Text { horizontal-stretch: 1; text: "Scan a code with the Steam app on your phone. Nothing to type. Steam gives Bilby a key to your account, which Bilby uses once to read the list and then throws away."; color: Theme.text-dim; font-size: 12px; wrap: word-wrap; vertical-alignment: center; }
+                        Text { horizontal-stretch: 1; text: @tr("Scan a code with the Steam app on your phone. Nothing to type. Steam gives Bilby a key to your account, which Bilby uses once to read the list and then throws away."); color: Theme.text-dim; font-size: 12px; wrap: word-wrap; vertical-alignment: center; }
                     }
                     HorizontalLayout {
                         spacing: 12px;
                         VerticalLayout {
                             alignment: center;
-                            Button { text: "Sign in in a browser"; primary: false; min-width: 200px; accessible-label: "Sign in to Steam in a browser"; clicked => { Store.steam-signin(); } }
+                            Button { text: @tr("Sign in in a browser"); primary: false; min-width: 200px; accessible-label: @tr("Sign in to Steam in a browser"); clicked => { Store.steam-signin(); } }
                         }
-                        Text { horizontal-stretch: 1; text: "Steam's own sign-in page opens in a small window. The browser asks Steam for the list, so no key ever reaches Bilby."; color: Theme.text-dim; font-size: 12px; wrap: word-wrap; vertical-alignment: center; }
+                        Text { horizontal-stretch: 1; text: @tr("Steam's own sign-in page opens in a small window. The browser asks Steam for the list, so no key ever reaches Bilby."); color: Theme.text-dim; font-size: 12px; wrap: word-wrap; vertical-alignment: center; }
                     }
                 }
                 if Store.steam-state == 3 : HorizontalLayout {
@@ -2395,7 +2415,7 @@ export component SettingsBody inherits Rectangle {
                         border-radius: 12px;
                         background: white;
                         accessible-role: AccessibleRole.image;
-                        accessible-label: "QR code to scan with the Steam app";
+                        accessible-label: @tr("QR code to scan with the Steam app");
                         if Store.steam-qr.width > 0 : Image {
                             width: 200px;
                             height: 200px;
@@ -2407,29 +2427,29 @@ export component SettingsBody inherits Rectangle {
                     VerticalLayout {
                         alignment: center;
                         spacing: 6px;
-                        Text { text: Store.steam-qr-scanned ? "Scanned. Approve it in the Steam app." : "Waiting for the Steam app…"; color: Theme.text; font-size: 14px; font-weight: 600; }
-                        Text { text: "The code refreshes by itself."; color: Theme.text-dim; font-size: 12px; }
+                        Text { text: Store.steam-qr-scanned ? @tr("Scanned. Approve it in the Steam app.") : @tr("Waiting for the Steam app…"); color: Theme.text; font-size: 14px; font-weight: 600; }
+                        Text { text: @tr("The code refreshes by itself."); color: Theme.text-dim; font-size: 12px; }
                     }
                 }
                 HorizontalLayout {
                     alignment: start;
                     spacing: 8px;
-                    if Store.steam-state != 0 : Button { text: "Stop waiting"; primary: false; accessible-label: "Stop waiting for Steam"; clicked => { Store.steam-cancel(); } }
-                    if Store.steam-signed-in && Store.steam-state == 0 : Button { text: "Sign out"; primary: false; accessible-label: "Sign out of Steam"; clicked => { Store.steam-signout(); } }
+                    if Store.steam-state != 0 : Button { text: @tr("Stop waiting"); primary: false; accessible-label: @tr("Stop waiting for Steam"); clicked => { Store.steam-cancel(); } }
+                    if Store.steam-signed-in && Store.steam-state == 0 : Button { text: @tr("Sign out"); primary: false; accessible-label: @tr("Sign out of Steam"); clicked => { Store.steam-signout(); } }
                 }
             }
 
             SettingsCard {
-                title: "GitHub access";
+                title: @tr("GitHub access");
                 Text {
-                    text: Store.has-token ? "You are signed in. GitHub allows 5,000 requests an hour." : "Everything works without signing in, but GitHub then allows only 60 requests an hour for your whole network, which a few searches can use up. Signing in raises that to 5,000. Bilby asks for no access to your account.";
+                    text: Store.has-token ? @tr("You are signed in. GitHub allows 5,000 requests an hour.") : @tr("Everything works without signing in, but GitHub then allows only 60 requests an hour for your whole network, which a few searches can use up. Signing in raises that to 5,000. Bilby asks for no access to your account.");
                     color: Theme.text-dim;
                     font-size: 13px;
                     wrap: word-wrap;
                 }
                 if !Store.has-token && Store.signin-state == 0 : HorizontalLayout {
                     alignment: start;
-                    Button { text: "Sign in with GitHub"; clicked => { Store.github-signin(); } }
+                    Button { text: @tr("Sign in with GitHub"); clicked => { Store.github-signin(); } }
                 }
                 if Store.signin-state == 1 : Busy { }
                 // The code to type at GitHub, large enough to read across a room.
@@ -2444,7 +2464,7 @@ export component SettingsBody inherits Rectangle {
                         padding: 16px;
                         spacing: 10px;
                         Text {
-                            text: "On this or any other device, open github.com/login/device and enter this code:";
+                            text: @tr("On this or any other device, open github.com/login/device and enter this code:");
                             color: Theme.text;
                             font-size: 13px;
                             wrap: word-wrap;
@@ -2456,20 +2476,20 @@ export component SettingsBody inherits Rectangle {
                             font-weight: 800;
                             letter-spacing: 3px;
                             accessible-role: text;
-                            accessible-label: "Sign-in code " + Store.signin-code;
+                            accessible-label: @tr("Sign-in code {}", Store.signin-code);
                         }
                         Busy { }
-                        Text { text: "Waiting for you to enter it. This page updates by itself."; color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
+                        Text { text: @tr("Waiting for you to enter it. This page updates by itself."); color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
                         HorizontalLayout {
                             spacing: 8px;
                             alignment: start;
-                            Button { text: "Open that page"; clicked => { Store.open-url("https://github.com/login/device"); } }
-                            Button { text: "Cancel"; primary: false; accessible-label: "Cancel signing in"; clicked => { Store.github-cancel(); } }
+                            Button { text: @tr("Open that page"); clicked => { Store.open-url("https://github.com/login/device"); } }
+                            Button { text: @tr("Cancel"); primary: false; accessible-label: @tr("Cancel signing in"); clicked => { Store.github-cancel(); } }
                         }
                     }
                 }
                 Text {
-                    text: "Or paste a personal access token (one with no scopes is enough):";
+                    text: @tr("Or paste a personal access token (one with no scopes is enough):");
                     color: Theme.text-dim;
                     font-size: 12px;
                     wrap: word-wrap;
@@ -2492,7 +2512,7 @@ export component SettingsBody inherits Rectangle {
                         border-color: token.has-focus ? Theme.accent : Theme.stroke;
                         if token.text == "" : Text {
                             x: 12px;
-                            text: Store.has-token ? "Paste a new token to replace it" : "Paste a token";
+                            text: Store.has-token ? @tr("Paste a new token to replace it") : @tr("Paste a token");
                             color: Theme.text-dim;
                             font-size: 13px;
                             vertical-alignment: center;
@@ -2506,7 +2526,7 @@ export component SettingsBody inherits Rectangle {
                             single-line: true;
                             input-type: password;
                             vertical-alignment: center;
-                            accessible-label: "GitHub token";
+                            accessible-label: @tr("GitHub token");
                             edited => { root.token-saved = false; }
                             accepted => {
                                 Store.save-token(self.text);
@@ -2516,10 +2536,10 @@ export component SettingsBody inherits Rectangle {
                         }
                     }
                     Button {
-                        text: root.token-saved ? "Saved" : "Save";
+                        text: root.token-saved ? @tr("Saved") : @tr("Save");
                         primary: false;
                         enabled: token.text != "";
-                        accessible-label: "Save token";
+                        accessible-label: @tr("Save token");
                         clicked => {
                             Store.save-token(token.text);
                             token.text = "";
@@ -2527,10 +2547,10 @@ export component SettingsBody inherits Rectangle {
                         }
                     }
                     if Store.has-token : Button {
-                        text: "Sign out";
+                        text: @tr("Sign out");
                         primary: false;
                         danger: true;
-                        accessible-label: "Sign out of GitHub";
+                        accessible-label: @tr("Sign out of GitHub");
                         clicked => {
                             Store.save-token("");
                             root.token-saved = false;
@@ -2540,14 +2560,14 @@ export component SettingsBody inherits Rectangle {
             }
 
             SettingsCard {
-                title: "Storage";
+                title: @tr("Storage");
                 HorizontalLayout {
                     spacing: 12px;
-                    Text { width: compact ? 110px : 170px; text: "Downloads go to"; color: Theme.text-dim; font-size: 13px; }
+                    Text { width: compact ? 110px : 170px; text: @tr("Downloads go to"); color: Theme.text-dim; font-size: 13px; }
                     Text { horizontal-stretch: 1; text: Store.downloads-dir; color: Theme.text; font-size: 13px; wrap: char-wrap; }
                 }
                 Text {
-                    text: "Installers and other files Bilby downloads are saved here. Apps that run as one file (AppImages) are then moved to the Applications folder in your home folder; packages, Flatpaks and store apps go where your system puts them.";
+                    text: @tr("Installers and other files Bilby downloads are saved here. Apps that run as one file (AppImages) are then moved to the Applications folder in your home folder; packages, Flatpaks and store apps go where your system puts them.");
                     color: Theme.text-dim;
                     font-size: 12px;
                     wrap: word-wrap;
@@ -2555,8 +2575,8 @@ export component SettingsBody inherits Rectangle {
                 HorizontalLayout {
                     spacing: 8px;
                     alignment: start;
-                    Button { text: "Change folder"; primary: false; accessible-label: "Change the downloads folder"; clicked => { Store.choose-downloads(); } }
-                    if Store.downloads-custom : Button { text: "Use the usual folder"; primary: false; clicked => { Store.set-downloads(""); } }
+                    Button { text: @tr("Change folder"); primary: false; accessible-label: @tr("Change the downloads folder"); clicked => { Store.choose-downloads(); } }
+                    if Store.downloads-custom : Button { text: @tr("Use the usual folder"); primary: false; clicked => { Store.set-downloads(""); } }
                 }
                 HorizontalLayout {
                     spacing: 8px;
@@ -2575,13 +2595,13 @@ export component SettingsBody inherits Rectangle {
                             font-size: 13px;
                             single-line: true;
                             vertical-alignment: center;
-                            accessible-label: "Downloads folder path";
+                            accessible-label: @tr("Downloads folder path");
                             accepted => {
                                 Store.set-downloads(self.text);
                                 self.text = "";
                             }
                         }
-                        if folder-input.text == "" : Text { x: 10px; text: "Or type a folder's full path and press Enter"; color: Theme.text-dim; font-size: 13px; vertical-alignment: center; }
+                        if folder-input.text == "" : Text { x: 10px; text: @tr("Or type a folder's full path and press Enter"); color: Theme.text-dim; font-size: 13px; vertical-alignment: center; }
                     }
                 }
                 HorizontalLayout {
@@ -2589,34 +2609,34 @@ export component SettingsBody inherits Rectangle {
                     VerticalLayout {
                         horizontal-stretch: 1;
                         spacing: 2px;
-                        Text { text: "Ask where to save each download"; color: Theme.text; font-size: 14px; }
-                        Text { text: "A folder chooser opens before each file is fetched. Backing out of it cancels the download."; color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
+                        Text { text: @tr("Ask where to save each download"); color: Theme.text; font-size: 14px; }
+                        Text { text: @tr("A folder chooser opens before each file is fetched. Backing out of it cancels the download."); color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
                     }
                     VerticalLayout {
                         alignment: center;
-                        Toggle { label: "Ask where to save each download"; checked: Store.ask-where; toggled(on) => { Store.set-ask-where(on); } }
+                        Toggle { label: @tr("Ask where to save each download"); checked: Store.ask-where; toggled(on) => { Store.set-ask-where(on); } }
                     }
                 }
                 // Side by side where there is room, stacked on a phone.
                 if !compact : HorizontalLayout {
                     spacing: 8px;
                     alignment: start;
-                    Button { text: "Open folder"; primary: false; accessible-label: "Open downloads folder"; clicked => { Store.open-downloads(); } }
-                    Button { text: "Clear cached catalog data"; primary: false; clicked => { Store.clear-cache(); } }
-                    if Store.recent.length > 0 : Button { text: "Clear search history"; primary: false; clicked => { Store.clear-recent(); } }
+                    Button { text: @tr("Open folder"); primary: false; accessible-label: @tr("Open downloads folder"); clicked => { Store.open-downloads(); } }
+                    Button { text: @tr("Clear cached catalog data"); primary: false; clicked => { Store.clear-cache(); } }
+                    if Store.recent.length > 0 : Button { text: @tr("Clear search history"); primary: false; clicked => { Store.clear-recent(); } }
                 }
                 if compact : VerticalLayout {
                     spacing: 8px;
-                    Button { text: "Open folder"; primary: false; accessible-label: "Open downloads folder"; clicked => { Store.open-downloads(); } }
-                    Button { text: "Clear cached catalog data"; primary: false; clicked => { Store.clear-cache(); } }
-                    if Store.recent.length > 0 : Button { text: "Clear search history"; primary: false; clicked => { Store.clear-recent(); } }
+                    Button { text: @tr("Open folder"); primary: false; accessible-label: @tr("Open downloads folder"); clicked => { Store.open-downloads(); } }
+                    Button { text: @tr("Clear cached catalog data"); primary: false; clicked => { Store.clear-cache(); } }
+                    if Store.recent.length > 0 : Button { text: @tr("Clear search history"); primary: false; clicked => { Store.clear-recent(); } }
                 }
             }
 
             if Store.prefer-applies : SettingsCard {
-                title: "Preferred kind of app";
+                title: @tr("Preferred kind of app");
                 Text {
-                    text: "Many apps come more than one way. Choose which Bilby offers first when there is a choice. Automatic picks what suits this system: its own packages on most, Flatpak on a read-only system such as Fedora Kinoite. You can always pick another on an app's page.";
+                    text: @tr("Many apps come more than one way. Choose which Bilby offers first when there is a choice. Automatic picks what suits this system: its own packages on most, Flatpak on a read-only system such as Fedora Kinoite. You can always pick another on an app's page.");
                     color: Theme.text-dim;
                     font-size: 12px;
                     wrap: word-wrap;
@@ -2624,22 +2644,22 @@ export component SettingsBody inherits Rectangle {
                 HorizontalLayout {
                     spacing: 8px;
                     alignment: start;
-                    ChoiceChip { text: "Automatic"; selected: Store.prefer-kind == 0; clicked => { Store.set-prefer-kind(0); } }
-                    ChoiceChip { text: "Flatpak"; selected: Store.prefer-kind == 1; clicked => { Store.set-prefer-kind(1); } }
-                    ChoiceChip { text: "AppImage"; selected: Store.prefer-kind == 2; clicked => { Store.set-prefer-kind(2); } }
-                    ChoiceChip { text: "System packages"; selected: Store.prefer-kind == 3; clicked => { Store.set-prefer-kind(3); } }
+                    ChoiceChip { text: @tr("Automatic"); selected: Store.prefer-kind == 0; clicked => { Store.set-prefer-kind(0); } }
+                    ChoiceChip { text: @tr("Flatpak"); selected: Store.prefer-kind == 1; clicked => { Store.set-prefer-kind(1); } }
+                    ChoiceChip { text: @tr("AppImage"); selected: Store.prefer-kind == 2; clicked => { Store.set-prefer-kind(2); } }
+                    ChoiceChip { text: @tr("System packages"); selected: Store.prefer-kind == 3; clicked => { Store.set-prefer-kind(3); } }
                 }
             }
 
             SettingsCard {
-                title: "About";
+                title: @tr("About");
                 if Store.store-update != "" : HorizontalLayout {
                     spacing: 12px;
                     VerticalLayout {
                         alignment: center;
                         horizontal-stretch: 1;
                         Text {
-                            text: "Bilby " + Store.store-update + " is available. You have " + Store.app-version + ".";
+                            text: @tr("Bilby {0} is available. You have {1}.", Store.store-update, Store.app-version);
                             color: Theme.accent;
                             font-size: 14px;
                             font-weight: 600;
@@ -2647,29 +2667,29 @@ export component SettingsBody inherits Rectangle {
                         }
                     }
                     Button {
-                        text: "View update";
-                        accessible-label: "View the store's update";
+                        text: @tr("View update");
+                        accessible-label: @tr("View the store's update");
                         clicked => { Store.view-store-update(); }
                     }
                 }
                 if Store.store-update == "" : HorizontalLayout {
                     alignment: start;
-                    Button { text: "Check for a newer Bilby"; primary: false; clicked => { Store.check-store-update(); } }
+                    Button { text: @tr("Check for a newer Bilby"); primary: false; clicked => { Store.check-store-update(); } }
                 }
                 Text {
-                    text: "Bilby " + Store.app-version + ". Everything runs on this device: there is no account and no server of ours. The store talks directly to the places apps come from, and keeps your library and settings in a file on this device.";
+                    text: @tr("Bilby {}. Everything runs on this device: there is no account and no server of ours. The store talks directly to the places apps come from, and keeps your library and settings in a file on this device.", Store.app-version);
                     color: Theme.text-dim;
                     font-size: 13px;
                     wrap: word-wrap;
                 }
                 Text {
-                    text: "Apps come from the sources listed above and are not reviewed by Bilby. Install software you trust. Made with Slint.";
+                    text: @tr("Apps come from the sources listed above and are not reviewed by Bilby. Install software you trust. Made with Slint.");
                     color: Theme.text-dim;
                     font-size: 13px;
                     wrap: word-wrap;
                 }
                 if Store.demo : Text {
-                    text: "Demo mode: the catalog is fictional and nothing is fetched from the network.";
+                    text: @tr("Demo mode: the catalog is fictional and nothing is fetched from the network.");
                     color: Theme.warn;
                     font-size: 13px;
                     wrap: word-wrap;
@@ -2765,7 +2785,7 @@ export component GateOverlay inherits Rectangle {
             if Store.gate == 1 : HorizontalLayout {
                 spacing: 10px;
                 alignment: end;
-                Button { text: Store.gate-no; primary: false; accessible-label: Store.gate-no == "No" ? "No, I am not" : Store.gate-no; clicked => { Store.gate-answer(false); } }
+                Button { text: Store.gate-no; primary: false; accessible-label: Store.gate-no == @tr("No") ? @tr("No, I am not") : Store.gate-no; clicked => { Store.gate-answer(false); } }
                 Button { text: Store.gate-yes; clicked => { Store.gate-answer(true); } }
             }
             if Store.gate >= 2 : VerticalLayout {
@@ -2786,14 +2806,14 @@ export component GateOverlay inherits Rectangle {
                 for row in [["1", "2", "3"], ["4", "5", "6"], ["7", "8", "9"]] : HorizontalLayout {
                     alignment: center;
                     spacing: 10px;
-                    for d in row : Button { text: d; primary: false; min-width: 64px; accessible-label: "Digit " + d; clicked => { root.digit(d); } }
+                    for d in row : Button { text: d; primary: false; min-width: 64px; accessible-label: @tr("Digit {}", d); clicked => { root.digit(d); } }
                 }
                 HorizontalLayout {
                     alignment: center;
                     spacing: 10px;
-                    Button { text: "Clear"; primary: false; min-width: 64px; clicked => { root.rub(); } }
-                    Button { text: "0"; primary: false; min-width: 64px; accessible-label: "Digit 0"; clicked => { root.digit("0"); } }
-                    Button { text: "Cancel"; primary: false; min-width: 64px; accessible-label: "Cancel the PIN"; clicked => { Store.gate-cancel(); } }
+                    Button { text: @tr("Clear"); primary: false; min-width: 64px; clicked => { root.rub(); } }
+                    Button { text: "0"; primary: false; min-width: 64px; accessible-label: @tr("Digit 0"); clicked => { root.digit("0"); } }
+                    Button { text: @tr("Cancel"); primary: false; min-width: 64px; accessible-label: @tr("Cancel the PIN"); clicked => { Store.gate-cancel(); } }
                 }
             }
         }

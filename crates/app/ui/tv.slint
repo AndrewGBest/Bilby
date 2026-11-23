@@ -40,7 +40,7 @@ component TvTile inherits Rectangle {
                     spacing: 1 * u;
                     Text { text: app.name; color: Theme.text; font-size: 14 * u; font-weight: 700; overflow: elide; }
                     Text {
-                        text: app.has-update ? "Update available" : app.installed ? "Installed" : app.stat != "" ? app.stat : app.author;
+                        text: app.has-update ? @tr("Update available") : app.installed ? @tr("Installed") : app.stat != "" ? app.stat : app.author;
                         color: app.has-update || app.installed ? Theme.accent : Theme.text-dim;
                         font-size: 11 * u;
                         font-weight: app.has-update || app.installed ? 700 : 400;
@@ -130,7 +130,7 @@ component TvSetting inherits Rectangle {
         padding-right: 10 * u;
         spacing: 12 * u;
         Text { horizontal-stretch: 1; text: root.label; color: Theme.text; font-size: 12 * u; vertical-alignment: center; overflow: elide; }
-        Text { text: root.value != "" ? root.value : root.on ? "On" : "Off"; color: root.value != "" ? Theme.accent : root.on ? Theme.ok : Theme.text-dim; font-size: 12 * u; font-weight: 700; vertical-alignment: center; }
+        Text { text: root.value != "" ? root.value : root.on ? @tr("On") : @tr("Off"); color: root.value != "" ? Theme.accent : root.on ? Theme.ok : Theme.text-dim; font-size: 12 * u; font-weight: 700; vertical-alignment: center; }
     }
 }
 
@@ -220,6 +220,14 @@ export component TvShell inherits Rectangle {
         root.cur-col = 0;
         root.zone = 0;
         scope.focus();
+    }
+    // The keyboard's last key was pressed: give the password, or search.
+    function osk-done() {
+        if (Store.password-ask) {
+            Store.password-submit();
+        } else {
+            root.run-search();
+        }
     }
     // A letter, digit or symbol from a real keyboard, not a key that moves or acts.
     pure function typed(event: KeyEvent) -> bool {
@@ -312,7 +320,9 @@ export component TvShell inherits Rectangle {
     property <bool> on-settings: Store.page == 3 && !Store.details-open;
     property <int> steam-rows: !Store.steam-available ? 0 : Store.steam-signed-in || Store.steam-state != 0 ? 1 : 2;
     property <int> src-first: 16 + root.steam-rows;
-    property <int> set-last: root.src-first + Store.sources.length - 1;
+    // The language is the last row, after the sources.
+    property <int> lang-row: root.src-first + Store.sources.length;
+    property <int> set-last: root.lang-row;
     changed set-last => { root.sys-row = min(root.sys-row, root.set-last); }
     // Rows below the eighth push the list up, so the focused one is always on screen.
     property <length> set-shift: max(0, root.sys-row - 7) * 34 * root.u;
@@ -320,12 +330,15 @@ export component TvShell inherits Rectangle {
     // Buttons on that page: Update (when there is one), Check again (where updates are
     // handled), and always last, the way out of the TV layout.
     property <bool> sys-working: Store.system-state == 1 || Store.system-state == 4;
-    property <int> sys-last: !Store.system-supported || sys-working ? 0 : sys-can-update ? 2 : 1;
+    // Updates are in place and wait for a restart: the first button offers one.
+    property <bool> sys-can-restart: Store.system-restart && !root.sys-can-update;
+    property <bool> sys-lead: root.sys-can-update || root.sys-can-restart;
+    property <int> sys-last: !Store.system-supported || sys-working ? 0 : sys-lead ? 2 : 1;
     changed sys-last => { root.sys-act = min(root.sys-act, root.sys-last); }
     property <bool> busy: Store.install-state == 1;
     property <bool> is-update: Store.installed-version != "" && Store.installed-version != "installed" && Store.app.version != "" && Store.installed-version != Store.app.version;
     property <bool> open-instead: Store.can-open && !is-update && !busy;
-    property <string> main-action: busy ? "Cancel" : open-instead ? "Open" : is-update ? "Update" : Store.options.length == 0 ? "" : Store.installed-version != "" && !Store.is-website ? "Install again" : Store.options[0].verb;
+    property <string> main-action: busy ? @tr("Cancel") : open-instead ? @tr("Open") : is-update ? @tr("Update") : Store.options.length == 0 ? "" : Store.installed-version != "" && !Store.is-website ? @tr("Install again") : Store.options[0].verb;
     // The buttons on an app's page, left to right: the main one, Favourite, Other files
     // (when there are any) and Remove (when the app is in the library).
     // Other versions of the service and other sources of the app come first in the
@@ -509,11 +522,15 @@ export component TvShell inherits Rectangle {
             if (search.has-focus) {
                 return reject;
             }
-            if (root.osk) {
+            if (root.osk || Store.password-ask) {
                 // The keyboard is up: the arrows walk its keys, OK presses one, Back
                 // puts it away. A real keyboard still types.
                 if (event.text == Key.Escape || event.text == Key.Back) {
-                    root.osk = false;
+                    if (Store.password-ask) {
+                        Store.password-cancel();
+                    } else {
+                        root.osk = false;
+                    }
                 } else if (event.text == Key.UpArrow) {
                     Store.osk-move(0);
                 } else if (event.text == Key.DownArrow) {
@@ -524,7 +541,7 @@ export component TvShell inherits Rectangle {
                     Store.osk-move(3);
                 } else if (event.text == Key.Return) {
                     if (Store.osk-press()) {
-                        root.run-search();
+                        root.osk-done();
                     }
                 } else if (event.text == Key.Backspace) {
                     Store.osk-erase();
@@ -669,6 +686,8 @@ export component TvShell inherits Rectangle {
                         // The row goes away while signing in; the highlight moves to the one that stays.
                         root.sys-row = 13;
                         Store.steam-signin();
+                    } else if (root.sys-row == root.lang-row) {
+                        Store.next-language();
                     } else if (root.sys-row >= root.src-first) {
                         Store.set-source(Store.sources[root.sys-row - root.src-first].id, !Store.sources[root.sys-row - root.src-first].on);
                     }
@@ -690,6 +709,8 @@ export component TvShell inherits Rectangle {
                         Store.set-interface(1);
                     } else if (root.sys-can-update && root.sys-act == 0) {
                         Store.system-update();
+                    } else if (root.sys-can-restart && root.sys-act == 0) {
+                        Store.system-restart-now();
                     } else {
                         Store.system-check();
                     }
@@ -918,13 +939,13 @@ export component TvShell inherits Rectangle {
             Rectangle { width: 14 * u; }
             TvTab {
                 u: root.u;
-                text: "Home";
+                text: @tr("Home");
                 current: Store.page == 0 && !Store.details-open;
                 focused: root.zone == 1 && root.tab == 0 && !Store.details-open && !search.has-focus;
             }
             TvTab {
                 u: root.u;
-                text: Store.updates-count > 0 ? "Library  ·  " + Store.updates-count + (Store.updates-count == 1 ? " update" : " updates") : "Library";
+                text: Store.updates-count > 0 ? @tr("Library  ·  {n} update" | "Library  ·  {n} updates" % Store.updates-count) : @tr("Library");
                 current: root.on-library;
                 focused: root.zone == 1 && root.tab == 1 && !Store.details-open && !search.has-focus;
                 attention: Store.updates-count > 0;
@@ -932,7 +953,7 @@ export component TvShell inherits Rectangle {
             Rectangle { horizontal-stretch: 1; }
             TvTab {
                 u: root.u;
-                text: "Settings";
+                text: @tr("Settings");
                 current: root.on-settings;
                 focused: root.zone == 1 && root.tab == 3 && !Store.details-open && !search.has-focus;
             }
@@ -960,7 +981,7 @@ export component TvShell inherits Rectangle {
             border-width: search.has-focus || self.pointed ? 2 * u : 0.5 * u;
             border-color: search.has-focus || self.pointed ? white : Theme.stroke;
             accessible-role: button;
-            accessible-label: "Search";
+            accessible-label: @tr("Search");
             animate background, border-color { duration: Theme.quick; }
             TouchArea {
                 clicked => {
@@ -977,7 +998,7 @@ export component TvShell inherits Rectangle {
             }
             if search.text == "" : Text {
                 x: 44 * u;
-                text: root.osk ? "Pick letters, then choose search" : search.has-focus ? "Type a name, then press OK" : parent.pointed ? "Press OK for the keyboard" : "Search for apps and games";
+                text: root.osk ? @tr("Pick letters, then choose search") : search.has-focus ? @tr("Type a name, then press OK") : parent.pointed ? @tr("Press OK for the keyboard") : @tr("Search for apps and games");
                 color: Theme.text-dim;
                 font-size: 15 * u;
                 vertical-alignment: center;
@@ -1019,7 +1040,7 @@ export component TvShell inherits Rectangle {
                     wrap: word-wrap;
                 }
                 if Store.system-detail != "" : Text { text: Store.system-detail; color: Theme.text-dim; font-size: 12 * u; wrap: word-wrap; }
-                if Store.system-restart : Text { text: "Restart this TV to finish updating."; color: Theme.warn; font-size: 12 * u; wrap: word-wrap; }
+                if Store.system-restart : Text { text: @tr("Restart this TV to finish updating."); color: Theme.warn; font-size: 12 * u; wrap: word-wrap; }
                 if Store.system-note != "" : Text { text: Store.system-note; color: Theme.text; font-size: 12 * u; wrap: word-wrap; }
                 if Store.system-state == 4 : VerticalLayout {
                     spacing: 5 * u;
@@ -1028,25 +1049,29 @@ export component TvShell inherits Rectangle {
                         border-radius: 3 * u;
                         background: Theme.surface-2;
                         accessible-role: progress-indicator;
-                        accessible-label: "Installing updates";
+                        accessible-label: @tr("Installing updates");
                         accessible-value: round(Store.system-progress * 100) + "%";
+                        clip: true;
+                        // How far is not always known (a whole new image of the system
+                        // says only that it is being fetched): then a band travels across.
+                        property <bool> unknown: Store.system-progress <= 0.01;
+                        property <float> t: mod(animation-tick() / 1.3s, 1.0);
                         Rectangle {
-                            x: 0;
-                            width: parent.width * max(0.02, min(1, Store.system-progress));
+                            x: parent.unknown ? parent.width * (parent.t * 1.4 - 0.4) : 0;
+                            width: parent.unknown ? parent.width * 0.4 : parent.width * max(0.02, min(1, Store.system-progress));
                             border-radius: 3 * u;
                             background: Theme.accent;
-                            animate width { duration: Theme.smooth; easing: ease-out; }
                         }
                     }
                     Text {
-                        text: round(Store.system-progress * 100) + "%" + (Store.system-step != "" ? "  ·  " + Store.system-step : "");
+                        text: (Store.system-progress <= 0.01 ? "" : round(Store.system-progress * 100) + "%" + (Store.system-step != "" ? "  ·  " : "")) + Store.system-step;
                         color: Theme.text-dim;
                         font-size: 11.5 * u;
                         overflow: elide;
                     }
                 }
                 if Store.system-state == 4 : Text {
-                    text: "You may be asked for your password. Keep the TV on until this finishes.";
+                    text: @tr("You may be asked for your password. Keep the TV on until this finishes.");
                     color: Theme.text-dim;
                     font-size: 12 * u;
                     wrap: word-wrap;
@@ -1057,21 +1082,28 @@ export component TvShell inherits Rectangle {
                     padding-top: 6 * u;
                     if root.sys-can-update && !root.sys-working : TvButton {
                         u: root.u;
-                        text: "Update now";
+                        text: @tr("Update now");
                         primary: true;
                         focused: root.zone == 0 && root.sys-row == 0 && root.sys-act == 0;
                         clicked => { Store.system-update(); }
                     }
+                    if root.sys-can-restart && !root.sys-working : TvButton {
+                        u: root.u;
+                        text: @tr("Restart now");
+                        primary: true;
+                        focused: root.zone == 0 && root.sys-row == 0 && root.sys-act == 0;
+                        clicked => { Store.system-restart-now(); }
+                    }
                     if Store.system-supported && !root.sys-working : TvButton {
                         u: root.u;
-                        text: "Check again";
-                        primary: !root.sys-can-update;
-                        focused: root.zone == 0 && root.sys-row == 0 && root.sys-act == (root.sys-can-update ? 1 : 0);
+                        text: @tr("Check again");
+                        primary: !root.sys-lead;
+                        focused: root.zone == 0 && root.sys-row == 0 && root.sys-act == (root.sys-lead ? 1 : 0);
                         clicked => { Store.system-check(); }
                     }
                     TvButton {
                         u: root.u;
-                        text: "Desktop layout";
+                        text: @tr("Desktop layout");
                         primary: false;
                         focused: root.zone == 0 && root.sys-row == 0 && root.sys-act == root.sys-last;
                         clicked => { Store.set-interface(1); }
@@ -1080,7 +1112,7 @@ export component TvShell inherits Rectangle {
                 if Store.system-updates.length > 0 : VerticalLayout {
                     spacing: 3 * u;
                     padding-top: 8 * u;
-                    Text { text: "Waiting to be installed"; color: Theme.text; font-size: 13 * u; font-weight: 700; }
+                    Text { text: @tr("Waiting to be installed"); color: Theme.text; font-size: 13 * u; font-weight: 700; }
                     for update[i] in Store.system-updates : Text {
                         visible: i < 6;
                         height: i < 6 ? self.preferred-height : 0;
@@ -1089,7 +1121,7 @@ export component TvShell inherits Rectangle {
                         font-size: 12 * u;
                         overflow: elide;
                     }
-                    if Store.system-updates.length > 6 : Text { text: "and " + (Store.system-updates.length - 6) + " more"; color: Theme.text-dim; font-size: 12 * u; }
+                    if Store.system-updates.length > 6 : Text { text: @tr("and {} more", Store.system-updates.length - 6); color: Theme.text-dim; font-size: 12 * u; }
                 }
             }
             VerticalLayout {
@@ -1098,7 +1130,7 @@ export component TvShell inherits Rectangle {
                 width: parent.width - 2 * margin - 432 * u;
                 spacing: 7 * u;
                 alignment: start;
-                Text { text: "Information"; color: Theme.text; font-size: 14 * u; font-weight: 700; }
+                Text { text: @tr("Information"); color: Theme.text; font-size: 14 * u; font-weight: 700; }
                 for fact in Store.system-facts : HorizontalLayout {
                     spacing: 12 * u;
                     accessible-role: text;
@@ -1111,12 +1143,12 @@ export component TvShell inherits Rectangle {
 
         // ---- settings: one list, top to bottom, the focused row always in view ----
         if root.on-settings : FadeIn {
-            Text { x: margin; y: 70 * u; text: "Settings"; color: Theme.text; font-size: 36 * u; font-weight: 800; }
+            Text { x: margin; y: 70 * u; text: @tr("Settings"); color: Theme.text; font-size: 36 * u; font-weight: 800; }
             Text {
                 x: margin;
                 y: 124 * u;
                 width: 330 * u;
-                text: "Up and Down move through the list. OK changes the highlighted setting.";
+                text: @tr("Up and Down move through the list. OK changes the highlighted setting.");
                 color: Theme.text-dim;
                 font-size: 13 * u;
                 wrap: word-wrap;
@@ -1135,115 +1167,115 @@ export component TvShell inherits Rectangle {
                     spacing: 7 * u;
                     alignment: start;
                     animate y { duration: Theme.smooth; easing: ease-out; }
-                    Text { text: "General"; color: Theme.text; font-size: 14 * u; font-weight: 700; }
+                    Text { text: @tr("General"); color: Theme.text; font-size: 14 * u; font-weight: 700; }
                     TvSetting {
                         u: root.u;
-                        label: "Ratings and reviews";
+                        label: @tr("Ratings and reviews");
                         on: Store.show-ratings;
                         focused: root.zone == 0 && root.sys-row == 1;
                         clicked => { Store.set-ratings(!Store.show-ratings); }
                     }
                     TvSetting {
                         u: root.u;
-                        label: "Check for updates when Bilby opens";
+                        label: @tr("Check for updates when Bilby opens");
                         on: Store.check-updates-on-start;
                         focused: root.zone == 0 && root.sys-row == 2;
                         clicked => { Store.set-check-on-start(!Store.check-updates-on-start); }
                     }
                     TvSetting {
                         u: root.u;
-                        label: "Offer test versions of apps";
+                        label: @tr("Offer test versions of apps");
                         on: Store.include-prereleases;
                         focused: root.zone == 0 && root.sys-row == 3;
                         clicked => { Store.set-prereleases(!Store.include-prereleases); }
                     }
                     TvSetting {
                         u: root.u;
-                        label: "Use the desktop layout, for a mouse and keyboard";
-                        value: "Switch";
+                        label: @tr("Use the desktop layout, for a mouse and keyboard");
+                        value: @tr("Switch");
                         on: false;
                         focused: root.zone == 0 && root.sys-row == 4;
                         clicked => { Store.set-interface(1); }
                     }
                     TvSetting {
                         u: root.u;
-                        label: "Recommend the apps everyone knows, on Home and in searches";
+                        label: @tr("Recommend the apps everyone knows, on Home and in searches");
                         on: Store.show-essentials;
                         focused: root.zone == 0 && root.sys-row == 5;
                         clicked => { Store.set-essentials(!Store.show-essentials); }
                     }
                     TvSetting {
                         u: root.u;
-                        label: "Sounds: a quiet tick as you move about";
+                        label: @tr("Sounds: a quiet tick as you move about");
                         on: Store.sounds;
                         focused: root.zone == 0 && root.sys-row == 6;
                         clicked => { Store.set-sounds(!Store.sounds); }
                     }
                     TvSetting {
                         u: root.u;
-                        label: "Kind of app to offer first when there is a choice";
-                        value: Store.prefer-kind == 1 ? "Flatpak" : Store.prefer-kind == 2 ? "AppImage" : Store.prefer-kind == 3 ? "System packages" : "Automatic";
+                        label: @tr("Kind of app to offer first when there is a choice");
+                        value: Store.prefer-kind == 1 ? @tr("Flatpak") : Store.prefer-kind == 2 ? @tr("AppImage") : Store.prefer-kind == 3 ? @tr("System packages") : @tr("Automatic");
                         on: false;
                         focused: root.zone == 0 && root.sys-row == 7;
                         clicked => { Store.set-prefer-kind(Store.prefer-kind >= 3 ? 0 : Store.prefer-kind + 1); }
                     }
                     Rectangle { height: 4 * u; }
-                    Text { text: "Family and adult content"; color: Theme.text; font-size: 14 * u; font-weight: 700; }
+                    Text { text: @tr("Family and adult content"); color: Theme.text; font-size: 14 * u; font-weight: 700; }
                     TvSetting {
                         u: root.u;
-                        label: "Family mode: nothing for adults is shown anywhere";
+                        label: @tr("Family mode: nothing for adults is shown anywhere");
                         on: Store.family-mode;
                         focused: root.zone == 0 && root.sys-row == 8;
                         clicked => { Store.set-family-mode(!Store.family-mode); }
                     }
                     TvSetting {
                         u: root.u;
-                        label: Store.family-mode ? "Adult content on Home (off in Family mode)" : "Adult content on Home, covered until chosen";
+                        label: Store.family-mode ? @tr("Adult content on Home (off in Family mode)") : @tr("Adult content on Home, covered until chosen");
                         on: Store.adult-on-home && !Store.family-mode;
                         focused: root.zone == 0 && root.sys-row == 9;
                     }
                     TvSetting {
                         u: root.u;
-                        label: Store.family-mode ? "Adult content uncovered (off in Family mode)" : "Show adult content uncovered, with no question";
+                        label: Store.family-mode ? @tr("Adult content uncovered (off in Family mode)") : @tr("Show adult content uncovered, with no question");
                         on: Store.adult-uncovered && !Store.family-mode;
                         focused: root.zone == 0 && root.sys-row == 10;
                     }
                     TvSetting {
                         u: root.u;
-                        label: Store.has-pin ? "A PIN guards these settings and adult content" : "Set a PIN to guard these settings and adult content";
-                        value: Store.has-pin ? "Change" : "Set a PIN";
+                        label: Store.has-pin ? @tr("A PIN guards these settings and adult content") : @tr("Set a PIN to guard these settings and adult content");
+                        value: Store.has-pin ? @tr("Change") : @tr("Set a PIN");
                         on: Store.has-pin;
                         focused: root.zone == 0 && root.sys-row == 11;
                     }
                     TvSetting {
                         u: root.u;
-                        label: Store.has-pin ? "Ask for the PIN to install or remove apps" : "Ask for the PIN to install or remove apps (set a PIN first)";
+                        label: Store.has-pin ? @tr("Ask for the PIN to install or remove apps") : @tr("Ask for the PIN to install or remove apps (set a PIN first)");
                         on: Store.pin-for-installs;
                         focused: root.zone == 0 && root.sys-row == 12;
                     }
                     TvSetting {
                         u: root.u;
-                        label: Store.has-pin ? "Remove the PIN" : "No PIN is set";
-                        value: Store.has-pin ? "Remove" : "—";
+                        label: Store.has-pin ? @tr("Remove the PIN") : @tr("No PIN is set");
+                        value: Store.has-pin ? @tr("Remove") : "—";
                         on: false;
                         focused: root.zone == 0 && root.sys-row == 13;
                     }
                     Rectangle { height: 4 * u; }
-                    Text { text: "This store"; color: Theme.text; font-size: 14 * u; font-weight: 700; }
+                    Text { text: @tr("This store"); color: Theme.text; font-size: 14 * u; font-weight: 700; }
                     TvSetting {
                         u: root.u;
-                        label: Store.store-update != "" ? "Bilby " + Store.store-update + " is available. You have " + Store.app-version : "Bilby " + Store.app-version;
-                        value: Store.store-update != "" ? "Update" : "Check for updates";
+                        label: Store.store-update != "" ? @tr("Bilby {0} is available. You have {1}", Store.store-update, Store.app-version) : "Bilby " + Store.app-version;
+                        value: Store.store-update != "" ? @tr("Update") : @tr("Check for updates");
                         on: false;
                         focused: root.zone == 0 && root.sys-row == 14;
                         clicked => { Store.check-store-update(); }
                     }
                     Rectangle { height: 4 * u; }
-                    Text { text: "Accounts"; color: Theme.text; font-size: 14 * u; font-weight: 700; }
+                    Text { text: @tr("Accounts"); color: Theme.text; font-size: 14 * u; font-weight: 700; }
                     TvSetting {
                         u: root.u;
-                        label: Store.has-token ? "Signed in to GitHub" : Store.signin-state != 0 ? "Signing in to GitHub…" : "Sign in to GitHub for more searches an hour";
-                        value: Store.has-token ? "Sign out" : Store.signin-state != 0 ? "Cancel" : "Sign in";
+                        label: Store.has-token ? @tr("Signed in to GitHub") : Store.signin-state != 0 ? @tr("Signing in to GitHub…") : @tr("Sign in to GitHub for more searches an hour");
+                        value: Store.has-token ? @tr("Sign out") : Store.signin-state != 0 ? @tr("Cancel") : @tr("Sign in");
                         on: Store.has-token;
                         focused: root.zone == 0 && root.sys-row == 15;
                     }
@@ -1251,38 +1283,49 @@ export component TvShell inherits Rectangle {
                     if Store.signin-state == 2 : VerticalLayout {
                         padding-left: 10 * u;
                         spacing: 4 * u;
-                        Text { text: "On your phone or computer, open github.com/login/device and enter:"; color: Theme.text; font-size: 12 * u; wrap: word-wrap; }
+                        Text { text: @tr("On your phone or computer, open github.com/login/device and enter:"); color: Theme.text; font-size: 12 * u; wrap: word-wrap; }
                         Text {
                             text: Store.signin-code;
                             color: Theme.text;
                             font-size: 30 * u;
                             font-weight: 800;
                             letter-spacing: 3 * u;
-                            accessible-label: "Sign-in code " + Store.signin-code;
+                            accessible-label: @tr("Sign-in code {}", Store.signin-code);
                         }
                     }
                     if root.steam-rows > 0 : TvSetting {
                         u: root.u;
-                        label: Store.steam-signed-in ? "Signed in to Steam  ·  " + Store.steam-summary : Store.steam-state == 3 ? "Scan the code with the Steam app on your phone" : Store.steam-state != 0 ? "Sign in on Steam's page in Longboard, then share your library" : "Sign in to Steam with a QR code, to see what you own";
-                        value: Store.steam-state != 0 ? "Cancel" : Store.steam-signed-in ? "Sign out" : "Show code";
+                        label: Store.steam-signed-in ? @tr("Signed in to Steam  ·  {}", Store.steam-summary) : Store.steam-state == 3 ? @tr("Scan the code with the Steam app on your phone") : Store.steam-state != 0 ? @tr("Sign in on Steam's page in Longboard, then share your library") : @tr("Sign in to Steam with a QR code, to see what you own");
+                        value: Store.steam-state != 0 ? @tr("Cancel") : Store.steam-signed-in ? @tr("Sign out") : @tr("Show code");
                         on: Store.steam-signed-in;
                         focused: root.zone == 0 && root.sys-row == 16;
                     }
                     if root.steam-rows > 1 : TvSetting {
                         u: root.u;
-                        label: "Or sign in to Steam in a browser (Longboard)";
-                        value: "Open";
+                        label: @tr("Or sign in to Steam in a browser (Longboard)");
+                        value: @tr("Open");
                         on: false;
                         focused: root.zone == 0 && root.sys-row == 17;
                     }
                     Rectangle { height: 4 * u; }
-                    Text { text: "Where apps come from"; color: Theme.text; font-size: 14 * u; font-weight: 700; }
+                    Text { text: @tr("Where apps come from"); color: Theme.text; font-size: 14 * u; font-weight: 700; }
                     for source[i] in Store.sources : TvSetting {
                         u: root.u;
                         label: source.label;
                         on: source.on;
                         focused: root.zone == 0 && root.sys-row == root.src-first + i;
                         clicked => { Store.set-source(source.id, !source.on); }
+                    }
+                    Rectangle { height: 4 * u; }
+                    // In English as well, always: findable in a language one cannot read.
+                    Text { text: @tr("Language") == "Language" ? "Language" : @tr("Language") + "  ·  Language"; color: Theme.text; font-size: 14 * u; font-weight: 700; }
+                    TvSetting {
+                        u: root.u;
+                        label: @tr("Press OK for the next language");
+                        value: Store.language-name;
+                        on: false;
+                        focused: root.zone == 0 && root.sys-row == root.lang-row;
+                        clicked => { Store.next-language(); }
                     }
                     Rectangle { height: 8 * u; }
                 }
@@ -1307,7 +1350,7 @@ export component TvShell inherits Rectangle {
                             border-radius: 14 * u;
                             background: white;
                             accessible-role: AccessibleRole.image;
-                            accessible-label: "QR code to scan with the Steam app";
+                            accessible-label: @tr("QR code to scan with the Steam app");
                             Image {
                                 width: 256 * u;
                                 height: 256 * u;
@@ -1320,11 +1363,11 @@ export component TvShell inherits Rectangle {
                         alignment: center;
                         spacing: 10 * u;
                         width: 380 * u;
-                        Text { text: "Sign in to Steam"; color: Theme.text; font-size: 30 * u; font-weight: 800; }
-                        Text { text: "Open the Steam app on your phone, scan this code and approve the sign-in there."; color: Theme.text; font-size: 15 * u; wrap: word-wrap; }
-                        Text { text: Store.steam-qr-scanned ? "Scanned. Approve it in the Steam app." : "Waiting for the Steam app…"; color: Theme.accent; font-size: 15 * u; font-weight: 700; }
-                        Text { text: "Steam gives Bilby a key to your account. Bilby uses it once to read what you own, then throws it away."; color: Theme.text-dim; font-size: 12 * u; wrap: word-wrap; }
-                        Text { text: "Press Back to stop."; color: Theme.text-dim; font-size: 12 * u; }
+                        Text { text: @tr("Sign in to Steam"); color: Theme.text; font-size: 30 * u; font-weight: 800; }
+                        Text { text: @tr("Open the Steam app on your phone, scan this code and approve the sign-in there."); color: Theme.text; font-size: 15 * u; wrap: word-wrap; }
+                        Text { text: Store.steam-qr-scanned ? @tr("Scanned. Approve it in the Steam app.") : @tr("Waiting for the Steam app…"); color: Theme.accent; font-size: 15 * u; font-weight: 700; }
+                        Text { text: @tr("Steam gives Bilby a key to your account. Bilby uses it once to read what you own, then throws it away."); color: Theme.text-dim; font-size: 12 * u; wrap: word-wrap; }
+                        Text { text: @tr("Press Back to stop."); color: Theme.text-dim; font-size: 12 * u; }
                     }
                 }
             }
@@ -1342,7 +1385,7 @@ export component TvShell inherits Rectangle {
                 Text { text: current.name; color: Theme.text; font-size: (root.has-search ? 28 : 36) * u; font-weight: 800; overflow: elide; }
                 Text { text: current.summary; color: Theme.text; font-size: 14 * u; wrap: word-wrap; }
                 Text {
-                    text: current.id == "" ? "" : (current.has-update ? "Update available  ·  " : current.installed ? "Installed  ·  " : "") + (current.rating != "" ? "★ " + current.rating + " (" + current.rating-count + ")  ·  " : current.headline != "" ? current.headline + "  ·  " : "") + current.author;
+                    text: current.id == "" ? "" : (current.has-update ? @tr("Update available") + "  ·  " : current.installed ? @tr("Installed") + "  ·  " : "") + (current.rating != "" ? "★ " + current.rating + " (" + current.rating-count + ")  ·  " : current.headline != "" ? current.headline + "  ·  " : "") + current.author;
                     color: current.has-update || current.installed ? Theme.accent : Theme.text-dim;
                     font-size: 12 * u;
                 }
@@ -1351,7 +1394,7 @@ export component TvShell inherits Rectangle {
                     height: 4 * u;
                 }
                 if rows.length == 0 : Text {
-                    text: Store.searching ? "Searching…" : root.on-library ? "Apps you install with Bilby show up here, and so do your favourites." : "Nothing for this TV yet. Press Up to search.";
+                    text: Store.searching ? @tr("Searching…") : root.on-library ? @tr("Apps you install with Bilby show up here, and so do your favourites.") : @tr("Nothing for this TV yet. Press Up to search.");
                     wrap: word-wrap;
                     color: Theme.text-dim;
                     font-size: 14 * u;
@@ -1365,14 +1408,14 @@ export component TvShell inherits Rectangle {
                 alignment: start;
                 if root.lib-can-update-all : TvButton {
                     u: root.u;
-                    text: "Update all";
+                    text: @tr("Update all");
                     primary: true;
                     focused: root.zone == 2 && root.lib-act == 0;
                     clicked => { Store.update-all(); }
                 }
                 TvButton {
                     u: root.u;
-                    text: Store.checking-updates ? "Checking…" : "Check for updates";
+                    text: Store.checking-updates ? @tr("Checking…") : @tr("Check for updates");
                     primary: !root.lib-can-update-all;
                     focused: root.zone == 2 && root.lib-act == (root.lib-can-update-all ? 1 : 0);
                     clicked => { Store.check-updates(); }
@@ -1483,7 +1526,7 @@ export component TvShell inherits Rectangle {
                         alignment: center;
                         spacing: 2 * u;
                         Text { text: Store.app.name; color: Theme.text; font-size: 28 * u; font-weight: 800; overflow: elide; }
-                        Text { text: Store.app.author + (Store.app.verified ? "  ✓ verified" : ""); color: Theme.text-dim; font-size: 12 * u; overflow: elide; }
+                        Text { text: Store.app.author + (Store.app.verified ? "  ✓ " + @tr("verified") : ""); color: Theme.text-dim; font-size: 12 * u; overflow: elide; }
                     }
                 }
                 Text { text: Store.app.summary; color: Theme.text; font-size: 14 * u; wrap: word-wrap; }
@@ -1491,15 +1534,15 @@ export component TvShell inherits Rectangle {
                     spacing: 24 * u;
                     alignment: start;
                     if Store.app.rating != "" : TvStat { u: root.u; value: "★ " + Store.app.rating; caption: Store.app.rating-count; }
-                    if Store.app.price != "" : TvStat { u: root.u; value: Store.app.price; caption: "on " + Store.app.source; }
+                    if Store.app.price != "" : TvStat { u: root.u; value: Store.app.price; caption: @tr("on {}", Store.app.source); }
                     if Store.app.downloads != "" : TvStat { u: root.u; value: Store.app.downloads; caption: Store.app.downloads-note; }
                     // The row has room for four: with a rating and downloads, the source's own count waits.
-                    if Store.app.popularity != "" && !(Store.app.rating != "" && Store.app.downloads != "") : TvStat { u: root.u; value: Store.app.popularity; caption: "on " + Store.app.source; }
-                    if Store.options.length > 0 && Store.options[0].size != "" : TvStat { u: root.u; value: Store.options[0].size; caption: "download"; }
-                    if Store.release-age != "" : TvStat { u: root.u; value: Store.release-age; caption: "last updated"; }
+                    if Store.app.popularity != "" && !(Store.app.rating != "" && Store.app.downloads != "") : TvStat { u: root.u; value: Store.app.popularity; caption: @tr("on {}", Store.app.source); }
+                    if Store.options.length > 0 && Store.options[0].size != "" : TvStat { u: root.u; value: Store.options[0].size; caption: @tr("download"); }
+                    if Store.release-age != "" : TvStat { u: root.u; value: Store.release-age; caption: @tr("last updated"); }
                 }
                 Text {
-                    text: root.remove-armed ? "Press OK again to remove " + Store.app.name + " from this TV" : Store.details-loading ? "Checking what works on this TV…" : Store.details-error != "" ? Store.details-error + "  Press OK to try again." : Store.unavailable != "" ? Store.unavailable : Store.install-state == 1 ? "Downloading…  " + round(Store.install-progress * 100) + "%" : Store.install-state >= 2 ? Store.install-message : root.is-update ? "Update available: you have " + Store.installed-version : Store.installed-version == "installed" ? "Installed" : Store.installed-version != "" ? "Installed  ·  " + Store.installed-version : Store.is-website ? "Opens in Longboard, driven with your remote" : Store.options.length > 0 ? (Store.options[0].native ? "Made for this TV" : "Works on this TV") + (Store.options[0].verified ? "  ·  the download is checked" : "") : "";
+                    text: root.remove-armed ? @tr("Press OK again to remove {} from this TV", Store.app.name) : Store.details-loading ? @tr("Checking what works on this TV…") : Store.details-error != "" ? @tr("{}  Press OK to try again.", Store.details-error) : Store.unavailable != "" ? Store.unavailable : Store.install-state == 1 ? @tr("Downloading…  {}%", round(Store.install-progress * 100)) : Store.install-state >= 2 ? Store.install-message : root.is-update ? @tr("Update available: you have {}", Store.installed-version) : Store.installed-version == "installed" ? @tr("Installed") : Store.installed-version != "" ? @tr("Installed  ·  {}", Store.installed-version) : Store.is-website ? @tr("Opens in Longboard, driven with your remote") : Store.options.length > 0 ? (Store.options[0].native ? @tr("Runs on this TV") : @tr("Should run on this TV")) + (Store.options[0].verified ? "  ·  " + @tr("Bilby checks the download is the genuine file") : "") : "";
                     color: Store.details-error != "" || Store.install-state == 3 ? Theme.bad : Store.unavailable != "" || root.remove-armed ? Theme.warn : Store.install-state == 1 ? Theme.accent : Theme.ok;
                     font-size: 12 * u;
                     font-weight: 700;
@@ -1513,7 +1556,7 @@ export component TvShell inherits Rectangle {
                     alignment: start;
                     if root.main-action != "" || Store.details-error != "" : TvButton {
                         u: root.u;
-                        text: Store.details-error != "" ? "Try again" : root.main-action;
+                        text: Store.details-error != "" ? @tr("Try again") : root.main-action;
                         progress: root.busy ? Store.install-progress : -1;
                         primary: true;
                         focused: root.act == 0 && !root.files && !root.reading && root.sec == 0;
@@ -1524,7 +1567,7 @@ export component TvShell inherits Rectangle {
                     }
                     TvButton {
                         u: root.u;
-                        text: Store.is-favourite ? "★  In favourites" : "☆  Favourite";
+                        text: Store.is-favourite ? @tr("★  In favourites") : @tr("☆  Favourite");
                         focused: (root.act == 1 || (root.act == 0 && root.main-action == "" && Store.details-error == "")) && !root.files && !root.reading && root.sec == 0;
                         clicked => {
                             root.act = 1;
@@ -1536,7 +1579,7 @@ export component TvShell inherits Rectangle {
                     // and still has the button when there is another way to use it.
                     if root.has-files : TvButton {
                         u: root.u;
-                        text: root.choices == 0 ? "Versions and files" : root.nfiles == 0 && Store.app-family.length > 0 ? "Other ways to use " + Store.app-family-name : "More choices";
+                        text: root.choices == 0 ? @tr("Versions and files") : root.nfiles == 0 && Store.app-family.length > 0 ? @tr("Other ways to use {}", Store.app-family-name) : @tr("More choices");
                         focused: root.act == 2 && !root.files && !root.reading && root.sec == 0;
                         clicked => {
                             root.act = 2;
@@ -1556,7 +1599,7 @@ export component TvShell inherits Rectangle {
                     }
                     if Store.in-library : TvButton {
                         u: root.u;
-                        text: root.remove-armed ? "Confirm" : "Remove";
+                        text: root.remove-armed ? @tr("Confirm") : @tr("Remove");
                         focused: root.act == root.remove-idx && !root.files && !root.reading && root.sec == 0;
                         clicked => {
                             root.act = root.remove-idx;
@@ -1574,7 +1617,7 @@ export component TvShell inherits Rectangle {
             // ---- pictures: a row of small ones; OK shows the highlighted one large ----
             if root.has-pics && !root.files : VerticalLayout {
                 spacing: 8 * u;
-                Text { text: "Pictures"; color: root.sec == 1 ? Theme.text : Theme.text-dim; font-size: 13 * u; font-weight: 700; }
+                Text { text: @tr("Pictures"); color: root.sec == 1 ? Theme.text : Theme.text-dim; font-size: 13 * u; font-weight: 700; }
                 Rectangle {
                     height: 118 * u;
                     clip: true;
@@ -1592,7 +1635,7 @@ export component TvShell inherits Rectangle {
                             clip: true;
                             background: Theme.surface;
                             accessible-role: button;
-                            accessible-label: "Picture " + (i + 1) + " of " + Store.screenshots.length;
+                            accessible-label: @tr("Picture {0} of {1}", i + 1, Store.screenshots.length);
                             accessible-action-default => {
                                 root.sec = 1;
                                 root.pic = i;
@@ -1621,7 +1664,7 @@ export component TvShell inherits Rectangle {
                 border-width: self.focused ? 2 * u : 0.5 * u;
                 border-color: self.focused ? white : Theme.stroke;
                 accessible-role: button;
-                accessible-label: "Description";
+                accessible-label: @tr("Description");
                 accessible-action-default => {
                     root.sec = 2;
                     root.about-scroll = 0;
@@ -1636,11 +1679,11 @@ export component TvShell inherits Rectangle {
                         root.about-open = true;
                     }
                 }
-                Text { x: 14 * u; y: 10 * u; text: "About"; color: Theme.text; font-size: 13 * u; font-weight: 700; }
+                Text { x: 14 * u; y: 10 * u; text: @tr("About"); color: Theme.text; font-size: 13 * u; font-weight: 700; }
                 Text {
                     x: parent.width - self.width - 14 * u;
                     y: 10 * u;
-                    text: Store.about-links.length > 0 ? (Store.about-links.length == 1 ? "1 link" : Store.about-links.length + " links") + "   ›" : "›";
+                    text: Store.about-links.length > 0 ? @tr("{n} link" | "{n} links" % Store.about-links.length) + "   ›" : "›";
                     color: parent.focused ? Theme.accent : Theme.text-dim;
                     font-size: 12 * u;
                     font-weight: 600;
@@ -1666,7 +1709,7 @@ export component TvShell inherits Rectangle {
             // ---- reviews: a row of them; OK reads the highlighted one in full ----
             if root.has-reviews && !root.files : VerticalLayout {
                 spacing: 8 * u;
-                Text { text: "Reviews" + (Store.app.rating != "" ? "   ★ " + Store.app.rating + "   " + Store.app.rating-count : ""); color: root.sec == 3 ? Theme.text : Theme.text-dim; font-size: 13 * u; font-weight: 700; }
+                Text { text: @tr("Reviews") + (Store.app.rating != "" ? "   ★ " + Store.app.rating + "   " + Store.app.rating-count : ""); color: root.sec == 3 ? Theme.text : Theme.text-dim; font-size: 13 * u; font-weight: 700; }
                 Rectangle {
                     height: 138 * u;
                     clip: true;
@@ -1686,7 +1729,7 @@ export component TvShell inherits Rectangle {
                             border-color: self.focused ? white : Theme.stroke;
                             clip: true;
                             accessible-role: button;
-                            accessible-label: "Review: " + review.title;
+                            accessible-label: @tr("Review: {}", review.title);
                             accessible-action-default => {
                                 root.sec = 3;
                                 root.rev = i;
@@ -1720,18 +1763,18 @@ export component TvShell inherits Rectangle {
             // ---- the details ----
             if !root.files : VerticalLayout {
                 spacing: 6 * u;
-                Text { text: "Information"; color: root.sec == 4 ? Theme.text : Theme.text-dim; font-size: 13 * u; font-weight: 700; }
-                if Store.app.source != "" : TvFact { u: root.u; name: "From"; value: Store.app.source; }
-                if Store.app.author != "" && Store.app.author != Store.app.source : TvFact { u: root.u; name: "Made by"; value: Store.app.author + (Store.app.verified ? " (confirmed by " + Store.app.source + ")" : ""); }
-                if Store.app.price != "" : TvFact { u: root.u; name: "Price"; value: Store.app.price + " on " + Store.app.source; }
-                if Store.app.downloads != "" : TvFact { u: root.u; name: "Downloads"; value: Store.app.downloads + " " + Store.app.downloads-note; }
-                if Store.app.popularity != "" : TvFact { u: root.u; name: "Popularity"; value: Store.app.popularity + " on " + Store.app.source; }
-                if Store.app.version != "" : TvFact { u: root.u; name: "Version"; value: Store.app.version; }
-                if Store.release-date != "" : TvFact { u: root.u; name: "Released"; value: Store.release-date; }
-                if Store.license != "" : TvFact { u: root.u; name: "Licence"; value: Store.license; }
-                if Store.options.length > 0 : TvFact { u: root.u; name: "Works on"; value: Store.platform-title; }
-                if Store.options.length > 0 : TvFact { u: root.u; name: "Kind of file"; value: Store.options[0].label; }
-                if Store.options.length > 0 && Store.options[0].size != "" : TvFact { u: root.u; name: "Download size"; value: Store.options[0].size; }
+                Text { text: @tr("Information"); color: root.sec == 4 ? Theme.text : Theme.text-dim; font-size: 13 * u; font-weight: 700; }
+                if Store.app.source != "" : TvFact { u: root.u; name: @tr("From"); value: Store.app.source; }
+                if Store.app.author != "" && Store.app.author != Store.app.source : TvFact { u: root.u; name: @tr("Made by"); value: Store.app.author + (Store.app.verified ? " " + @tr("(confirmed by {})", Store.app.source) : ""); }
+                if Store.app.price != "" : TvFact { u: root.u; name: @tr("Price"); value: @tr("{0} on {1}", Store.app.price, Store.app.source); }
+                if Store.app.downloads != "" : TvFact { u: root.u; name: @tr("Downloads"); value: Store.app.downloads + " " + Store.app.downloads-note; }
+                if Store.app.popularity != "" : TvFact { u: root.u; name: @tr("Popularity"); value: @tr("{0} on {1}", Store.app.popularity, Store.app.source); }
+                if Store.app.version != "" : TvFact { u: root.u; name: @tr("Version"); value: Store.app.version; }
+                if Store.release-date != "" : TvFact { u: root.u; name: @tr("Released"); value: Store.release-date; }
+                if Store.license != "" : TvFact { u: root.u; name: @tr("Licence"); value: Store.license; }
+                if Store.options.length > 0 : TvFact { u: root.u; name: @tr("Works on"); value: Store.platform-title; }
+                if Store.options.length > 0 : TvFact { u: root.u; name: @tr("Kind of file"); value: Store.options[0].label; }
+                if Store.options.length > 0 && Store.options[0].size != "" : TvFact { u: root.u; name: @tr("Download size"); value: Store.options[0].size; }
                 Rectangle { height: 20 * u; }
             }
            }
@@ -1753,7 +1796,7 @@ export component TvShell inherits Rectangle {
                 spacing: 6 * u;
                 alignment: start;
                 Text { text: Store.app.name; color: Theme.text; font-size: 28 * u; font-weight: 800; wrap: word-wrap; }
-                Text { text: "What people wrote" + (Store.app.rating != "" ? "   ★ " + Store.app.rating : ""); color: Theme.text-dim; font-size: 13 * u; }
+                Text { text: @tr("What people wrote") + (Store.app.rating != "" ? "   ★ " + Store.app.rating : ""); color: Theme.text-dim; font-size: 13 * u; }
             }
             if root.viewer && root.pic < Store.screenshots.length : Rectangle {
                 x: 0;
@@ -1761,7 +1804,7 @@ export component TvShell inherits Rectangle {
                 width: parent.width;
                 height: parent.height;
                 accessible-role: AccessibleRole.image;
-                accessible-label: "Picture " + (root.pic + 1) + " of " + Store.screenshots.length + ", large";
+                accessible-label: @tr("Picture {0} of {1}, large", root.pic + 1, Store.screenshots.length);
                 TouchArea { clicked => { root.viewer = false; } }
                 Image {
                     x: margin;
@@ -1774,7 +1817,7 @@ export component TvShell inherits Rectangle {
                 Text {
                     y: parent.height - 36 * u;
                     width: parent.width;
-                    text: (root.pic > 0 ? "‹      " : "") + (root.pic + 1) + " of " + Store.screenshots.length + (root.pic < Store.screenshots.length - 1 ? "      ›" : "");
+                    text: (root.pic > 0 ? "‹      " : "") + @tr("{0} of {1}", root.pic + 1, Store.screenshots.length) + (root.pic < Store.screenshots.length - 1 ? "      ›" : "");
                     color: Theme.text;
                     font-size: 14 * u;
                     font-weight: 700;
@@ -1800,7 +1843,7 @@ export component TvShell inherits Rectangle {
                         background: root.link == 0 ? Theme.surface-2 : transparent;
                         border-width: root.link == 0 ? 2 * u : 0.5 * u;
                         border-color: root.link == 0 ? white : Theme.stroke;
-                        reading-label := Text { text: "Reading"; color: Theme.text; font-size: 12 * u; font-weight: 600; }
+                        reading-label := Text { text: @tr("Reading"); color: Theme.text; font-size: 12 * u; font-weight: 600; }
                     }
                     for address[i] in Store.about-links : Rectangle {
                         property <bool> focused: root.link == i + 1;
@@ -1810,7 +1853,7 @@ export component TvShell inherits Rectangle {
                         border-width: self.focused ? 2 * u : 0.5 * u;
                         border-color: self.focused ? white : Theme.stroke;
                         accessible-role: button;
-                        accessible-label: "Open link " + address;
+                        accessible-label: @tr("Open link {}", address);
                         accessible-action-default => { Store.open-url(address); }
                         TouchArea { clicked => { Store.open-url(address); } }
                         link-label := Text { width: parent.width - 24 * u; text: "↗  " + address; color: Theme.accent; font-size: 12 * u; font-weight: 600; overflow: elide; }
@@ -1834,7 +1877,7 @@ export component TvShell inherits Rectangle {
                         alignment: start;
                         animate y { duration: Theme.smooth; easing: ease-out; }
                         if Store.about != "" : Text { text: Store.about; color: Theme.text; font-size: 15 * u; wrap: word-wrap; }
-                        if Store.notes != "" : Text { text: Store.is-website ? "About this website" : Store.is-package ? "About this package" : "What's new in " + Store.app.version; color: Theme.text; font-size: 15 * u; font-weight: 700; }
+                        if Store.notes != "" : Text { text: Store.is-website ? @tr("About this website") : Store.is-package ? @tr("About this package") : @tr("What's new in {}", Store.app.version); color: Theme.text; font-size: 15 * u; font-weight: 700; }
                         if Store.notes != "" : Text { text: Store.notes; color: Theme.text-dim; font-size: 14 * u; wrap: word-wrap; }
                     }
                     if root.about-max > 0 : Rectangle {
@@ -1856,7 +1899,7 @@ export component TvShell inherits Rectangle {
                 spacing: 8 * u;
                 alignment: start;
                 Text {
-                    text: (root.rev > 0 ? "‹   " : "") + "Review " + (root.rev + 1) + " of " + Store.reviews.length + (root.rev < Store.reviews.length - 1 ? "   ›" : "") + (Store.app.rating != "" ? "      ★ " + Store.app.rating + " from " + Store.app.rating-count : "");
+                    text: (root.rev > 0 ? "‹   " : "") + @tr("Review {0} of {1}", root.rev + 1, Store.reviews.length) + (root.rev < Store.reviews.length - 1 ? "   ›" : "") + (Store.app.rating != "" ? "      ★ " + @tr("{0} from {1}", Store.app.rating, Store.app.rating-count) : "");
                     color: Theme.text;
                     font-size: 13 * u;
                     font-weight: 700;
@@ -1869,7 +1912,7 @@ export component TvShell inherits Rectangle {
                     border-color: white;
                     height: review-box.preferred-height;
                     accessible-role: text;
-                    accessible-label: "Review " + (root.rev + 1) + ": " + Store.reviews[root.rev].title;
+                    accessible-label: @tr("Review {0}: {1}", root.rev + 1, Store.reviews[root.rev].title);
                     review-box := VerticalLayout {
                         width: parent.width;
                         padding: 14 * u;
@@ -1894,7 +1937,7 @@ export component TvShell inherits Rectangle {
                     }
                 }
                 Text {
-                    text: "Reviews are written by other people and come from the ratings service the GNOME and KDE app stores use.";
+                    text: @tr("Reviews are written by other people and come from the ratings service the GNOME and KDE app stores use.");
                     color: Theme.text-dim;
                     font-size: 11 * u;
                     wrap: word-wrap;
@@ -1909,7 +1952,7 @@ export component TvShell inherits Rectangle {
                 alignment: start;
                 // Each group below says what it is; with nothing but files, this does.
                 if root.ver-open || root.choices == 0 : Text {
-                    text: root.ver-open ? "Choose a version" : "Versions and files";
+                    text: root.ver-open ? @tr("Choose a version") : @tr("Versions and files");
                     color: Theme.text;
                     font-size: 13 * u;
                     font-weight: 700;
@@ -1931,7 +1974,7 @@ export component TvShell inherits Rectangle {
                             border-width: focused ? 2 * u : 0.5 * u;
                             border-color: focused ? white : Theme.stroke;
                             accessible-role: button;
-                            accessible-label: "Version " + version;
+                            accessible-label: @tr("Version {}", version);
                             accessible-action-default => {
                                 root.ver-open = false;
                                 Store.select-version(v);
@@ -1942,7 +1985,7 @@ export component TvShell inherits Rectangle {
                                     Store.select-version(v);
                                 }
                             }
-                            Text { x: 14 * u; text: version + (v == 0 ? "   ·   newest" : ""); color: Theme.text; font-size: 13 * u; font-weight: 600; vertical-alignment: center; }
+                            Text { x: 14 * u; text: version + (v == 0 ? "   ·   " + @tr("newest") : ""); color: Theme.text; font-size: 13 * u; font-weight: 600; vertical-alignment: center; }
                             Text { x: parent.width - 30 * u; text: v == Store.selected-version ? "✓" : ""; color: Theme.accent; font-size: 14 * u; font-weight: 700; vertical-alignment: center; }
                         }
                     }
@@ -1993,7 +2036,7 @@ export component TvShell inherits Rectangle {
                 }
                 if root.choices > 0 && root.nfiles > 0 && !root.ver-open : Text {
                     height: 20 * u;
-                    text: "Versions and files";
+                    text: @tr("Versions and files");
                     color: Theme.text;
                     font-size: 13 * u;
                     font-weight: 700;
@@ -2009,7 +2052,7 @@ export component TvShell inherits Rectangle {
                     border-width: focused ? 2 * u : 0.5 * u;
                     border-color: focused ? white : Theme.stroke;
                     accessible-role: button;
-                    accessible-label: "Change version";
+                    accessible-label: @tr("Change version");
                     accessible-action-default => {
                         root.opt = root.choices;
                         root.ver-pick = Store.selected-version;
@@ -2022,8 +2065,8 @@ export component TvShell inherits Rectangle {
                             root.ver-open = true;
                         }
                     }
-                    Text { x: 14 * u; text: "Version " + Store.versions[Store.selected-version] + (Store.selected-version == 0 ? "   ·   newest" : "   ·   an older one"); color: Theme.text; font-size: 13 * u; font-weight: 600; vertical-alignment: center; }
-                    Text { x: parent.width - self.preferred-width - 14 * u; text: "Change  ▾"; color: Theme.accent; font-size: 12 * u; font-weight: 700; vertical-alignment: center; }
+                    Text { x: 14 * u; text: @tr("Version {}", Store.versions[Store.selected-version]) + "   ·   " + (Store.selected-version == 0 ? @tr("newest") : @tr("an older one")); color: Theme.text; font-size: 13 * u; font-weight: 600; vertical-alignment: center; }
+                    Text { x: parent.width - self.preferred-width - 14 * u; text: @tr("Change") + "  ▾"; color: Theme.accent; font-size: 12 * u; font-weight: 700; vertical-alignment: center; }
                 }
                 for option[j] in Store.options : Rectangle {
                     property <int> i: j + root.pre;
@@ -2054,9 +2097,9 @@ export component TvShell inherits Rectangle {
                                 alignment: center;
                                 spacing: 2 * u;
                                 horizontal-stretch: 1;
-                                Text { text: option.label + (j == 0 ? "  ·  best for this TV" : ""); color: Theme.text; font-size: 13 * u; font-weight: 700; overflow: elide; }
+                                Text { text: option.label + (j == 0 ? "  ·  " + @tr("best for this TV") : ""); color: Theme.text; font-size: 13 * u; font-weight: 700; overflow: elide; }
                                 Text {
-                                    text: mine ? (Store.install-state == 1 ? "Downloading…  " + round(Store.install-progress * 100) + "%" : Store.install-message) : option.note != "" ? option.note : option.size != "" ? option.file + "  ·  " + option.size : option.file;
+                                    text: mine ? (Store.install-state == 1 ? @tr("Downloading…  {}%", round(Store.install-progress * 100)) : Store.install-message) : option.note != "" ? option.note : option.size != "" ? option.file + "  ·  " + option.size : option.file;
                                     color: mine && Store.install-state == 3 ? Theme.bad : mine && Store.install-state == 2 ? Theme.ok : option.note != "" && !mine ? Theme.warn : Theme.text-dim;
                                     font-size: 11.5 * u;
                                     overflow: elide;
@@ -2071,7 +2114,7 @@ export component TvShell inherits Rectangle {
                                     border-radius: 16 * u;
                                     background: Theme.accent;
                                     accessible-role: button;
-                                    accessible-label: mine && Store.install-state == 1 ? "Cancel" : option.verb;
+                                    accessible-label: mine && Store.install-state == 1 ? @tr("Cancel") : option.verb;
                                     Image {
                                         width: 17 * u;
                                         height: 17 * u;
@@ -2084,7 +2127,7 @@ export component TvShell inherits Rectangle {
                     }
                 }
                 if Store.hidden.length > 0 && !root.ver-open : Text {
-                    text: Store.hidden.length + (Store.hidden.length == 1 ? " file for other devices is" : " files for other devices are") + " not listed.";
+                    text: @tr("{n} file for other devices is not listed." | "{n} files for other devices are not listed." % Store.hidden.length);
                     color: Theme.text-dim;
                     font-size: 12 * u;
                 }
@@ -2092,7 +2135,61 @@ export component TvShell inherits Rectangle {
         }
     }
     // ---- the on-screen keyboard, as in Longboard: ten keys to a row, at the bottom ----
-    if root.osk : Rectangle {
+    // The system's password, asked for here because nobody can type in the system's
+    // own prompt with a remote. Only how many characters there are is shown.
+    if Store.password-ask : Rectangle {
+        x: 0;
+        y: 0;
+        width: parent.width;
+        height: parent.height;
+        background: #05070bf0;
+        accessible-role: AccessibleRole.groupbox;
+        accessible-label: @tr("Your password is needed");
+        TouchArea { }
+        VerticalLayout {
+            x: (parent.width - self.width) / 2;
+            y: 40 * u;
+            width: 460 * u;
+            height: 200 * u;
+            alignment: start;
+            spacing: 8 * u;
+            Text { text: @tr("Your password is needed"); color: Theme.text; font-size: 24 * u; font-weight: 800; horizontal-alignment: center; }
+            Text {
+                text: @tr("Changing the system needs the password you sign in to this device with. Bilby passes it to the system and does not keep it.");
+                color: Theme.text-dim;
+                font-size: 12.5 * u;
+                wrap: word-wrap;
+                horizontal-alignment: center;
+            }
+            Rectangle {
+                height: 40 * u;
+                border-radius: 10 * u;
+                background: Theme.surface-2;
+                border-width: 2 * u;
+                border-color: white;
+                accessible-role: text;
+                accessible-label: @tr("{n} character typed" | "{n} characters typed" % Store.password-length);
+                HorizontalLayout {
+                    alignment: center;
+                    spacing: 6 * u;
+                    for dot in min(Store.password-length, 28) : Rectangle {
+                        y: (parent.height - self.height) / 2;
+                        width: 8 * u;
+                        height: 8 * u;
+                        border-radius: 4 * u;
+                        background: Theme.text;
+                    }
+                }
+            }
+            Text {
+                text: Store.password-wrong ? @tr("That was not the password. Try again.") : @tr("Choose enter when it is typed. Back cancels.");
+                color: Store.password-wrong ? Theme.bad : Theme.text-dim;
+                font-size: 12 * u;
+                horizontal-alignment: center;
+            }
+        }
+    }
+    if root.osk || Store.password-ask : Rectangle {
         property <length> key: 40 * u;
         property <length> gap: 5 * u;
         property <length> pad: 12 * u;
@@ -2108,7 +2205,7 @@ export component TvShell inherits Rectangle {
         drop-shadow-offset-y: 5 * u;
         drop-shadow-color: #000000b0;
         accessible-role: AccessibleRole.groupbox;
-        accessible-label: "On-screen keyboard";
+        accessible-label: @tr("On-screen keyboard");
         TouchArea { }
         for k[i] in Store.osk-keys : Rectangle {
             property <bool> on: i == Store.osk-at;
@@ -2121,7 +2218,7 @@ export component TvShell inherits Rectangle {
             border-width: self.on ? 2.4 * u : 0;
             border-color: #ffffff4d;
             accessible-role: button;
-            accessible-label: k.label == " " ? "space" : k.label;
+            accessible-label: k.label == " " ? @tr("space") : k.label;
             Text {
                 text: k.label;
                 color: parent.on ? #0b0e13 : k.go ? Theme.on-accent : k.wide ? #b7bfcb : #f1f3f6;
@@ -2133,7 +2230,7 @@ export component TvShell inherits Rectangle {
             TouchArea {
                 clicked => {
                     if (Store.osk-tap(i)) {
-                        root.run-search();
+                        root.osk-done();
                     }
                 }
             }
@@ -2189,7 +2286,7 @@ export component TvShell inherits Rectangle {
                     border-width: focused ? 2 * u : 0.5 * u;
                     border-color: focused ? white : Theme.stroke;
                     accessible-role: button;
-                    accessible-label: d == 10 ? "Clear the PIN" : "Digit " + d;
+                    accessible-label: d == 10 ? @tr("Clear the PIN") : @tr("Digit {}", d);
                     TouchArea {
                         clicked => {
                             root.gate-digit = d;
@@ -2201,10 +2298,10 @@ export component TvShell inherits Rectangle {
                             }
                         }
                     }
-                    Text { text: d == 10 ? "Clear" : d; color: Theme.text; font-size: (d == 10 ? 13 : 18) * u; font-weight: 700; }
+                    Text { text: d == 10 ? @tr("Clear") : d; color: Theme.text; font-size: (d == 10 ? 13 : 18) * u; font-weight: 700; }
                 }
             }
-            Text { text: "Back cancels."; color: Theme.text-dim; font-size: 12 * u; horizontal-alignment: center; }
+            Text { text: @tr("Back cancels."); color: Theme.text-dim; font-size: 12 * u; horizontal-alignment: center; }
         }
     }
     if Store.toast != "" : Rectangle {

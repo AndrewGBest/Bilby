@@ -28,6 +28,8 @@ pub struct Flathub {
     api: String,
     /// Where Flatpak keeps installed apps (`.../app/<id>`), to mark what is installed.
     roots: Vec<PathBuf>,
+    /// The language names and descriptions are asked for in, as Flathub names it.
+    locale: String,
 }
 
 impl Flathub {
@@ -36,7 +38,20 @@ impl Flathub {
     }
 
     pub fn with_api(http: Arc<dyn Http>, api: &str, roots: Vec<PathBuf>) -> Flathub {
-        Flathub { http, api: api.trim_end_matches('/').to_string(), roots }
+        Flathub { http, api: api.trim_end_matches('/').to_string(), roots, locale: "en".to_string() }
+    }
+
+    /// Ask for names and descriptions in this language (a code such as `fr`), where
+    /// an app's makers have published them in it; English otherwise.
+    pub fn in_language(mut self, code: &str) -> Flathub {
+        self.locale = match code {
+            "" => "en",
+            "pt" => "pt-BR",
+            "zh" => "zh-Hans-CN",
+            other => other,
+        }
+        .to_string();
+        self
     }
 
     fn installed(&self, id: &str) -> bool {
@@ -218,7 +233,10 @@ impl Flathub {
         if !valid_key(SourceKind::Flathub, key) {
             return Err(Error::NotFound(format!("\"{key}\" is not a Flathub app id")));
         }
-        Ok(serde_json::from_str(&self.http.get(&format!("{}/appstream/{key}", self.api))?)?)
+        Ok(serde_json::from_str(&self.http.get(&match self.locale.as_str() {
+            "en" => format!("{}/appstream/{key}", self.api),
+            locale => format!("{}/appstream/{key}?locale={locale}", self.api),
+        })?)?)
     }
 
     /// Up to four screenshot addresses for an app, each the size nearest to what a page shows.
@@ -275,7 +293,7 @@ impl Source for Flathub {
     fn search(&self, query: &str, limit: usize) -> Result<Vec<AppSummary>> {
         let body = serde_json::json!({ "query": query, "hits_per_page": limit.clamp(1, 50), "page": 1 }).to_string();
         let resp: SearchResponse =
-            serde_json::from_str(&self.http.post_json(&format!("{}/search?locale=en", self.api), &body)?)?;
+            serde_json::from_str(&self.http.post_json(&format!("{}/search?locale={}", self.api, self.locale), &body)?)?;
         Ok(self.summaries_of(resp.hits))
     }
 
@@ -287,7 +305,8 @@ impl Source for Flathub {
             ("New and updated on Flathub", "recently-updated"),
         ];
         let fetch = |path: &str| -> Result<Vec<AppSummary>> {
-            let url = format!("{}/collection/{path}?page=1&per_page={}&locale=en", self.api, limit.clamp(1, 50));
+            let url =
+                format!("{}/collection/{path}?page=1&per_page={}&locale={}", self.api, limit.clamp(1, 50), self.locale);
             let resp: SearchResponse = serde_json::from_str(&self.http.get(&url)?)?;
             Ok(self.summaries_of(resp.hits))
         };
@@ -310,7 +329,7 @@ impl Source for Flathub {
             let per_list = (limit * 2 / paths.len()).clamp(1, 50);
             let mut lists = Vec::new();
             for path in paths {
-                let url = format!("{}/collection/{path}page=1&per_page={per_list}&locale=en", self.api);
+                let url = format!("{}/collection/{path}page=1&per_page={per_list}&locale={}", self.api, self.locale);
                 let resp: SearchResponse = serde_json::from_str(&self.http.get(&url)?)?;
                 lists.push(self.summaries_of(resp.hits).into_iter());
             }

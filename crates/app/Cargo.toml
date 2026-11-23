@@ -17,6 +17,9 @@ path = "src/main.rs"
 bilby-core = { path = "../core" }
 slint = { version = "1.19", default-features = false, features = ["std", "compat-1-2", "backend-winit", "renderer-software", "renderer-femtovg"] }
 png = "0.17"
+# Translations are kept as JSON; the system says which language it is set to.
+serde_json = "1"
+sys-locale = "0.3"
 # App pictures are PNGs or JPEGs. Slint's own "image-default-formats" would pull in every
 # format the image crate knows (AVIF, EXR, WebP, ...); two decoders are enough.
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }

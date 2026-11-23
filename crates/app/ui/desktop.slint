@@ -117,7 +117,7 @@ component Spotlight inherits Rectangle {
             alignment: center;
             spacing: 5px;
             horizontal-stretch: 1;
-            Text { text: "Featured"; color: white.with-alpha(0.75); font-size: 12px; font-weight: 700; }
+            Text { text: @tr("Featured"); color: white.with-alpha(0.75); font-size: 12px; font-weight: 700; }
             Text { text: app.name; color: white; font-size: 28px; font-weight: 800; overflow: elide; }
             Text { text: app.summary; color: white.with-alpha(0.9); font-size: 14px; overflow: elide; }
         }
@@ -131,7 +131,7 @@ component Spotlight inherits Rectangle {
                 border-width: view-fs.has-focus ? 2px : 0px;
                 border-color: black;
                 accessible-role: button;
-                accessible-label: "View " + app.name;
+                accessible-label: @tr("View {}", app.name);
                 accessible-action-default => { Store.open(app.id); }
                 view-fs := FocusScope {
                     focus-on-click: false;
@@ -147,7 +147,7 @@ component Spotlight inherits Rectangle {
                         clicked => { Store.open(app.id); }
                     }
                 }
-                Text { text: "View"; color: #111318; font-size: 14px; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
+                Text { text: @tr("View"); color: #111318; font-size: 14px; font-weight: 700; horizontal-alignment: center; vertical-alignment: center; }
             }
         }
     }
@@ -238,13 +238,13 @@ export component DesktopShell inherits Rectangle {
                         Text { text: "Bilby"; color: Theme.text; font-size: 16px; font-weight: 700; vertical-alignment: center; }
                     }
                     NavItem {
-                        label: "Discover";
+                        label: @tr("Discover");
                         icon: @image-url("icons/discover.svg");
                         active: Store.page == 0 && !Store.details-open;
                         clicked => { root.go(0); }
                     }
                     NavItem {
-                        label: "Search";
+                        label: @tr("Search");
                         icon: @image-url("icons/search.svg");
                         active: Store.page == 1 && !Store.details-open;
                         clicked => {
@@ -253,14 +253,14 @@ export component DesktopShell inherits Rectangle {
                         }
                     }
                     NavItem {
-                        label: "Library";
+                        label: @tr("Library");
                         icon: @image-url("icons/library.svg");
                         badge: Store.updates-count + (Store.system-state == 3 ? 1 : 0);
                         active: (Store.page == 2 || (Store.page == 4 && Store.system-from == 2)) && !Store.details-open;
                         clicked => { root.go(2); }
                     }
                     NavItem {
-                        label: "Settings";
+                        label: @tr("Settings");
                         icon: @image-url("icons/settings.svg");
                         active: (Store.page == 3 || (Store.page == 4 && Store.system-from == 3)) && !Store.details-open;
                         clicked => { root.go(3); }
@@ -270,7 +270,7 @@ export component DesktopShell inherits Rectangle {
                         height: 30px;
                         border-radius: 8px;
                         background: Theme.warn.with-alpha(0.14);
-                        Text { text: "Demo catalog"; color: Theme.warn; font-size: 12px; font-weight: 600; horizontal-alignment: center; vertical-alignment: center; }
+                        Text { text: @tr("Demo catalog"); color: Theme.warn; font-size: 12px; font-weight: 600; horizontal-alignment: center; vertical-alignment: center; }
                     }
                     Rectangle {
                         height: 58px;
@@ -279,7 +279,7 @@ export component DesktopShell inherits Rectangle {
                         border-width: 1px;
                         border-color: Theme.stroke;
                         accessible-role: button;
-                        accessible-label: Store.device-name + ". Everything shown works here.";
+                        accessible-label: @tr("{}. Everything shown works here.", Store.device-name);
                         accessible-action-default => { root.go(3); }
                         dev-ta := TouchArea {
                             mouse-cursor: pointer;
@@ -291,7 +291,7 @@ export component DesktopShell inherits Rectangle {
                             alignment: center;
                             spacing: 3px;
                             Text { text: Store.device-name; color: Theme.text; font-size: 13px; font-weight: 600; overflow: elide; }
-                            Text { text: "Everything shown works here"; color: Theme.text-dim; font-size: 11px; overflow: elide; }
+                            Text { text: @tr("Everything shown works here"); color: Theme.text-dim; font-size: 11px; overflow: elide; }
                         }
                     }
                 }
@@ -315,7 +315,7 @@ export component DesktopShell inherits Rectangle {
                         border-width: 1px;
                         border-color: Theme.stroke;
                         accessible-role: button;
-                        accessible-label: "Back";
+                        accessible-label: @tr("Back");
                         accessible-action-default => { root.back(); }
                         back-ta := TouchArea {
                             mouse-cursor: pointer;
@@ -327,7 +327,7 @@ export component DesktopShell inherits Rectangle {
                         horizontal-stretch: 1;
                         max-width: 560px;
                         text <=> Store.query;
-                        placeholder: "Search, or paste a project link   (Ctrl+K)";
+                        placeholder: @tr("Search, or paste a project link   (Ctrl+K)");
                         accepted(text) => { Store.search(text); }
                         edited(text) => { Store.typing(text); }
                     }
@@ -360,7 +360,7 @@ export component DesktopShell inherits Rectangle {
                                     HorizontalLayout {
                                         spacing: 8px;
                                         alignment: start;
-                                        ChoiceChip { text: "All"; selected: Store.category == ""; clicked => { Store.category = ""; } }
+                                        ChoiceChip { text: @tr("All"); selected: Store.category == ""; clicked => { Store.category = ""; } }
                                         for name in Store.categories : ChoiceChip {
                                             text: name;
                                             selected: Store.category == name;
@@ -386,9 +386,9 @@ export component DesktopShell inherits Rectangle {
                                             // how many tiles fit, which the layout must not depend on.)
                                             ChoiceChip {
                                                 visible: Store.category == "" && section.apps.length > grid.shown;
-                                                text: "Show all " + section.apps.length;
+                                                text: @tr("Show all {}", section.apps.length);
                                                 selected: false;
-                                                accessible-label: "Show all " + section.apps.length + " in " + section.title;
+                                                accessible-label: @tr("Show all {0} in {1}", section.apps.length, section.title);
                                                 clicked => { Store.category = section.title; }
                                             }
                                         }
@@ -397,9 +397,9 @@ export component DesktopShell inherits Rectangle {
                                     }
                                 }
                                 if Store.sections.length == 0 : EmptyState {
-                                    title: "Nothing featured for this device yet";
-                                    body: "Search for an app by name, or paste a project link.";
-                                    action: "Search";
+                                    title: @tr("Nothing featured for this device yet");
+                                    body: @tr("Search for an app by name, or paste a project link.");
+                                    action: @tr("Search");
                                     acted => {
                                         Store.page = 1;
                                         search.grab-focus();
@@ -418,7 +418,7 @@ export component DesktopShell inherits Rectangle {
                                 spacing: 14px;
                                 alignment: start;
                                 Heading {
-                                    text: Store.searching ? "Searching…" : Store.searched ? "Results" : "Search";
+                                    text: Store.searching ? @tr("Searching…") : Store.searched ? @tr("Results") : @tr("Search");
                                 }
                                 if Store.searching : Busy { }
                                 if Store.search-note != "" && !Store.searching : Text {
@@ -445,7 +445,7 @@ export component DesktopShell inherits Rectangle {
                                 if !Store.searched && !Store.searching && Store.suggestions.length == 0 : VerticalLayout {
                                     spacing: 14px;
                                     Text {
-                                        text: "Type a name and press Enter, or paste a link to a project. Only apps that work on this device are listed.";
+                                        text: @tr("Type a name and press Enter, or paste a link to a project. Only apps that work on this device are listed.");
                                         color: Theme.text-dim;
                                         font-size: 14px;
                                         wrap: word-wrap;
@@ -458,11 +458,11 @@ export component DesktopShell inherits Rectangle {
                                         alignment: start;
                                         VerticalLayout {
                                             alignment: center;
-                                            Text { text: "Recent"; color: Theme.text-dim; font-size: 12px; font-weight: 700; }
+                                            Text { text: @tr("Recent"); color: Theme.text-dim; font-size: 12px; font-weight: 700; }
                                         }
                                         for q in Store.recent : ChoiceChip {
                                             text: q;
-                                            accessible-label: "Search again for " + q;
+                                            accessible-label: @tr("Search again for {}", q);
                                             clicked => {
                                                 Store.query = q;
                                                 Store.search(q);
@@ -473,7 +473,7 @@ export component DesktopShell inherits Rectangle {
                                 if Store.suggestions.length > 0 && !Store.searching : VerticalLayout {
                                     spacing: 10px;
                                     Text {
-                                        text: "Featured apps matching “" + Store.query + "”  ·  press Enter to search GitHub too";
+                                        text: @tr("Featured apps matching “{}”  ·  press Enter to search GitHub too", Store.query);
                                         color: Theme.text-dim;
                                         font-size: 12px;
                                         font-weight: 700;
@@ -482,8 +482,8 @@ export component DesktopShell inherits Rectangle {
                                 }
                                 CardGrid { apps: Store.results; }
                                 if Store.searched && !Store.searching && Store.results.length == 0 && Store.search-error == "" : EmptyState {
-                                    title: "No apps for this device";
-                                    body: "Try a different name, or check the spelling. Projects without a file for " + Store.platform-title + " are left out.";
+                                    title: @tr("No apps for this device");
+                                    body: @tr("Try a different name, or check the spelling. Projects without a file for {} are left out.", Store.platform-title);
                                 }
                             }
                         }
