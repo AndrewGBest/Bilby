@@ -218,7 +218,14 @@ impl Catalog {
         catalog.sources.push(Arc::new(crate::source::homebrew::Homebrew::new(shared.clone(), &platform)));
         catalog.sources.push(Arc::new(crate::source::snap::SnapStore::new(shared.clone())));
         catalog.sources.push(Arc::new(crate::source::fdroid::FDroid::new(shared)));
-        catalog.sources.push(Arc::new(crate::source::winget::Winget::new()));
+        // Windows asks its own winget; a Linux system that can run Windows programs
+        // reads winget's catalog itself.
+        catalog.sources.push(Arc::new(match platform.os {
+            crate::platform::Os::Linux => {
+                crate::source::winget::Winget::from_the_catalog(catalog.http.clone(), cache_dir.join("winget"))
+            }
+            _ => crate::source::winget::Winget::new(),
+        }));
         // Other stores, handed over to: they install and run what they sell.
         let shared = catalog.http.clone();
         catalog.sources.push(Arc::new(crate::source::steam::Steam::new(shared.clone(), &platform).in_country(country)));
@@ -363,6 +370,28 @@ impl Catalog {
     /// Names of the packages the system's own package manager has installed.
     pub fn installed_packages(&self) -> Vec<String> {
         self.sources.iter().flat_map(|source| source.installed_names()).collect()
+    }
+
+    /// The apps on this system that its package manager installed, with the names the
+    /// app menu shows them under. One that the system's repositories do not list is
+    /// taken to be from the AUR where that is a source here, and left out otherwise:
+    /// there would be no page to show for it.
+    pub fn installed_programs(&self) -> Vec<(AppId, String)> {
+        let has_aur = self.sources.iter().any(|s| s.kind() == SourceKind::Aur && self.uses(s.as_ref()));
+        let mut found = Vec::new();
+        for source in self.sources.iter().filter(|s| self.uses(s.as_ref())) {
+            for (key, name, offered) in source.installed_apps() {
+                let kind = match (offered, has_aur) {
+                    (true, _) => source.kind(),
+                    (false, true) => SourceKind::Aur,
+                    (false, false) => continue,
+                };
+                if crate::model::valid_key(kind, &key) {
+                    found.push((AppId::new(kind, key), name));
+                }
+            }
+        }
+        found
     }
 
     pub fn collections(&self, limit: usize) -> Vec<Section> {

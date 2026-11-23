@@ -136,6 +136,10 @@ msgctxt "SourceFilter"
 msgid "All"
 msgstr "الكل"
 
+msgctxt "LibraryBody"
+msgid "Also installed here"
+msgstr "مثبّتة هنا أيضًا"
+
 msgctxt "SettingsBody"
 msgid "Also show apps that do not run on this device"
 msgstr "إظهار التطبيقات التي لا تعمل على هذا الجهاز أيضًا"
@@ -167,6 +171,10 @@ msgstr "يمكن أن تأتي التطبيقات أيضًا من قائمة ع�
 msgctxt "SettingsBody"
 msgid "Apps come from the sources listed above and are not reviewed by Bilby. Install software you trust. Made with Slint."
 msgstr "تأتي التطبيقات من المصادر المذكورة أعلاه ولا يراجعها Bilby. ثبّت البرامج التي تثق بها. صُنع باستخدام Slint."
+
+msgctxt "LibraryBody"
+msgid "Apps on this device that Bilby did not install. Open one to start it, see its page or remove it."
+msgstr "تطبيقات على هذا الجهاز لم يثبّتها Bilby. افتح أحدها لتشغيله أو عرض صفحته أو إزالته."
 
 msgctxt "LibraryBody"
 msgid "Apps you install from the store show up here, and the store can tell you when they have a new release."
@@ -435,6 +443,10 @@ msgstr "مسح سجل البحث"
 msgctxt "TvShell"
 msgid "Clear the PIN"
 msgstr "مسح رمز PIN"
+
+msgctxt "DetailsBody"
+msgid "Comes from {}"
+msgstr "المصدر: {}"
 
 msgctxt "CommandBox"
 msgid "Command"
@@ -1512,6 +1524,14 @@ msgctxt "TvShell"
 msgid "Searching…"
 msgstr "جارٍ البحث…"
 
+msgctxt "DetailsBody"
+msgid "See it on {}"
+msgstr "عرض على {}"
+
+msgctxt "DetailsBody"
+msgid "See it there"
+msgstr "عرض الصفحة"
+
 msgctxt "ReviewForm"
 msgid "Send review"
 msgstr "إرسال المراجعة"
@@ -1572,6 +1592,10 @@ msgctxt "TvShell"
 msgid "Show adult content uncovered, with no question"
 msgstr "إظهار محتوى البالغين دون حجب ودون سؤال"
 
+msgctxt "LibraryBody"
+msgid "Show all installed apps"
+msgstr "عرض كل التطبيقات المثبّتة"
+
 msgctxt "Clamped"
 msgid "Show all of {}"
 msgstr "عرض {} كاملًا"
@@ -1585,6 +1609,10 @@ msgid "Show all {0} in {1}"
 msgstr "عرض كل {0} في {1}"
 
 msgctxt "DesktopShell"
+msgid "Show all {}"
+msgstr "عرض كل {}"
+
+msgctxt "LibraryBody"
 msgid "Show all {}"
 msgstr "عرض كل {}"
 
@@ -1604,9 +1632,17 @@ msgctxt "TvShell"
 msgid "Show code"
 msgstr "إظهار الرمز"
 
+msgctxt "LibraryBody"
+msgid "Show fewer"
+msgstr "عرض أقل"
+
 msgctxt "SystemBody"
 msgid "Show fewer"
 msgstr "عرض أقل"
+
+msgctxt "LibraryBody"
+msgid "Show fewer installed apps"
+msgstr "عرض تطبيقات مثبّتة أقل"
 
 msgctxt "Clamped"
 msgid "Show less"

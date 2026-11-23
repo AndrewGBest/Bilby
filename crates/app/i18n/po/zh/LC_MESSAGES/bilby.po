@@ -136,6 +136,10 @@ msgctxt "SourceFilter"
 msgid "All"
 msgstr "全部"
 
+msgctxt "LibraryBody"
+msgid "Also installed here"
+msgstr "此处也已安装"
+
 msgctxt "SettingsBody"
 msgid "Also show apps that do not run on this device"
 msgstr "同时显示无法在此设备上运行的应用"
@@ -167,6 +171,10 @@ msgstr "应用也可以来自你自己服务器或存储上的列表：一个说
 msgctxt "SettingsBody"
 msgid "Apps come from the sources listed above and are not reviewed by Bilby. Install software you trust. Made with Slint."
 msgstr "应用来自上面列出的来源，未经 Bilby 审核。请只安装你信任的软件。使用 Slint 制作。"
+
+msgctxt "LibraryBody"
+msgid "Apps on this device that Bilby did not install. Open one to start it, see its page or remove it."
+msgstr "此设备上并非由 Bilby 安装的应用。打开其中一个即可启动、查看其页面或将其移除。"
 
 msgctxt "LibraryBody"
 msgid "Apps you install from the store show up here, and the store can tell you when they have a new release."
@@ -435,6 +443,10 @@ msgstr "清除搜索记录"
 msgctxt "TvShell"
 msgid "Clear the PIN"
 msgstr "清除 PIN"
+
+msgctxt "DetailsBody"
+msgid "Comes from {}"
+msgstr "来自 {}"
 
 msgctxt "CommandBox"
 msgid "Command"
@@ -1502,6 +1514,14 @@ msgctxt "TvShell"
 msgid "Searching…"
 msgstr "正在搜索…"
 
+msgctxt "DetailsBody"
+msgid "See it on {}"
+msgstr "在 {} 上查看"
+
+msgctxt "DetailsBody"
+msgid "See it there"
+msgstr "前往查看"
+
 msgctxt "ReviewForm"
 msgid "Send review"
 msgstr "发送评价"
@@ -1562,6 +1582,10 @@ msgctxt "TvShell"
 msgid "Show adult content uncovered, with no question"
 msgstr "不遮盖成人内容，也不询问"
 
+msgctxt "LibraryBody"
+msgid "Show all installed apps"
+msgstr "显示所有已安装的应用"
+
 msgctxt "Clamped"
 msgid "Show all of {}"
 msgstr "显示 {} 的全部内容"
@@ -1575,6 +1599,10 @@ msgid "Show all {0} in {1}"
 msgstr "显示 {1} 中的全部 {0} 项"
 
 msgctxt "DesktopShell"
+msgid "Show all {}"
+msgstr "显示全部 {}"
+
+msgctxt "LibraryBody"
 msgid "Show all {}"
 msgstr "显示全部 {}"
 
@@ -1594,9 +1622,17 @@ msgctxt "TvShell"
 msgid "Show code"
 msgstr "显示代码"
 
+msgctxt "LibraryBody"
+msgid "Show fewer"
+msgstr "显示更少"
+
 msgctxt "SystemBody"
 msgid "Show fewer"
 msgstr "显示更少"
+
+msgctxt "LibraryBody"
+msgid "Show fewer installed apps"
+msgstr "显示较少已安装的应用"
 
 msgctxt "Clamped"
 msgid "Show less"

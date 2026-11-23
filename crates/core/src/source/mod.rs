@@ -18,6 +18,7 @@ pub mod steam;
 pub mod system;
 pub mod web;
 pub mod winget;
+pub mod winget_index;
 
 use crate::error::Result;
 use crate::model::{AppSummary, Release, SourceKind};
@@ -29,6 +30,13 @@ pub trait Source: Send + Sync {
     /// Names of what is on the device that this source would know as its own (a
     /// distribution's installed packages). Empty for sources that cannot tell.
     fn installed_names(&self) -> Vec<String> {
+        Vec::new()
+    }
+
+    /// The installed things of this source that are apps a person opens, as (key,
+    /// name, offered): `offered` is false for one the source no longer lists, which
+    /// came from somewhere else (on Arch, the AUR). Empty for sources that cannot tell.
+    fn installed_apps(&self) -> Vec<(String, String, bool)> {
         Vec::new()
     }
 

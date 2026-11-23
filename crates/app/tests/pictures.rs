@@ -73,6 +73,7 @@ fn start(root: &Path) -> Session {
         programs: Vec::new(),
         cache: root.join("cache"),
         config: root.join("config"),
+        desktop: None,
     };
     std::fs::create_dir_all(&dirs.config).unwrap();
     std::fs::write(dirs.config.join("demo-state.json"), r#"{"settings":{"welcomed":true}}"#).unwrap();

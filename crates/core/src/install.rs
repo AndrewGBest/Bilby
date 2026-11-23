@@ -289,6 +289,9 @@ pub struct Dirs {
     pub cache: PathBuf,
     /// Settings and library (`state.json`).
     pub config: PathBuf,
+    /// The person's desktop folder, where a web app also gets an icon. `None` where
+    /// there is none to be found.
+    pub desktop: Option<PathBuf>,
 }
 
 impl Dirs {
@@ -322,7 +325,59 @@ impl Dirs {
             ],
             programs: std::env::var_os("PATH").map(|path| std::env::split_paths(&path).collect()).unwrap_or_default(),
             cache: cache.join("bilby"),
+            desktop: desktop_folder(&home, &config),
             config: config.join("bilby"),
+        }
+    }
+}
+
+/// The desktop folder: on Linux the one the desktop itself names (it may be called
+/// something else in another language, or be turned off), else `Desktop` in the home
+/// folder where that exists.
+fn desktop_folder(home: &Path, config: &Path) -> Option<PathBuf> {
+    let named =
+        std::fs::read_to_string(config.join("user-dirs.dirs")).ok().and_then(|text| desktop_in_user_dirs(&text, home));
+    // Turned off is written as the home folder itself.
+    named.or_else(|| Some(home.join("Desktop"))).filter(|folder| folder.is_dir() && folder != home)
+}
+
+/// What `user-dirs.dirs` says the desktop folder is.
+fn desktop_in_user_dirs(text: &str, home: &Path) -> Option<PathBuf> {
+    let value = text.lines().find_map(|line| line.trim().strip_prefix("XDG_DESKTOP_DIR="))?;
+    let value = value.trim().trim_matches('"');
+    match value.strip_prefix("$HOME") {
+        Some(rest) => Some(home.join(rest.trim_start_matches('/'))),
+        None => value.starts_with('/').then(|| PathBuf::from(value)),
+    }
+}
+
+/// Where an app's icon on the desktop is kept.
+fn desktop_icon_path(dirs: &Dirs, id: &str) -> Option<PathBuf> {
+    let name = menu_entry_path(dirs, id).file_name()?.to_os_string();
+    Some(dirs.desktop.as_ref()?.join(name))
+}
+
+/// Put a copy of an app's menu entry on the desktop, where the desktop shows it as
+/// an icon to start the app from. Desktops only start such a file when it may be run,
+/// and GNOME's when it has also been marked as trusted.
+fn put_on_desktop(dirs: &Dirs, id: &str, entry: &Path) {
+    let Some(icon) = desktop_icon_path(dirs, id) else { return };
+    if std::fs::copy(entry, &icon).is_err() {
+        return;
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&icon, std::fs::Permissions::from_mode(0o755));
+        if let Some(gio) = dirs.programs.iter().map(|dir| dir.join("gio")).find(|p| p.is_file()) {
+            let _ = std::process::Command::new(gio)
+                .args(["set"])
+                .arg(&icon)
+                .args(["metadata::trusted", "true"])
+                .stdin(std::process::Stdio::null())
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .status();
         }
     }
 }
@@ -339,7 +394,7 @@ pub struct Outcome {
     pub flatpak_app: Option<String>,
 }
 
-fn menu_entry_path(dirs: &Dirs, id: &str) -> PathBuf {
+pub fn menu_entry_path(dirs: &Dirs, id: &str) -> PathBuf {
     let slug: String =
         id.chars().map(|c| if c.is_ascii_alphanumeric() { c.to_ascii_lowercase() } else { '-' }).collect();
     dirs.menu.join(format!("bilby-{slug}.desktop"))
@@ -492,8 +547,50 @@ impl AppBrowser {
     }
 }
 
+/// The browser links open in, as the desktop names it (`firefox`, `brave-browser`,
+/// `com.google.chrome`): the id of its menu entry, in small letters and without
+/// `.desktop`. Read from the lists the desktop keeps of which app opens what, the
+/// person's own before the system's.
+pub fn default_browser(dirs: &Dirs) -> Option<String> {
+    let mut lists: Vec<PathBuf> = Vec::new();
+    if let Some(config) = dirs.config.parent() {
+        // A desktop's own list comes before the general one.
+        let desktops = std::env::var("XDG_CURRENT_DESKTOP").unwrap_or_default().to_lowercase();
+        lists.extend(desktops.split(':').filter(|d| !d.is_empty()).map(|d| config.join(format!("{d}-mimeapps.list"))));
+        lists.push(config.join("mimeapps.list"));
+    }
+    lists.push(dirs.menu.join("mimeapps.list"));
+    lists.push(PathBuf::from("/etc/xdg/mimeapps.list"));
+    lists.push(PathBuf::from("/usr/share/applications/mimeapps.list"));
+    lists.iter().filter_map(|list| std::fs::read_to_string(list).ok()).find_map(|text| browser_in_list(&text))
+}
+
+/// What a "which app opens what" list says opens web links.
+fn browser_in_list(text: &str) -> Option<String> {
+    let mut in_defaults = false;
+    for line in text.lines() {
+        let line = line.trim();
+        if line.starts_with('[') {
+            in_defaults = line == "[Default Applications]"; // a file format's heading (not shown)
+            continue;
+        }
+        let Some((kind, apps)) = line.split_once('=').filter(|_| in_defaults) else { continue };
+        if !matches!(kind.trim(), "x-scheme-handler/https" | "x-scheme-handler/http") {
+            continue;
+        }
+        // Several may be listed; the first is the one used.
+        let first = apps.split(';').map(str::trim).find(|app| !app.is_empty())?;
+        let id = first.strip_suffix(".desktop").unwrap_or(first).to_lowercase();
+        let plain = |c: char| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.');
+        return (!id.is_empty() && id.chars().all(plain)).then_some(id);
+    }
+    None
+}
+
 /// Such a browser, when this device has one: Chrome, Chromium, Brave, Edge or Vivaldi,
-/// as a program on the PATH or as a Flatpak. (Firefox cannot do this.)
+/// as a program on the PATH or as a Flatpak. (Firefox cannot do this.) The browser the
+/// person's links already open in is the one used when it can; otherwise another that
+/// is installed.
 pub fn find_app_browser(dirs: &Dirs) -> Option<AppBrowser> {
     if !cfg!(target_os = "linux") {
         return None;
@@ -518,15 +615,51 @@ pub fn find_app_browser(dirs: &Dirs) -> Option<AppBrowser> {
         ("com.vivaldi.Vivaldi", "vivaldi"),
         ("io.github.ungoogled_software.ungoogled_chromium", "chrome"),
     ];
+    // Every one that is here, each with the name the desktop would know it by.
+    let mut here: Vec<(String, AppBrowser)> = Vec::new();
     for (name, family) in PROGRAMS {
         if let Some(program) = dirs.programs.iter().map(|dir| dir.join(name)).find(|p| p.is_file()) {
-            return Some(AppBrowser { program, before: Vec::new(), family });
+            here.push((name.to_string(), AppBrowser { program, before: Vec::new(), family }));
         }
     }
-    FLATPAKS.iter().find(|(id, _)| flatpak_app_installed(dirs, id)).map(|(id, family)| AppBrowser {
-        program: dirs.flatpak.clone(),
-        before: vec!["run".to_string(), id.to_string()],
-        family,
+    for (id, family) in FLATPAKS {
+        if flatpak_app_installed(dirs, id) {
+            let browser =
+                AppBrowser { program: dirs.flatpak.clone(), before: vec!["run".to_string(), id.to_string()], family };
+            here.push((id.to_lowercase(), browser));
+        }
+    }
+    // The usual browser first, when it is one of them. A program and its menu entry
+    // do not always share a whole name (`google-chrome-stable`, `google-chrome`).
+    let usual = default_browser(dirs);
+    let is_usual = |name: &str| {
+        usual.as_deref().is_some_and(|usual| usual == name || usual.starts_with(name) || name.starts_with(usual))
+    };
+    let chosen = here.iter().position(|(name, _)| is_usual(name)).unwrap_or(0);
+    (!here.is_empty()).then(|| here.swap_remove(chosen).1)
+}
+
+/// A browser that can show a website in a window of its own, to install on a device
+/// that has none: Chromium, from wherever this device gets its apps.
+pub fn app_browser_to_install(platform: &Platform, sources: &[SourceKind]) -> Option<AppId> {
+    use crate::platform::{LinuxFamily, Os};
+    if platform.os != Os::Linux {
+        return None;
+    }
+    let has = |kind: SourceKind| sources.contains(&kind);
+    let suse = platform.linux.as_ref().is_some_and(|l| l.family == LinuxFamily::Suse);
+    Some(if has(SourceKind::Pacman) {
+        AppId::new(SourceKind::Pacman, "chromium")
+    } else if has(SourceKind::Flathub) {
+        AppId::new(SourceKind::Flathub, "org.chromium.Chromium")
+    } else if has(SourceKind::Dnf) && !suse {
+        AppId::new(SourceKind::Dnf, "chromium")
+    } else if has(SourceKind::Zypper) {
+        AppId::new(SourceKind::Zypper, "chromium")
+    } else if has(SourceKind::Apt) {
+        AppId::new(SourceKind::Apt, "chromium")
+    } else {
+        return None;
     })
 }
 
@@ -662,6 +795,7 @@ pub fn write_web_shortcut(dirs: &Dirs, id: &str, name: &str, url: &str) -> Resul
             let _ = std::fs::write(&path, format!("{entry}StartupWMClass={}\n", browser.window_class(url)));
         }
         give_entry_its_picture(dirs, id, &path);
+        put_on_desktop(dirs, id, &path);
         return Ok(path);
     }
     // Without one: the desktop's own opener, started on the address.
@@ -670,6 +804,7 @@ pub fn write_web_shortcut(dirs: &Dirs, id: &str, name: &str, url: &str) -> Resul
         .unwrap_or_else(|| PathBuf::from("/usr/bin/xdg-open"));
     let path = write_menu_entry(dirs, id, &label, &opener, &[url.to_string()], "Network;")?;
     give_entry_its_picture(dirs, id, &path);
+    put_on_desktop(dirs, id, &path);
     Ok(path)
 }
 
@@ -1086,6 +1221,12 @@ pub fn remove_menu_entry(dirs: &Dirs, id: &str) {
     // Only files this store wrote: the name is ours, and so is the marker inside.
     if std::fs::read_to_string(&path).is_ok_and(|text| text.contains("X-Bilby-App=")) {
         let _ = std::fs::remove_file(path);
+    }
+    // And its icon on the desktop, by the same test.
+    if let Some(icon) = desktop_icon_path(dirs, id) {
+        if std::fs::read_to_string(&icon).is_ok_and(|text| text.contains("X-Bilby-App=")) {
+            let _ = std::fs::remove_file(icon);
+        }
     }
 }
 
@@ -1710,6 +1851,44 @@ mod tests {
 
     #[test]
     #[cfg(target_os = "linux")]
+    fn the_usual_browser_is_the_one_a_web_app_opens_in_when_it_can() {
+        let dirs = temp_dirs("web-usual");
+        let bin = dirs.cache.join("bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        for program in ["chromium", "brave-browser", "firefox"] {
+            std::fs::write(bin.join(program), "").unwrap();
+        }
+        let dirs = Dirs { programs: vec![bin.clone()], ..dirs };
+        let lists = dirs.config.parent().unwrap().to_path_buf();
+        std::fs::create_dir_all(&lists).unwrap();
+        let usual = |entry: &str| {
+            let text = format!("[Added Associations]\nx-scheme-handler/https=other.desktop;\n\n[Default Applications]\ntext/html={entry}\nx-scheme-handler/https={entry};chromium.desktop;\n");
+            std::fs::write(lists.join("mimeapps.list"), text).unwrap();
+        };
+        // Brave is the usual browser and can do it: Brave, though Chromium is here too.
+        usual("brave-browser.desktop");
+        assert_eq!(default_browser(&dirs).as_deref(), Some("brave-browser"));
+        assert_eq!(find_app_browser(&dirs).unwrap().program, bin.join("brave-browser"));
+        // Firefox is the usual browser and cannot: one that is installed and can.
+        usual("firefox.desktop");
+        assert_eq!(default_browser(&dirs).as_deref(), Some("firefox"));
+        assert_eq!(find_app_browser(&dirs).unwrap().program, bin.join("chromium"));
+        // Only Firefox here: none, and the store offers one to install.
+        std::fs::remove_file(bin.join("chromium")).unwrap();
+        std::fs::remove_file(bin.join("brave-browser")).unwrap();
+        assert_eq!(find_app_browser(&dirs), None);
+        let arch = Platform::preset("linux-x64-arch").unwrap();
+        let offered = |sources: &[SourceKind]| app_browser_to_install(&arch, sources).map(|id| id.to_string());
+        assert_eq!(offered(&[SourceKind::Flathub, SourceKind::Pacman]).as_deref(), Some("pacman:chromium"));
+        assert_eq!(offered(&[SourceKind::Flathub]).as_deref(), Some("flathub:org.chromium.Chromium"));
+        assert_eq!(offered(&[SourceKind::GitHub]), None);
+        assert_eq!(app_browser_to_install(&Platform::preset("windows-x64").unwrap(), &[SourceKind::Winget]), None);
+        // An odd list names no browser.
+        assert_eq!(browser_in_list("[Default Applications]\nx-scheme-handler/https=../../x y.desktop\n"), None);
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
     fn a_website_gets_a_window_of_its_own_where_a_browser_can_give_it_one() {
         // Only Firefox, or nothing: the site opens in the usual browser, as before.
         let plain = temp_dirs("web-plain");
@@ -1917,6 +2096,7 @@ mod tests {
             programs: Vec::new(),
             cache: root.join("cache"),
             config: root.join("config"),
+            desktop: None,
         }
     }
 

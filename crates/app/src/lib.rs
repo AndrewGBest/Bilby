@@ -1633,10 +1633,13 @@ impl App {
                 author: AppId::parse(id).map(|id| id.source.label()).unwrap_or("").into(),
                 installed: true,
                 tint: tint_for(id),
+                initials: initials(name).into(),
                 icon: picture_for(id),
                 ..Default::default()
             })
             .collect();
+        // The desktop's and the phone's library list them too, under the store's own.
+        store.set_also_installed(ModelRc::new(VecModel::from(others.clone())));
         if !others.is_empty() {
             tv_library.push(section("Also installed here", others));
         }
@@ -2006,6 +2009,18 @@ impl App {
                 }
             }
         }
+        // A web app on a computer whose browsers cannot give a website a window of its
+        // own: said on its page, with a browser that can one press away. (A TV opens
+        // them in Longboard, which is made for it.)
+        let mut web_note = String::new();
+        if id.starts_with("web:") && !self.opens_sites_in_longboard() && install::find_app_browser(&self.dirs).is_none()
+        {
+            let platform = self.platform.read().unwrap().clone();
+            if let Some(browser) = install::app_browser_to_install(&platform, &available) {
+                helper = (browser.to_string(), "Install Chromium".to_string());
+                web_note = "Web apps open in a window of their own, like any other app, in a browser that can do that: Chrome, Chromium, Brave, Edge or Vivaldi. None of them is on this computer. Install Chromium for that, or add this anyway and it opens as a page in your usual browser.".to_string();
+            }
+        }
         // An AppImage on a system that lacks what AppImages need to start: said before
         // it is downloaded, with the package that provides it one press away.
         let mut need_note = String::new();
@@ -2052,7 +2067,7 @@ impl App {
         if another_kind {
             need_note.clear();
         }
-        store.set_need_note(l(need_note));
+        store.set_need_note(l(if need_note.is_empty() { web_note } else { need_note }));
         *self.needed.lock().unwrap() = needed;
         // The same choices as rows for the TV, in two groups that each say what they
         // are: other apps for the service, then other places to get this one.
@@ -3100,6 +3115,7 @@ impl App {
         store.set_release_age(SharedString::new());
         store.set_license(SharedString::new());
         store.set_homepage(SharedString::new());
+        store.set_source_page(SharedString::new());
         store.set_options(ModelRc::default());
         store.set_hidden(ModelRc::default());
         // Still being downloaded from an earlier visit to this page: it shows.
@@ -3301,6 +3317,14 @@ impl App {
         store.set_app(at_the_top(card));
         store.set_license(plain_licence(details.summary.license.as_deref().unwrap_or_default()).into());
         store.set_homepage(details.summary.homepage.as_str().into());
+        // The app's own page where it is downloaded from, always a press away.
+        let distro = self.platform.read().unwrap().linux.as_ref().map(|linux| linux.distro.clone()).unwrap_or_default();
+        let source_page = bilby_core::model::source_page(&details.summary.id, &distro).or_else(|| {
+            // A store whose pages go by a name: the page its own entry gives.
+            let page = details.summary.homepage.clone();
+            (details.summary.id.source == SourceKind::Gog && install::store_link_ok(&page)).then_some(page)
+        });
+        store.set_source_page(source_page.unwrap_or_default().into());
         store.set_unavailable(l(details.unavailable_reason.clone().unwrap_or_default()));
         store.set_versions(ModelRc::new(VecModel::from(
             details.versions.iter().map(|r| SharedString::from(&r.version)).collect::<Vec<_>>(),
@@ -4961,7 +4985,16 @@ impl App {
                         .into_iter()
                         .map(|(id, name)| (format!("steam:{id}"), name)),
                 );
-                let packages = app.catalog().installed_packages().iter().map(|name| plain(name)).collect();
+                // What the system's package manager installed and shows in the app menu.
+                let catalog = app.catalog();
+                for (id, name) in catalog.installed_programs() {
+                    let id = id.to_string();
+                    if !apps.iter().any(|(known, _)| known.eq_ignore_ascii_case(&id)) {
+                        apps.push((id, name));
+                    }
+                }
+                let packages = catalog.installed_packages().iter().map(|name| plain(name)).collect();
+                app.give_web_apps_their_own_windows();
                 Elsewhere { apps, packages }
             },
             |app, ui, found| {
@@ -4969,6 +5002,23 @@ impl App {
                 app.refresh(ui);
             },
         );
+    }
+
+    /// Web apps added while no browser here could give them a window of their own
+    /// open as pages in the usual browser. Once such a browser is installed, their
+    /// menu entries are written again to use it.
+    fn give_web_apps_their_own_windows(&self) {
+        if self.opens_sites_in_longboard() || install::find_app_browser(&self.dirs).is_none() {
+            return;
+        }
+        for app in self.state().library.iter().filter(|app| app.id.starts_with("web:")) {
+            let entry = install::menu_entry_path(&self.dirs, &app.id);
+            let plain = std::fs::read_to_string(&entry).is_ok_and(|text| !text.contains("--app="));
+            if let (true, Some(host)) = (plain, app.id.strip_prefix("web:")) {
+                let url = bilby_core::source::web::address(host);
+                let _ = install::write_web_shortcut(&self.dirs, &app.id, &app.name, &url);
+            }
+        }
     }
 
     /// Is this app on the device although the store did not install it? Its own entry

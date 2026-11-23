@@ -52,6 +52,7 @@ fn dirs_in(root: &std::path::Path) -> Dirs {
         programs: Vec::new(),
         cache: root.join("cache"),
         config: root.join("config"),
+        desktop: Some(root.join("Desktop")),
     }
 }
 
@@ -2304,6 +2305,102 @@ fn on_a_tv_a_review_is_written_with_the_remote_and_the_on_screen_keyboard() {
 }
 
 #[test]
+fn an_apps_page_says_where_it_comes_from_and_links_to_its_page_there() {
+    let s = start("linux-x64-arch", Shell::Desktop);
+    // From a project's releases: the repository is a press away.
+    s.app.open(&s.ui, "github:lumen-labs/lumen");
+    assert_eq!(s.store().get_source_page(), "https://github.com/lumen-labs/lumen");
+    assert!(s.has("Comes from GitHub") || s.has("Installing from GitHub"), "the source is named by the button");
+    s.activate("See it on GitHub");
+    assert_eq!(s.opened.lock().unwrap().last().unwrap(), &PathBuf::from("https://github.com/lumen-labs/lumen"));
+
+    // From a store: its listing there, not the project's own website.
+    s.app.open(&s.ui, "flathub:io.quillpad.Quillpad");
+    assert_eq!(s.store().get_source_page(), "https://flathub.org/apps/io.quillpad.Quillpad");
+    assert!(s.has("See it on Flathub"));
+
+    // A phone's page says it too.
+    let phone = start("android-arm64", Shell::Mobile);
+    phone.app.open(&phone.ui, "github:lumen-labs/lumen");
+    assert!(phone.has("See it on GitHub"));
+}
+
+#[test]
+fn the_desktop_library_lists_apps_the_store_did_not_install_and_opens_their_pages() {
+    let s = start("linux-x64-arch", Shell::Desktop);
+    let flatpak = s.dirs.flatpak_roots[0].join("app/org.example.Paint/current/active/export/share/applications");
+    std::fs::create_dir_all(&flatpak).unwrap();
+    std::fs::write(flatpak.join("org.example.Paint.desktop"), "[Desktop Entry]\nName=Paint Box\n").unwrap();
+    s.app.scan_installed(&s.ui);
+    s.store().set_page(2);
+    let listed: Vec<(String, String)> =
+        s.store().get_also_installed().iter().map(|card| (card.id.to_string(), card.source.to_string())).collect();
+    assert!(listed.contains(&("flathub:org.example.Paint".to_string(), "Flathub".to_string())), "{listed:?}");
+    assert!(listed.iter().any(|(id, _)| id.starts_with("pacman:")), "the system's own packages too: {listed:?}");
+    assert!(s.has("Also installed here") && s.has("Paint Box"));
+
+    // Its page is where it is started, updated or removed, like any other app's.
+    s.activate("Paint Box");
+    assert_eq!(s.store().get_app().id, "flathub:org.example.Paint");
+    assert!(s.store().get_can_uninstall() && !s.store().get_in_library());
+
+    // Something the store installed itself is in its own list, not in this one.
+    let package = s.store().get_also_installed().iter().find(|card| card.id.starts_with("pacman:")).unwrap();
+    s.app.open(&s.ui, package.id.as_str());
+    assert!(s.store().get_can_uninstall(), "a system package is removed with the system's own tools");
+}
+
+#[test]
+fn a_web_app_asks_for_a_browser_that_can_give_it_a_window_of_its_own() {
+    // A computer whose only browser cannot: the page says so and offers one that can.
+    let s = start("linux-x64-arch", Shell::Desktop);
+    s.app.open(&s.ui, "web:youtube.com");
+    assert_eq!(s.store().get_helper_id(), "pacman:chromium");
+    assert_eq!(s.store().get_helper_label(), "Install Chromium");
+    assert!(s.store().get_need_note().contains("usual browser"), "{}", s.store().get_need_note());
+
+    // Added anyway, it opens as a page in the usual browser. It is in the app menu
+    // and has an icon on the desktop, which the desktop will only start if it may run.
+    let desktop = s.dirs.desktop.clone().unwrap();
+    std::fs::create_dir_all(&desktop).unwrap();
+    s.store().invoke_install(0);
+    let entry = bilby_core::install::menu_entry_path(&s.dirs, "web:youtube.com");
+    let written = std::fs::read_to_string(&entry).unwrap_or_else(|_| panic!("{}", s.store().get_toast()));
+    assert!(!written.contains("--app="), "{written}");
+    let icon = desktop.join(entry.file_name().unwrap());
+    assert_eq!(std::fs::read_to_string(&icon).unwrap(), written, "the same entry, on the desktop");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        assert_eq!(std::fs::metadata(&icon).unwrap().permissions().mode() & 0o111, 0o111);
+    }
+
+    // Once such a browser is on the computer, the app gets its own window without
+    // being added again, and the page stops asking.
+    let brave = s.dirs.flatpak_roots[0].join("app/com.brave.Browser/current/active/export/share/applications");
+    std::fs::create_dir_all(&brave).unwrap();
+    std::fs::write(brave.join("com.brave.Browser.desktop"), "[Desktop Entry]\nName=Brave\n").unwrap();
+    s.app.scan_installed(&s.ui);
+    let written = std::fs::read_to_string(&entry).unwrap();
+    assert!(written.contains("com.brave.Browser") && written.contains("--app=https://"), "{written}");
+    s.app.open(&s.ui, "web:youtube.com");
+    assert_eq!(s.store().get_helper_id(), "");
+    assert_eq!(s.store().get_need_note(), "");
+
+    assert!(std::fs::read_to_string(&icon).unwrap().contains("--app=https://"), "the desktop icon follows");
+
+    // Removed from the library, it leaves the menu and the desktop.
+    s.app.remove_from_library(&s.ui, "web:youtube.com");
+    assert!(!entry.exists() && !icon.exists());
+
+    // A TV opens web apps in Longboard, made for a remote: no other browser is asked for.
+    let tv = start("linux-tv", Shell::Tv);
+    tv.app.open(&tv.ui, "web:youtube.com");
+    assert_ne!(tv.store().get_helper_id(), "pacman:chromium");
+    assert!(!tv.store().get_need_note().contains("Chromium"));
+}
+
+#[test]
 fn signing_in_to_gog_keeps_only_the_list_of_what_the_account_owns() {
     let s = start("linux-x64-debian", Shell::Desktop);
     s.store().set_page(3);
@@ -3219,8 +3316,8 @@ fn apps_the_store_did_not_install_can_be_uninstalled() {
     let ran = s.web_opened.lock().unwrap().clone();
     assert!(ran.iter().any(|(_, args)| args == "uninstall --noninteractive --assumeyes org.example.Paint"), "{ran:?}");
     assert!(s.store().get_toast().starts_with("Uninstalling"));
-    let rows: Vec<String> = s.store().get_tv_library_rows().iter().map(|row| row.title.to_string()).collect();
-    assert!(!rows.contains(&"Also installed here".to_string()), "and it leaves the library's list: {rows:?}");
+    let left: Vec<String> = s.store().get_also_installed().iter().map(|card| card.name.to_string()).collect();
+    assert!(!left.contains(&"Paint Box".to_string()), "and it leaves the library's list: {left:?}");
 }
 
 #[test]
@@ -3239,7 +3336,8 @@ fn the_library_shows_the_device_the_store_and_what_was_installed_some_other_way(
         .collect();
     let also =
         rows.iter().find(|(title, _)| title == "Also installed here").expect("a row for what came from elsewhere");
-    assert_eq!(also.1, ["Paint Box"]);
+    // With it, what the system's own package manager installed.
+    assert_eq!(also.1, ["Paint Box", "harbor"]);
     // The same app is marked installed wherever the store shows it.
     assert!(s.app.card(&AppSummary::new(AppId::parse("flathub:org.example.Paint").unwrap(), "Paint Box")).installed);
 

@@ -269,6 +269,9 @@ export global Store {
     in property <string> review-result;
     in property <string> warning;
     in property <string> homepage;
+    // The open app's own page at the source it is downloaded from. Empty when the
+    // source has none.
+    in property <string> source-page;
     // Set when nothing in the app's releases fits this machine.
     in property <string> unavailable;
     in property <[OptionRow]> options;
@@ -302,6 +305,9 @@ export global Store {
 
     // --- library ----------------------------------------------------------------
     in property <[LibraryRow]> library;
+    // Apps on the device that the store did not install: Flatpaks, Steam games and
+    // what the system's package manager put in the app menu.
+    in property <[AppCard]> also-installed;
     in property <int> updates-count;
     in property <bool> checking-updates;
     in property <string> last-checked;

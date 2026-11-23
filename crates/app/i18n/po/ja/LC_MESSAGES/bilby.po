@@ -136,6 +136,10 @@ msgctxt "SourceFilter"
 msgid "All"
 msgstr "すべて"
 
+msgctxt "LibraryBody"
+msgid "Also installed here"
+msgstr "ここにもインストール済み"
+
 msgctxt "SettingsBody"
 msgid "Also show apps that do not run on this device"
 msgstr "このデバイスで動作しないアプリも表示する"
@@ -167,6 +171,10 @@ msgstr "アプリは、自分のサーバーやストレージにある一覧か
 msgctxt "SettingsBody"
 msgid "Apps come from the sources listed above and are not reviewed by Bilby. Install software you trust. Made with Slint."
 msgstr "アプリは上記の提供元から届き、Bilby による審査は行われていません。信頼できるソフトウェアをインストールしてください。Slint で作られています。"
+
+msgctxt "LibraryBody"
+msgid "Apps on this device that Bilby did not install. Open one to start it, see its page or remove it."
+msgstr "このデバイスにある、Bilby がインストールしたものではないアプリです。開くと、起動、ページの表示、削除ができます。"
 
 msgctxt "LibraryBody"
 msgid "Apps you install from the store show up here, and the store can tell you when they have a new release."
@@ -435,6 +443,10 @@ msgstr "検索履歴を消去"
 msgctxt "TvShell"
 msgid "Clear the PIN"
 msgstr "PIN を消去"
+
+msgctxt "DetailsBody"
+msgid "Comes from {}"
+msgstr "提供元：{}"
 
 msgctxt "CommandBox"
 msgid "Command"
@@ -1502,6 +1514,14 @@ msgctxt "TvShell"
 msgid "Searching…"
 msgstr "検索中…"
 
+msgctxt "DetailsBody"
+msgid "See it on {}"
+msgstr "{} で見る"
+
+msgctxt "DetailsBody"
+msgid "See it there"
+msgstr "ページを見る"
+
 msgctxt "ReviewForm"
 msgid "Send review"
 msgstr "レビューを送信"
@@ -1562,6 +1582,10 @@ msgctxt "TvShell"
 msgid "Show adult content uncovered, with no question"
 msgstr "成人向けコンテンツを隠さず、確認なしで表示"
 
+msgctxt "LibraryBody"
+msgid "Show all installed apps"
+msgstr "インストール済みのアプリをすべて表示"
+
 msgctxt "Clamped"
 msgid "Show all of {}"
 msgstr "{} をすべて表示"
@@ -1575,6 +1599,10 @@ msgid "Show all {0} in {1}"
 msgstr "{1} の {0} をすべて表示"
 
 msgctxt "DesktopShell"
+msgid "Show all {}"
+msgstr "{} をすべて表示"
+
+msgctxt "LibraryBody"
 msgid "Show all {}"
 msgstr "{} をすべて表示"
 
@@ -1594,9 +1622,17 @@ msgctxt "TvShell"
 msgid "Show code"
 msgstr "コードを表示"
 
+msgctxt "LibraryBody"
+msgid "Show fewer"
+msgstr "表示を減らす"
+
 msgctxt "SystemBody"
 msgid "Show fewer"
 msgstr "表示を減らす"
+
+msgctxt "LibraryBody"
+msgid "Show fewer installed apps"
+msgstr "インストール済みのアプリの表示を減らす"
 
 msgctxt "Clamped"
 msgid "Show less"

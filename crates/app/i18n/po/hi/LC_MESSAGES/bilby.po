@@ -136,6 +136,10 @@ msgctxt "SourceFilter"
 msgid "All"
 msgstr "सभी"
 
+msgctxt "LibraryBody"
+msgid "Also installed here"
+msgstr "यहाँ यह भी इंस्टॉल है"
+
 msgctxt "SettingsBody"
 msgid "Also show apps that do not run on this device"
 msgstr "वे ऐप भी दिखाएँ जो इस डिवाइस पर नहीं चलते"
@@ -167,6 +171,10 @@ msgstr "ऐप आपके अपने सर्वर या स्टोर�
 msgctxt "SettingsBody"
 msgid "Apps come from the sources listed above and are not reviewed by Bilby. Install software you trust. Made with Slint."
 msgstr "ऐप ऊपर दिए गए स्रोतों से आते हैं और Bilby उनकी जाँच नहीं करता। वही सॉफ़्टवेयर इंस्टॉल करें जिस पर आपको भरोसा हो। Slint से बना।"
+
+msgctxt "LibraryBody"
+msgid "Apps on this device that Bilby did not install. Open one to start it, see its page or remove it."
+msgstr "इस डिवाइस के वे ऐप जिन्हें Bilby ने इंस्टॉल नहीं किया। किसी को खोलकर उसे शुरू करें, उसका पेज देखें या हटाएँ।"
 
 msgctxt "LibraryBody"
 msgid "Apps you install from the store show up here, and the store can tell you when they have a new release."
@@ -435,6 +443,10 @@ msgstr "खोज इतिहास साफ़ करें"
 msgctxt "TvShell"
 msgid "Clear the PIN"
 msgstr "PIN हटाएँ"
+
+msgctxt "DetailsBody"
+msgid "Comes from {}"
+msgstr "स्रोत: {}"
 
 msgctxt "CommandBox"
 msgid "Command"
@@ -1504,6 +1516,14 @@ msgctxt "TvShell"
 msgid "Searching…"
 msgstr "खोज हो रही है…"
 
+msgctxt "DetailsBody"
+msgid "See it on {}"
+msgstr "{} पर देखें"
+
+msgctxt "DetailsBody"
+msgid "See it there"
+msgstr "वहाँ देखें"
+
 msgctxt "ReviewForm"
 msgid "Send review"
 msgstr "समीक्षा भेजें"
@@ -1564,6 +1584,10 @@ msgctxt "TvShell"
 msgid "Show adult content uncovered, with no question"
 msgstr "वयस्क सामग्री बिना ढके, बिना पूछे दिखाएँ"
 
+msgctxt "LibraryBody"
+msgid "Show all installed apps"
+msgstr "सभी इंस्टॉल किए गए ऐप दिखाएँ"
+
 msgctxt "Clamped"
 msgid "Show all of {}"
 msgstr "{} पूरा दिखाएँ"
@@ -1577,6 +1601,10 @@ msgid "Show all {0} in {1}"
 msgstr "{1} में सभी {0} दिखाएँ"
 
 msgctxt "DesktopShell"
+msgid "Show all {}"
+msgstr "सभी {} दिखाएँ"
+
+msgctxt "LibraryBody"
 msgid "Show all {}"
 msgstr "सभी {} दिखाएँ"
 
@@ -1596,9 +1624,17 @@ msgctxt "TvShell"
 msgid "Show code"
 msgstr "कोड दिखाएँ"
 
+msgctxt "LibraryBody"
+msgid "Show fewer"
+msgstr "कम दिखाएँ"
+
 msgctxt "SystemBody"
 msgid "Show fewer"
 msgstr "कम दिखाएँ"
+
+msgctxt "LibraryBody"
+msgid "Show fewer installed apps"
+msgstr "कम इंस्टॉल किए गए ऐप दिखाएँ"
 
 msgctxt "Clamped"
 msgid "Show less"

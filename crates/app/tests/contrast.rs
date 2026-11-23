@@ -48,6 +48,7 @@ fn text_is_readable_in_both_themes() {
             programs: Vec::new(),
             cache: root.join("c"),
             config: root.join("cfg"),
+            desktop: None,
         }),
         ..Default::default()
     };

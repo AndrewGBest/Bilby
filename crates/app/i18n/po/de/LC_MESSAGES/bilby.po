@@ -136,6 +136,10 @@ msgctxt "SourceFilter"
 msgid "All"
 msgstr "Alle"
 
+msgctxt "LibraryBody"
+msgid "Also installed here"
+msgstr "Hier ebenfalls installiert"
+
 msgctxt "SettingsBody"
 msgid "Also show apps that do not run on this device"
 msgstr "Auch Apps anzeigen, die auf diesem Gerät nicht laufen"
@@ -167,6 +171,10 @@ msgstr "Apps können auch aus einer Liste auf deinem eigenen Server oder Speiche
 msgctxt "SettingsBody"
 msgid "Apps come from the sources listed above and are not reviewed by Bilby. Install software you trust. Made with Slint."
 msgstr "Apps stammen aus den oben genannten Quellen und werden von Bilby nicht geprüft. Installiere nur Software, der du vertraust. Erstellt mit Slint."
+
+msgctxt "LibraryBody"
+msgid "Apps on this device that Bilby did not install. Open one to start it, see its page or remove it."
+msgstr "Apps auf diesem Gerät, die Bilby nicht installiert hat. Öffne eine, um sie zu starten, ihre Seite zu sehen oder sie zu entfernen."
 
 msgctxt "LibraryBody"
 msgid "Apps you install from the store show up here, and the store can tell you when they have a new release."
@@ -435,6 +443,10 @@ msgstr "Suchverlauf löschen"
 msgctxt "TvShell"
 msgid "Clear the PIN"
 msgstr "PIN löschen"
+
+msgctxt "DetailsBody"
+msgid "Comes from {}"
+msgstr "Stammt von {}"
 
 msgctxt "CommandBox"
 msgid "Command"
@@ -1504,6 +1516,14 @@ msgctxt "TvShell"
 msgid "Searching…"
 msgstr "Suche…"
 
+msgctxt "DetailsBody"
+msgid "See it on {}"
+msgstr "Auf {} ansehen"
+
+msgctxt "DetailsBody"
+msgid "See it there"
+msgstr "Dort ansehen"
+
 msgctxt "ReviewForm"
 msgid "Send review"
 msgstr "Rezension senden"
@@ -1564,6 +1584,10 @@ msgctxt "TvShell"
 msgid "Show adult content uncovered, with no question"
 msgstr "Inhalte für Erwachsene unverdeckt und ohne Nachfrage zeigen"
 
+msgctxt "LibraryBody"
+msgid "Show all installed apps"
+msgstr "Alle installierten Apps anzeigen"
+
 msgctxt "Clamped"
 msgid "Show all of {}"
 msgstr "Alles anzeigen: {}"
@@ -1577,6 +1601,10 @@ msgid "Show all {0} in {1}"
 msgstr "Alle {0} in {1} anzeigen"
 
 msgctxt "DesktopShell"
+msgid "Show all {}"
+msgstr "Alle {} anzeigen"
+
+msgctxt "LibraryBody"
 msgid "Show all {}"
 msgstr "Alle {} anzeigen"
 
@@ -1596,9 +1624,17 @@ msgctxt "TvShell"
 msgid "Show code"
 msgstr "Code anzeigen"
 
+msgctxt "LibraryBody"
+msgid "Show fewer"
+msgstr "Weniger anzeigen"
+
 msgctxt "SystemBody"
 msgid "Show fewer"
 msgstr "Weniger anzeigen"
+
+msgctxt "LibraryBody"
+msgid "Show fewer installed apps"
+msgstr "Weniger installierte Apps anzeigen"
 
 msgctxt "Clamped"
 msgid "Show less"

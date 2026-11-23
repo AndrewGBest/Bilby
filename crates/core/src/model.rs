@@ -230,6 +230,45 @@ impl AppId {
     }
 }
 
+/// The app's own page at the place it is downloaded from: the repository, the
+/// package's page, the store's listing. `distro` is the Linux system's name, which
+/// decides whose package pages a system package is looked up on. `None` where the
+/// source has no page to show, or its pages go by something other than the key.
+pub fn source_page(id: &AppId, distro: &str) -> Option<String> {
+    if !valid_key(id.source, &id.key) {
+        return None;
+    }
+    let key = id.key.as_str();
+    let distro = distro.to_ascii_lowercase();
+    Some(match id.source {
+        SourceKind::GitHub => format!("https://github.com/{key}"),
+        SourceKind::Codeberg => format!("https://codeberg.org/{key}"),
+        SourceKind::GitLab => format!("https://gitlab.com/{key}"),
+        SourceKind::Flathub => format!("https://flathub.org/apps/{key}"),
+        SourceKind::Aur => format!("https://aur.archlinux.org/packages/{key}"),
+        SourceKind::Snap => format!("https://snapcraft.io/{key}"),
+        SourceKind::FDroid => format!("https://f-droid.org/packages/{key}"),
+        SourceKind::Homebrew => format!("https://formulae.brew.sh/cask/{key}"),
+        SourceKind::Winget => format!("https://winget.run/pkg/{}", key.replacen('.', "/", 1)),
+        SourceKind::Steam => format!("https://store.steampowered.com/app/{key}"),
+        SourceKind::MacAppStore => format!("https://apps.apple.com/app/id{key}"),
+        SourceKind::MicrosoftStore => format!("https://apps.microsoft.com/detail/{key}"),
+        SourceKind::GooglePlay => format!("https://play.google.com/store/apps/details?id={key}"),
+        SourceKind::Web => format!("https://{key}/"),
+        // A system package: the page of that name in the distribution's own list.
+        SourceKind::Pacman => format!("https://archlinux.org/packages/?name={key}"),
+        SourceKind::Apt if ["ubuntu", "mint", "pop", "zorin", "elementary"].iter().any(|d| distro.contains(d)) => {
+            format!("https://packages.ubuntu.com/search?keywords={key}&exact=1")
+        }
+        SourceKind::Apt => format!("https://packages.debian.org/search?keywords={key}&exact=1"),
+        SourceKind::Dnf => format!("https://packages.fedoraproject.org/search?query={key}"),
+        SourceKind::Zypper => format!("https://software.opensuse.org/package/{key}"),
+        // GOG's pages go by a name, which the game's entry carries; a list someone
+        // added themselves has no page.
+        SourceKind::Gog | SourceKind::Own => return None,
+    })
+}
+
 /// Keys end up in URLs, so they are checked against what the source allows in names.
 pub fn valid_key(source: SourceKind, key: &str) -> bool {
     let ok = |part: &str, extra: &[char]| {
@@ -589,5 +628,19 @@ mod tests {
         assert_eq!(human_size(150 * 1024 * 1024), "150 MB");
         assert_eq!(human_count(950), "950");
         assert_eq!(human_count(48_200), "48k");
+    }
+
+    #[test]
+    fn every_source_with_a_page_links_to_the_apps_own_page_there() {
+        let page = |id: &str, distro: &str| source_page(&AppId::parse(id).unwrap(), distro);
+        assert_eq!(page("github:owner/app", "").unwrap(), "https://github.com/owner/app");
+        assert_eq!(page("aur:paru-bin", "CachyOS").unwrap(), "https://aur.archlinux.org/packages/paru-bin");
+        assert_eq!(page("flathub:org.example.App", "").unwrap(), "https://flathub.org/apps/org.example.App");
+        assert_eq!(page("pacman:vlc", "Arch Linux").unwrap(), "https://archlinux.org/packages/?name=vlc");
+        assert!(page("apt:vlc", "Ubuntu 24.04").unwrap().starts_with("https://packages.ubuntu.com/"));
+        assert!(page("apt:vlc", "Debian GNU/Linux 13").unwrap().starts_with("https://packages.debian.org/"));
+        assert_eq!(page("steam:620", "").unwrap(), "https://store.steampowered.com/app/620");
+        assert_eq!(page("winget:VideoLAN.VLC", "").unwrap(), "https://winget.run/pkg/VideoLAN/VLC");
+        assert!(page("gog:1207658924", "").is_none(), "its page goes by a name, not this number");
     }
 }

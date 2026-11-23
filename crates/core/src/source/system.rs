@@ -173,6 +173,83 @@ impl Backend {
         }
     }
 
+    /// The installed packages that are apps a person would open: the ones that put an
+    /// entry in the system's app menu. Each comes with the name its entry gives it.
+    /// `menu` is where those entries are (`/usr/share/applications`).
+    fn installed_apps(&self, menu: &Path) -> Vec<(String, String)> {
+        // Which package each menu entry belongs to, by the entry's file name.
+        let mut owners: Vec<(String, String)> = Vec::new();
+        let entry_in = |line: &str| -> Option<String> {
+            let file = line.trim().trim_start_matches('/').strip_prefix("usr/share/applications/")?;
+            (file.ends_with(".desktop") && !file.contains('/')).then(|| file.to_string())
+        };
+        match self {
+            Backend::Fixed { installed, .. } => {
+                return installed.iter().map(|(name, _)| (name.clone(), name.clone())).collect();
+            }
+            // Each installed package has a folder with the list of its files.
+            Backend::Pacman { local_dir, .. } => {
+                for entry in std::fs::read_dir(local_dir).into_iter().flatten().flatten() {
+                    let dir = entry.file_name().to_string_lossy().into_owned();
+                    let mut parts = dir.rsplitn(3, '-');
+                    let (Some(_), Some(_), Some(name)) = (parts.next(), parts.next(), parts.next()) else { continue };
+                    let Ok(files) = std::fs::read_to_string(entry.path().join("files")) else { continue };
+                    owners.extend(files.lines().filter_map(entry_in).map(|file| (file, name.to_string())));
+                }
+            }
+            // dpkg keeps one list of files per package, beside its record of what is installed.
+            Backend::Apt { status, .. } => {
+                let info = status.parent().map(|dir| dir.join("info")).unwrap_or_default();
+                for entry in std::fs::read_dir(info).into_iter().flatten().flatten() {
+                    let file = entry.file_name().to_string_lossy().into_owned();
+                    let Some(package) = file.strip_suffix(".list") else { continue };
+                    // `vlc:amd64.list` on a system with more than one architecture.
+                    let package = package.split(':').next().unwrap_or(package).to_string();
+                    let Ok(files) = std::fs::read_to_string(entry.path()) else { continue };
+                    owners.extend(files.lines().filter_map(entry_in).map(|file| (file, package.clone())));
+                }
+            }
+            // rpm is asked once, for all the entries together: a line for each.
+            Backend::Dnf { rpm, .. } | Backend::Zypper { rpm, .. } => {
+                let entries: Vec<PathBuf> = std::fs::read_dir(menu)
+                    .into_iter()
+                    .flatten()
+                    .flatten()
+                    .map(|entry| entry.path())
+                    .filter(|path| path.extension().is_some_and(|ext| ext == "desktop"))
+                    .collect();
+                if !entries.is_empty() {
+                    let output = std::process::Command::new(rpm)
+                        .args(["-qf", "--qf", "%{NAME}\\n"])
+                        .args(&entries)
+                        .stdin(std::process::Stdio::null())
+                        .output();
+                    let text = output.map(|o| String::from_utf8_lossy(&o.stdout).into_owned()).unwrap_or_default();
+                    for (path, line) in entries.iter().zip(text.lines()) {
+                        // A file no package owns gets a sentence in place of a name.
+                        if let (Some(file), false) = (path.file_name(), line.contains(' ') || line.is_empty()) {
+                            owners.push((file.to_string_lossy().into_owned(), line.to_string()));
+                        }
+                    }
+                }
+            }
+        }
+        owners.sort();
+        let mut apps: Vec<(String, String)> = Vec::new();
+        for (file, package) in owners {
+            // One line per package: its first entry that is meant to be seen.
+            if apps.iter().any(|(known, _)| *known == package) {
+                continue;
+            }
+            let Ok(text) = std::fs::read_to_string(menu.join(&file)) else { continue };
+            if let Some(name) = menu_entry_name(&text) {
+                apps.push((package, name));
+            }
+        }
+        apps.sort_by_key(|(_, name)| name.to_lowercase());
+        apps
+    }
+
     fn exists(&self) -> bool {
         matches!(self, Backend::Fixed { .. }) || !self.files().is_empty()
     }
@@ -263,6 +340,31 @@ impl Backend {
             }
         }
     }
+}
+
+/// The name an app-menu entry gives its app, when the entry is one a person sees in
+/// the menu: an application, not hidden, and not something that runs in a terminal.
+pub fn menu_entry_name(text: &str) -> Option<String> {
+    let mut in_main = false;
+    let (mut name, mut kind) = (None, None);
+    for line in text.lines() {
+        let line = line.trim();
+        if line.starts_with('[') {
+            in_main = line == "[Desktop Entry]"; // a file format's heading (not shown)
+            continue;
+        }
+        let Some((key, value)) = line.split_once('=').filter(|_| in_main) else { continue };
+        let (key, value) = (key.trim(), value.trim());
+        match key {
+            "Name" => name = Some(value.to_string()),
+            "Type" => kind = Some(value.to_string()),
+            "NoDisplay" | "Hidden" | "Terminal" if value.eq_ignore_ascii_case("true") => return None,
+            _ => {}
+        }
+    }
+    let name =
+        name.filter(|name| !name.is_empty() && name.chars().count() <= 80 && !name.chars().any(char::is_control))?;
+    (kind.as_deref() == Some("Application")).then_some(name)
 }
 
 /// What rpm says is installed: name -> version-release.
@@ -678,6 +780,18 @@ impl Source for SystemRepos {
 
     fn installed_names(&self) -> Vec<String> {
         self.backend.installed().into_keys().collect()
+    }
+
+    fn installed_apps(&self) -> Vec<(String, String, bool)> {
+        let offered: std::collections::HashSet<String> = self.packages().iter().map(|p| p.name.clone()).collect();
+        self.backend
+            .installed_apps(Path::new("/usr/share/applications"))
+            .into_iter()
+            .map(|(package, name)| {
+                let known = offered.contains(&package);
+                (package, name, known)
+            })
+            .collect()
     }
 
     fn available_on(&self, platform: &Platform) -> bool {
@@ -1158,5 +1272,50 @@ mod tests {
             Platform::preset("linux-x64-debian").unwrap(),
         );
         assert!(!missing.available_on(&Platform::preset("linux-x64-debian").unwrap()));
+    }
+
+    #[test]
+    fn installed_packages_with_an_app_menu_entry_are_the_installed_apps() {
+        let dir = std::env::temp_dir().join(format!("bilby-installed-apps-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let (local, menu) = (dir.join("local"), dir.join("applications"));
+        std::fs::create_dir_all(&menu).unwrap();
+        let package = |name: &str, files: &str| {
+            let at = local.join(name);
+            std::fs::create_dir_all(&at).unwrap();
+            std::fs::write(at.join("files"), format!("%FILES%\n{files}")).unwrap();
+        };
+        package("vlc-3.0.21-4", "usr/\nusr/bin/vlc\nusr/share/applications/\nusr/share/applications/vlc.desktop\n");
+        package("gtk-update-icon-cache-4.0-1", "usr/bin/gtk-update-icon-cache\n");
+        package("htop-3.3.0-1", "usr/share/applications/htop.desktop\n");
+        package(
+            "qt6-tools-6.8-1",
+            "usr/share/applications/assistant.desktop\nusr/share/applications/designer.desktop\n",
+        );
+        std::fs::write(menu.join("vlc.desktop"), "[Desktop Entry]\nName=VLC media player\nName[de]=VLC\nType=Application\n\n[Desktop Action x]\nName=Other\n").unwrap();
+        std::fs::write(menu.join("htop.desktop"), "[Desktop Entry]\nName=Htop\nType=Application\nTerminal=true\n")
+            .unwrap();
+        std::fs::write(
+            menu.join("assistant.desktop"),
+            "[Desktop Entry]\nName=Qt Assistant\nType=Application\nNoDisplay=true\n",
+        )
+        .unwrap();
+        std::fs::write(menu.join("designer.desktop"), "[Desktop Entry]\nName=Qt Designer\nType=Application\n").unwrap();
+
+        let pacman = Backend::Pacman { sync_dir: dir.join("sync"), conf: dir.join("pacman.conf"), local_dir: local };
+        assert_eq!(
+            pacman.installed_apps(&menu),
+            [("qt6-tools".to_string(), "Qt Designer".to_string()), ("vlc".to_string(), "VLC media player".to_string())],
+            "what the menu shows, one line a package; nothing hidden or for a terminal"
+        );
+
+        // dpkg: a list of files for each package, beside its record of what is installed.
+        let info = dir.join("dpkg").join("info");
+        std::fs::create_dir_all(&info).unwrap();
+        std::fs::write(info.join("vlc:amd64.list"), "/usr/bin/vlc\n/usr/share/applications/vlc.desktop\n").unwrap();
+        std::fs::write(info.join("libc6:amd64.list"), "/usr/lib/libc.so.6\n").unwrap();
+        let apt = Backend::Apt { lists_dir: dir.join("lists"), status: dir.join("dpkg").join("status") };
+        assert_eq!(apt.installed_apps(&menu), [("vlc".to_string(), "VLC media player".to_string())]);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

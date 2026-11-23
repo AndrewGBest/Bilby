@@ -396,6 +396,41 @@ pub fn run(
     args: &[&str],
     keep_going: &mut dyn FnMut(u64, Option<u64>) -> bool,
 ) -> Result<()> {
+    run_until(runner, prefix, program, args, keep_going, &mut || false)
+}
+
+/// Ask what is running Windows programs to stop, and make it if it will not: asked,
+/// it takes everything it started with it.
+fn stop(child: &mut std::process::Child) {
+    let asked = std::process::Command::new("kill")
+        .args(["-TERM", &child.id().to_string()])
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .is_ok_and(|status| status.success());
+    let until = std::time::Instant::now() + std::time::Duration::from_secs(if asked { 10 } else { 0 });
+    while std::time::Instant::now() < until {
+        if matches!(child.try_wait(), Ok(Some(_))) {
+            return;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(200));
+    }
+    let _ = child.kill();
+    let _ = child.wait();
+}
+
+/// The same, and also done when `finished` says the program's work is over although
+/// something it started is still running (an installer that leaves a window of
+/// Windows' own open behind it would otherwise be waited for forever).
+pub fn run_until(
+    runner: &Path,
+    prefix: &Path,
+    program: &Path,
+    args: &[&str],
+    keep_going: &mut dyn FnMut(u64, Option<u64>) -> bool,
+    finished: &mut dyn FnMut() -> bool,
+) -> Result<()> {
     std::fs::create_dir_all(prefix)?;
     let log = prefix.with_extension("log");
     let said = std::fs::File::create(&log)?;
@@ -420,9 +455,12 @@ pub fn run(
                 return Err(Error::Unsupported(format!("The Windows program did not finish: {last}")));
             }
             None if !keep_going(0, None) => {
-                let _ = child.kill();
-                let _ = child.wait();
+                stop(&mut child);
                 return Err(Error::Cancelled);
+            }
+            None if finished() => {
+                stop(&mut child);
+                return Ok(());
             }
             None => std::thread::sleep(std::time::Duration::from_millis(200)),
         }
@@ -460,6 +498,29 @@ pub fn write_launcher(folder: &Path, runner: &Path, program: &Path) -> Result<Pa
     Ok(path)
 }
 
+/// How often an installer's folder is looked at, and how long nothing may change in
+/// it before the installing is taken to be over.
+const SETTLE_LOOK: std::time::Duration = std::time::Duration::from_secs(5);
+const SETTLED_AFTER: std::time::Duration = std::time::Duration::from_secs(45);
+
+/// How much is in a folder: the sizes of its files and how many there are, as one
+/// number that changes when anything is written. Links are not followed.
+fn written(folder: &Path, depth: usize) -> u64 {
+    if depth > 24 {
+        return 0;
+    }
+    let mut total = 0u64;
+    for entry in std::fs::read_dir(folder).into_iter().flatten().flatten() {
+        let Ok(kind) = entry.file_type() else { continue };
+        if kind.is_dir() {
+            total = total.wrapping_add(written(&entry.path(), depth + 1));
+        } else if kind.is_file() {
+            total = total.wrapping_add(entry.metadata().map(|meta| meta.len()).unwrap_or(0)).wrapping_add(1);
+        }
+    }
+    total
+}
+
 /// Set a downloaded Windows installer up as an app: the whole of it, start to finish.
 /// Returns what starts the app.
 pub fn install(
@@ -483,8 +544,31 @@ pub fn install(
     std::fs::create_dir_all(&prefix)?;
     let before = programs_in(&prefix);
     let kind = installer_kind(installer);
-    run(&runner, &prefix, installer, kind.quiet(), progress)?;
     let name = installer.file_name().unwrap_or_default().to_string_lossy().to_string();
+    // Some installers finish their work and leave something of Windows' own running,
+    // which would be waited for forever. Once a program has appeared and nothing has
+    // been written for a while, the installing is over.
+    let mut last_look = std::time::Instant::now();
+    let mut still: Option<(u64, std::time::Instant)> = None;
+    let mut finished = || {
+        if last_look.elapsed() < SETTLE_LOOK {
+            return false;
+        }
+        last_look = std::time::Instant::now();
+        if installed_program(&before, &programs_in(&prefix), &name).is_none() {
+            still = None;
+            return false;
+        }
+        let size = written(&prefix.join("drive_c"), 0);
+        match still {
+            Some((same, since)) if same == size => since.elapsed() >= SETTLED_AFTER,
+            _ => {
+                still = Some((size, std::time::Instant::now()));
+                false
+            }
+        }
+    };
+    run_until(&runner, &prefix, installer, kind.quiet(), progress, &mut finished)?;
     let program = match installed_program(&before, &programs_in(&prefix), &name) {
         Some(program) => program,
         // Nothing was installed: the file is the program itself. It is kept in its
@@ -516,6 +600,7 @@ mod tests {
             programs: Vec::new(),
             cache: root.join("cache"),
             config: root.join("config"),
+            desktop: None,
         }
     }
 

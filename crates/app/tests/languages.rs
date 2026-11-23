@@ -110,6 +110,7 @@ fn every_language_says_everything_and_the_interface_follows_the_one_chosen() {
         programs: Vec::new(),
         cache: root.join("cache"),
         config: root.join("config"),
+        desktop: None,
     };
     std::fs::create_dir_all(&dirs.config).unwrap();
     let state = dirs.config.join("demo-state.json");
