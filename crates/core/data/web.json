@@ -13,7 +13,7 @@
     {"host": "peacocktv.com", "name": "Peacock", "summary": "NBCUniversal's films, series and sport.", "kind": "watch"},
     {"host": "rogersxfinitystream.rogers.com", "name": "Rogers Ignite TV", "summary": "Live and recorded TV for Rogers customers in Canada, now called Rogers Xfinity.", "kind": "watch"},
     {"host": "watch.sportsnet.ca", "name": "Sportsnet", "summary": "Live hockey, baseball and other sport from Sportsnet+, in Canada.", "kind": "watch"},
-    {"host": "tsn.ca", "name": "TSN", "summary": "Live sport, scores and highlights from TSN, in Canada.", "kind": "watch"},
+    {"host": "tsn.ca", "name": "TSN", "summary": "Live sport, scores and highlights from TSN, in Canada.", "kind": "watch", "start": "/live"},
     {"host": "crunchyroll.com", "name": "Crunchyroll", "summary": "Anime, with new episodes soon after Japan.", "kind": "watch", "featured": true},
     {"host": "vimeo.com", "name": "Vimeo", "summary": "Videos from film-makers and studios.", "kind": "watch"},
     {"host": "dailymotion.com", "name": "Dailymotion", "summary": "Videos from around the world.", "kind": "watch"},

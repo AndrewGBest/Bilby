@@ -49,6 +49,10 @@ pub struct Site {
     /// small to show on a TV (Google's is 32 pixels across).
     #[serde(default)]
     pub icon: Option<String>,
+    /// The page the app opens on, where the site's front page is not the one people
+    /// came for: "/live" for a broadcaster whose front page is its news.
+    #[serde(default)]
+    pub start: Option<String>,
 }
 
 /// The bundled list. A broken file means no list, not a store that will not start;
@@ -72,6 +76,12 @@ pub fn sites() -> &'static [Site] {
 pub fn listed(host: &str) -> Option<&'static Site> {
     let bare = host.trim_start_matches("www.");
     sites().iter().find(|site| site.host == host || site.host == bare)
+}
+
+/// The address a site's app opens: its front page, or the page the list names for it.
+pub fn address(host: &str) -> String {
+    let start = listed(host).and_then(|site| site.start.as_deref()).filter(|path| path.starts_with('/'));
+    format!("https://{host}{}", start.unwrap_or("/"))
 }
 
 /// The source. `tv`: the device is a TV, where sites open in Longboard.
@@ -241,7 +251,7 @@ impl Source for Websites {
             assets: vec![Asset {
                 name: site.name,
                 size: 0,
-                url: site.homepage,
+                url: address(key),
                 digest: None,
                 info: Some(AssetInfo {
                     format: Format::WebApp,
@@ -266,6 +276,21 @@ impl Source for Websites {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_site_can_open_on_the_page_people_came_for() {
+        // TSN's front page is news; what there is to watch is on its own page.
+        assert_eq!(address("tsn.ca"), "https://tsn.ca/live");
+        assert_eq!(address("netflix.com"), "https://netflix.com/");
+        assert_eq!(address("unlisted.example"), "https://unlisted.example/");
+        let files = Websites { tv: true, os: Os::Linux }.releases("tsn.ca").unwrap().remove(0).assets;
+        assert_eq!(files[0].url, "https://tsn.ca/live");
+        // It is still the one site, found and pictured by its own address.
+        assert_eq!(summary_of("tsn.ca").homepage, "https://tsn.ca/");
+        for site in sites() {
+            assert!(site.start.as_deref().is_none_or(|path| path.starts_with('/')), "{}", site.host);
+        }
+    }
 
     const ON_TV: Websites = Websites { tv: true, os: Os::Linux };
 

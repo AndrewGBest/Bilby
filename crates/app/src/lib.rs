@@ -4750,16 +4750,17 @@ impl App {
         let started = if let Some(host) = id.strip_prefix("web:").filter(|_| !self.opens_sites_in_longboard()) {
             // A window of its own where a browser here can give it one; else a page
             // in the usual browser.
-            let url = format!("https://{host}/");
+            let url = bilby_core::source::web::address(host);
             match install::find_app_browser(&self.dirs) {
                 Some(browser) => (self.runner)(&browser.program, &browser.args(&url)),
                 None => (self.browser)(&url),
             }
         } else if let Some(host) = id.strip_prefix("web:") {
             match install::find_longboard(&self.dirs) {
-                Some(longboard) => {
-                    (self.runner)(&longboard.program, &longboard.args(&[format!("--url=https://{host}/")]))
-                }
+                Some(longboard) => (self.runner)(
+                    &longboard.program,
+                    &longboard.args(&[format!("--url={}", bilby_core::source::web::address(host))]),
+                ),
                 None => Err(Error::Unsupported("Longboard is no longer on this device.".into())),
             }
         } else if let Some(app_id) = self.flatpak_app(&id) {

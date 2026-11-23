@@ -1512,7 +1512,8 @@ pub fn execute(
     }
     // On a computer or phone a web app is a shortcut to the site in the usual browser.
     if plan.action == Action::WebApp && !asset.info.as_ref().is_some_and(|info| info.tv) {
-        let host = asset.url.trim_start_matches("https://").trim_end_matches('/');
+        // The site itself, whichever of its pages the app opens on.
+        let host = asset.url.trim_start_matches("https://").split('/').next().unwrap_or_default();
         let entry = write_web_shortcut(dirs, &format!("web:{host}"), &asset.name, &asset.url)?;
         let how = match find_app_browser(dirs) {
             Some(_) => "It opens in a window of its own.",
@@ -1526,7 +1527,8 @@ pub fn execute(
         });
     }
     if plan.action == Action::WebApp {
-        let host = asset.url.trim_start_matches("https://").trim_end_matches('/');
+        // The site itself, whichever of its pages the app opens on.
+        let host = asset.url.trim_start_matches("https://").split('/').next().unwrap_or_default();
         // The store installs Longboard itself before it gets here; this is for a caller
         // that did not.
         let longboard = find_longboard(dirs).ok_or_else(|| {
