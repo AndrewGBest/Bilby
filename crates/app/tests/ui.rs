@@ -95,6 +95,7 @@ fn start_on(preset: &str, shell: Shell, seed: Option<&str>, host: Option<Arc<dyn
     let opened: Arc<Mutex<Vec<PathBuf>>> = Arc::default();
     let record = opened.clone();
     let launched = opened.clone();
+    let browsed = opened.clone();
     let web_opened: Arc<Mutex<Vec<(PathBuf, String)>>> = Arc::default();
     let web_record = web_opened.clone();
     let notified: Arc<Mutex<Vec<String>>> = Arc::default();
@@ -107,6 +108,15 @@ fn start_on(preset: &str, shell: Shell, seed: Option<&str>, host: Option<Arc<dyn
         dirs: Some(dirs.clone()),
         opener: Some(Arc::new(move |path: &std::path::Path| {
             record.lock().unwrap().push(path.to_path_buf());
+            Ok(())
+        })),
+        // No real browser is started: what would have been opened is noted.
+        browser: Some(Arc::new(move |url: &str| {
+            // As the real one does, it refuses anything that is not a plain https link.
+            if !url.starts_with("https://") || url.chars().any(|c| c.is_whitespace() || c.is_control()) {
+                return Err(bilby_core::Error::Unsupported(format!("Refusing to open \"{url}\": not an https link")));
+            }
+            browsed.lock().unwrap().push(PathBuf::from(url));
             Ok(())
         })),
         launcher: Some(Arc::new(move |path: &std::path::Path| {
@@ -123,10 +133,14 @@ fn start_on(preset: &str, shell: Shell, seed: Option<&str>, host: Option<Arc<dyn
             Ok(())
         })),
         // The store's sign-in window: the person signs in and Steam answers.
-        signin: Some(Arc::new(|session: &std::path::Path| {
+        signin: Some(Arc::new(|site: &str, session: &std::path::Path| {
             std::fs::create_dir_all(session)?;
             std::fs::write(session.join("cookies"), b"stand-in")?;
-            Ok(Some(r#"{"steamid":"76561198000000001","owned":[620,440,10]}"#.to_string()))
+            Ok(Some(match site {
+                // GOG hands back a one-time code, which the store then asks GOG about.
+                "gog" => r#"{"code":"one-time-code-1"}"#.to_string(),
+                _ => r#"{"steamid":"76561198000000001","owned":[620,440,10]}"#.to_string(),
+            }))
         })),
         host,
         ..Default::default()
@@ -158,6 +172,21 @@ impl Session {
     /// labelled by its own content, so a heading can share a button's label).
     fn labelled(&self, label: &str) -> Vec<ElementHandle> {
         let mut found: Vec<ElementHandle> = ElementHandle::find_by_accessible_label(&self.ui, label).collect();
+        // The settings show one section at a time. A person looking for a setting
+        // looks through the sections; so does this, staying on the one that has it.
+        if found.is_empty() && self.store().get_page() == 3 {
+            let showing = self.store().get_settings_section();
+            for section in 0..=6 {
+                self.store().set_settings_section(section);
+                found = ElementHandle::find_by_accessible_label(&self.ui, label).collect();
+                if !found.is_empty() {
+                    break;
+                }
+            }
+            if found.is_empty() {
+                self.store().set_settings_section(showing);
+            }
+        }
         found.sort_by_key(|e| {
             e.accessible_role() == Some(slint::private_unstable_api::re_exports::AccessibleRole::Text)
         });
@@ -1440,6 +1469,121 @@ fn tv_is_driven_entirely_by_the_remote() {
 }
 
 #[test]
+fn the_country_for_prices_can_be_chosen_and_is_remembered() {
+    let s = start("linux-x64-debian", Shell::Desktop);
+    // The system's own to begin with, named; then the countries on offer.
+    let choices = s.store().get_countries();
+    assert!(choices.row_count() > 40);
+    assert!(choices.row_data(0).unwrap().on && choices.row_data(0).unwrap().id.is_empty());
+    assert_eq!(s.store().get_country_name(), choices.row_data(0).unwrap().label);
+    s.store().invoke_set_country("CA".into());
+    assert_eq!(s.saved().settings.country, "CA");
+    assert_eq!(s.store().get_country_name(), "Canada");
+    let on: Vec<String> = s.store().get_countries().iter().filter(|c| c.on).map(|c| c.id.to_string()).collect();
+    assert_eq!(on, ["CA"]);
+    // Not a country on offer: nothing changes.
+    s.store().invoke_set_country("ZZ".into());
+    s.store().invoke_set_country("../x".into());
+    assert_eq!(s.saved().settings.country, "CA");
+    // A remote steps through them, both ways and round the ends; "" is the system's own.
+    s.store().invoke_step_country(true);
+    assert_eq!(s.saved().settings.country, "MX");
+    s.store().invoke_step_country(false);
+    s.store().invoke_step_country(false);
+    assert_eq!(s.saved().settings.country, "US");
+    s.store().invoke_step_country(false);
+    assert_eq!(s.saved().settings.country, "");
+    s.store().invoke_step_country(false);
+    assert_eq!(s.saved().settings.country, "NZ");
+    s.store().invoke_set_country("".into());
+    assert!(s.store().get_countries().row_data(0).unwrap().on);
+}
+
+#[test]
+fn settings_come_in_sections_and_windows_apps_have_choices_of_their_own() {
+    // On a desktop: one section at a time. General first; a setting elsewhere is in its section.
+    let s = start("linux-x64-debian", Shell::Desktop);
+    s.click("Settings");
+    assert_eq!(s.store().get_settings_section(), 0);
+    assert!(!ElementHandle::find_by_accessible_label(&s.ui, "Include pre-releases").any(|_| true));
+    s.click("Updates");
+    assert_eq!(s.store().get_settings_section(), 5);
+    assert!(ElementHandle::find_by_accessible_label(&s.ui, "Include pre-releases").any(|_| true));
+    // The Windows section is only offered where Windows apps can run; not on this stand-in.
+    assert!(!s.has("Windows apps"));
+
+    // How Windows apps run is kept where their launchers read it, and shown back.
+    assert_eq!((s.store().get_windows_proton(), s.store().get_windows_overlay()), (0, false));
+    s.store().invoke_set_windows_proton(1);
+    s.store().invoke_set_windows_overlay(true);
+    assert_eq!((s.store().get_windows_proton(), s.store().get_windows_overlay()), (1, true));
+    let kept = std::fs::read_to_string(bilby_core::winrun::general_choices(&s.dirs)).unwrap();
+    assert!(kept.contains("export PROTONPATH=GE-Proton") && kept.contains("export MANGOHUD=1"), "{kept}");
+    s.store().invoke_set_windows_proton(0);
+    s.store().invoke_set_windows_overlay(false);
+    assert!(!bilby_core::winrun::general_choices(&s.dirs).exists(), "nothing chosen leaves no file");
+    // An app that is not installed has no choices to change.
+    s.store().invoke_set_windows_app("github:nobody/nothing".into(), 2, 1);
+    assert_eq!(s.store().get_windows_installed().row_count(), 0);
+
+    // On a TV: the sections are a list on the left. Left goes to it, Down along it,
+    // Right into the section pointed at.
+    let tv = start_with("linux-tv", Shell::Tv, Some(r#"{"settings":{"welcomed":true,"reduce_motion":true}}"#));
+    for key in [Key::UpArrow, Key::UpArrow, Key::RightArrow, Key::RightArrow, Key::RightArrow, Key::Return] {
+        tv.press(key);
+    }
+    assert_eq!(tv.store().get_page(), 3);
+    assert!(tv.has("Language and country"));
+    // Left, Down to Family, Right: the first setting of that section is the one OK changes.
+    tv.press(Key::LeftArrow);
+    tv.press(Key::DownArrow);
+    tv.press(Key::RightArrow);
+    assert!(!tv.saved().settings.family_mode);
+    tv.press(Key::Return);
+    assert!(tv.saved().settings.family_mode, "Family's first setting is family mode");
+    // In the list of sections, OK does not change a setting.
+    tv.press(Key::LeftArrow);
+    tv.press(Key::Return);
+    assert!(tv.saved().settings.family_mode);
+}
+
+#[test]
+fn the_top_bar_is_reachable_from_an_app_page_on_a_tv() {
+    let s = start("linux-tv", Shell::Tv);
+    let first = s.store().get_tv_rows().row_data(0).unwrap().apps.row_data(0).unwrap();
+    s.press(Key::Return);
+    assert!(s.store().get_details_open());
+    // Up from the page's buttons is the top bar; Down is the page again, still open,
+    // and OK there is the page's own button, not the bar's.
+    s.press(Key::UpArrow);
+    s.press(Key::DownArrow);
+    assert!(s.store().get_details_open());
+    assert_eq!(s.store().get_page(), 0);
+    // Up, along to Library, OK: the app's page is put away and the library is shown.
+    s.press(Key::UpArrow);
+    s.press(Key::RightArrow);
+    s.press(Key::Return);
+    assert!(!s.store().get_details_open());
+    assert_eq!(s.store().get_page(), 2);
+    // And Home from an app's page, the same way.
+    s.store().invoke_open(first.id.clone());
+    assert!(s.store().get_details_open());
+    s.press(Key::UpArrow);
+    s.press(Key::LeftArrow);
+    s.press(Key::Return);
+    assert!(!s.store().get_details_open());
+    assert_eq!(s.store().get_page(), 0);
+    // Back in the bar, on an app's page, is the page again; Back again closes it.
+    s.press(Key::Return);
+    assert!(s.store().get_details_open());
+    s.press(Key::UpArrow);
+    s.press(Key::Escape);
+    assert!(s.store().get_details_open());
+    s.press(Key::Escape);
+    assert!(!s.store().get_details_open());
+}
+
+#[test]
 fn tv_focus_survives_rows_changing_under_it() {
     let s = start("android-tv", Shell::Tv);
     // Move to the last row and its last tile, then make the grid shorter by searching
@@ -2025,6 +2169,158 @@ fn written_reviews_appear_only_for_apps_that_have_them() {
     s.store().invoke_set_ratings(false);
     s.app.open(&s.ui, "flathub:io.quillpad.Quillpad");
     assert_eq!(s.store().get_reviews().row_count(), 0);
+}
+
+#[test]
+fn a_review_can_be_written_on_an_apps_page_and_sent_from_there() {
+    let s = start("linux-x64-debian", Shell::Desktop);
+    s.app.load_ratings(&s.ui);
+    s.app.open(&s.ui, "flathub:io.quillpad.Quillpad");
+    let places = s.store().get_review_places();
+    assert_eq!(places.row_count(), 1, "the ratings service the Linux app stores share");
+    assert!(places.row_data(0).unwrap().from_here && places.row_data(0).unwrap().chosen);
+    assert!(!s.has("Title of your review"));
+    s.click("Write a review");
+    assert!(s.has("Title of your review") && s.has("Your review") && s.has("Name to show next to your review"));
+
+    // Nothing written yet: the form says what is missing and nothing is sent.
+    s.activate("Send your review");
+    assert_eq!(s.store().get_review_problem(), "Choose how many stars first.");
+    s.activate("4 stars");
+    s.activate("Send your review");
+    assert!(s.store().get_review_problem().starts_with("Write a little more"), "{}", s.store().get_review_problem());
+    let (title, text) = ("Does the job", "Starts fast and stays out of the way.");
+    s.store().invoke_send_review(4, title.into(), text.into(), "".into());
+    assert_eq!(s.store().get_review_problem(), "Say what name to show next to your review.");
+    assert!(s.saved().reviewer.is_empty(), "nothing is made up for a review that was not sent");
+
+    // Written in full: it is sent, and the page says so in place of the form.
+    s.store().invoke_send_review(4, title.into(), text.into(), "Ana".into());
+    assert_eq!(s.store().get_review_state(), 2, "{}", s.store().get_review_problem());
+    assert!(s.store().get_review_result().starts_with("Sent, thank you."));
+    assert!(!s.has("Title of your review") && !s.has("Write a review"));
+    // The made-up id that marks this person's reviews, and the name for next time.
+    let saved = s.saved();
+    assert!(saved.reviewer.len() == 40 && saved.reviewer_name == "Ana");
+
+    // The service takes one review of an app from each person; its refusal is shown.
+    s.app.open(&s.ui, "flathub:org.sundial.Sundial");
+    s.app.open(&s.ui, "flathub:io.quillpad.Quillpad");
+    assert_eq!(s.store().get_review_state(), 0);
+    assert_eq!(s.store().get_review_name(), "Ana");
+    s.store().invoke_send_review(5, "Again".into(), text.into(), "Ana".into());
+    assert_eq!(s.store().get_review_problem(), "You have already reviewed this app there.");
+    assert_eq!(s.saved().reviewer, saved.reviewer, "the same person as before");
+
+    // An app nowhere takes reviews of: nothing to write.
+    s.app.open(&s.ui, "github:lumen-labs/lumen");
+    assert_eq!(s.store().get_review_places().row_count(), 0);
+    assert!(!s.has("Write a review"));
+
+    // With ratings and reviews turned off, there is nowhere to send one.
+    s.store().invoke_set_ratings(false);
+    s.app.open(&s.ui, "flathub:io.quillpad.Quillpad");
+    assert_eq!(s.store().get_review_places().row_count(), 0);
+}
+
+#[test]
+fn on_a_tv_a_review_is_written_with_the_remote_and_the_on_screen_keyboard() {
+    let s = start_with("linux-tv", Shell::Tv, Some(r#"{"settings":{"welcomed":true,"reduce_motion":true}}"#));
+    s.app.load_ratings(&s.ui);
+    s.app.open(&s.ui, "flathub:io.quillpad.Quillpad");
+    assert_eq!(s.store().get_review_places().row_count(), 1);
+    // Down to the foot of the page and one back up is the row of reviews; Left of
+    // the first review is the button to write one.
+    for _ in 0..5 {
+        s.press(Key::DownArrow);
+    }
+    s.press(Key::UpArrow);
+    assert!(s.has("Write a review"), "offered beside the reviews");
+    let type_out = |words: &str| {
+        for letter in words.chars() {
+            s.press(SharedString::from(letter.to_string()));
+        }
+    };
+
+    s.press(Key::LeftArrow);
+    s.press(Key::Return);
+    assert!(s.has("Title of your review") && s.has("Your review") && s.has("Name to show next to your review"));
+    // Sending straight away says what is missing.
+    s.activate("Send your review");
+    assert_eq!(s.store().get_review_problem(), "Choose how many stars first.");
+
+    // The stars: Right adds one. Then down the form, OK on a row to type into it.
+    s.press(Key::UpArrow);
+    s.press(Key::UpArrow);
+    s.press(Key::UpArrow);
+    s.press(Key::UpArrow);
+    for _ in 0..4 {
+        s.press(Key::RightArrow);
+    }
+    assert!(s.has("4 stars"));
+    s.press(Key::DownArrow);
+    s.press(Key::Return);
+    assert!(s.has("On-screen keyboard") && s.has("What you have typed"));
+    assert!(s.has("done"), "the last key puts the keyboard away; nothing is searched for");
+    type_out("Does the job");
+    s.press(Key::Return);
+    assert!(!s.has("On-screen keyboard"));
+    assert_eq!(s.store().get_review_title(), "Does the job");
+    assert_eq!(s.store().get_query(), "", "the search was not typed into");
+
+    s.press(Key::DownArrow);
+    s.press(Key::Return);
+    type_out("Starts fast and stays out of the wayy");
+    s.press(Key::Backspace);
+    s.press(Key::Return);
+    assert_eq!(s.store().get_review_text(), "Starts fast and stays out of the way");
+
+    s.press(Key::DownArrow);
+    s.press(Key::Return);
+    type_out("Ana");
+    s.press(Key::Return);
+
+    // Down to "Send review", and OK.
+    s.press(Key::DownArrow);
+    s.press(Key::Return);
+    assert_eq!(s.store().get_review_state(), 2, "{}", s.store().get_review_problem());
+    assert!(s.store().get_review_result().starts_with("Sent, thank you."));
+    assert_eq!(s.saved().reviewer_name, "Ana");
+    // OK closes it, back on the app's page.
+    s.press(Key::Return);
+    assert!(!s.has("Title of your review") && s.store().get_details_open());
+
+    // Back leaves a review half written without sending anything.
+    s.app.open(&s.ui, "flathub:org.sundial.Sundial");
+    s.press(Key::DownArrow);
+    if s.has("Write a review") {
+        s.activate("Write a review");
+        assert!(s.has("Title of your review"));
+        assert_eq!(s.store().get_review_title(), "", "the last app's words do not linger");
+        s.press(Key::Escape);
+        assert!(!s.has("Title of your review"), "Back closes the form");
+        assert!(s.store().get_details_open(), "and the app's page stays");
+    }
+}
+
+#[test]
+fn signing_in_to_gog_keeps_only_the_list_of_what_the_account_owns() {
+    let s = start("linux-x64-debian", Shell::Desktop);
+    s.store().set_page(3);
+    assert!(!s.store().get_gog_signed_in());
+    s.click("Sign in to GOG");
+    assert!(s.store().get_gog_signed_in(), "{}", s.store().get_toast());
+    assert_eq!(s.store().get_gog_summary(), "2 games");
+    assert_eq!(s.saved().gog.unwrap().owned, [1207658924, 1495134320]);
+    let kept = std::fs::read_to_string(&s.state_file).unwrap();
+    assert!(!kept.contains("demo-gog-key") && !kept.contains("one-time-code"), "no key to the account is kept");
+    assert!(s.app.owns(&AppId::parse("gog:1207658924").unwrap()));
+    assert!(!s.app.owns(&AppId::parse("gog:7").unwrap()));
+
+    s.click("Sign out of GOG");
+    assert!(!s.store().get_gog_signed_in() && s.saved().gog.is_none());
+    assert!(!s.dirs.config.join("gog-session").exists(), "the sign-in window's own data goes too");
+    assert!(!s.app.owns(&AppId::parse("gog:1207658924").unwrap()));
 }
 
 // ---- the operating system's own updates ----
@@ -2780,10 +3076,12 @@ fn a_tv_app_page_is_sections_to_move_down_through_and_open() {
     }
     assert!(seen, "{from}");
     assert!(!s.has("C library: glibc"));
-    // And Up comes all the way back to the buttons, which still work.
+    // And Up comes all the way back to the buttons, and past them to the top bar; Down
+    // from there is the buttons again, which still work.
     for _ in 0..8 {
         s.press(Key::UpArrow);
     }
+    s.press(Key::DownArrow);
     s.press(Key::Return);
     assert!(
         s.store().get_install_state() != 0 || s.store().get_in_library() || s.store().get_can_open(),
@@ -2859,6 +3157,15 @@ fn the_tv_has_a_settings_tab_with_every_setting_reachable_by_remote() {
     assert!(!s.saved().settings.show_everything);
     s.press(Key::Return);
     assert!(s.saved().settings.show_everything && s.store().get_show_everything());
+    // Above it is the country for prices: Right is the next in the list (from the
+    // system's own to the first by name), Left the one before.
+    s.press(Key::UpArrow);
+    assert!(s.saved().settings.country.is_empty());
+    s.press(Key::RightArrow);
+    assert_eq!(s.saved().settings.country, "US");
+    assert_eq!(s.store().get_country_name(), "United States");
+    s.press(Key::LeftArrow);
+    assert!(s.saved().settings.country.is_empty());
     // Above it is the language: OK steps to the next one in the list (from the
     // system's own to English by name, here).
     s.press(Key::UpArrow);

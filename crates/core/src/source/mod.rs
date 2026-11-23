@@ -8,8 +8,11 @@ pub mod flathub;
 pub mod forgejo;
 pub mod github;
 pub mod gitlab;
+pub mod gog;
 pub mod homebrew;
+pub mod msstore;
 pub mod own;
+pub mod play;
 pub mod snap;
 pub mod steam;
 pub mod system;
@@ -69,6 +72,12 @@ pub trait Source: Send + Sync {
     /// to browse in full, where [`Source::collections`] gives a home page's few.
     fn collection(&self, title: &str, limit: usize) -> Vec<AppSummary> {
         self.collections(limit).into_iter().find(|(name, _)| name == title).map(|(_, apps)| apps).unwrap_or_default()
+    }
+
+    /// What people wrote about the app at this source, the most helpful first, where
+    /// the source publishes that. Costs a request.
+    fn reviews(&self, _key: &str) -> Vec<crate::ratings::Review> {
+        Vec::new()
     }
 
     fn origins(&self) -> Vec<String> {

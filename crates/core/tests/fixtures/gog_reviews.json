@@ -1,0 +1,62 @@
+{
+ "page": 1,
+ "reviewCount": 1574,
+ "_embedded": {
+  "items": [
+   {
+    "id": "1784f9f0-9a2c-11e8-956e-00163e97122a",
+    "content": {
+     "title": "Harvest Moon for PC, Buy Now",
+     "description": "I'm 14 game days in and this is the Harvest Moon (HM) that fans always wanted for PC. There's relationship building, crop growing, mining, combat, nature spirits, fishing, house expansion, etc. It has all the building blocks that make a HM game.\n\nThe player can choose to create a male or female char"
+    },
+    "reviewer": {
+     "username": "tiberius8"
+    },
+    "date": "2016-02-27T01:01:53+02:00",
+    "rating": {
+     "value": 5
+    },
+    "votes": {
+     "downvotes": 66,
+     "upvotes": 718
+    }
+   },
+   {
+    "id": "28aaf462-c585-11e8-92ca-00163e97122a",
+    "content": {
+     "title": "Don't call it a a ripoff, baby",
+     "description": "The phrase \"Harvest Moon ripoff\" gets thrown around a lot on the review page, but let me set the record straight: This is a ripoff of Harvest Moon, you know, in the sense that both Harvest Moon and Stardew Valley are games about farming. \n\nIn reality, this game offers so many improvements over the H"
+    },
+    "reviewer": {
+     "username": "TheTome56"
+    },
+    "date": "2016-02-29T15:05:41+02:00",
+    "rating": {
+     "value": 5
+    },
+    "votes": {
+     "downvotes": 76,
+     "upvotes": 638
+    }
+   },
+   {
+    "id": "2862a586-c585-11e8-a283-00163e97122a",
+    "content": {
+     "title": "New bar set for Harvest Moon-type games",
+     "description": "Stardew Valley takes elements of Harvest Moon, Rune factory and animal crossing and then becomes better than all three. Bold statement, huh? Here's why.\n\nFirstly, the amount of content this game  has is astounding. You have farming, fishing, mining, foraging, combat, NPCs, quests, special events... "
+    },
+    "reviewer": {
+     "username": "wbmc1"
+    },
+    "date": "2016-02-29T05:54:43+02:00",
+    "rating": {
+     "value": 5
+    },
+    "votes": {
+     "downvotes": 32,
+     "upvotes": 283
+    }
+   }
+  ]
+ }
+}

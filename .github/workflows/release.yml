@@ -120,8 +120,46 @@ jobs:
             bilby-v*.tar.gz
           if-no-files-found: error
 
+  # The Android package: one APK for phones, tablets and TVs with a 64-bit ARM
+  # processor, signed with the project's own key (kept in the repository's secrets).
+  android:
+    runs-on: ubuntu-latest
+    env:
+      # The drawing library underneath comes ready-built against this NDK and no older one.
+      NDK: 30.0.16248370
+    steps:
+      - name: Check the version
+        run: |
+          [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.]+)?$ ]] || { echo "not a version: $VERSION"; exit 1; }
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+      - name: Android NDK
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$NDK" "platforms;android-34" "build-tools;34.0.0" > /dev/null
+          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/$NDK" >> "$GITHUB_ENV"
+      - run: cargo install cargo-apk --locked
+      - name: Build and sign
+        working-directory: crates/app
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          CARGO_APK_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          # Without the key there is no APK, and the rest of the release goes ahead.
+          [ -n "$KEYSTORE" ] || { echo "::warning::No Android package: the signing key is not in the repository's secrets"; exit 0; }
+          echo "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.jks"
+          CARGO_APK_RELEASE_KEYSTORE="$RUNNER_TEMP/release.jks" cargo apk build --lib --release
+          rm -f "$RUNNER_TEMP/release.jks"
+          cp ../../target/release/apk/bilby.apk "../../bilby-${VERSION}-android-arm64.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bilby-android
+          path: bilby-*.apk
+          if-no-files-found: ignore
+
   publish:
-    needs: build
+    needs: [build, android]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4

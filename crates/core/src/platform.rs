@@ -113,6 +113,9 @@ pub struct LinuxInfo {
     /// SteamOS): packages are not installed into it in the ordinary way, and apps are
     /// meant to come as Flatpaks.
     pub image: bool,
+    /// Windows programs can be set up to run here through Proton (see `winrun`): the
+    /// store was told to offer them, and what that needs is on the device.
+    pub windows: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -229,6 +232,28 @@ impl Platform {
         out
     }
 
+    /// Could Windows programs be set up here? An ordinary 64-bit Linux with the
+    /// usual C library, and Python for the launcher (or the launcher itself).
+    pub fn could_run_windows(&self) -> bool {
+        self.os == Os::Linux
+            && self.arch == Arch::X86_64
+            && self.linux.as_ref().is_some_and(|linux| linux.libc == Libc::Gnu)
+            && (on_path("python3") || on_path("umu-run"))
+    }
+
+    /// Offer Windows programs here from now on, or stop: only where they could run.
+    pub fn offer_windows(&mut self, wanted: bool) {
+        let can = wanted && self.could_run_windows();
+        if let Some(linux) = self.linux.as_mut() {
+            linux.windows = can;
+        }
+    }
+
+    /// Are Windows programs offered here?
+    pub fn runs_windows(&self) -> bool {
+        self.os == Os::Linux && self.arch == Arch::X86_64 && self.linux.as_ref().is_some_and(|linux| linux.windows)
+    }
+
     pub fn can_run(&self, arch: Arch) -> bool {
         arch == self.arch || self.also_runs.contains(&arch)
     }
@@ -247,6 +272,7 @@ impl Platform {
                 snap: false,
                 aur_helper: (family == LinuxFamily::Arch).then(|| "paru".to_string()),
                 image: false,
+                windows: false,
             })
         };
         let p = |os, arch, also_runs: &[Arch], linux: Option<LinuxInfo>, ff, os_name: &str| Platform {
@@ -495,6 +521,8 @@ fn detect_linux() -> LinuxInfo {
         snap: on_path("snap"),
         aur_helper: ["paru", "yay", "pikaur", "aura"].iter().find(|h| on_path(h)).map(|h| h.to_string()),
         image: Path::new("/run/ostree-booted").exists() || on_path("steamos-update"),
+        // Off until the settings say otherwise; see `Platform::offer_windows`.
+        windows: false,
     }
 }
 

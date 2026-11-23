@@ -394,6 +394,7 @@ dependencies = [
  "bilby-signin",
  "i-slint-backend-testing",
  "image",
+ "jni 0.21.1",
  "png 0.17.16",
  "rodio",
  "serde_json",

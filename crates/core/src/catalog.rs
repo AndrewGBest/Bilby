@@ -186,6 +186,19 @@ impl Catalog {
     /// Talks to the real GitHub and AUR, caching responses under `cache_dir`.
     #[cfg(feature = "net")]
     pub fn live(platform: Platform, github_token: Option<String>, cache_dir: std::path::PathBuf) -> Catalog {
+        let country = crate::region::from_env().unwrap_or_else(|| "US".to_string());
+        Catalog::live_in(platform, github_token, cache_dir, &country)
+    }
+
+    /// The same, asking the stores that sell things for the prices of one country
+    /// (two letters, as in `CA`).
+    #[cfg(feature = "net")]
+    pub fn live_in(
+        platform: Platform,
+        github_token: Option<String>,
+        cache_dir: std::path::PathBuf,
+        country: &str,
+    ) -> Catalog {
         use crate::http::{CachedHttp, NetHttp};
         use std::time::Duration;
         let has_token = github_token.as_deref().is_some_and(|t| !t.trim().is_empty());
@@ -208,8 +221,11 @@ impl Catalog {
         catalog.sources.push(Arc::new(crate::source::winget::Winget::new()));
         // Other stores, handed over to: they install and run what they sell.
         let shared = catalog.http.clone();
-        catalog.sources.push(Arc::new(crate::source::steam::Steam::new(shared.clone(), &platform)));
-        catalog.sources.push(Arc::new(crate::source::appstore::MacAppStore::new(shared)));
+        catalog.sources.push(Arc::new(crate::source::steam::Steam::new(shared.clone(), &platform).in_country(country)));
+        catalog.sources.push(Arc::new(crate::source::appstore::MacAppStore::new(shared.clone()).in_country(country)));
+        catalog.sources.push(Arc::new(crate::source::msstore::MicrosoftStore::new(shared.clone()).in_country(country)));
+        catalog.sources.push(Arc::new(crate::source::gog::Gog::new(shared.clone(), &platform).in_country(country)));
+        catalog.sources.push(Arc::new(crate::source::play::GooglePlay::new(shared).in_country(country)));
         if has_token {
             catalog.check_limit = 20;
         }
@@ -262,7 +278,7 @@ impl Catalog {
     /// answer over the network, not through a program only their own system has).
     fn searched(&self, source: &dyn Source) -> bool {
         use SourceKind::*;
-        let anywhere = matches!(source.kind(), Flathub | Snap | Aur | FDroid | MacAppStore | Homebrew);
+        let anywhere = matches!(source.kind(), Flathub | Snap | Aur | FDroid | MacAppStore | MicrosoftStore | Homebrew);
         self.uses(source) || (self.show_everything && anywhere && !self.disabled.contains(&source.kind()))
     }
 
@@ -566,6 +582,15 @@ impl Catalog {
     /// The id the ratings service knows the app by, and its rating. `None` when
     /// ratings are off, or the service does not know the app.
     fn rated_as(&self, id: &AppId) -> Option<(String, crate::model::Rating)> {
+        let appstream_id = self.rated_id(id)?;
+        let rating = self.ratings.read().unwrap().as_ref()?.ratings.get(&appstream_id)?;
+        Some((appstream_id, rating))
+    }
+
+    /// The id the ratings service would know the app by, whether or not anyone has
+    /// rated it yet: its own for Flathub, through the system's catalog for packages
+    /// and GitHub projects. `None` when ratings are off.
+    pub fn rated_id(&self, id: &AppId) -> Option<String> {
         let guard = self.ratings.read().unwrap();
         let rated = guard.as_ref()?;
         let appstream_id = match id.source {
@@ -584,19 +609,46 @@ impl Catalog {
             | SourceKind::FDroid
             | SourceKind::Steam
             | SourceKind::MacAppStore
+            | SourceKind::MicrosoftStore
+            | SourceKind::Gog
+            | SourceKind::GooglePlay
             | SourceKind::Own => return None,
         };
-        Some((appstream_id.to_string(), rated.ratings.get(appstream_id)?))
+        Some(appstream_id.to_string())
     }
 
-    /// What people wrote about the app. Asked for only when the ratings service is
-    /// known to have the app; anything else returns nothing without a request.
+    /// Where a review of the app can be left: from here for the open ratings service,
+    /// and on their own pages for the stores among `ids` (the app itself and the
+    /// other places the same app comes from). `skip` leaves a store out, for one the
+    /// person is known not to be able to review at.
+    pub fn review_places(&self, ids: &[AppId], skip: &dyn Fn(&AppId) -> bool) -> Vec<crate::reviewing::Place> {
+        let mut places: Vec<crate::reviewing::Place> = Vec::new();
+        if let Some(appstream_id) = ids.iter().find_map(|id| self.rated_id(id)) {
+            places.push(crate::reviewing::open_place(&appstream_id));
+        }
+        for id in ids {
+            if skip(id) || places.iter().any(|place| place.id == id.source.prefix()) {
+                continue;
+            }
+            // GOG's pages go by a name, which the game's own entry has.
+            let page = match id.source {
+                SourceKind::Gog => self.source_summary(id).map(|app| app.homepage).unwrap_or_default(),
+                _ => String::new(),
+            };
+            places.extend(crate::reviewing::store_place(id, &page, &self.platform));
+        }
+        places
+    }
+
+    /// What people wrote about the app: from the ratings service where it knows the
+    /// app, else from the app's own store where that publishes reviews. A source that
+    /// has none answers without a request.
     pub fn reviews(&self, id: &AppId) -> Vec<crate::ratings::Review> {
         match self.rated_as(id) {
             Some((appstream_id, _)) => {
                 crate::ratings::fetch_reviews(self.http.as_ref(), &appstream_id).unwrap_or_default()
             }
-            None => Vec::new(),
+            None => self.source(id.source).map(|source| source.reviews(&id.key)).unwrap_or_default(),
         }
     }
 

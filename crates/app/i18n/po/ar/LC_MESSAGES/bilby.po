@@ -16,6 +16,14 @@ msgctxt "FamilyRow"
 msgid ", unofficial"
 msgstr "، غير رسمي"
 
+msgctxt "ReviewForm"
+msgid "1 star"
+msgstr "نجمة واحدة"
+
+msgctxt "TvShell"
+msgid "1 star"
+msgstr "نجمة واحدة"
+
 msgctxt "TvShell"
 msgid "A PIN guards these settings and adult content"
 msgstr "رمز PIN يحمي هذه الإعدادات ومحتوى البالغين"
@@ -31,6 +39,14 @@ msgstr "تُفتح نافذة لاختيار المجلد قبل جلب كل م�
 msgctxt "TvQuestion"
 msgid "A game controller is connected. Bilby has a layout with large text for the sofa, driven with the arrow keys of a remote or keyboard. You can change this later in Settings."
 msgstr "تم توصيل ذراع تحكم. لدى Bilby تخطيط بنص كبير يناسب الجلوس على الأريكة، ويُتحكَّم فيه بأسهم جهاز التحكم عن بُعد أو لوحة المفاتيح. يمكنك تغيير ذلك لاحقًا من الإعدادات."
+
+msgctxt "ReviewForm"
+msgid "A short title"
+msgstr "عنوان قصير"
+
+msgctxt "TvShell"
+msgid "A short title"
+msgstr "عنوان قصير"
 
 msgctxt "DetailsBody"
 msgid "About"
@@ -59,6 +75,10 @@ msgstr "حول هذا الموقع"
 msgctxt "WhatsNew"
 msgid "About this website"
 msgstr "حول هذا الموقع"
+
+msgctxt "SettingsBody"
+msgid "Accounts"
+msgstr "الحسابات"
 
 msgctxt "TvShell"
 msgid "Accounts"
@@ -181,6 +201,10 @@ msgid "Ask where to save each download"
 msgstr "السؤال عن مكان حفظ كل تنزيل"
 
 msgctxt "SettingsBody"
+msgid "Asks the system for its full speed while a Windows app runs."
+msgstr "يطلب من النظام سرعته الكاملة أثناء تشغيل تطبيق Windows."
+
+msgctxt "SettingsBody"
 msgid "Automatic"
 msgstr "تلقائي"
 
@@ -235,6 +259,10 @@ msgstr "يثبّت Bilby تحديثات تطبيقاتك فور العثور ع�
 msgctxt "SettingsBody"
 msgid "Bilby keeps a short list, chosen by people, of the apps and websites nearly everyone looks for: a browser, a video player, the big names. On, the home page starts with them in the version for this device, and they are placed a little higher in a search. Off, you get only what the sources' own figures say."
 msgstr "يحتفظ Bilby بقائمة قصيرة، اختارها أشخاص، للتطبيقات والمواقع التي يبحث عنها الجميع تقريبًا: متصفح، مشغّل فيديو، الأسماء الكبيرة. عند التشغيل، تبدأ الصفحة الرئيسية بها في النسخة المناسبة لهذا الجهاز، وتُرفع قليلًا في نتائج البحث. عند الإيقاف، ترى فقط ما تقوله أرقام المصادر نفسها."
+
+msgctxt "SettingsBody"
+msgid "Bilby sets Windows programs up to run here through Proton, each in a folder of its own. Most programs work, not all. The first one needs about 700 MB of downloads."
+msgstr "يُعدّ Bilby برامج Windows لتعمل هنا عبر Proton، كل منها في مجلد خاص به. يعمل معظمها، وليس كلها. يحتاج الأول إلى تنزيل نحو 700 ميغابايت."
 
 msgctxt "TvShell"
 msgid "Bilby {0} is available. You have {1}"
@@ -377,6 +405,10 @@ msgid "Choose a version"
 msgstr "اختر إصدارًا"
 
 msgctxt "TvShell"
+msgid "Choose done when it is typed. Back puts the keyboard away."
+msgstr "اختر «تم» عند الانتهاء من الكتابة. زر الرجوع يخفي لوحة المفاتيح."
+
+msgctxt "TvShell"
 msgid "Choose enter when it is typed. Back cancels."
 msgstr "اختر «إدخال» بعد كتابتها. زر الرجوع يلغي."
 
@@ -432,6 +464,14 @@ msgctxt "CommandBox"
 msgid "Copy"
 msgstr "نسخ"
 
+msgctxt "ReviewForm"
+msgid "Copy and open"
+msgstr "نسخ وفتح"
+
+msgctxt "TvShell"
+msgid "Copy and open"
+msgstr "نسخ وفتح"
+
 msgctxt "CommandBox"
 msgid "Copy command"
 msgstr "نسخ الأمر"
@@ -439,6 +479,14 @@ msgstr "نسخ الأمر"
 msgctxt "DetailsBody"
 msgid "Couldn't load this app"
 msgstr "تعذّر تحميل هذا التطبيق"
+
+msgctxt "SettingsBody"
+msgid "Country for prices"
+msgstr "بلد الأسعار"
+
+msgctxt "TvShell"
+msgid "Country for prices"
+msgstr "بلد الأسعار"
 
 msgctxt "SettingsBody"
 msgid "Dark"
@@ -491,6 +539,10 @@ msgstr "استكشاف"
 msgctxt "MobileShell"
 msgid "Discover"
 msgstr "استكشاف"
+
+msgctxt "TvShell"
+msgid "Done"
+msgstr "تم"
 
 msgctxt "DetailsBody"
 msgid "Download"
@@ -549,6 +601,14 @@ msgid "Everything works without signing in, but GitHub then allows only 60 reque
 msgstr "كل شيء يعمل دون تسجيل الدخول، لكن GitHub يسمح حينها بـ 60 طلبًا فقط في الساعة لشبكتك كلها، وقد تستنفدها بضع عمليات بحث. تسجيل الدخول يرفع الحد إلى 5,000. لا يطلب Bilby أي وصول إلى حسابك."
 
 msgctxt "SettingsBody"
+msgid "Family"
+msgstr "العائلة"
+
+msgctxt "TvShell"
+msgid "Family"
+msgstr "العائلة"
+
+msgctxt "SettingsBody"
 msgid "Family and adult content"
 msgstr "العائلة ومحتوى البالغين"
 
@@ -600,6 +660,10 @@ msgctxt "SettingsBody"
 msgid "Four digits. With a PIN set, it is asked for to change anything in this card and to open adult content, in place of the question about being an adult."
 msgstr "أربعة أرقام. عند تعيين رمز PIN، يُطلب لتغيير أي شيء في هذه البطاقة ولفتح محتوى البالغين، بدلًا من السؤال عن كونك بالغًا."
 
+msgctxt "SettingsBody"
+msgid "Frames a second and temperatures, drawn over the app by MangoHud."
+msgstr "الإطارات في الثانية ودرجات الحرارة، يرسمها MangoHud فوق التطبيق."
+
 msgctxt "DetailsBody"
 msgid "From"
 msgstr "من"
@@ -607,6 +671,22 @@ msgstr "من"
 msgctxt "TvShell"
 msgid "From"
 msgstr "من"
+
+msgctxt "SettingsBody"
+msgid "GE-Proton"
+msgstr "GE-Proton"
+
+msgctxt "TvShell"
+msgid "GE-Proton"
+msgstr "GE-Proton"
+
+msgctxt "SettingsBody"
+msgid "GOG"
+msgstr "GOG"
+
+msgctxt "SettingsBody"
+msgid "General"
+msgstr "عام"
 
 msgctxt "TvShell"
 msgid "General"
@@ -649,6 +729,10 @@ msgstr[5] "إخفاء {n} ملف لأجهزة أخرى"
 msgctxt "TvShell"
 msgid "Home"
 msgstr "الرئيسية"
+
+msgctxt "SettingsBody"
+msgid "How Windows apps run"
+msgstr "كيف تعمل تطبيقات Windows"
 
 msgctxt "DetailsBody"
 msgid "In your favourites"
@@ -738,6 +822,14 @@ msgctxt "TvShell"
 msgid "Installing updates"
 msgstr "تثبيت التحديثات"
 
+msgctxt "ReviewForm"
+msgid "It goes to:"
+msgstr "تُرسَل إلى:"
+
+msgctxt "TvShell"
+msgid "It goes to:"
+msgstr "تُرسَل إلى:"
+
 msgctxt "SettingsBody"
 msgid "Keep Bilby in the system tray when its window is closed"
 msgstr "إبقاء Bilby في علبة النظام عند إغلاق نافذته"
@@ -766,6 +858,10 @@ msgctxt "TvShell"
 msgid "Language"
 msgstr "اللغة"
 
+msgctxt "TvShell"
+msgid "Language and country"
+msgstr "اللغة والبلد"
+
 msgctxt "LibraryBody"
 msgid "Last checked {}"
 msgstr "آخر تحقق {}"
@@ -773,6 +869,26 @@ msgstr "آخر تحقق {}"
 msgctxt "SettingsBody"
 msgid "Layout"
 msgstr "التخطيط"
+
+msgctxt "ReviewForm"
+msgid "Leave it at:"
+msgstr "اتركها في:"
+
+msgctxt "TvShell"
+msgid "Leave it at:"
+msgstr "اتركها في:"
+
+msgctxt "ReviewForm"
+msgid "Leave the review at {}"
+msgstr "مكان ترك المراجعة: {}"
+
+msgctxt "TvShell"
+msgid "Leave the review at {}"
+msgstr "مكان ترك المراجعة: {}"
+
+msgctxt "TvShell"
+msgid "Left and Right to change"
+msgstr "يمين ويسار للتغيير"
 
 msgctxt "DesktopShell"
 msgid "Library"
@@ -828,6 +944,26 @@ msgctxt "TvShell"
 msgid "More choices"
 msgstr "خيارات أخرى"
 
+msgctxt "TvShell"
+msgid "Name"
+msgstr "الاسم"
+
+msgctxt "ReviewForm"
+msgid "Name to show next to your review"
+msgstr "الاسم الذي يظهر بجانب مراجعتك"
+
+msgctxt "TvShell"
+msgid "Name to show next to your review"
+msgstr "الاسم الذي يظهر بجانب مراجعتك"
+
+msgctxt "SettingsBody"
+msgid "Needs GameMode, which is not on this device. Install it and this starts working."
+msgstr "يحتاج إلى GameMode، وهو غير موجود على هذا الجهاز. ثبّته وسيبدأ هذا بالعمل."
+
+msgctxt "SettingsBody"
+msgid "Needs MangoHud, which is not on this device. Install it and this starts working."
+msgstr "يحتاج إلى MangoHud، وهو غير موجود على هذا الجهاز. ثبّته وسيبدأ هذا بالعمل."
+
 msgctxt "GateOverlay"
 msgid "No"
 msgstr "لا"
@@ -856,6 +992,14 @@ msgctxt "AppTile"
 msgid "Not for this device"
 msgstr "ليس لهذا الجهاز"
 
+msgctxt "ReviewForm"
+msgid "Not now"
+msgstr "ليس الآن"
+
+msgctxt "TvShell"
+msgid "Not now"
+msgstr "ليس الآن"
+
 msgctxt "DesktopShell"
 msgid "Nothing featured for this device yet"
 msgstr "لا شيء مميّز لهذا الجهاز بعد"
@@ -872,6 +1016,10 @@ msgctxt "TvShell"
 msgid "Nothing for this TV yet. Press Up to search."
 msgstr "لا شيء لهذا التلفاز بعد. اضغط للأعلى للبحث."
 
+msgctxt "SettingsBody"
+msgid "Off"
+msgstr "متوقف"
+
 msgctxt "TvSetting"
 msgid "Off"
 msgstr "متوقف"
@@ -885,6 +1033,14 @@ msgid "Off, adult things are only ever found by searching. On, they may also app
 msgstr "عند الإيقاف، لا تُوجد أشياء البالغين إلا بالبحث. عند التشغيل، قد تظهر أيضًا في الصفحة الرئيسية، محجوبة كما في أي مكان آخر."
 
 msgctxt "SettingsBody"
+msgid "Offer Windows apps"
+msgstr "عرض تطبيقات Windows"
+
+msgctxt "TvShell"
+msgid "Offer Windows apps, set up to run here through Proton"
+msgstr "عرض تطبيقات Windows المُعدّة للعمل هنا عبر Proton"
+
+msgctxt "SettingsBody"
 msgid "Offer betas and release candidates as soon as they are published. They may be unstable."
 msgstr "عرض النسخ التجريبية والمرشحة للإصدار فور نشرها. قد تكون غير مستقرة."
 
@@ -895,6 +1051,10 @@ msgstr "عرض النسخ التجريبية من التطبيقات"
 msgctxt "FamilyRow"
 msgid "Official"
 msgstr "رسمي"
+
+msgctxt "SettingsBody"
+msgid "On"
+msgstr "مفعّل"
 
 msgctxt "TvSetting"
 msgid "On"
@@ -935,6 +1095,10 @@ msgstr "فتح مجلد التنزيلات"
 msgctxt "SettingsBody"
 msgid "Open folder"
 msgstr "فتح المجلد"
+
+msgctxt "SettingsBody"
+msgid "Open its folder"
+msgstr "فتح مجلده"
 
 msgctxt "TvShell"
 msgid "Open link {}"
@@ -996,6 +1160,10 @@ msgctxt "SettingsBody"
 msgid "Paste a token"
 msgstr "لصق رمز"
 
+msgctxt "SettingsBody"
+msgid "Performance figures"
+msgstr "أرقام الأداء"
+
 msgctxt "TvShell"
 msgid "Pick letters, then choose search"
 msgstr "اختر الحروف، ثم اختر «بحث»"
@@ -1033,6 +1201,10 @@ msgid "Press Back to stop."
 msgstr "اضغط زر الرجوع للإيقاف."
 
 msgctxt "TvShell"
+msgid "Press Left or Right for another country"
+msgstr "اضغط يسارًا أو يمينًا لبلد آخر"
+
+msgctxt "TvShell"
 msgid "Press OK again to remove {} from this TV"
 msgstr "اضغط OK مجددًا لإزالة {} من هذا التلفاز"
 
@@ -1043,6 +1215,10 @@ msgstr "اضغط OK لإظهار لوحة المفاتيح"
 msgctxt "TvShell"
 msgid "Press OK for the next language"
 msgstr "اضغط OK للغة التالية"
+
+msgctxt "TvShell"
+msgid "Press OK to type"
+msgstr "اضغط OK للكتابة"
 
 msgctxt "DetailsBody"
 msgid "Price"
@@ -1055,6 +1231,14 @@ msgstr "السعر"
 msgctxt "DetailsBody"
 msgid "Project page"
 msgstr "صفحة المشروع"
+
+msgctxt "SettingsBody"
+msgid "Proton version"
+msgstr "إصدار Proton"
+
+msgctxt "TvShell"
+msgid "Proton version for Windows apps"
+msgstr "إصدار Proton لتطبيقات Windows"
 
 msgctxt "SettingsBody"
 msgid "QR code to scan with the Steam app"
@@ -1205,6 +1389,10 @@ msgid "Results"
 msgstr "النتائج"
 
 msgctxt "TvShell"
+msgid "Review"
+msgstr "المراجعة"
+
+msgctxt "TvShell"
 msgid "Review {0} of {1}"
 msgstr "المراجعة {0} من {1}"
 
@@ -1231,6 +1419,10 @@ msgstr "المراجعات يكتبها أشخاص آخرون وتأتي من خ
 msgctxt "TvShell"
 msgid "Reviews are written by other people and come from the ratings service the GNOME and KDE app stores use."
 msgstr "المراجعات يكتبها أشخاص آخرون وتأتي من خدمة التقييمات التي تستخدمها متاجر تطبيقات GNOME و KDE."
+
+msgctxt "SettingsBody"
+msgid "Same as the others"
+msgstr "مثل البقية"
 
 msgctxt "SettingsBody"
 msgid "Save"
@@ -1320,6 +1512,26 @@ msgctxt "TvShell"
 msgid "Searching…"
 msgstr "جارٍ البحث…"
 
+msgctxt "ReviewForm"
+msgid "Send review"
+msgstr "إرسال المراجعة"
+
+msgctxt "TvShell"
+msgid "Send review"
+msgstr "إرسال المراجعة"
+
+msgctxt "ReviewForm"
+msgid "Send your review"
+msgstr "أرسل مراجعتك"
+
+msgctxt "TvShell"
+msgid "Send your review"
+msgstr "أرسل مراجعتك"
+
+msgctxt "TvShell"
+msgid "Sending…"
+msgstr "جارٍ الإرسال…"
+
 msgctxt "SettingsBody"
 msgid "Set a PIN"
 msgstr "تعيين رمز PIN"
@@ -1405,6 +1617,10 @@ msgid "Show less of {}"
 msgstr "عرض أقل من {}"
 
 msgctxt "SettingsBody"
+msgid "Show performance figures"
+msgstr "إظهار أرقام الأداء"
+
+msgctxt "SettingsBody"
 msgid "Show ratings and reviews"
 msgstr "إظهار التقييمات والمراجعات"
 
@@ -1435,6 +1651,10 @@ msgid "Sign in in a browser"
 msgstr "تسجيل الدخول في متصفح"
 
 msgctxt "SettingsBody"
+msgid "Sign in on GOG's page in the window that opened. Close it to stop."
+msgstr "سجّل الدخول في صفحة GOG في النافذة التي فُتحت. أغلقها للإيقاف."
+
+msgctxt "SettingsBody"
 msgid "Sign in on Steam's page in Longboard, then choose to share your library."
 msgstr "سجّل الدخول في صفحة Steam داخل Longboard، ثم اختر مشاركة مكتبتك."
 
@@ -1445,6 +1665,10 @@ msgstr "سجّل الدخول في صفحة Steam داخل Longboard، ثم شا
 msgctxt "SettingsBody"
 msgid "Sign in on Steam's page in the window that opened. Close it to stop."
 msgstr "سجّل الدخول في صفحة Steam في النافذة التي فُتحت. أغلقها للإيقاف."
+
+msgctxt "SettingsBody"
+msgid "Sign in to GOG"
+msgstr "تسجيل الدخول إلى GOG"
 
 msgctxt "TvShell"
 msgid "Sign in to GitHub for more searches an hour"
@@ -1467,6 +1691,10 @@ msgid "Sign in to Steam with a QR code, to see what you own"
 msgstr "تسجيل الدخول إلى Steam برمز QR، لمعرفة ما تملكه"
 
 msgctxt "SettingsBody"
+msgid "Sign in to see which GOG games you already own. GOG's own sign-in page opens in a small window; Bilby asks GOG once for the list and keeps only that, on this device."
+msgstr "سجّل الدخول لترى ألعاب GOG التي تملكها بالفعل. تُفتح صفحة تسجيل الدخول الخاصة بـ GOG في نافذة صغيرة؛ يطلب Bilby القائمة من GOG مرة واحدة ويحتفظ بها وحدها، على هذا الجهاز."
+
+msgctxt "SettingsBody"
 msgid "Sign in to see which Steam games you already own. Bilby keeps only the list of what you own, on this device. Choose how:"
 msgstr "سجّل الدخول لمعرفة ألعاب Steam التي تملكها. يحتفظ Bilby فقط بقائمة ما تملكه، على هذا الجهاز. اختر الطريقة:"
 
@@ -1485,6 +1713,10 @@ msgstr "تسجيل الخروج"
 msgctxt "TvShell"
 msgid "Sign out"
 msgstr "تسجيل الخروج"
+
+msgctxt "SettingsBody"
+msgid "Sign out of GOG"
+msgstr "تسجيل الخروج من GOG"
 
 msgctxt "SettingsBody"
 msgid "Sign out of GitHub"
@@ -1509,6 +1741,10 @@ msgstr "تم تسجيل الدخول إلى GitHub"
 msgctxt "TvShell"
 msgid "Signed in to Steam  ·  {}"
 msgstr "تم تسجيل الدخول إلى Steam  ·  {}"
+
+msgctxt "SettingsBody"
+msgid "Signed in. Bilby knows {} in your GOG library and marks them Owned."
+msgstr "تم تسجيل الدخول. يعرف Bilby {} في مكتبتك على GOG ويضع عليها علامة «مملوكة»."
 
 msgctxt "SettingsBody"
 msgid "Signed in. Bilby knows {} in your Steam library and marks them Owned."
@@ -1551,6 +1787,22 @@ msgid "Sounds: a quiet tick or pop as you move about and press things."
 msgstr "الأصوات: نقرة أو فرقعة هادئة أثناء التنقل والضغط على الأشياء."
 
 msgctxt "SettingsBody"
+msgid "Standard"
+msgstr "قياسي"
+
+msgctxt "TvShell"
+msgid "Standard"
+msgstr "قياسي"
+
+msgctxt "SettingsBody"
+msgid "Standard follows Valve's own Proton and is the steady choice. GE-Proton is a community build with newer fixes, which some games need. Either is fetched the first time it is used."
+msgstr "«قياسي» يتبع Proton الخاص بـ Valve وهو الخيار المستقر. GE-Proton نسخة من المجتمع بإصلاحات أحدث تحتاجها بعض الألعاب. يُجلب أيٌّ منهما عند أول استخدام."
+
+msgctxt "TvShell"
+msgid "Stars"
+msgstr "النجوم"
+
+msgctxt "SettingsBody"
 msgid "Steam"
 msgstr "Steam"
 
@@ -1567,12 +1819,40 @@ msgid "Stop waiting"
 msgstr "إيقاف الانتظار"
 
 msgctxt "SettingsBody"
+msgid "Stop waiting for GOG"
+msgstr "إيقاف انتظار GOG"
+
+msgctxt "SettingsBody"
 msgid "Stop waiting for Steam"
 msgstr "إيقاف انتظار Steam"
+
+msgctxt "ReviewForm"
+msgid "Stop writing the review"
+msgstr "التوقف عن كتابة المراجعة"
+
+msgctxt "TvShell"
+msgid "Stop writing the review"
+msgstr "التوقف عن كتابة المراجعة"
 
 msgctxt "SettingsBody"
 msgid "Storage"
 msgstr "التخزين"
+
+msgctxt "SettingsBody"
+msgid "Storage and about"
+msgstr "التخزين وحول"
+
+msgctxt "SettingsBody"
+msgid "Stores"
+msgstr "المتاجر"
+
+msgctxt "TvShell"
+msgid "Stores"
+msgstr "المتاجر"
+
+msgctxt "SettingsBody"
+msgid "Stores are asked for this country's prices, in its own money."
+msgstr "تُسأل المتاجر عن أسعار هذا البلد، بعملته."
 
 msgctxt "TvShell"
 msgid "Switch"
@@ -1622,9 +1902,21 @@ msgctxt "SettingsBody"
 msgid "The code refreshes by itself."
 msgstr "يتجدد الرمز تلقائيًا."
 
+msgctxt "ReviewForm"
+msgid "The name to show next to it"
+msgstr "الاسم الذي يظهر بجانبها"
+
+msgctxt "TvShell"
+msgid "The name to show next to it"
+msgstr "الاسم الذي يظهر بجانبها"
+
 msgctxt "SettingsBody"
 msgid "The store only lists apps with a file that can be installed here. This is what it detected."
 msgstr "يعرض المتجر فقط التطبيقات التي لها ملف يمكن تثبيته هنا. هذا ما اكتشفه."
+
+msgctxt "SettingsBody"
+msgid "These apply to every Windows app, unless an app below says otherwise."
+msgstr "تنطبق على كل تطبيقات Windows، ما لم يحدد تطبيق أدناه غير ذلك."
 
 msgctxt "SettingsBody"
 msgid "They come from the service the GNOME and KDE app stores use (odrs.gnome.org). Star ratings arrive as one file a day for every app. Written reviews are asked for when you open the page of an app that has them, which tells that service which app it was. Nothing that identifies you is sent."
@@ -1649,6 +1941,18 @@ msgstr "هذا ينسى التطبيق هنا فقط. لإلغاء تثبيته�
 msgctxt "TvShell"
 msgid "This store"
 msgstr "هذا المتجر"
+
+msgctxt "TvShell"
+msgid "Title"
+msgstr "العنوان"
+
+msgctxt "ReviewForm"
+msgid "Title of your review"
+msgstr "عنوان مراجعتك"
+
+msgctxt "TvShell"
+msgid "Title of your review"
+msgstr "عنوان مراجعتك"
 
 msgctxt "DesktopShell"
 msgid "Try a different name, or check the spelling. Projects without a file for {} are left out."
@@ -1691,8 +1995,8 @@ msgid "Unofficial"
 msgstr "غير رسمي"
 
 msgctxt "TvShell"
-msgid "Up and Down move through the list. OK changes the highlighted setting."
-msgstr "زرّا الأعلى والأسفل للتنقل في القائمة. زر OK يغيّر الإعداد المحدد."
+msgid "Up and Down move through the list. OK changes the highlighted setting. Left is the list of sections."
+msgstr "أعلى وأسفل للتنقل في القائمة. موافق يغيّر الإعداد المحدد. يسار لقائمة الأقسام."
 
 msgctxt "AppRow"
 msgid "Update"
@@ -1790,6 +2094,10 @@ msgctxt "LibraryItem"
 msgid "Updating…"
 msgstr "جارٍ التحديث…"
 
+msgctxt "SettingsBody"
+msgid "Use GameMode"
+msgstr "استخدام GameMode"
+
 msgctxt "TvQuestion"
 msgid "Use the TV layout"
 msgstr "استخدام تخطيط التلفاز"
@@ -1878,6 +2186,14 @@ msgctxt "Welcome"
 msgid "Welcome to Bilby"
 msgstr "مرحبًا بك في Bilby"
 
+msgctxt "ReviewForm"
+msgid "What do you think of it?"
+msgstr "ما رأيك فيه؟"
+
+msgctxt "TvShell"
+msgid "What do you think of it?"
+msgstr "ما رأيك فيه؟"
+
 msgctxt "OptionCard"
 msgid "What happens when I install {}"
 msgstr "ماذا يحدث عند تثبيت {}"
@@ -1889,6 +2205,10 @@ msgstr "ما كتبه الناس"
 msgctxt "OptionCard"
 msgid "What will happen?"
 msgstr "ماذا سيحدث؟"
+
+msgctxt "TvShell"
+msgid "What you have typed"
+msgstr "ما كتبته"
 
 msgctxt "WhatsNew"
 msgid "What's new"
@@ -1906,6 +2226,18 @@ msgctxt "TvShell"
 msgid "Where apps come from"
 msgstr "من أين تأتي التطبيقات"
 
+msgctxt "SettingsBody"
+msgid "Windows apps"
+msgstr "تطبيقات Windows"
+
+msgctxt "SettingsBody"
+msgid "Windows apps you install show up here, each with its own choices."
+msgstr "تظهر هنا تطبيقات Windows التي تثبّتها، ولكلٍّ منها خياراته."
+
+msgctxt "SettingsBody"
+msgid "Windows settings"
+msgstr "إعدادات Windows"
+
 msgctxt "DetailsBody"
 msgid "Works on"
 msgstr "يعمل على"
@@ -1913,6 +2245,14 @@ msgstr "يعمل على"
 msgctxt "TvShell"
 msgid "Works on"
 msgstr "يعمل على"
+
+msgctxt "ReviewForm"
+msgid "Write a review"
+msgstr "كتابة مراجعة"
+
+msgctxt "TvShell"
+msgid "Write a review"
+msgstr "كتابة مراجعة"
 
 msgctxt "Welcome"
 msgid "You are seeing apps for {}. Anything that cannot be installed on this device is hidden."
@@ -1930,6 +2270,10 @@ msgctxt "SystemBody"
 msgid "You may be asked for your password. Keep the device on until this finishes."
 msgstr "قد تُطلب منك كلمة المرور. أبقِ الجهاز يعمل حتى ينتهي هذا."
 
+msgctxt "SettingsBody"
+msgid "Your Windows apps"
+msgstr "تطبيقات Windows الخاصة بك"
+
 msgctxt "LibraryBody"
 msgid "Your library is empty"
 msgstr "مكتبتك فارغة"
@@ -1941,6 +2285,22 @@ msgstr "مصادرك الخاصة"
 msgctxt "TvShell"
 msgid "Your password is needed"
 msgstr "كلمة مرورك مطلوبة"
+
+msgctxt "ReviewForm"
+msgid "Your review"
+msgstr "مراجعتك"
+
+msgctxt "TvShell"
+msgid "Your review"
+msgstr "مراجعتك"
+
+msgctxt "ReviewForm"
+msgid "Your review of {}"
+msgstr "مراجعتك لـ {}"
+
+msgctxt "TvShell"
+msgid "Your review of {}"
+msgstr "مراجعتك لـ {}"
 
 msgctxt "TvShell"
 msgid "an older one"
@@ -2101,6 +2461,14 @@ msgstr "تنزيل {}"
 msgctxt "AppTile"
 msgid "{} sources"
 msgstr "{} مصادر"
+
+msgctxt "ReviewForm"
+msgid "{} stars"
+msgstr "{} نجمة"
+
+msgctxt "TvShell"
+msgid "{} stars"
+msgstr "{} نجمة"
 
 msgctxt "DesktopShell"
 msgid "{}. Everything shown works here."

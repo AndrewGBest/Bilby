@@ -3,10 +3,11 @@
 //!
 //! * `GET https://itunes.apple.com/search?term=...&entity=macSoftware`
 //! * `GET https://itunes.apple.com/lookup?id=...`
+//! * `GET https://itunes.apple.com/us/rss/customerreviews/id=.../sortBy=mostHelpful/json`
 //!
 //! Only the App Store app can install from the App Store, so the store hands over to
 //! it with `macappstore://apps.apple.com/app/id<number>`. Prices and availability are
-//! the United States store's; another country's may differ.
+//! those of the country the device is set to (see `region`).
 
 use super::Source;
 use crate::asset::{AssetInfo, Format, TargetArch, TargetOs};
@@ -22,6 +23,8 @@ pub const APPLE_API: &str = "https://itunes.apple.com";
 pub struct MacAppStore {
     http: Arc<dyn Http>,
     api: String,
+    /// Whose prices to ask for, in small letters as Apple writes them.
+    country: String,
 }
 
 impl MacAppStore {
@@ -30,14 +33,23 @@ impl MacAppStore {
     }
 
     pub fn with_api(http: Arc<dyn Http>, api: &str) -> MacAppStore {
-        MacAppStore { http, api: api.trim_end_matches('/').to_string() }
+        MacAppStore { http, api: api.trim_end_matches('/').to_string(), country: "us".to_string() }
+    }
+
+    /// Ask for the prices of this country (two letters, as in `CA`); anything that is
+    /// not a country code leaves it as it was.
+    pub fn in_country(mut self, code: &str) -> Self {
+        if let Some(country) = crate::region::country(code) {
+            self.country = country.to_ascii_lowercase();
+        }
+        self
     }
 
     fn lookup(&self, key: &str) -> Result<App> {
         if !crate::model::valid_key(SourceKind::MacAppStore, key) {
             return Err(Error::NotFound(format!("\"{key}\" is not an App Store number")));
         }
-        let url = format!("{}/lookup?id={key}&entity=macSoftware&country=us", self.api);
+        let url = format!("{}/lookup?id={key}&entity=macSoftware&country={}", self.api, self.country);
         let found: Found = serde_json::from_str(&self.http.get(&url)?)?;
         found
             .results
@@ -116,9 +128,10 @@ impl Source for MacAppStore {
             return Ok(Vec::new());
         }
         let url = format!(
-            "{}/search?term={}&entity=macSoftware&country=us&limit={}",
+            "{}/search?term={}&entity=macSoftware&country={}&limit={}",
             self.api,
             url_encode(query.trim()),
+            self.country,
             limit.clamp(1, 25)
         );
         let found: Found = serde_json::from_str(&self.http.get(&url)?)?;
@@ -144,6 +157,70 @@ impl Source for MacAppStore {
             .filter_map(|url| own_picture(Some(url)))
             .filter(|url| url.ends_with(".jpg") || url.ends_with(".png"))
             .take(crate::screenshots::MAX_PICTURES)
+            .collect()
+    }
+
+    fn reviews(&self, key: &str) -> Vec<crate::ratings::Review> {
+        // Apple's feed wraps every value as {"label": ...}.
+        #[derive(Deserialize)]
+        struct Label {
+            #[serde(default)]
+            label: String,
+        }
+        #[derive(Deserialize)]
+        struct Feed {
+            feed: Entries,
+        }
+        #[derive(Deserialize)]
+        struct Entries {
+            // One review comes as an object, several as a list, none as nothing at all.
+            #[serde(default)]
+            entry: serde_json::Value,
+        }
+        #[derive(Deserialize)]
+        struct Entry {
+            author: Option<Author>,
+            updated: Option<Label>,
+            #[serde(rename = "im:rating")]
+            rating: Option<Label>,
+            #[serde(rename = "im:version")]
+            version: Option<Label>,
+            title: Option<Label>,
+            content: Option<Label>,
+        }
+        #[derive(Deserialize)]
+        struct Author {
+            name: Option<Label>,
+        }
+        if !crate::model::valid_key(SourceKind::MacAppStore, key) {
+            return Vec::new();
+        }
+        let url = format!("{}/{}/rss/customerreviews/id={key}/sortBy=mostHelpful/json", self.api, self.country);
+        let Some(feed) = self.http.get(&url).ok().and_then(|text| serde_json::from_str::<Feed>(&text).ok()) else {
+            return Vec::new();
+        };
+        let entries = match feed.feed.entry {
+            serde_json::Value::Array(all) => all,
+            one @ serde_json::Value::Object(_) => vec![one],
+            _ => Vec::new(),
+        };
+        let text = |label: Option<Label>| label.map(|l| l.label.trim().to_string()).unwrap_or_default();
+        entries
+            .into_iter()
+            .filter_map(|entry| serde_json::from_value::<Entry>(entry).ok())
+            .filter_map(|entry| {
+                let stars: u8 = text(entry.rating).parse().ok().filter(|stars| (1..=5).contains(stars))?;
+                let written = text(entry.content);
+                (!written.is_empty()).then(|| crate::ratings::Review {
+                    stars,
+                    title: text(entry.title),
+                    text: written,
+                    author: text(entry.author.and_then(|author| author.name)),
+                    date: text(entry.updated).chars().take(10).collect(),
+                    version: text(entry.version),
+                })
+            })
+            .take(20)
             .collect()
     }
 

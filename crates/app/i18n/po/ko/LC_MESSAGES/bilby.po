@@ -16,6 +16,14 @@ msgctxt "FamilyRow"
 msgid ", unofficial"
 msgstr ", 비공식"
 
+msgctxt "ReviewForm"
+msgid "1 star"
+msgstr "별 1개"
+
+msgctxt "TvShell"
+msgid "1 star"
+msgstr "별 1개"
+
 msgctxt "TvShell"
 msgid "A PIN guards these settings and adult content"
 msgstr "PIN이 이 설정과 성인 콘텐츠를 보호합니다"
@@ -31,6 +39,14 @@ msgstr "파일을 받기 전에 매번 폴더 선택 창이 열립니다. 창을
 msgctxt "TvQuestion"
 msgid "A game controller is connected. Bilby has a layout with large text for the sofa, driven with the arrow keys of a remote or keyboard. You can change this later in Settings."
 msgstr "게임 컨트롤러가 연결되어 있습니다. Bilby에는 소파에서 보기 좋게 글자가 큰 레이아웃이 있으며, 리모컨이나 키보드의 방향키로 조작합니다. 나중에 설정에서 바꿀 수 있습니다."
+
+msgctxt "ReviewForm"
+msgid "A short title"
+msgstr "짧은 제목"
+
+msgctxt "TvShell"
+msgid "A short title"
+msgstr "짧은 제목"
 
 msgctxt "DetailsBody"
 msgid "About"
@@ -59,6 +75,10 @@ msgstr "이 웹사이트 정보"
 msgctxt "WhatsNew"
 msgid "About this website"
 msgstr "이 웹사이트 정보"
+
+msgctxt "SettingsBody"
+msgid "Accounts"
+msgstr "계정"
 
 msgctxt "TvShell"
 msgid "Accounts"
@@ -181,6 +201,10 @@ msgid "Ask where to save each download"
 msgstr "다운로드할 때마다 저장 위치 묻기"
 
 msgctxt "SettingsBody"
+msgid "Asks the system for its full speed while a Windows app runs."
+msgstr "Windows 앱이 실행되는 동안 시스템에 최대 속도를 요청합니다."
+
+msgctxt "SettingsBody"
 msgid "Automatic"
 msgstr "자동"
 
@@ -235,6 +259,10 @@ msgstr "Bilby는 열릴 때, 그리고 열려 있는 동안 몇 시간마다 업
 msgctxt "SettingsBody"
 msgid "Bilby keeps a short list, chosen by people, of the apps and websites nearly everyone looks for: a browser, a video player, the big names. On, the home page starts with them in the version for this device, and they are placed a little higher in a search. Off, you get only what the sources' own figures say."
 msgstr "Bilby에는 브라우저, 동영상 플레이어, 유명 서비스처럼 거의 모든 사람이 찾는 앱과 웹사이트를 사람이 직접 고른 짧은 목록이 있습니다. 켜면 홈 화면이 이 기기에 맞는 버전의 추천 앱으로 시작하고, 검색에서도 조금 더 위에 표시됩니다. 끄면 소스 자체의 수치에 따른 결과만 표시됩니다."
+
+msgctxt "SettingsBody"
+msgid "Bilby sets Windows programs up to run here through Proton, each in a folder of its own. Most programs work, not all. The first one needs about 700 MB of downloads."
+msgstr "Bilby는 Windows 프로그램을 Proton으로 여기서 실행되도록 각각 전용 폴더에 설정합니다. 대부분 작동하지만 전부는 아닙니다. 첫 번째는 약 700MB를 내려받아야 합니다."
 
 msgctxt "TvShell"
 msgid "Bilby {0} is available. You have {1}"
@@ -377,6 +405,10 @@ msgid "Choose a version"
 msgstr "버전 선택"
 
 msgctxt "TvShell"
+msgid "Choose done when it is typed. Back puts the keyboard away."
+msgstr "다 입력했으면 '완료'를 선택하세요. 뒤로 버튼은 키보드를 닫습니다."
+
+msgctxt "TvShell"
 msgid "Choose enter when it is typed. Back cancels."
 msgstr "다 입력했으면 '확인'을 선택하세요. 뒤로 버튼을 누르면 취소됩니다."
 
@@ -432,6 +464,14 @@ msgctxt "CommandBox"
 msgid "Copy"
 msgstr "복사"
 
+msgctxt "ReviewForm"
+msgid "Copy and open"
+msgstr "복사하고 열기"
+
+msgctxt "TvShell"
+msgid "Copy and open"
+msgstr "복사하고 열기"
+
 msgctxt "CommandBox"
 msgid "Copy command"
 msgstr "명령어 복사"
@@ -439,6 +479,14 @@ msgstr "명령어 복사"
 msgctxt "DetailsBody"
 msgid "Couldn't load this app"
 msgstr "이 앱을 불러올 수 없습니다"
+
+msgctxt "SettingsBody"
+msgid "Country for prices"
+msgstr "가격 기준 국가"
+
+msgctxt "TvShell"
+msgid "Country for prices"
+msgstr "가격 기준 국가"
 
 msgctxt "SettingsBody"
 msgid "Dark"
@@ -491,6 +539,10 @@ msgstr "둘러보기"
 msgctxt "MobileShell"
 msgid "Discover"
 msgstr "둘러보기"
+
+msgctxt "TvShell"
+msgid "Done"
+msgstr "완료"
 
 msgctxt "DetailsBody"
 msgid "Download"
@@ -549,6 +601,14 @@ msgid "Everything works without signing in, but GitHub then allows only 60 reque
 msgstr "로그인하지 않아도 모두 작동하지만, 그러면 GitHub는 네트워크 전체에 시간당 60회의 요청만 허용하며 검색 몇 번으로 다 쓸 수 있습니다. 로그인하면 5,000회로 늘어납니다. Bilby는 계정에 대한 어떤 접근 권한도 요청하지 않습니다."
 
 msgctxt "SettingsBody"
+msgid "Family"
+msgstr "가족"
+
+msgctxt "TvShell"
+msgid "Family"
+msgstr "가족"
+
+msgctxt "SettingsBody"
 msgid "Family and adult content"
 msgstr "가족 및 성인 콘텐츠"
 
@@ -600,6 +660,10 @@ msgctxt "SettingsBody"
 msgid "Four digits. With a PIN set, it is asked for to change anything in this card and to open adult content, in place of the question about being an adult."
 msgstr "숫자 네 자리입니다. PIN을 설정하면 이 카드의 설정을 바꾸거나 성인 콘텐츠를 열 때 성인인지 묻는 대신 PIN을 묻습니다."
 
+msgctxt "SettingsBody"
+msgid "Frames a second and temperatures, drawn over the app by MangoHud."
+msgstr "MangoHud가 앱 위에 초당 프레임 수와 온도를 표시합니다."
+
 msgctxt "DetailsBody"
 msgid "From"
 msgstr "제공"
@@ -607,6 +671,22 @@ msgstr "제공"
 msgctxt "TvShell"
 msgid "From"
 msgstr "제공"
+
+msgctxt "SettingsBody"
+msgid "GE-Proton"
+msgstr "GE-Proton"
+
+msgctxt "TvShell"
+msgid "GE-Proton"
+msgstr "GE-Proton"
+
+msgctxt "SettingsBody"
+msgid "GOG"
+msgstr "GOG"
+
+msgctxt "SettingsBody"
+msgid "General"
+msgstr "일반"
 
 msgctxt "TvShell"
 msgid "General"
@@ -644,6 +724,10 @@ msgstr[0] "다른 기기용 파일 {n}개 숨기기"
 msgctxt "TvShell"
 msgid "Home"
 msgstr "홈"
+
+msgctxt "SettingsBody"
+msgid "How Windows apps run"
+msgstr "Windows 앱 실행 방식"
 
 msgctxt "DetailsBody"
 msgid "In your favourites"
@@ -733,6 +817,14 @@ msgctxt "TvShell"
 msgid "Installing updates"
 msgstr "업데이트 설치 중"
 
+msgctxt "ReviewForm"
+msgid "It goes to:"
+msgstr "보내는 곳:"
+
+msgctxt "TvShell"
+msgid "It goes to:"
+msgstr "보내는 곳:"
+
 msgctxt "SettingsBody"
 msgid "Keep Bilby in the system tray when its window is closed"
 msgstr "창을 닫아도 Bilby를 시스템 트레이에 유지"
@@ -761,6 +853,10 @@ msgctxt "TvShell"
 msgid "Language"
 msgstr "언어"
 
+msgctxt "TvShell"
+msgid "Language and country"
+msgstr "언어 및 국가"
+
 msgctxt "LibraryBody"
 msgid "Last checked {}"
 msgstr "마지막 확인: {}"
@@ -768,6 +864,26 @@ msgstr "마지막 확인: {}"
 msgctxt "SettingsBody"
 msgid "Layout"
 msgstr "레이아웃"
+
+msgctxt "ReviewForm"
+msgid "Leave it at:"
+msgstr "남길 곳:"
+
+msgctxt "TvShell"
+msgid "Leave it at:"
+msgstr "남길 곳:"
+
+msgctxt "ReviewForm"
+msgid "Leave the review at {}"
+msgstr "{}에 리뷰 남기기"
+
+msgctxt "TvShell"
+msgid "Leave the review at {}"
+msgstr "{}에 리뷰 남기기"
+
+msgctxt "TvShell"
+msgid "Left and Right to change"
+msgstr "좌우로 변경"
 
 msgctxt "DesktopShell"
 msgid "Library"
@@ -818,6 +934,26 @@ msgctxt "TvShell"
 msgid "More choices"
 msgstr "다른 선택지"
 
+msgctxt "TvShell"
+msgid "Name"
+msgstr "이름"
+
+msgctxt "ReviewForm"
+msgid "Name to show next to your review"
+msgstr "리뷰 옆에 표시할 이름"
+
+msgctxt "TvShell"
+msgid "Name to show next to your review"
+msgstr "리뷰 옆에 표시할 이름"
+
+msgctxt "SettingsBody"
+msgid "Needs GameMode, which is not on this device. Install it and this starts working."
+msgstr "GameMode가 필요한데 이 기기에 없습니다. 설치하면 작동합니다."
+
+msgctxt "SettingsBody"
+msgid "Needs MangoHud, which is not on this device. Install it and this starts working."
+msgstr "MangoHud가 필요한데 이 기기에 없습니다. 설치하면 작동합니다."
+
 msgctxt "GateOverlay"
 msgid "No"
 msgstr "아니요"
@@ -846,6 +982,14 @@ msgctxt "AppTile"
 msgid "Not for this device"
 msgstr "이 기기용 아님"
 
+msgctxt "ReviewForm"
+msgid "Not now"
+msgstr "나중에"
+
+msgctxt "TvShell"
+msgid "Not now"
+msgstr "나중에"
+
 msgctxt "DesktopShell"
 msgid "Nothing featured for this device yet"
 msgstr "아직 이 기기용 추천 항목이 없습니다"
@@ -862,6 +1006,10 @@ msgctxt "TvShell"
 msgid "Nothing for this TV yet. Press Up to search."
 msgstr "아직 이 TV용 항목이 없습니다. 위쪽 버튼을 눌러 검색하세요."
 
+msgctxt "SettingsBody"
+msgid "Off"
+msgstr "끔"
+
 msgctxt "TvSetting"
 msgid "Off"
 msgstr "끔"
@@ -875,6 +1023,14 @@ msgid "Off, adult things are only ever found by searching. On, they may also app
 msgstr "끄면 성인용 항목은 검색으로만 찾을 수 있습니다. 켜면 홈 화면에도 나타날 수 있으며, 다른 곳과 마찬가지로 가려져 있습니다."
 
 msgctxt "SettingsBody"
+msgid "Offer Windows apps"
+msgstr "Windows 앱 제공"
+
+msgctxt "TvShell"
+msgid "Offer Windows apps, set up to run here through Proton"
+msgstr "Proton으로 여기서 실행되도록 설정한 Windows 앱 제공"
+
+msgctxt "SettingsBody"
 msgid "Offer betas and release candidates as soon as they are published. They may be unstable."
 msgstr "베타와 릴리스 후보를 게시되는 대로 제안합니다. 불안정할 수 있습니다."
 
@@ -885,6 +1041,10 @@ msgstr "앱의 테스트 버전 제안"
 msgctxt "FamilyRow"
 msgid "Official"
 msgstr "공식"
+
+msgctxt "SettingsBody"
+msgid "On"
+msgstr "켬"
 
 msgctxt "TvSetting"
 msgid "On"
@@ -924,6 +1084,10 @@ msgstr "다운로드 폴더 열기"
 
 msgctxt "SettingsBody"
 msgid "Open folder"
+msgstr "폴더 열기"
+
+msgctxt "SettingsBody"
+msgid "Open its folder"
 msgstr "폴더 열기"
 
 msgctxt "TvShell"
@@ -986,6 +1150,10 @@ msgctxt "SettingsBody"
 msgid "Paste a token"
 msgstr "토큰 붙여 넣기"
 
+msgctxt "SettingsBody"
+msgid "Performance figures"
+msgstr "성능 수치"
+
 msgctxt "TvShell"
 msgid "Pick letters, then choose search"
 msgstr "글자를 고른 다음 검색을 선택하세요"
@@ -1023,6 +1191,10 @@ msgid "Press Back to stop."
 msgstr "중지하려면 뒤로 버튼을 누르세요."
 
 msgctxt "TvShell"
+msgid "Press Left or Right for another country"
+msgstr "왼쪽 또는 오른쪽을 눌러 다른 국가 선택"
+
+msgctxt "TvShell"
 msgid "Press OK again to remove {} from this TV"
 msgstr "이 TV에서 {}을(를) 제거하려면 OK를 다시 누르세요"
 
@@ -1033,6 +1205,10 @@ msgstr "OK를 누르면 키보드가 열립니다"
 msgctxt "TvShell"
 msgid "Press OK for the next language"
 msgstr "OK를 누르면 다음 언어로 바뀝니다"
+
+msgctxt "TvShell"
+msgid "Press OK to type"
+msgstr "OK를 눌러 입력"
 
 msgctxt "DetailsBody"
 msgid "Price"
@@ -1045,6 +1221,14 @@ msgstr "가격"
 msgctxt "DetailsBody"
 msgid "Project page"
 msgstr "프로젝트 페이지"
+
+msgctxt "SettingsBody"
+msgid "Proton version"
+msgstr "Proton 버전"
+
+msgctxt "TvShell"
+msgid "Proton version for Windows apps"
+msgstr "Windows 앱용 Proton 버전"
 
 msgctxt "SettingsBody"
 msgid "QR code to scan with the Steam app"
@@ -1195,6 +1379,10 @@ msgid "Results"
 msgstr "결과"
 
 msgctxt "TvShell"
+msgid "Review"
+msgstr "리뷰"
+
+msgctxt "TvShell"
 msgid "Review {0} of {1}"
 msgstr "리뷰 {0}/{1}"
 
@@ -1221,6 +1409,10 @@ msgstr "리뷰는 다른 사람들이 작성한 것이며 GNOME과 KDE 앱 스�
 msgctxt "TvShell"
 msgid "Reviews are written by other people and come from the ratings service the GNOME and KDE app stores use."
 msgstr "리뷰는 다른 사람들이 작성한 것이며 GNOME과 KDE 앱 스토어가 사용하는 평점 서비스에서 가져옵니다."
+
+msgctxt "SettingsBody"
+msgid "Same as the others"
+msgstr "다른 앱과 동일"
 
 msgctxt "SettingsBody"
 msgid "Save"
@@ -1310,6 +1502,26 @@ msgctxt "TvShell"
 msgid "Searching…"
 msgstr "검색 중…"
 
+msgctxt "ReviewForm"
+msgid "Send review"
+msgstr "리뷰 보내기"
+
+msgctxt "TvShell"
+msgid "Send review"
+msgstr "리뷰 보내기"
+
+msgctxt "ReviewForm"
+msgid "Send your review"
+msgstr "리뷰를 보내세요"
+
+msgctxt "TvShell"
+msgid "Send your review"
+msgstr "리뷰를 보내세요"
+
+msgctxt "TvShell"
+msgid "Sending…"
+msgstr "보내는 중…"
+
 msgctxt "SettingsBody"
 msgid "Set a PIN"
 msgstr "PIN 설정"
@@ -1395,6 +1607,10 @@ msgid "Show less of {}"
 msgstr "{} 접기"
 
 msgctxt "SettingsBody"
+msgid "Show performance figures"
+msgstr "성능 수치 표시"
+
+msgctxt "SettingsBody"
 msgid "Show ratings and reviews"
 msgstr "평점 및 리뷰 표시"
 
@@ -1420,6 +1636,10 @@ msgid "Sign in in a browser"
 msgstr "브라우저에서 로그인"
 
 msgctxt "SettingsBody"
+msgid "Sign in on GOG's page in the window that opened. Close it to stop."
+msgstr "열린 창의 GOG 페이지에서 로그인하세요. 중지하려면 창을 닫으세요."
+
+msgctxt "SettingsBody"
 msgid "Sign in on Steam's page in Longboard, then choose to share your library."
 msgstr "Longboard에 열린 Steam 페이지에서 로그인한 다음 라이브러리 공유를 선택하세요."
 
@@ -1430,6 +1650,10 @@ msgstr "Longboard에 열린 Steam 페이지에서 로그인한 다음 라이브�
 msgctxt "SettingsBody"
 msgid "Sign in on Steam's page in the window that opened. Close it to stop."
 msgstr "열린 창의 Steam 페이지에서 로그인하세요. 중지하려면 창을 닫으세요."
+
+msgctxt "SettingsBody"
+msgid "Sign in to GOG"
+msgstr "GOG에 로그인"
 
 msgctxt "TvShell"
 msgid "Sign in to GitHub for more searches an hour"
@@ -1452,6 +1676,10 @@ msgid "Sign in to Steam with a QR code, to see what you own"
 msgstr "QR 코드로 Steam에 로그인해 보유한 게임 보기"
 
 msgctxt "SettingsBody"
+msgid "Sign in to see which GOG games you already own. GOG's own sign-in page opens in a small window; Bilby asks GOG once for the list and keeps only that, on this device."
+msgstr "로그인하면 이미 가지고 있는 GOG 게임을 확인할 수 있습니다. GOG의 로그인 페이지가 작은 창으로 열립니다. Bilby는 GOG에 목록을 한 번만 요청하고, 그 목록만 이 기기에 보관합니다."
+
+msgctxt "SettingsBody"
 msgid "Sign in to see which Steam games you already own. Bilby keeps only the list of what you own, on this device. Choose how:"
 msgstr "로그인하면 이미 보유한 Steam 게임을 확인할 수 있습니다. Bilby는 보유 목록만 이 기기에 보관합니다. 방법을 선택하세요:"
 
@@ -1470,6 +1698,10 @@ msgstr "로그아웃"
 msgctxt "TvShell"
 msgid "Sign out"
 msgstr "로그아웃"
+
+msgctxt "SettingsBody"
+msgid "Sign out of GOG"
+msgstr "GOG에서 로그아웃"
 
 msgctxt "SettingsBody"
 msgid "Sign out of GitHub"
@@ -1494,6 +1726,10 @@ msgstr "GitHub에 로그인됨"
 msgctxt "TvShell"
 msgid "Signed in to Steam  ·  {}"
 msgstr "Steam에 로그인됨  ·  {}"
+
+msgctxt "SettingsBody"
+msgid "Signed in. Bilby knows {} in your GOG library and marks them Owned."
+msgstr "로그인했습니다. Bilby가 GOG 라이브러리의 {}을(를) 확인하고 ‘보유 중’으로 표시합니다."
 
 msgctxt "SettingsBody"
 msgid "Signed in. Bilby knows {} in your Steam library and marks them Owned."
@@ -1536,6 +1772,22 @@ msgid "Sounds: a quiet tick or pop as you move about and press things."
 msgstr "소리: 이동하거나 누를 때 조용한 틱 또는 팝 소리가 납니다."
 
 msgctxt "SettingsBody"
+msgid "Standard"
+msgstr "표준"
+
+msgctxt "TvShell"
+msgid "Standard"
+msgstr "표준"
+
+msgctxt "SettingsBody"
+msgid "Standard follows Valve's own Proton and is the steady choice. GE-Proton is a community build with newer fixes, which some games need. Either is fetched the first time it is used."
+msgstr "표준은 Valve의 Proton을 따르는 안정적인 선택입니다. GE-Proton은 더 새로운 수정 사항이 담긴 커뮤니티 빌드로, 일부 게임에 필요합니다. 둘 다 처음 사용할 때 가져옵니다."
+
+msgctxt "TvShell"
+msgid "Stars"
+msgstr "별점"
+
+msgctxt "SettingsBody"
 msgid "Steam"
 msgstr "Steam"
 
@@ -1552,12 +1804,40 @@ msgid "Stop waiting"
 msgstr "기다리지 않기"
 
 msgctxt "SettingsBody"
+msgid "Stop waiting for GOG"
+msgstr "GOG 기다리지 않기"
+
+msgctxt "SettingsBody"
 msgid "Stop waiting for Steam"
 msgstr "Steam 기다리지 않기"
+
+msgctxt "ReviewForm"
+msgid "Stop writing the review"
+msgstr "리뷰 쓰기 그만두기"
+
+msgctxt "TvShell"
+msgid "Stop writing the review"
+msgstr "리뷰 쓰기 그만두기"
 
 msgctxt "SettingsBody"
 msgid "Storage"
 msgstr "저장 공간"
+
+msgctxt "SettingsBody"
+msgid "Storage and about"
+msgstr "저장 공간 및 정보"
+
+msgctxt "SettingsBody"
+msgid "Stores"
+msgstr "스토어"
+
+msgctxt "TvShell"
+msgid "Stores"
+msgstr "스토어"
+
+msgctxt "SettingsBody"
+msgid "Stores are asked for this country's prices, in its own money."
+msgstr "스토어에 이 국가의 가격을 해당 통화로 요청합니다."
 
 msgctxt "TvShell"
 msgid "Switch"
@@ -1607,9 +1887,21 @@ msgctxt "SettingsBody"
 msgid "The code refreshes by itself."
 msgstr "코드는 자동으로 새로 고쳐집니다."
 
+msgctxt "ReviewForm"
+msgid "The name to show next to it"
+msgstr "옆에 표시할 이름"
+
+msgctxt "TvShell"
+msgid "The name to show next to it"
+msgstr "옆에 표시할 이름"
+
 msgctxt "SettingsBody"
 msgid "The store only lists apps with a file that can be installed here. This is what it detected."
 msgstr "스토어는 이 기기에 설치할 수 있는 파일이 있는 앱만 표시합니다. 감지한 내용은 다음과 같습니다."
+
+msgctxt "SettingsBody"
+msgid "These apply to every Windows app, unless an app below says otherwise."
+msgstr "아래 앱에서 다르게 지정하지 않는 한 모든 Windows 앱에 적용됩니다."
 
 msgctxt "SettingsBody"
 msgid "They come from the service the GNOME and KDE app stores use (odrs.gnome.org). Star ratings arrive as one file a day for every app. Written reviews are asked for when you open the page of an app that has them, which tells that service which app it was. Nothing that identifies you is sent."
@@ -1634,6 +1926,18 @@ msgstr "여기에서 앱 기록만 지웁니다. 앱을 제거하려면 시스�
 msgctxt "TvShell"
 msgid "This store"
 msgstr "이 스토어"
+
+msgctxt "TvShell"
+msgid "Title"
+msgstr "제목"
+
+msgctxt "ReviewForm"
+msgid "Title of your review"
+msgstr "리뷰 제목"
+
+msgctxt "TvShell"
+msgid "Title of your review"
+msgstr "리뷰 제목"
 
 msgctxt "DesktopShell"
 msgid "Try a different name, or check the spelling. Projects without a file for {} are left out."
@@ -1676,8 +1980,8 @@ msgid "Unofficial"
 msgstr "비공식"
 
 msgctxt "TvShell"
-msgid "Up and Down move through the list. OK changes the highlighted setting."
-msgstr "위/아래 버튼으로 목록을 이동합니다. OK를 누르면 선택한 설정이 바뀝니다."
+msgid "Up and Down move through the list. OK changes the highlighted setting. Left is the list of sections."
+msgstr "위와 아래로 목록을 이동합니다. 확인은 강조된 설정을 바꿉니다. 왼쪽은 섹션 목록입니다."
 
 msgctxt "AppRow"
 msgid "Update"
@@ -1775,6 +2079,10 @@ msgctxt "LibraryItem"
 msgid "Updating…"
 msgstr "업데이트 중…"
 
+msgctxt "SettingsBody"
+msgid "Use GameMode"
+msgstr "GameMode 사용"
+
 msgctxt "TvQuestion"
 msgid "Use the TV layout"
 msgstr "TV 레이아웃 사용"
@@ -1863,6 +2171,14 @@ msgctxt "Welcome"
 msgid "Welcome to Bilby"
 msgstr "Bilby에 오신 것을 환영합니다"
 
+msgctxt "ReviewForm"
+msgid "What do you think of it?"
+msgstr "어떻게 생각하시나요?"
+
+msgctxt "TvShell"
+msgid "What do you think of it?"
+msgstr "어떻게 생각하시나요?"
+
 msgctxt "OptionCard"
 msgid "What happens when I install {}"
 msgstr "{}을(를) 설치하면 일어나는 일"
@@ -1874,6 +2190,10 @@ msgstr "사람들이 쓴 글"
 msgctxt "OptionCard"
 msgid "What will happen?"
 msgstr "어떻게 되나요?"
+
+msgctxt "TvShell"
+msgid "What you have typed"
+msgstr "입력한 내용"
 
 msgctxt "WhatsNew"
 msgid "What's new"
@@ -1891,6 +2211,18 @@ msgctxt "TvShell"
 msgid "Where apps come from"
 msgstr "앱을 가져오는 곳"
 
+msgctxt "SettingsBody"
+msgid "Windows apps"
+msgstr "Windows 앱"
+
+msgctxt "SettingsBody"
+msgid "Windows apps you install show up here, each with its own choices."
+msgstr "설치한 Windows 앱이 여기에 표시되며, 각각 고유한 설정을 가집니다."
+
+msgctxt "SettingsBody"
+msgid "Windows settings"
+msgstr "Windows 설정"
+
 msgctxt "DetailsBody"
 msgid "Works on"
 msgstr "지원 기기"
@@ -1898,6 +2230,14 @@ msgstr "지원 기기"
 msgctxt "TvShell"
 msgid "Works on"
 msgstr "지원 기기"
+
+msgctxt "ReviewForm"
+msgid "Write a review"
+msgstr "리뷰 쓰기"
+
+msgctxt "TvShell"
+msgid "Write a review"
+msgstr "리뷰 쓰기"
 
 msgctxt "Welcome"
 msgid "You are seeing apps for {}. Anything that cannot be installed on this device is hidden."
@@ -1915,6 +2255,10 @@ msgctxt "SystemBody"
 msgid "You may be asked for your password. Keep the device on until this finishes."
 msgstr "비밀번호를 물을 수 있습니다. 끝날 때까지 기기를 켜 두세요."
 
+msgctxt "SettingsBody"
+msgid "Your Windows apps"
+msgstr "내 Windows 앱"
+
 msgctxt "LibraryBody"
 msgid "Your library is empty"
 msgstr "라이브러리가 비어 있습니다"
@@ -1926,6 +2270,22 @@ msgstr "내 소스"
 msgctxt "TvShell"
 msgid "Your password is needed"
 msgstr "비밀번호가 필요합니다"
+
+msgctxt "ReviewForm"
+msgid "Your review"
+msgstr "내 리뷰"
+
+msgctxt "TvShell"
+msgid "Your review"
+msgstr "내 리뷰"
+
+msgctxt "ReviewForm"
+msgid "Your review of {}"
+msgstr "{} 리뷰"
+
+msgctxt "TvShell"
+msgid "Your review of {}"
+msgstr "{} 리뷰"
 
 msgctxt "TvShell"
 msgid "an older one"
@@ -2056,6 +2416,14 @@ msgstr "다운로드 {}"
 msgctxt "AppTile"
 msgid "{} sources"
 msgstr "소스 {}개"
+
+msgctxt "ReviewForm"
+msgid "{} stars"
+msgstr "별 {}개"
+
+msgctxt "TvShell"
+msgid "{} stars"
+msgstr "별 {}개"
 
 msgctxt "DesktopShell"
 msgid "{}. Everything shown works here."

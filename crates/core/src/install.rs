@@ -42,6 +42,8 @@ pub enum Action {
     /// Hand over to another store's own app (Steam, the Mac App Store), which does
     /// the installing. Nothing is downloaded by this store.
     OpenStore,
+    /// Set a Windows installer up to run on Linux through Proton (see `winrun`).
+    WindowsApp,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -65,6 +67,14 @@ pub fn plan(asset: &Asset, info: &AssetInfo, p: &Platform) -> InstallPlan {
         Format::Apk => {
             steps.push("Android asks you to confirm the install".to_string());
             (Action::AndroidInstaller, "Install", None)
+        }
+        Format::Exe if p.runs_windows() => {
+            steps.push(
+                "The first time, Bilby fetches what Windows programs need to run here (about 700 MB, and 2 GB of space)".to_string(),
+            );
+            steps.push("Bilby runs the installer for you, in a folder of the app's own".to_string());
+            steps.push("The app is added to your apps, and removing it removes everything it brought".to_string());
+            (Action::WindowsApp, "Install", None)
         }
         Format::Exe | Format::Msi | Format::Msix => {
             steps.push("Windows opens the installer".to_string());
@@ -168,6 +178,11 @@ pub fn plan(asset: &Asset, info: &AssetInfo, p: &Platform) -> InstallPlan {
                 "steam" if asset.url.starts_with("steam://install/") => ("Steam", "Install with Steam"),
                 "steam" => ("Steam", "View in Steam"),
                 "macappstore" => ("the App Store", "Get on the App Store"),
+                "ms-windows-store" => ("the Microsoft Store", "Get from the Microsoft Store"),
+                "https" if asset.url.starts_with("https://www.gog.com/") => ("GOG's website", "Get it on GOG"),
+                "https" if asset.url.starts_with("https://play.google.com/") => {
+                    ("Google Play", "Get it on Google Play")
+                }
                 _ => ("its store's page", "Open its store page"),
             };
             return InstallPlan {
@@ -352,6 +367,11 @@ pub fn add_menu_entry(dirs: &Dirs, id: &str, name: &str, appimage: &Path) -> Res
 /// carries its icon at its root as `.DirIcon`; asking the file to extract that does
 /// not start the app inside it. Anything unexpected means no icon, never an error.
 fn appimage_icon(dirs: &Dirs, id: &str, appimage: &Path) -> Option<PathBuf> {
+    // What starts a Windows program is a script, not an AppImage: asking it for its
+    // icon would start the program.
+    if crate::winrun::folder_of(dirs, appimage).is_some() {
+        return None;
+    }
     use std::process::{Command, Stdio};
     if !cfg!(target_os = "linux") {
         return None;
@@ -805,6 +825,11 @@ pub fn remove_placed(dirs: &Dirs, program: &Path) -> bool {
     if !program.starts_with(&dirs.applications) {
         return false;
     }
+    // A Windows program: its folder holds its whole Windows, and goes with it.
+    if let Some(folder) = crate::winrun::folder_of(dirs, program) {
+        let _ = std::fs::remove_file(folder.join("prefix.log"));
+        return std::fs::remove_dir_all(folder).is_ok();
+    }
     match unpacked_folder(program) {
         Some(folder) => std::fs::remove_dir_all(folder).is_ok(),
         None => std::fs::remove_file(program).is_ok(),
@@ -814,7 +839,10 @@ pub fn remove_placed(dirs: &Dirs, program: &Path) -> bool {
 /// Does this step fetch a file into the downloads folder? Package managers, Flatpak,
 /// other stores and web apps do not: they have their own places, or none.
 pub fn saves_a_file(action: &Action) -> bool {
-    matches!(action, Action::OpenFile | Action::PlaceAppImage | Action::Reveal | Action::AndroidInstaller)
+    matches!(
+        action,
+        Action::OpenFile | Action::PlaceAppImage | Action::Reveal | Action::AndroidInstaller | Action::WindowsApp
+    )
 }
 
 /// Show one of the desktop's own notifications. True when something was found to
@@ -1382,6 +1410,8 @@ pub fn open_url(url: &str) -> Result<()> {
 /// own website. Built by this store from a checked id; checked again before opening.
 pub fn store_link_ok(url: &str) -> bool {
     let number = |rest: &str| (1..=12).contains(&rest.len()) && rest.chars().all(|c| c.is_ascii_digit());
+    // The Microsoft Store's ids are capitals and digits, not a number.
+    let product = |rest: &str| crate::model::valid_key(crate::model::SourceKind::MicrosoftStore, rest);
     [
         "steam://install/",
         "steam://store/",
@@ -1392,6 +1422,15 @@ pub fn store_link_ok(url: &str) -> bool {
     ]
     .iter()
     .any(|prefix| url.strip_prefix(prefix).is_some_and(number))
+        || ["ms-windows-store://pdp/?ProductId=", "https://apps.microsoft.com/detail/"]
+            .iter()
+            .any(|prefix| url.strip_prefix(prefix).is_some_and(product))
+        // GOG's pages go by a name in small letters.
+        || url.strip_prefix("https://www.gog.com/en/game/").is_some_and(crate::source::gog::slug_ok)
+        // Google Play's go by the app's Android name.
+        || url
+            .strip_prefix("https://play.google.com/store/apps/details?id=")
+            .is_some_and(|name| crate::model::valid_key(crate::model::SourceKind::GooglePlay, name))
 }
 
 /// The plan for a file the store would not install here: fetch it, check it, and show
@@ -1474,6 +1513,10 @@ pub fn execute(
             "Steam"
         } else if asset.url.starts_with("macappstore://") {
             "The App Store"
+        } else if asset.url.starts_with("ms-windows-store://") {
+            "The Microsoft Store"
+        } else if asset.url.starts_with("https://play.google.com/") {
+            "Google Play"
         } else {
             "Your browser"
         };
@@ -1618,6 +1661,17 @@ pub fn execute(
                 file: None,
                 store_managed: false,
                 flatpak_app,
+            })
+        }
+        Action::WindowsApp => {
+            let launcher = crate::winrun::install(http, dirs, &asset.url, &dest, progress);
+            // The installer has done its work, or could not: either way it is not kept.
+            let _ = std::fs::remove_file(&dest);
+            Ok(Outcome {
+                message: format!("{verified}Set up to run through Proton."),
+                file: Some(launcher?),
+                store_managed: true,
+                flatpak_app: None,
             })
         }
         Action::ShowCommand
@@ -1799,6 +1853,26 @@ mod tests {
         assert_eq!(opened.borrow().len(), 1);
         let mac = link("macappstore://apps.apple.com/app/id1");
         assert_eq!(plan(&mac, mac.info.as_ref().unwrap(), &platform).verb, "Get on the App Store");
+        // The Microsoft Store: its own scheme and a product id, nothing else after it.
+        assert!(store_link_ok("ms-windows-store://pdp/?ProductId=9NCBCSZSJRSB"));
+        assert!(store_link_ok("https://apps.microsoft.com/detail/XPDC2RH70K22MN"));
+        assert!(store_link_ok("https://www.gog.com/en/game/the_witcher_3_wild_hunt_game"));
+        assert!(!store_link_ok("https://www.gog.com/en/game/../../account"));
+        assert!(!store_link_ok("https://www.gog.com/en/game/x?redirect=elsewhere"));
+        assert!(store_link_ok("https://play.google.com/store/apps/details?id=org.mozilla.firefox"));
+        assert!(!store_link_ok("https://play.google.com/store/apps/details?id=org.mozilla.firefox&referrer=x"));
+        assert!(!store_link_ok("https://play.google.com/store/search?q=firefox"));
+        for bad in [
+            "ms-windows-store://pdp/?ProductId=",
+            "ms-windows-store://pdp/?ProductId=9NCBCSZSJRSB&mode=mini",
+            "ms-windows-store://pdp/?ProductId=9ncbcszsjrsb",
+            "ms-windows-store://navigatetopage/?Id=Gaming",
+            "ms-settings:privacy",
+        ] {
+            assert!(!store_link_ok(bad), "{bad}");
+        }
+        let windows = link("ms-windows-store://pdp/?ProductId=9NCBCSZSJRSB");
+        assert_eq!(plan(&windows, windows.info.as_ref().unwrap(), &platform).verb, "Get from the Microsoft Store");
     }
 
     #[test]
@@ -1848,6 +1922,47 @@ mod tests {
 
     fn plan_for(name: &str, preset: &str) -> InstallPlan {
         plan(&asset(name, None), &classify(name).unwrap(), &Platform::preset(preset).unwrap())
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn a_windows_installer_is_set_up_on_linux_and_removed_with_everything_it_brought() {
+        use std::os::unix::fs::PermissionsExt;
+        let mut linux = Platform::preset("linux-x64-debian").unwrap();
+        let exe = asset("thing-setup-x64.exe", None);
+        let info = classify(&exe.name).unwrap();
+        // Where Windows programs are not offered, an installer is only a file to keep.
+        assert_ne!(plan(&exe, &info, &linux).action, Action::WindowsApp);
+        linux.linux.as_mut().unwrap().windows = true;
+        let made = plan(&exe, &info, &linux);
+        assert_eq!((&made.action, made.verb.as_str()), (&Action::WindowsApp, "Install"));
+        assert!(made.steps.iter().any(|step| step.contains("700 MB")), "{:?}", made.steps);
+        assert!(!unattended(&made) && saves_a_file(&made.action));
+
+        // A stand-in for the launcher: its "install" makes the app.
+        let mut dirs = temp_dirs("windows-app");
+        let bin = dirs.cache.join("bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        let fake = bin.join("umu-run");
+        let body = "#!/bin/sh\nmkdir -p \"$WINEPREFIX/drive_c/Program Files/Thing\"\nprintf app > \"$WINEPREFIX/drive_c/Program Files/Thing/Thing.exe\"\n";
+        std::fs::write(&fake, body).unwrap();
+        std::fs::set_permissions(&fake, std::fs::Permissions::from_mode(0o755)).unwrap();
+        dirs.programs = vec![bin];
+        let open = |_: &Path| -> Result<()> { unreachable!("nothing is opened: the store runs the installer itself") };
+        let outcome = execute(&made, &exe, &Fake(b"MZ..installer"), &dirs, &open, &mut |_, _| true).unwrap();
+        let launcher = outcome.file.clone().unwrap();
+        assert!(outcome.store_managed && outcome.message.contains("Proton"), "{}", outcome.message);
+        assert!(launcher.starts_with(&dirs.applications) && launcher.is_file());
+        assert!(!dirs.downloads.join("thing-setup-x64.exe").exists(), "the installer is not left in Downloads");
+        // Its entry in the app menu starts the launcher, and asking for its picture does not.
+        let entry = add_menu_entry(&dirs, "github:x/thing", "Thing", &launcher).unwrap();
+        let text = std::fs::read_to_string(&entry).unwrap();
+        assert!(text.contains(&format!("Exec=\"{}\"", launcher.display())) && !text.contains("Icon="), "{text}");
+        // Removing it removes its whole folder, and nothing outside it.
+        let folder = launcher.parent().unwrap().to_path_buf();
+        assert!(folder.join("prefix").join("drive_c").is_dir());
+        assert!(remove_placed(&dirs, &launcher));
+        assert!(!folder.exists() && crate::winrun::root(&dirs).is_dir());
     }
 
     #[test]

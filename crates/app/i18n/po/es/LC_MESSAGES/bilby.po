@@ -16,6 +16,14 @@ msgctxt "FamilyRow"
 msgid ", unofficial"
 msgstr ", no oficial"
 
+msgctxt "ReviewForm"
+msgid "1 star"
+msgstr "1 estrella"
+
+msgctxt "TvShell"
+msgid "1 star"
+msgstr "1 estrella"
+
 msgctxt "TvShell"
 msgid "A PIN guards these settings and adult content"
 msgstr "Un PIN protege estos ajustes y el contenido para adultos"
@@ -31,6 +39,14 @@ msgstr "Antes de descargar cada archivo se abre un selector de carpetas. Si sale
 msgctxt "TvQuestion"
 msgid "A game controller is connected. Bilby has a layout with large text for the sofa, driven with the arrow keys of a remote or keyboard. You can change this later in Settings."
 msgstr "Hay un mando de juego conectado. Bilby tiene un diseño con texto grande para el sofá, que se maneja con las flechas de un control remoto o del teclado. Puedes cambiarlo después en Ajustes."
+
+msgctxt "ReviewForm"
+msgid "A short title"
+msgstr "Un título breve"
+
+msgctxt "TvShell"
+msgid "A short title"
+msgstr "Un título breve"
 
 msgctxt "DetailsBody"
 msgid "About"
@@ -59,6 +75,10 @@ msgstr "Acerca de este sitio web"
 msgctxt "WhatsNew"
 msgid "About this website"
 msgstr "Acerca de este sitio web"
+
+msgctxt "SettingsBody"
+msgid "Accounts"
+msgstr "Cuentas"
 
 msgctxt "TvShell"
 msgid "Accounts"
@@ -181,6 +201,10 @@ msgid "Ask where to save each download"
 msgstr "Preguntar dónde guardar cada descarga"
 
 msgctxt "SettingsBody"
+msgid "Asks the system for its full speed while a Windows app runs."
+msgstr "Pide al sistema toda su velocidad mientras se ejecuta una aplicación de Windows."
+
+msgctxt "SettingsBody"
 msgid "Automatic"
 msgstr "Automático"
 
@@ -235,6 +259,10 @@ msgstr "Bilby instala las actualizaciones de tus aplicaciones en cuanto las encu
 msgctxt "SettingsBody"
 msgid "Bilby keeps a short list, chosen by people, of the apps and websites nearly everyone looks for: a browser, a video player, the big names. On, the home page starts with them in the version for this device, and they are placed a little higher in a search. Off, you get only what the sources' own figures say."
 msgstr "Bilby mantiene una lista breve, elegida por personas, de las apps y sitios web que casi todo el mundo busca: un navegador, un reproductor de video, los grandes nombres. Activado, la página de inicio empieza con ellos en la versión para este dispositivo y aparecen un poco más arriba en las búsquedas. Desactivado, solo ves lo que dicen las cifras de las propias fuentes."
+
+msgctxt "SettingsBody"
+msgid "Bilby sets Windows programs up to run here through Proton, each in a folder of its own. Most programs work, not all. The first one needs about 700 MB of downloads."
+msgstr "Bilby configura los programas de Windows para funcionar aquí mediante Proton, cada uno en su propia carpeta. La mayoría funcionan, no todos. El primero necesita unos 700 MB de descargas."
 
 msgctxt "TvShell"
 msgid "Bilby {0} is available. You have {1}"
@@ -377,6 +405,10 @@ msgid "Choose a version"
 msgstr "Elige una versión"
 
 msgctxt "TvShell"
+msgid "Choose done when it is typed. Back puts the keyboard away."
+msgstr "Elige «listo» cuando esté escrito. Atrás guarda el teclado."
+
+msgctxt "TvShell"
 msgid "Choose enter when it is typed. Back cancels."
 msgstr "Elige «intro» cuando la hayas escrito. Atrás cancela."
 
@@ -432,6 +464,14 @@ msgctxt "CommandBox"
 msgid "Copy"
 msgstr "Copiar"
 
+msgctxt "ReviewForm"
+msgid "Copy and open"
+msgstr "Copiar y abrir"
+
+msgctxt "TvShell"
+msgid "Copy and open"
+msgstr "Copiar y abrir"
+
 msgctxt "CommandBox"
 msgid "Copy command"
 msgstr "Copiar comando"
@@ -439,6 +479,14 @@ msgstr "Copiar comando"
 msgctxt "DetailsBody"
 msgid "Couldn't load this app"
 msgstr "No se pudo cargar esta app"
+
+msgctxt "SettingsBody"
+msgid "Country for prices"
+msgstr "País para los precios"
+
+msgctxt "TvShell"
+msgid "Country for prices"
+msgstr "País para los precios"
 
 msgctxt "SettingsBody"
 msgid "Dark"
@@ -491,6 +539,10 @@ msgstr "Descubrir"
 msgctxt "MobileShell"
 msgid "Discover"
 msgstr "Descubrir"
+
+msgctxt "TvShell"
+msgid "Done"
+msgstr "Listo"
 
 msgctxt "DetailsBody"
 msgid "Download"
@@ -549,6 +601,14 @@ msgid "Everything works without signing in, but GitHub then allows only 60 reque
 msgstr "Todo funciona sin iniciar sesión, pero entonces GitHub solo permite 60 solicitudes por hora para toda tu red, y unas pocas búsquedas pueden agotarlas. Al iniciar sesión, el límite sube a 5000. Bilby no pide ningún acceso a tu cuenta."
 
 msgctxt "SettingsBody"
+msgid "Family"
+msgstr "Familia"
+
+msgctxt "TvShell"
+msgid "Family"
+msgstr "Familia"
+
+msgctxt "SettingsBody"
 msgid "Family and adult content"
 msgstr "Familia y contenido para adultos"
 
@@ -600,6 +660,10 @@ msgctxt "SettingsBody"
 msgid "Four digits. With a PIN set, it is asked for to change anything in this card and to open adult content, in place of the question about being an adult."
 msgstr "Cuatro dígitos. Con un PIN definido, se pide para cambiar cualquier cosa de esta tarjeta y para abrir contenido para adultos, en lugar de la pregunta sobre si eres adulto."
 
+msgctxt "SettingsBody"
+msgid "Frames a second and temperatures, drawn over the app by MangoHud."
+msgstr "Fotogramas por segundo y temperaturas, dibujados sobre la aplicación por MangoHud."
+
 msgctxt "DetailsBody"
 msgid "From"
 msgstr "De"
@@ -607,6 +671,22 @@ msgstr "De"
 msgctxt "TvShell"
 msgid "From"
 msgstr "De"
+
+msgctxt "SettingsBody"
+msgid "GE-Proton"
+msgstr "GE-Proton"
+
+msgctxt "TvShell"
+msgid "GE-Proton"
+msgstr "GE-Proton"
+
+msgctxt "SettingsBody"
+msgid "GOG"
+msgstr "GOG"
+
+msgctxt "SettingsBody"
+msgid "General"
+msgstr "General"
 
 msgctxt "TvShell"
 msgid "General"
@@ -645,6 +725,10 @@ msgstr[1] "Ocultar {n} archivos para otros dispositivos"
 msgctxt "TvShell"
 msgid "Home"
 msgstr "Inicio"
+
+msgctxt "SettingsBody"
+msgid "How Windows apps run"
+msgstr "Cómo se ejecutan las aplicaciones de Windows"
 
 msgctxt "DetailsBody"
 msgid "In your favourites"
@@ -734,6 +818,14 @@ msgctxt "TvShell"
 msgid "Installing updates"
 msgstr "Instalando actualizaciones"
 
+msgctxt "ReviewForm"
+msgid "It goes to:"
+msgstr "Se envía a:"
+
+msgctxt "TvShell"
+msgid "It goes to:"
+msgstr "Se envía a:"
+
 msgctxt "SettingsBody"
 msgid "Keep Bilby in the system tray when its window is closed"
 msgstr "Mantener Bilby en la bandeja del sistema al cerrar su ventana"
@@ -762,6 +854,10 @@ msgctxt "TvShell"
 msgid "Language"
 msgstr "Idioma"
 
+msgctxt "TvShell"
+msgid "Language and country"
+msgstr "Idioma y país"
+
 msgctxt "LibraryBody"
 msgid "Last checked {}"
 msgstr "Última comprobación: {}"
@@ -769,6 +865,26 @@ msgstr "Última comprobación: {}"
 msgctxt "SettingsBody"
 msgid "Layout"
 msgstr "Diseño"
+
+msgctxt "ReviewForm"
+msgid "Leave it at:"
+msgstr "Déjala en:"
+
+msgctxt "TvShell"
+msgid "Leave it at:"
+msgstr "Déjala en:"
+
+msgctxt "ReviewForm"
+msgid "Leave the review at {}"
+msgstr "Deja la reseña en {}"
+
+msgctxt "TvShell"
+msgid "Leave the review at {}"
+msgstr "Deja la reseña en {}"
+
+msgctxt "TvShell"
+msgid "Left and Right to change"
+msgstr "Izquierda y derecha para cambiar"
 
 msgctxt "DesktopShell"
 msgid "Library"
@@ -820,6 +936,26 @@ msgctxt "TvShell"
 msgid "More choices"
 msgstr "Más opciones"
 
+msgctxt "TvShell"
+msgid "Name"
+msgstr "Nombre"
+
+msgctxt "ReviewForm"
+msgid "Name to show next to your review"
+msgstr "Nombre que se mostrará junto a tu reseña"
+
+msgctxt "TvShell"
+msgid "Name to show next to your review"
+msgstr "Nombre que se mostrará junto a tu reseña"
+
+msgctxt "SettingsBody"
+msgid "Needs GameMode, which is not on this device. Install it and this starts working."
+msgstr "Necesita GameMode, que no está en este dispositivo. Instálalo y esto empezará a funcionar."
+
+msgctxt "SettingsBody"
+msgid "Needs MangoHud, which is not on this device. Install it and this starts working."
+msgstr "Necesita MangoHud, que no está en este dispositivo. Instálalo y esto empezará a funcionar."
+
 msgctxt "GateOverlay"
 msgid "No"
 msgstr "No"
@@ -848,6 +984,14 @@ msgctxt "AppTile"
 msgid "Not for this device"
 msgstr "No es para este dispositivo"
 
+msgctxt "ReviewForm"
+msgid "Not now"
+msgstr "Ahora no"
+
+msgctxt "TvShell"
+msgid "Not now"
+msgstr "Ahora no"
+
 msgctxt "DesktopShell"
 msgid "Nothing featured for this device yet"
 msgstr "Aún no hay nada destacado para este dispositivo"
@@ -864,6 +1008,10 @@ msgctxt "TvShell"
 msgid "Nothing for this TV yet. Press Up to search."
 msgstr "Aún no hay nada para este televisor. Pulsa Arriba para buscar."
 
+msgctxt "SettingsBody"
+msgid "Off"
+msgstr "Desactivado"
+
 msgctxt "TvSetting"
 msgid "Off"
 msgstr "Desactivado"
@@ -877,6 +1025,14 @@ msgid "Off, adult things are only ever found by searching. On, they may also app
 msgstr "Desactivado, el contenido para adultos solo se encuentra buscándolo. Activado, también puede aparecer en la página de inicio, cubierto como en todas partes."
 
 msgctxt "SettingsBody"
+msgid "Offer Windows apps"
+msgstr "Ofrecer aplicaciones de Windows"
+
+msgctxt "TvShell"
+msgid "Offer Windows apps, set up to run here through Proton"
+msgstr "Ofrecer aplicaciones de Windows, configuradas para funcionar aquí mediante Proton"
+
+msgctxt "SettingsBody"
 msgid "Offer betas and release candidates as soon as they are published. They may be unstable."
 msgstr "Ofrece betas y candidatas a versión final en cuanto se publican. Pueden ser inestables."
 
@@ -887,6 +1043,10 @@ msgstr "Ofrecer versiones de prueba de las apps"
 msgctxt "FamilyRow"
 msgid "Official"
 msgstr "Oficial"
+
+msgctxt "SettingsBody"
+msgid "On"
+msgstr "Activado"
 
 msgctxt "TvSetting"
 msgid "On"
@@ -927,6 +1087,10 @@ msgstr "Abrir la carpeta de descargas"
 msgctxt "SettingsBody"
 msgid "Open folder"
 msgstr "Abrir carpeta"
+
+msgctxt "SettingsBody"
+msgid "Open its folder"
+msgstr "Abrir su carpeta"
 
 msgctxt "TvShell"
 msgid "Open link {}"
@@ -988,6 +1152,10 @@ msgctxt "SettingsBody"
 msgid "Paste a token"
 msgstr "Pegar un token"
 
+msgctxt "SettingsBody"
+msgid "Performance figures"
+msgstr "Datos de rendimiento"
+
 msgctxt "TvShell"
 msgid "Pick letters, then choose search"
 msgstr "Elige letras y luego elige buscar"
@@ -1025,6 +1193,10 @@ msgid "Press Back to stop."
 msgstr "Pulsa Atrás para detener."
 
 msgctxt "TvShell"
+msgid "Press Left or Right for another country"
+msgstr "Pulsa Izquierda o Derecha para otro país"
+
+msgctxt "TvShell"
 msgid "Press OK again to remove {} from this TV"
 msgstr "Pulsa OK otra vez para quitar {} de este televisor"
 
@@ -1035,6 +1207,10 @@ msgstr "Pulsa OK para abrir el teclado"
 msgctxt "TvShell"
 msgid "Press OK for the next language"
 msgstr "Pulsa OK para el siguiente idioma"
+
+msgctxt "TvShell"
+msgid "Press OK to type"
+msgstr "Pulsa OK para escribir"
 
 msgctxt "DetailsBody"
 msgid "Price"
@@ -1047,6 +1223,14 @@ msgstr "Precio"
 msgctxt "DetailsBody"
 msgid "Project page"
 msgstr "Página del proyecto"
+
+msgctxt "SettingsBody"
+msgid "Proton version"
+msgstr "Versión de Proton"
+
+msgctxt "TvShell"
+msgid "Proton version for Windows apps"
+msgstr "Versión de Proton para aplicaciones de Windows"
 
 msgctxt "SettingsBody"
 msgid "QR code to scan with the Steam app"
@@ -1197,6 +1381,10 @@ msgid "Results"
 msgstr "Resultados"
 
 msgctxt "TvShell"
+msgid "Review"
+msgstr "Reseña"
+
+msgctxt "TvShell"
 msgid "Review {0} of {1}"
 msgstr "Reseña {0} de {1}"
 
@@ -1223,6 +1411,10 @@ msgstr "Las reseñas las escriben otras personas y vienen del servicio de valora
 msgctxt "TvShell"
 msgid "Reviews are written by other people and come from the ratings service the GNOME and KDE app stores use."
 msgstr "Las reseñas las escriben otras personas y vienen del servicio de valoraciones que usan las tiendas de apps de GNOME y KDE."
+
+msgctxt "SettingsBody"
+msgid "Same as the others"
+msgstr "Igual que las demás"
 
 msgctxt "SettingsBody"
 msgid "Save"
@@ -1312,6 +1504,26 @@ msgctxt "TvShell"
 msgid "Searching…"
 msgstr "Buscando…"
 
+msgctxt "ReviewForm"
+msgid "Send review"
+msgstr "Enviar reseña"
+
+msgctxt "TvShell"
+msgid "Send review"
+msgstr "Enviar reseña"
+
+msgctxt "ReviewForm"
+msgid "Send your review"
+msgstr "Envía tu reseña"
+
+msgctxt "TvShell"
+msgid "Send your review"
+msgstr "Envía tu reseña"
+
+msgctxt "TvShell"
+msgid "Sending…"
+msgstr "Enviando…"
+
 msgctxt "SettingsBody"
 msgid "Set a PIN"
 msgstr "Definir un PIN"
@@ -1397,6 +1609,10 @@ msgid "Show less of {}"
 msgstr "Mostrar menos: {}"
 
 msgctxt "SettingsBody"
+msgid "Show performance figures"
+msgstr "Mostrar datos de rendimiento"
+
+msgctxt "SettingsBody"
 msgid "Show ratings and reviews"
 msgstr "Mostrar valoraciones y reseñas"
 
@@ -1423,6 +1639,10 @@ msgid "Sign in in a browser"
 msgstr "Iniciar sesión en un navegador"
 
 msgctxt "SettingsBody"
+msgid "Sign in on GOG's page in the window that opened. Close it to stop."
+msgstr "Inicia sesión en la página de GOG en la ventana que se abrió. Ciérrala para detener."
+
+msgctxt "SettingsBody"
 msgid "Sign in on Steam's page in Longboard, then choose to share your library."
 msgstr "Inicia sesión en la página de Steam en Longboard y luego elige compartir tu biblioteca."
 
@@ -1433,6 +1653,10 @@ msgstr "Inicia sesión en la página de Steam en Longboard y luego comparte tu b
 msgctxt "SettingsBody"
 msgid "Sign in on Steam's page in the window that opened. Close it to stop."
 msgstr "Inicia sesión en la página de Steam en la ventana que se abrió. Ciérrala para detener."
+
+msgctxt "SettingsBody"
+msgid "Sign in to GOG"
+msgstr "Iniciar sesión en GOG"
 
 msgctxt "TvShell"
 msgid "Sign in to GitHub for more searches an hour"
@@ -1455,6 +1679,10 @@ msgid "Sign in to Steam with a QR code, to see what you own"
 msgstr "Iniciar sesión en Steam con un código QR, para ver lo que tienes"
 
 msgctxt "SettingsBody"
+msgid "Sign in to see which GOG games you already own. GOG's own sign-in page opens in a small window; Bilby asks GOG once for the list and keeps only that, on this device."
+msgstr "Inicia sesión para ver qué juegos de GOG ya tienes. La página de inicio de sesión de GOG se abre en una ventana pequeña; Bilby le pide la lista a GOG una sola vez y solo guarda eso, en este dispositivo."
+
+msgctxt "SettingsBody"
 msgid "Sign in to see which Steam games you already own. Bilby keeps only the list of what you own, on this device. Choose how:"
 msgstr "Inicia sesión para ver qué juegos de Steam ya tienes. Bilby solo guarda la lista de lo que tienes, en este dispositivo. Elige cómo:"
 
@@ -1473,6 +1701,10 @@ msgstr "Cerrar sesión"
 msgctxt "TvShell"
 msgid "Sign out"
 msgstr "Cerrar sesión"
+
+msgctxt "SettingsBody"
+msgid "Sign out of GOG"
+msgstr "Cerrar sesión en GOG"
 
 msgctxt "SettingsBody"
 msgid "Sign out of GitHub"
@@ -1497,6 +1729,10 @@ msgstr "Sesión iniciada en GitHub"
 msgctxt "TvShell"
 msgid "Signed in to Steam  ·  {}"
 msgstr "Sesión iniciada en Steam  ·  {}"
+
+msgctxt "SettingsBody"
+msgid "Signed in. Bilby knows {} in your GOG library and marks them Owned."
+msgstr "Sesión iniciada. Bilby conoce {} de tu biblioteca de GOG y los marca como Adquirido."
 
 msgctxt "SettingsBody"
 msgid "Signed in. Bilby knows {} in your Steam library and marks them Owned."
@@ -1539,6 +1775,22 @@ msgid "Sounds: a quiet tick or pop as you move about and press things."
 msgstr "Sonidos: un clic o un pop suave al moverte y pulsar cosas."
 
 msgctxt "SettingsBody"
+msgid "Standard"
+msgstr "Estándar"
+
+msgctxt "TvShell"
+msgid "Standard"
+msgstr "Estándar"
+
+msgctxt "SettingsBody"
+msgid "Standard follows Valve's own Proton and is the steady choice. GE-Proton is a community build with newer fixes, which some games need. Either is fetched the first time it is used."
+msgstr "Estándar sigue el Proton de Valve y es la opción estable. GE-Proton es una compilación de la comunidad con correcciones más recientes, que algunos juegos necesitan. Cualquiera se descarga la primera vez que se usa."
+
+msgctxt "TvShell"
+msgid "Stars"
+msgstr "Estrellas"
+
+msgctxt "SettingsBody"
 msgid "Steam"
 msgstr "Steam"
 
@@ -1555,12 +1807,40 @@ msgid "Stop waiting"
 msgstr "Dejar de esperar"
 
 msgctxt "SettingsBody"
+msgid "Stop waiting for GOG"
+msgstr "Dejar de esperar a GOG"
+
+msgctxt "SettingsBody"
 msgid "Stop waiting for Steam"
 msgstr "Dejar de esperar a Steam"
+
+msgctxt "ReviewForm"
+msgid "Stop writing the review"
+msgstr "Dejar de escribir la reseña"
+
+msgctxt "TvShell"
+msgid "Stop writing the review"
+msgstr "Dejar de escribir la reseña"
 
 msgctxt "SettingsBody"
 msgid "Storage"
 msgstr "Almacenamiento"
+
+msgctxt "SettingsBody"
+msgid "Storage and about"
+msgstr "Almacenamiento y acerca de"
+
+msgctxt "SettingsBody"
+msgid "Stores"
+msgstr "Tiendas"
+
+msgctxt "TvShell"
+msgid "Stores"
+msgstr "Tiendas"
+
+msgctxt "SettingsBody"
+msgid "Stores are asked for this country's prices, in its own money."
+msgstr "Se piden a las tiendas los precios de este país, en su propia moneda."
 
 msgctxt "TvShell"
 msgid "Switch"
@@ -1610,9 +1890,21 @@ msgctxt "SettingsBody"
 msgid "The code refreshes by itself."
 msgstr "El código se renueva solo."
 
+msgctxt "ReviewForm"
+msgid "The name to show next to it"
+msgstr "El nombre que se mostrará junto a ella"
+
+msgctxt "TvShell"
+msgid "The name to show next to it"
+msgstr "El nombre que se mostrará junto a ella"
+
 msgctxt "SettingsBody"
 msgid "The store only lists apps with a file that can be installed here. This is what it detected."
 msgstr "La tienda solo muestra apps con un archivo que se puede instalar aquí. Esto es lo que detectó."
+
+msgctxt "SettingsBody"
+msgid "These apply to every Windows app, unless an app below says otherwise."
+msgstr "Se aplican a todas las aplicaciones de Windows, salvo que una aplicación de abajo indique otra cosa."
 
 msgctxt "SettingsBody"
 msgid "They come from the service the GNOME and KDE app stores use (odrs.gnome.org). Star ratings arrive as one file a day for every app. Written reviews are asked for when you open the page of an app that has them, which tells that service which app it was. Nothing that identifies you is sent."
@@ -1637,6 +1929,18 @@ msgstr "Esto solo hace que la app se olvide aquí. Para desinstalarla, usa el ge
 msgctxt "TvShell"
 msgid "This store"
 msgstr "Esta tienda"
+
+msgctxt "TvShell"
+msgid "Title"
+msgstr "Título"
+
+msgctxt "ReviewForm"
+msgid "Title of your review"
+msgstr "Título de tu reseña"
+
+msgctxt "TvShell"
+msgid "Title of your review"
+msgstr "Título de tu reseña"
 
 msgctxt "DesktopShell"
 msgid "Try a different name, or check the spelling. Projects without a file for {} are left out."
@@ -1679,8 +1983,8 @@ msgid "Unofficial"
 msgstr "No oficial"
 
 msgctxt "TvShell"
-msgid "Up and Down move through the list. OK changes the highlighted setting."
-msgstr "Arriba y Abajo recorren la lista. OK cambia el ajuste resaltado."
+msgid "Up and Down move through the list. OK changes the highlighted setting. Left is the list of sections."
+msgstr "Arriba y Abajo recorren la lista. OK cambia el ajuste resaltado. Izquierda es la lista de secciones."
 
 msgctxt "AppRow"
 msgid "Update"
@@ -1778,6 +2082,10 @@ msgctxt "LibraryItem"
 msgid "Updating…"
 msgstr "Actualizando…"
 
+msgctxt "SettingsBody"
+msgid "Use GameMode"
+msgstr "Usar GameMode"
+
 msgctxt "TvQuestion"
 msgid "Use the TV layout"
 msgstr "Usar el diseño para TV"
@@ -1866,6 +2174,14 @@ msgctxt "Welcome"
 msgid "Welcome to Bilby"
 msgstr "Te damos la bienvenida a Bilby"
 
+msgctxt "ReviewForm"
+msgid "What do you think of it?"
+msgstr "¿Qué te parece?"
+
+msgctxt "TvShell"
+msgid "What do you think of it?"
+msgstr "¿Qué te parece?"
+
 msgctxt "OptionCard"
 msgid "What happens when I install {}"
 msgstr "Qué pasa cuando instalo {}"
@@ -1877,6 +2193,10 @@ msgstr "Lo que escribió la gente"
 msgctxt "OptionCard"
 msgid "What will happen?"
 msgstr "¿Qué pasará?"
+
+msgctxt "TvShell"
+msgid "What you have typed"
+msgstr "Lo que has escrito"
 
 msgctxt "WhatsNew"
 msgid "What's new"
@@ -1894,6 +2214,18 @@ msgctxt "TvShell"
 msgid "Where apps come from"
 msgstr "De dónde vienen las apps"
 
+msgctxt "SettingsBody"
+msgid "Windows apps"
+msgstr "Aplicaciones de Windows"
+
+msgctxt "SettingsBody"
+msgid "Windows apps you install show up here, each with its own choices."
+msgstr "Las aplicaciones de Windows que instales aparecen aquí, cada una con sus propias opciones."
+
+msgctxt "SettingsBody"
+msgid "Windows settings"
+msgstr "Configuración de Windows"
+
 msgctxt "DetailsBody"
 msgid "Works on"
 msgstr "Funciona en"
@@ -1901,6 +2233,14 @@ msgstr "Funciona en"
 msgctxt "TvShell"
 msgid "Works on"
 msgstr "Funciona en"
+
+msgctxt "ReviewForm"
+msgid "Write a review"
+msgstr "Escribir una reseña"
+
+msgctxt "TvShell"
+msgid "Write a review"
+msgstr "Escribir una reseña"
 
 msgctxt "Welcome"
 msgid "You are seeing apps for {}. Anything that cannot be installed on this device is hidden."
@@ -1918,6 +2258,10 @@ msgctxt "SystemBody"
 msgid "You may be asked for your password. Keep the device on until this finishes."
 msgstr "Puede que se te pida tu contraseña. Mantén el dispositivo encendido hasta que termine."
 
+msgctxt "SettingsBody"
+msgid "Your Windows apps"
+msgstr "Tus aplicaciones de Windows"
+
 msgctxt "LibraryBody"
 msgid "Your library is empty"
 msgstr "Tu biblioteca está vacía"
@@ -1929,6 +2273,22 @@ msgstr "Tus propias fuentes"
 msgctxt "TvShell"
 msgid "Your password is needed"
 msgstr "Se necesita tu contraseña"
+
+msgctxt "ReviewForm"
+msgid "Your review"
+msgstr "Tu reseña"
+
+msgctxt "TvShell"
+msgid "Your review"
+msgstr "Tu reseña"
+
+msgctxt "ReviewForm"
+msgid "Your review of {}"
+msgstr "Tu reseña de {}"
+
+msgctxt "TvShell"
+msgid "Your review of {}"
+msgstr "Tu reseña de {}"
 
 msgctxt "TvShell"
 msgid "an older one"
@@ -2065,6 +2425,14 @@ msgstr "Descarga de {}"
 msgctxt "AppTile"
 msgid "{} sources"
 msgstr "{} fuentes"
+
+msgctxt "ReviewForm"
+msgid "{} stars"
+msgstr "{} estrellas"
+
+msgctxt "TvShell"
+msgid "{} stars"
+msgstr "{} estrellas"
 
 msgctxt "DesktopShell"
 msgid "{}. Everything shown works here."

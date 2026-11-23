@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="crates/app/ui/icons/logo.svg" width="104" alt="Bilby logo: a long-eared bilby face">
+  <img src="crates/app/ui/icons/logo.svg" width="104" alt="Bilby logo: a shopping bag with a bilby's long ears and face">
 </p>
 
 <h1 align="center">Bilby</h1>
@@ -70,8 +70,8 @@ There is no Android package yet, and no Flatpak
 
 **Find an app**
 
-- Search whole catalogs at once, not a hand-made list: everything in winget on
-  Windows, Homebrew and the Mac App Store on a Mac, Flathub, the Snap Store and your
+- Search whole catalogs at once, not a hand-made list: everything in winget and the
+  Microsoft Store on Windows, Homebrew and the Mac App Store on a Mac, Flathub, the Snap Store and your
   distribution's repositories on Linux (tens of thousands of packages on a typical
   system), plus Steam and every project with releases on GitHub and GitLab.
 - Or browse the home page. It opens with the apps and sites nearly everyone looks for
@@ -117,7 +117,8 @@ There is no Android package yet, and no Flatpak
   from Fedora's documentation and has not yet been run on such a system.] An app that closes the moment it starts is reported with
   the reason.
 - Every other file and every older version is one press away, never hidden for good.
-- For things only another store can install (Steam, the Mac App Store), Bilby opens
+- For things only another store can install (Steam, the Mac App Store, the Microsoft
+  Store), Bilby opens
   that store's app on the right page and lets it take over. Buying, downloading and
   updating happen there, not in Bilby. If Steam itself is missing, Bilby offers to
   install it.
@@ -161,6 +162,9 @@ Each source only appears on devices it applies to. A Windows user never sees the
 | **F-Droid** | Android (when the Android app arrives) | Its catalog of free Android apps |
 | **Steam** | Windows, macOS, Linux | Games and apps, free and paid, with their prices. Bilby hands over to the Steam app, which sells, installs and runs them |
 | **Mac App Store** | macOS | Its catalog, free and paid, with prices and ratings. Bilby hands over to the App Store app |
+| **Microsoft Store** | Windows | Its catalog of apps, and the PC games the Xbox app sells, with prices and ratings. Bilby hands over to the Store app |
+| **GOG** | Windows, macOS, Linux | Games sold without copy protection, with prices, ratings and reviews; each device is offered the games made for it. Bilby opens the game's page on gog.com, where it is bought and downloaded |
+| **Google Play** | Android (when the Android app arrives) | An app's own page: rating, installs and price, for a pasted link and for about 75 well-known apps found by name. Google forbids programs from using its search, so Bilby does not search Google Play. Bilby hands over to Google Play |
 | **Codeberg** | Windows, macOS, Linux | Projects by link and from the home page. Codeberg is turning away searches at the moment |
 | **Your own sources** | Everywhere | A list of apps on your own server or storage, added by its address ([how to publish one](docs/OWN-SOURCES.md)) |
 | **Web apps** | Windows, macOS, Linux | Websites added like apps: about ninety well-known ones recommended, a thousand more found by name, and any address you type. They open in your own browser, or in Longboard on a Linux TV |
@@ -193,7 +197,7 @@ is written and tested but not yet tried on a real machine. Plainly:
 | **Linux** | Works. Tried on Debian 13: real searches on GitHub, GitLab, Flathub, apt and Steam, and a real install from Flathub. Search and package details also run for real on Fedora and openSUSE |
 | **Installing distribution packages** | The install commands were run for real on Fedora and openSUSE. Doing it through the system's password prompt has not been tried on a real desktop, nor has any of it on Arch |
 | **Snap Store, AUR** | Written and tested against stand-ins. Not tried end to end |
-| **Steam, Mac App Store** | Searching Steam works for real. Handing over to the Steam or App Store app has not been tried on a machine that has them |
+| **Steam, Mac App Store, Microsoft Store** | Searching Steam and the Microsoft Store works for real. Handing over to the Steam, App Store or Microsoft Store app has not been tried on a machine that has them. The Microsoft Store is read through the service its own app uses, which Microsoft does not document for others and may change |
 | **Signing in to Steam** | Nobody has completed a sign-in yet, by QR code or browser. On a TV, the browser way also waits on a Longboard release |
 | **Windows, macOS** | Downloads are published and the tests pass on both. Nobody has checked the window by eye yet, so expect rough edges |
 | **winget** (Windows) | Written without a Windows machine to try it on. English-language Windows only |

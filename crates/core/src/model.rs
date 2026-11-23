@@ -36,6 +36,13 @@ pub enum SourceKind {
     Steam,
     /// The Mac App Store, handed over to in the same way.
     MacAppStore,
+    /// The Microsoft Store: Windows apps and the Xbox app's PC games, handed over to
+    /// the Store app.
+    MicrosoftStore,
+    /// GOG: games for Windows, macOS and Linux, bought on its website.
+    Gog,
+    /// Google Play: an app's own page, read; Google Play itself installs it.
+    GooglePlay,
     /// A list of apps on the person's own server or storage, added in Settings.
     Own,
 }
@@ -63,6 +70,9 @@ impl SourceKind {
             SourceKind::FDroid => "F-Droid",
             SourceKind::Steam => "Steam",
             SourceKind::MacAppStore => "Mac App Store",
+            SourceKind::MicrosoftStore => "Microsoft Store",
+            SourceKind::Gog => "GOG",
+            SourceKind::GooglePlay => "Google Play",
             SourceKind::Own => "Your own sources",
         }
     }
@@ -84,6 +94,9 @@ impl SourceKind {
             SourceKind::FDroid => "fdroid",
             SourceKind::Steam => "steam",
             SourceKind::MacAppStore => "mas",
+            SourceKind::MicrosoftStore => "msstore",
+            SourceKind::Gog => "gog",
+            SourceKind::GooglePlay => "play",
             SourceKind::Own => "own",
         }
     }
@@ -120,6 +133,9 @@ impl AppId {
             "fdroid" => SourceKind::FDroid,
             "steam" => SourceKind::Steam,
             "mas" => SourceKind::MacAppStore,
+            "msstore" => SourceKind::MicrosoftStore,
+            "gog" => SourceKind::Gog,
+            "play" => SourceKind::GooglePlay,
             "own" => SourceKind::Own,
             _ => return None,
         };
@@ -166,6 +182,23 @@ impl AppId {
             let id =
                 rest.split(['?', '#']).next().unwrap_or("").rsplit('/').next().unwrap_or("").trim_start_matches("id");
             return valid_key(SourceKind::MacAppStore, id).then(|| AppId::new(SourceKind::MacAppStore, id));
+        }
+        for site in ["apps.microsoft.com/", "microsoft.com/"] {
+            // apps.microsoft.com/detail/9NCBCSZSJRSB, or the older
+            // microsoft.com/en-us/p/some-name/9ncbcszsjrsb and .../store/productId/...
+            if let Some(rest) = stripped.strip_prefix(site) {
+                let path = rest.split(['?', '#']).next().unwrap_or("");
+                let on_store = site.starts_with("apps.") || path.contains("/p/") || path.contains("/store/");
+                let id = path.rsplit('/').find(|part| !part.is_empty()).unwrap_or("").to_ascii_uppercase();
+                return (on_store && valid_key(SourceKind::MicrosoftStore, &id))
+                    .then(|| AppId::new(SourceKind::MicrosoftStore, id));
+            }
+        }
+        if let Some(rest) = stripped.strip_prefix("play.google.com/store/apps/details") {
+            // play.google.com/store/apps/details?id=org.mozilla.firefox&hl=en
+            let query = rest.split('#').next().unwrap_or("").split_once('?').map_or("", |(_, query)| query);
+            let name = query.split('&').find_map(|pair| pair.strip_prefix("id=")).unwrap_or("");
+            return valid_key(SourceKind::GooglePlay, name).then(|| AppId::new(SourceKind::GooglePlay, name));
         }
         if let Some(rest) = stripped.strip_prefix("f-droid.org/") {
             let name = last(rest);
@@ -226,13 +259,18 @@ pub fn valid_key(source: SourceKind, key: &str) -> bool {
         | SourceKind::Homebrew => ok(key, &['+', '@']),
         SourceKind::Snap => key.len() <= 40 && ok(key, &[]),
         // A number the store gave the app.
-        SourceKind::Steam | SourceKind::MacAppStore => {
+        SourceKind::Steam | SourceKind::MacAppStore | SourceKind::Gog => {
             (1..=12).contains(&key.len()) && key.chars().all(|c| c.is_ascii_digit())
+        }
+        // A product id: twelve capitals and digits (9NCBCSZSJRSB), or fourteen for a
+        // program the Store lists but does not package itself (XPDC2RH70K22MN).
+        SourceKind::MicrosoftStore => {
+            matches!(key.len(), 12 | 14) && key.chars().all(|c| c.is_ascii_uppercase() || c.is_ascii_digit())
         }
         // Publisher.Package, as winget writes them.
         SourceKind::Winget => key.len() <= 128 && key.contains('.') && ok(key, &['+']),
         // An Android package name: at least two dotted parts.
-        SourceKind::FDroid => {
+        SourceKind::FDroid | SourceKind::GooglePlay => {
             key.len() <= 255 && key.split('.').count() >= 2 && key.split('.').all(|part| ok(part, &[]))
         }
         // A reverse-DNS application id: at least three dotted parts.
@@ -503,6 +541,25 @@ mod tests {
         assert_eq!(gh("github:sharkdp/bat").as_deref(), Some("github:sharkdp/bat"));
         assert_eq!(gh("https://aur.archlinux.org/packages/paru-bin").as_deref(), Some("aur:paru-bin"));
         assert_eq!(gh("aur:yay").as_deref(), Some("aur:yay"));
+        // The Microsoft Store's pages, new and old, and its id in either case.
+        assert_eq!(
+            gh("https://apps.microsoft.com/detail/9NCBCSZSJRSB?hl=en-US&gl=US").as_deref(),
+            Some("msstore:9NCBCSZSJRSB")
+        );
+        assert_eq!(gh("https://apps.microsoft.com/detail/xpdc2rh70k22mn").as_deref(), Some("msstore:XPDC2RH70K22MN"));
+        assert_eq!(
+            gh("https://www.microsoft.com/en-us/p/spotify-music/9ncbcszsjrsb").as_deref(),
+            Some("msstore:9NCBCSZSJRSB")
+        );
+        assert_eq!(gh("https://www.microsoft.com/en-us/windows"), None);
+        assert_eq!(gh("msstore:9NCBCSZSJRSB").as_deref(), Some("msstore:9NCBCSZSJRSB"));
+        assert_eq!(gh("msstore:spotify"), None);
+        assert_eq!(
+            gh("https://play.google.com/store/apps/details?hl=en&id=org.mozilla.firefox&gl=CA").as_deref(),
+            Some("play:org.mozilla.firefox")
+        );
+        assert_eq!(gh("https://play.google.com/store/apps/details?id=../x"), None);
+        assert_eq!(gh("https://play.google.com/store/search?q=firefox"), None);
         // Ordinary searches are left alone.
         for words in ["bat", "text editor", "a/b/c", "", "https://example.com", "../etc", "github:../x", "c++/thing?x"]
         {

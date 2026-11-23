@@ -12,7 +12,7 @@
 //! Written reviews come from the same service, but one app at a time: opening the page
 //! of an app the service knows asks it for that app's reviews. Nothing identifying is
 //! sent beyond what any web request carries: no user id, a generic system name, and no
-//! version. Reviews are only read; writing one needs an identity the store does not have.
+//! version. Writing one is in [`crate::reviewing`].
 
 use crate::error::Result;
 use crate::http::Http;

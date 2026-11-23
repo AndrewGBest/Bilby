@@ -23,6 +23,8 @@ slint::include_modules!();
 
 #[cfg(target_os = "linux")]
 mod activation;
+#[cfg(target_os = "android")]
+mod android;
 mod askpass;
 pub mod i18n;
 pub mod instance;
@@ -180,7 +182,7 @@ fn plain(text: &str) -> String {
     text.chars().filter(|c| c.is_alphanumeric()).flat_map(char::to_lowercase).collect()
 }
 
-pub type SignIn = Arc<dyn Fn(&std::path::Path) -> bilby_core::Result<Option<String>> + Send + Sync>;
+pub type SignIn = Arc<dyn Fn(&str, &std::path::Path) -> bilby_core::Result<Option<String>> + Send + Sync>;
 /// The answer to "which folder?".
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Picked {
@@ -489,6 +491,14 @@ fn plural(n: usize, word: &str) -> String {
     i18n::trn(&format!("{{n}} {word}"), &format!("{{n}} {word}s"), n)
 }
 
+/// The country the system is set to, for prices: the United States where it does not say.
+fn system_country() -> String {
+    sys_locale::get_locale()
+        .and_then(|locale| bilby_core::region::country_of(&locale))
+        .or_else(bilby_core::region::from_env)
+        .unwrap_or_else(|| "US".to_string())
+}
+
 /// The language of ours that the system is set to; English when not asked to look.
 fn system_language(look: bool) -> &'static str {
     match sys_locale::get_locale() {
@@ -506,6 +516,16 @@ fn apply_language(code: &str) {
         known => known,
     });
 }
+
+/// What an app's page fetches after it opens: the description, screenshots, the
+/// project's logo, what people wrote, and where a review can be left.
+type PageExtras = (
+    String,
+    Vec<slint::SharedPixelBuffer<slint::Rgba8Pixel>>,
+    Option<PathBuf>,
+    Vec<bilby_core::ratings::Review>,
+    Vec<bilby_core::reviewing::Place>,
+);
 
 /// Text on its way to the screen, in the language in use.
 fn l(text: impl AsRef<str>) -> SharedString {
@@ -560,7 +580,9 @@ fn make_catalog(platform: &Platform, demo: bool, settings: &Settings, dirs: &Dir
         let token = Some(settings.github_token.clone())
             .filter(|t| !t.trim().is_empty())
             .or_else(|| std::env::var("GITHUB_TOKEN").ok());
-        Catalog::live(platform.clone(), token, dirs.cache.clone())
+        // Prices are those of the country the person chose, else the system's own.
+        let country = bilby_core::region::country(&settings.country).unwrap_or_else(system_country);
+        Catalog::live_in(platform.clone(), token, dirs.cache.clone(), &country)
     };
     catalog.include_prereleases = settings.include_prereleases;
     catalog.show_everything = settings.show_everything;
@@ -879,6 +901,11 @@ pub struct App {
     steam: std::sync::RwLock<Option<bilby_core::steam_account::Account>>,
     /// Bumped whenever a Steam sign-in starts or is cancelled, so a late answer is dropped.
     steam_generation: AtomicU64,
+    /// The GOG account signed in to, and what it owns.
+    gog: std::sync::RwLock<Option<bilby_core::gog_account::Account>>,
+    gog_generation: AtomicU64,
+    /// Where a review of the open app can be left.
+    review_places: Mutex<Vec<bilby_core::reviewing::Place>>,
     /// Where the quiet sounds of moving about go. Tests record them; a run that draws
     /// one picture and leaves makes none.
     heard: Option<Heard>,
@@ -1690,6 +1717,43 @@ impl App {
         store.set_sounds(!settings.mute_sounds);
         store.set_show_essentials(!settings.hide_essentials);
         store.set_show_everything(settings.show_everything);
+        // Offered only on the real device, where what it needs was looked for.
+        let possible = self.real_device && self.platform.read().unwrap().could_run_windows();
+        store.set_windows_possible(possible);
+        store.set_windows_apps(possible && !settings.hide_windows_apps);
+        // How they run: in general, and what each installed one does differently.
+        use bilby_core::winrun::{self, Choices, Proton};
+        let general = Choices::read(&winrun::general_choices(&self.dirs));
+        store.set_windows_proton(i32::from(general.proton == Proton::Ge));
+        store.set_windows_overlay(general.overlay == Some(true));
+        store.set_windows_gamemode(general.gamemode == Some(true));
+        let on_path = |program: &str| self.dirs.programs.iter().any(|dir| dir.join(program).is_file());
+        store.set_has_mangohud(on_path("mangohud"));
+        store.set_has_gamemode(on_path("gamemoderun"));
+        let installed: Vec<WindowsApp> = self
+            .state()
+            .library
+            .iter()
+            .filter_map(|app| {
+                let folder = winrun::folder_of(&self.dirs, std::path::Path::new(app.path.as_deref()?))?;
+                let own = Choices::read(&winrun::app_choices(&folder));
+                Some(WindowsApp {
+                    id: app.id.as_str().into(),
+                    name: app.name.as_str().into(),
+                    proton: match own.proton {
+                        Proton::Unset => 0,
+                        Proton::Standard => 1,
+                        Proton::Ge => 2,
+                    },
+                    overlay: match own.overlay {
+                        None => 0,
+                        Some(true) => 1,
+                        Some(false) => 2,
+                    },
+                })
+            })
+            .collect();
+        store.set_windows_installed(ModelRc::new(VecModel::from(installed)));
         store.set_auto_update(settings.auto_update);
         store.set_close_to_tray(!settings.quit_on_close);
         store.set_prefer_kind(bilby_core::compat::Prefer::named(&settings.prefer_kind).number());
@@ -1715,6 +1779,10 @@ impl App {
         // Steam is a desktop program: its library is offered wherever it runs.
         let os = self.platform.read().unwrap().os;
         store.set_steam_available(matches!(os, Os::Windows | Os::MacOs | Os::Linux));
+        let gog = self.gog.read().unwrap().clone();
+        store.set_gog_available(matches!(os, Os::Windows | Os::MacOs | Os::Linux));
+        store.set_gog_signed_in(gog.is_some());
+        store.set_gog_summary(l(gog.map(|a| format!("{} games", a.owned.len())).unwrap_or_default()));
         store.set_steam_signed_in(steam.is_some());
         store.set_steam_summary(l(steam.map(|a| format!("{} games and tools", a.owned.len())).unwrap_or_default()));
         store.set_downloads_dir(self.downloads_folder().display().to_string().into());
@@ -1743,6 +1811,24 @@ impl App {
             languages.iter().find(|choice| choice.on).map(|choice| choice.label.clone()).unwrap_or_default(),
         );
         store.set_languages(ModelRc::new(VecModel::from(languages)));
+        // The countries, the same way: the system's own first, named.
+        let chosen = bilby_core::region::country(&settings.country);
+        let mut countries = vec![SourceChoice {
+            id: SharedString::new(),
+            label: format!("{} ({})", i18n::tr("System"), bilby_core::region::name_of(&system_country())).into(),
+            on: chosen.is_none(),
+            count: 0,
+        }];
+        countries.extend(bilby_core::region::countries().iter().map(|(code, name)| SourceChoice {
+            id: code.into(),
+            label: name.into(),
+            on: chosen.as_deref() == Some(code.as_str()),
+            count: 0,
+        }));
+        store.set_country_name(
+            countries.iter().find(|choice| choice.on).map(|choice| choice.label.clone()).unwrap_or_default(),
+        );
+        store.set_countries(ModelRc::new(VecModel::from(countries)));
         store.set_sources(ModelRc::new(VecModel::from(
             self.catalog()
                 .available_sources()
@@ -2082,8 +2168,240 @@ impl App {
 
     /// Does the signed-in Steam account own this app?
     pub fn owns(&self, id: &AppId) -> bool {
-        id.source == SourceKind::Steam
-            && self.steam.read().unwrap().as_ref().is_some_and(|account| account.owns_key(&id.key))
+        match id.source {
+            SourceKind::Steam => self.steam.read().unwrap().as_ref().is_some_and(|account| account.owns_key(&id.key)),
+            SourceKind::Gog => self.gog.read().unwrap().as_ref().is_some_and(|account| account.owns_key(&id.key)),
+            _ => false,
+        }
+    }
+
+    /// Sign in to GOG on GOG's own page, in a small window of the store's, to learn
+    /// what the account owns. The store receives a one-time code, asks GOG once for
+    /// the list, and keeps only the list.
+    pub fn gog_signin(self: &Arc<Self>, ui: &AppWindow) {
+        let generation = self.gog_generation.fetch_add(1, Ordering::SeqCst) + 1;
+        ui.global::<Store>().set_gog_state(1);
+        self.job(
+            move |app| -> bilby_core::Result<Option<bilby_core::gog_account::Account>> {
+                use bilby_core::gog_account;
+                let Some(line) = (app.signin)("gog", &app.dirs.config.join("gog-session"))? else { return Ok(None) };
+                let code = gog_account::code_of(&line)
+                    .ok_or_else(|| Error::Parse("GOG's answer could not be read.".into()))?;
+                gog_account::library(app.catalog().http().as_ref(), &code).map(Some)
+            },
+            move |app, ui, result| {
+                if app.gog_generation.load(Ordering::SeqCst) != generation {
+                    return;
+                }
+                ui.global::<Store>().set_gog_state(0);
+                match result {
+                    Ok(Some(account)) => {
+                        let count = account.owned.len();
+                        *app.gog.write().unwrap() = Some(account.clone());
+                        app.update_state(ui, |state| state.gog = Some(account));
+                        app.refresh_settings(ui);
+                        app.refresh(ui);
+                        app.toast(ui, &format!("Signed in to GOG. {count} games are in your library."), false);
+                    }
+                    // Closed or cancelled: nothing changes.
+                    Ok(None) => {}
+                    Err(e) => app.toast(ui, &format!("Could not read your GOG library: {e}"), true),
+                }
+            },
+        );
+    }
+
+    /// Stop waiting for a GOG sign-in, closing the sign-in window if it is open.
+    pub fn gog_cancel(&self, ui: &AppWindow) {
+        self.gog_generation.fetch_add(1, Ordering::SeqCst);
+        close_signin_window();
+        ui.global::<Store>().set_gog_state(0);
+    }
+
+    /// Forget the GOG account: what it owns, and the sign-in window's own data.
+    pub fn gog_signout(&self, ui: &AppWindow) {
+        self.gog_generation.fetch_add(1, Ordering::SeqCst);
+        *self.gog.write().unwrap() = None;
+        self.update_state(ui, |state| state.gog = None);
+        let _ = std::fs::remove_dir_all(self.dirs.config.join("gog-session"));
+        self.refresh_settings(ui);
+        self.refresh(ui);
+        self.toast(ui, "Signed out of GOG on this device", false);
+    }
+
+    /// Where a review of this app can be left: the open ratings service, and the
+    /// stores the same app comes from. A store the signed-in account does not own
+    /// the game at is left out, since it would refuse the review.
+    fn review_places_for(&self, catalog: &Catalog, id: &AppId) -> Vec<bilby_core::reviewing::Place> {
+        if self.state().settings.hide_ratings {
+            return Vec::new();
+        }
+        let mut ids = vec![id.clone()];
+        if let Some(members) = self.alternates.lock().unwrap().get(&id.to_string()) {
+            ids.extend(members.iter().filter_map(|(other, _)| AppId::parse(other)).filter(|other| other != id));
+        }
+        let signed_in = |source: SourceKind| match source {
+            SourceKind::Steam => self.steam.read().unwrap().is_some(),
+            SourceKind::Gog => self.gog.read().unwrap().is_some(),
+            _ => false,
+        };
+        catalog.review_places(&ids, &|other| signed_in(other.source) && !self.owns(other))
+    }
+
+    /// Show where a review can go, each place chosen to begin with.
+    fn show_review_places(&self, ui: &AppWindow, places: Vec<bilby_core::reviewing::Place>) {
+        let store = ui.global::<Store>();
+        let rows: Vec<ReviewPlace> = places
+            .iter()
+            .map(|place| ReviewPlace {
+                id: place.id.as_str().into(),
+                name: l(&place.name),
+                note: l(&place.note),
+                from_here: place.from_here,
+                chosen: true,
+            })
+            .collect();
+        store.set_review_copies(places.iter().any(|place| !place.from_here));
+        store.set_review_from_here(places.iter().any(|place| place.from_here));
+        store.set_review_places(ModelRc::new(VecModel::from(rows)));
+        store.set_review_name(self.state().reviewer_name.as_str().into());
+        store.set_review_title(SharedString::new());
+        store.set_review_text(SharedString::new());
+        store.set_review_problem(SharedString::new());
+        store.set_review_result(SharedString::new());
+        store.set_review_state(0);
+        *self.review_places.lock().unwrap() = places;
+    }
+
+    /// Choose, or stop choosing, one of the places a review goes to.
+    pub fn toggle_review_place(&self, ui: &AppWindow, id: &str) {
+        let store = ui.global::<Store>();
+        let places = store.get_review_places();
+        for n in 0..places.row_count() {
+            if let Some(mut row) = places.row_data(n) {
+                if row.id == id {
+                    row.chosen = !row.chosen;
+                    places.set_row_data(n, row);
+                }
+            }
+        }
+        store.set_review_copies(places.iter().any(|row| row.chosen && !row.from_here));
+        store.set_review_from_here(places.iter().any(|row| row.chosen && row.from_here));
+        store.set_review_problem(SharedString::new());
+    }
+
+    /// Leave the review at every chosen place: sent from here to the open service,
+    /// and for a store, its own page opened (the words were copied by the page that
+    /// called this, ready to paste).
+    pub fn send_review(self: &Arc<Self>, ui: &AppWindow, draft: bilby_core::reviewing::Draft) {
+        use bilby_core::reviewing;
+        let store = ui.global::<Store>();
+        if store.get_review_state() == 1 {
+            return;
+        }
+        let chosen: Vec<String> =
+            store.get_review_places().iter().filter(|row| row.chosen).map(|row| row.id.to_string()).collect();
+        let places: Vec<reviewing::Place> =
+            self.review_places.lock().unwrap().iter().filter(|place| chosen.contains(&place.id)).cloned().collect();
+        let from_here = places.iter().find(|place| place.from_here).cloned();
+        let problem = if places.is_empty() {
+            Some("Choose where to leave your review.")
+        } else {
+            draft.problem().or_else(|| from_here.as_ref().and_then(|_| draft.problem_from_here()))
+        };
+        if let Some(problem) = problem {
+            store.set_review_problem(l(problem));
+            return;
+        }
+        store.set_review_problem(SharedString::new());
+        // The stores' own pages, each with its box to write in.
+        let mut said: Vec<String> = Vec::new();
+        for place in places.iter().filter(|place| !place.from_here) {
+            let opened = if !reviewing::link_ok(&place.target) {
+                Err(Error::Unsupported("That page cannot be opened from here.".into()))
+            } else if place.target.starts_with("https://") {
+                (self.browser)(&place.target)
+            } else {
+                (self.opener)(std::path::Path::new(&place.target))
+            };
+            let name = i18n::tr(&place.name);
+            said.push(i18n::tr(&match opened {
+                Ok(()) => format!("Opened {name}: paste your review into its box there."),
+                Err(e) => format!("Could not open the page for {name}: {e}"),
+            }));
+        }
+        let Some(service) = from_here else {
+            store.set_review_result(
+                said.join(
+                    "
+",
+                )
+                .into(),
+            );
+            store.set_review_state(2);
+            return;
+        };
+        // The made-up id that marks this person's reviews, from the first one on.
+        let mut writer_id = self.state().reviewer;
+        if !reviewing::writer_id_ok(&writer_id) {
+            writer_id = reviewing::new_writer_id();
+        }
+        let name = draft.name.trim().to_string();
+        let kept = writer_id.clone();
+        self.update_state(ui, move |state| {
+            state.reviewer = kept;
+            state.reviewer_name = name;
+        });
+        let version = store.get_installed_version().to_string();
+        let page = store.get_app().id.to_string();
+        store.set_review_state(1);
+        self.job(
+            move |app| {
+                let catalog = app.catalog();
+                let writer = reviewing::Writer {
+                    id: &writer_id,
+                    locale: i18n::language(),
+                    system: &catalog.platform.os_name,
+                    version: &version,
+                };
+                reviewing::send(catalog.http().as_ref(), &service.target, &draft, &writer)
+            },
+            move |_app, ui, sent| {
+                let store = ui.global::<Store>();
+                // Another app's page by now: its form is not this review's.
+                if store.get_app().id != page.as_str() {
+                    return;
+                }
+                let mut said = said;
+                match sent {
+                    Ok(()) => {
+                        said.insert(
+                            0,
+                            i18n::tr("Sent, thank you. It can take a while to show, here and in other app stores."),
+                        );
+                        store.set_review_result(
+                            said.join(
+                                "
+",
+                            )
+                            .into(),
+                        );
+                        store.set_review_state(2);
+                    }
+                    Err(e) => {
+                        store.set_review_problem(l(e.to_string()));
+                        store.set_review_result(
+                            said.join(
+                                "
+",
+                            )
+                            .into(),
+                        );
+                        store.set_review_state(0);
+                    }
+                }
+            },
+        );
     }
 
     /// Sign in to Steam on Steam's own page, to learn what the account owns. On a TV
@@ -2217,7 +2535,7 @@ impl App {
     ) -> bilby_core::Result<Option<bilby_core::steam_account::Account>> {
         use bilby_core::steam_account;
         if !via_longboard {
-            let line = (self.signin)(&self.dirs.config.join("steam-session"))?;
+            let line = (self.signin)("steam", &self.dirs.config.join("steam-session"))?;
             return line
                 .map(|line| {
                     steam_account::parse(&line).ok_or_else(|| Error::Parse("Steam's answer could not be read.".into()))
@@ -2252,10 +2570,7 @@ impl App {
     /// Stop waiting for a Steam sign-in, closing the sign-in window if it is open.
     pub fn steam_cancel(&self, ui: &AppWindow) {
         self.steam_generation.fetch_add(1, Ordering::SeqCst);
-        if let Some(mut window) = SIGNIN_WINDOW.lock().unwrap().take() {
-            let _ = window.kill();
-            let _ = window.wait();
-        }
+        close_signin_window();
         ui.global::<Store>().set_steam_state(0);
     }
 
@@ -2546,12 +2861,14 @@ impl App {
                 if loaded {
                     app.refresh(ui);
                     let store = ui.global::<Store>();
-                    if let Some(id) = AppId::parse(store.get_app().id.as_str()) {
-                        let rating = app.catalog().rating_for(&id);
+                    // Only where the ratings service knows the app: a rating its own
+                    // store gave it (Steam's, the Microsoft Store's) is left as it is.
+                    let open = AppId::parse(store.get_app().id.as_str());
+                    if let Some(rating) = open.and_then(|id| app.catalog().rating_for(&id)) {
                         let mut card = store.get_app();
-                        card.rating = rating.map(bilby_core::ratings::stars_text).unwrap_or_default().into();
-                        card.rating_count = rating.map(|r| ratings_text(r.count)).unwrap_or_default().into();
-                        card.rating_spread = rating.map(spread_shares).unwrap_or_default();
+                        card.rating = bilby_core::ratings::stars_text(rating).into();
+                        card.rating_count = ratings_text(rating.count).into();
+                        card.rating_spread = spread_shares(rating);
                         store.set_app(at_the_top(card));
                     }
                 }
@@ -2778,6 +3095,7 @@ impl App {
         show_links(&store);
         store.set_screenshots(ModelRc::default());
         store.set_reviews(ModelRc::default());
+        self.show_review_places(ui, Vec::new());
         store.set_release_date(SharedString::new());
         store.set_release_age(SharedString::new());
         store.set_license(SharedString::new());
@@ -2908,16 +3226,10 @@ impl App {
                     catalog.load_ratings(&app.dirs.cache);
                 }
                 let reviews = catalog.reviews(&id);
-                (plain_about(&readme), pictures, logo, reviews)
+                let places = app.review_places_for(&catalog, &id);
+                (plain_about(&readme), pictures, logo, reviews, places)
             },
-            move |app,
-                  ui,
-                  (about, pictures, logo, reviews): (
-                String,
-                Vec<slint::SharedPixelBuffer<slint::Rgba8Pixel>>,
-                Option<PathBuf>,
-                Vec<bilby_core::ratings::Review>,
-            )| {
+            move |app, ui, (about, pictures, logo, reviews, places): PageExtras| {
                 if let Some(image) = logo.as_deref().and_then(|path| decode_picture(path, picture_sizes(ui))) {
                     PICTURES.with(|p| p.borrow_mut().insert(key.clone(), image));
                     app.repaint_pictures(ui);
@@ -2951,6 +3263,7 @@ impl App {
                         })
                         .collect();
                     store.set_reviews(ModelRc::new(VecModel::from(rows)));
+                    app.show_review_places(ui, places);
                     let mut card = store.get_app();
                     card.icon = picture_for(&card.id);
                     store.set_app(at_the_top(card));
@@ -3358,6 +3671,8 @@ impl App {
                 let label = match key.kind {
                     osk::Kind::Char | osk::Kind::Symbols | osk::Kind::Letters => key.label.clone(),
                     osk::Kind::Submit if asking => i18n::tr("enter"),
+                    // Typing a review: the last key only puts the keyboard away.
+                    osk::Kind::Submit if ui.global::<Store>().get_osk_target() != 0 => i18n::tr("done"),
                     osk::Kind::Shift if key.label == "SHIFT" => i18n::tr("shift").to_uppercase(),
                     _ => i18n::tr(&key.label),
                 };
@@ -3402,9 +3717,17 @@ impl App {
             store.set_password_length(password.chars().count() as i32);
             return;
         }
-        let mut text = store.get_query().to_string();
-        text.pop();
-        store.set_query(text.into());
+        let erase = |text: SharedString| -> SharedString {
+            let mut text = text.to_string();
+            text.pop();
+            text.into()
+        };
+        match store.get_osk_target() {
+            1 => store.set_review_title(erase(store.get_review_title())),
+            2 => store.set_review_text(erase(store.get_review_text())),
+            3 => store.set_review_name(erase(store.get_review_name())),
+            _ => store.set_query(erase(store.get_query())),
+        }
     }
 
     /// Add to what is being typed: the search, or the password when one is asked for.
@@ -3416,7 +3739,20 @@ impl App {
             store.set_password_length(password.chars().count() as i32);
             return;
         }
-        store.set_query(format!("{}{}", store.get_query(), text).into());
+        // A review's words have the ratings service's limits; more is not taken.
+        let add = |to: SharedString, limit: usize| -> SharedString {
+            match to.chars().count() + text.chars().count() > limit {
+                true => to,
+                false => format!("{to}{text}").into(),
+            }
+        };
+        use bilby_core::reviewing::{TEXT_LIMIT, TITLE_LIMIT};
+        match store.get_osk_target() {
+            1 => store.set_review_title(add(store.get_review_title(), TITLE_LIMIT)),
+            2 => store.set_review_text(add(store.get_review_text(), TEXT_LIMIT)),
+            3 => store.set_review_name(add(store.get_review_name(), 40)),
+            _ => store.set_query(format!("{}{}", store.get_query(), text).into()),
+        }
     }
 
     /// Ask for the system's password on screen, with the keyboard. `again`: the one
@@ -3469,6 +3805,61 @@ impl App {
             let id = store.get_app().id.to_string();
             self.open(ui, &id);
         }
+    }
+
+    /// The folder of an installed Windows app, by the app's id.
+    fn windows_folder(&self, id: &str) -> Option<PathBuf> {
+        let path = self.state().installed(id)?.path.clone()?;
+        bilby_core::winrun::folder_of(&self.dirs, std::path::Path::new(&path))
+    }
+
+    /// Change how Windows apps run: in general, or (given an id) for one app alone.
+    /// The launchers read the choices each time they start, so nothing else changes.
+    fn change_windows(&self, ui: &AppWindow, id: Option<&str>, change: impl FnOnce(&mut bilby_core::winrun::Choices)) {
+        use bilby_core::winrun::{self, Choices};
+        let file = match id {
+            None => winrun::general_choices(&self.dirs),
+            Some(id) => match self.windows_folder(id) {
+                Some(folder) => winrun::app_choices(&folder),
+                None => return,
+            },
+        };
+        let mut choices = Choices::read(&file);
+        change(&mut choices);
+        if let Err(e) = choices.write(&file) {
+            self.toast(ui, &format!("That could not be saved: {e}"), true);
+        }
+        self.refresh_settings(ui);
+    }
+
+    /// Change the country whose prices the stores are asked for. An empty code means
+    /// the system's own.
+    pub fn set_country(self: &Arc<Self>, ui: &AppWindow, code: &str) {
+        let known = code.is_empty() || bilby_core::region::countries().iter().any(|(known, _)| known == code);
+        if !known || self.state().settings.country == code {
+            return;
+        }
+        self.update_state(ui, |state| state.settings.country = code.to_string());
+        // The stores are asked afresh: what is on screen carries the old prices.
+        self.rebuild_catalog();
+        self.refresh_settings(ui);
+        self.load_collections(ui);
+        self.refresh(ui);
+        let store = ui.global::<Store>();
+        if store.get_details_open() {
+            let id = store.get_app().id.to_string();
+            self.open(ui, &id);
+        }
+    }
+
+    /// The country after this one in the list (or before it), and round again: for a remote.
+    pub fn step_country(self: &Arc<Self>, ui: &AppWindow, forward: bool) {
+        let mut codes = vec![""];
+        codes.extend(bilby_core::region::countries().iter().map(|(code, _)| code.as_str()));
+        let now = self.state().settings.country;
+        let at = codes.iter().position(|code| *code == now).unwrap_or(0);
+        let next = if forward { at + 1 } else { at + codes.len() - 1 } % codes.len();
+        self.set_country(ui, codes[next]);
     }
 
     /// The language after this one in the list, and round again: for a remote.
@@ -5049,6 +5440,11 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         Some(_) => {}
         None => platform.form_factor = form_for(&state.settings.interface, detected),
     }
+    // Windows programs, set up to run here through Proton: only on the real device,
+    // where the settings ask for it and what it needs is there.
+    if options.platform.is_none() && !options.demo {
+        platform.offer_windows(!state.settings.hide_windows_apps);
+    }
     // A controller with nothing else pointing at a TV: worth one question.
     let ask_tv = options.shell.is_none()
         && platform.form_factor == FormFactor::Desktop
@@ -5195,6 +5591,9 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         lacks_fuse: std::sync::atomic::AtomicBool::new(false),
         steam: std::sync::RwLock::new(None),
         steam_generation: AtomicU64::new(0),
+        gog: std::sync::RwLock::new(None),
+        gog_generation: AtomicU64::new(0),
+        review_places: Mutex::new(Vec::new()),
         elsewhere: std::sync::RwLock::new(Elsewhere::default()),
         heard: options.heard.clone(),
         #[cfg(not(target_os = "android"))]
@@ -5220,6 +5619,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     app.note_self(&ui);
     app.scan_installed(&ui);
     *app.steam.write().unwrap() = app.state().steam;
+    *app.gog.write().unwrap() = app.state().gog;
     app.apply_menu_entry(&ui);
     app.show_system(&ui, 0, "");
 
@@ -5266,6 +5666,8 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     on!(on_leave_search, |app, ui| { app.leave_search(ui) });
     on!(on_set_language, |app, ui, code| { app.set_language(ui, &code) });
     on!(on_next_language, |app, ui| { app.next_language(ui) });
+    on!(on_set_country, |app, ui, code| { app.set_country(ui, &code) });
+    on!(on_step_country, |app, ui, forward| { app.step_country(ui, forward) });
     on!(on_osk_open, |app, ui| {
         *app.osk.lock().unwrap() = osk::Model::default();
         app.show_osk(ui);
@@ -5381,6 +5783,19 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     on!(on_steam_signin_qr, |app, ui| { app.steam_signin_qr(ui) });
     on!(on_steam_cancel, |app, ui| { app.steam_cancel(ui) });
     on!(on_steam_signout, |app, ui| { app.steam_signout(ui) });
+    on!(on_gog_signin, |app, ui| { app.gog_signin(ui) });
+    on!(on_gog_cancel, |app, ui| { app.gog_cancel(ui) });
+    on!(on_gog_signout, |app, ui| { app.gog_signout(ui) });
+    on!(on_toggle_review_place, |app, ui, id| { app.toggle_review_place(ui, &id) });
+    on!(on_send_review, |app, ui, stars, title, text, name| {
+        let draft = bilby_core::reviewing::Draft {
+            stars: stars.clamp(0, 5) as u8,
+            title: title.to_string(),
+            text: text.to_string(),
+            name: name.to_string(),
+        };
+        app.send_review(ui, draft)
+    });
     on!(on_save_token, |app, ui, token| {
         let token = token.trim().to_string();
         let cleared = token.is_empty();
@@ -5409,7 +5824,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         app.refresh(ui);
     });
     on!(on_open_url, |app, ui, url| {
-        if let Err(e) = install::open_url(&url) {
+        if let Err(e) = (app.browser)(&url) {
             app.toast(ui, &e.to_string(), true);
         }
     });
@@ -5456,6 +5871,67 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     });
     on!(on_browse_category, |app, ui, name| { app.browse_category(ui, &name, false) });
     on!(on_set_auto_update, |app, ui, on| { app.request_setting(ui, Change::AutoUpdate(on)) });
+    on!(on_set_windows_apps, |app, ui, on| {
+        if !app.real_device {
+            return;
+        }
+        app.update_state(ui, |state| state.settings.hide_windows_apps = !on);
+        app.platform.write().unwrap().offer_windows(on);
+        // What can be installed here has changed: a new catalog, and the search made again.
+        app.rebuild_catalog();
+        app.refresh_settings(ui);
+        app.refresh(ui);
+        let query = ui.global::<Store>().get_query().to_string();
+        if ui.global::<Store>().get_page() == 1 && !query.trim().is_empty() {
+            app.search(ui, &query);
+        }
+    });
+    on!(on_set_windows_proton, |app, ui, which| {
+        app.change_windows(ui, None, |choices| {
+            choices.proton =
+                if which == 1 { bilby_core::winrun::Proton::Ge } else { bilby_core::winrun::Proton::Unset };
+        });
+    });
+    on!(on_set_windows_overlay, |app, ui, on| {
+        app.change_windows(ui, None, |choices| choices.overlay = on.then_some(true));
+    });
+    on!(on_set_windows_gamemode, |app, ui, on| {
+        app.change_windows(ui, None, |choices| choices.gamemode = on.then_some(true));
+    });
+    on!(on_set_windows_app, |app, ui, id, proton, overlay| {
+        use bilby_core::winrun::Proton;
+        app.change_windows(ui, Some(&id), |choices| {
+            choices.proton = match proton {
+                1 => Proton::Standard,
+                2 => Proton::Ge,
+                _ => Proton::Unset,
+            };
+            choices.overlay = match overlay {
+                1 => Some(true),
+                2 => Some(false),
+                _ => None,
+            };
+        });
+    });
+    on!(on_open_windows_tool, |app, ui, id| {
+        let opened = app
+            .windows_folder(&id)
+            .ok_or_else(|| Error::Unsupported("That Windows app is not installed.".to_string()))
+            .and_then(|folder| bilby_core::winrun::open_tool(&app.dirs, &folder, "winecfg"));
+        match opened {
+            Ok(()) => app.toast(ui, "Opening its Windows settings…", false),
+            Err(e) => app.toast(ui, &e.to_string(), true),
+        }
+    });
+    on!(on_open_windows_folder, |app, ui, id| {
+        let opened = app
+            .windows_folder(&id)
+            .ok_or_else(|| Error::Unsupported("That Windows app is not installed.".to_string()))
+            .and_then(|folder| (app.opener)(&folder.join("prefix").join("drive_c")));
+        if let Err(e) = opened {
+            app.toast(ui, &e.to_string(), true);
+        }
+    });
     on!(on_set_show_everything, |app, ui, on| {
         app.update_state(ui, |state| state.settings.show_everything = on);
         // What a search finds depends on it: a new catalog, and the search made again.
@@ -5997,6 +6473,7 @@ fn describe(ui: &AppWindow) -> String {
 fn android_main(android_app: slint::android::AndroidApp) {
     let internal = android_app.internal_data_path().unwrap_or_else(std::env::temp_dir);
     let downloads = android_app.external_data_path().unwrap_or_else(|| internal.clone());
+    android::remember(&android_app);
     slint::android::init(android_app).expect("Slint Android backend failed to start");
     let dirs = Dirs {
         downloads: downloads.join("downloads"),
@@ -6010,7 +6487,14 @@ fn android_main(android_app: slint::android::AndroidApp) {
         cache: internal.join("cache"),
         config: internal.join("config"),
     };
-    if let Err(e) = run(Options { dirs: Some(dirs), ..Default::default() }) {
+    // Addresses and other stores' pages are shown by Android: its browser, Google Play.
+    let options = Options {
+        dirs: Some(dirs),
+        browser: Some(Arc::new(android::view)),
+        opener: Some(Arc::new(|what: &std::path::Path| android::view(&what.to_string_lossy()))),
+        ..Default::default()
+    };
+    if let Err(e) = run(options) {
         eprintln!("bilby: {e}");
     }
 }
@@ -6128,9 +6612,17 @@ fn signin_command() -> Option<std::process::Command> {
     beside.or_else(on_path).map(std::process::Command::new)
 }
 
-/// Show Steam's sign-in page in the store's own small window and wait for it to hand
-/// back what the account owns, or to be closed.
-fn signin_window(data_dir: &std::path::Path) -> bilby_core::Result<Option<String>> {
+/// Close the sign-in window, if one is open.
+fn close_signin_window() {
+    if let Some(mut window) = SIGNIN_WINDOW.lock().unwrap().take() {
+        let _ = window.kill();
+        let _ = window.wait();
+    }
+}
+
+/// Show a store's sign-in page (`steam`, `gog`) in the store's own small window and
+/// wait for it to hand back its answer, or to be closed.
+fn signin_window(site: &str, data_dir: &std::path::Path) -> bilby_core::Result<Option<String>> {
     use std::io::Read;
     use std::process::Stdio;
     let cannot = || {
@@ -6143,13 +6635,9 @@ fn signin_window(data_dir: &std::path::Path) -> bilby_core::Result<Option<String
     };
     let mut command = signin_command().ok_or_else(cannot)?;
     std::fs::create_dir_all(data_dir)?;
-    command
-        .arg("steam")
-        .arg("--data-dir")
-        .arg(data_dir)
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null());
+    // One sign-in window at a time: starting another closes the first.
+    close_signin_window();
+    command.arg(site).arg("--data-dir").arg(data_dir).stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::null());
     let mut window = command.spawn().map_err(|_| cannot())?;
     let mut said = window.stdout.take();
     *SIGNIN_WINDOW.lock().unwrap() = Some(window);

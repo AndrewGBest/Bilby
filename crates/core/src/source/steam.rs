@@ -25,6 +25,9 @@ pub struct Steam {
     api: String,
     /// Where Steam answers questions about many apps at once.
     browse: String,
+    protondb: String,
+    /// Whose prices to ask for.
+    country: String,
     os: Os,
     /// Steam's `steamapps` folders on this machine.
     libraries: Vec<PathBuf>,
@@ -132,7 +135,19 @@ impl Steam {
         // The lookup of descriptors lives on another of Steam's addresses.
         let browse =
             if api == STEAM_API { "https://api.steampowered.com".to_string() } else { format!("{api}/browse") };
-        Steam { http, api, browse, os: platform.os, libraries, present }
+        // What players report about Windows games on Linux is kept by ProtonDB.
+        let protondb =
+            if api == STEAM_API { "https://www.protondb.com/api/v1".to_string() } else { format!("{api}/protondb") };
+        Steam { http, api, browse, protondb, country: "US".to_string(), os: platform.os, libraries, present }
+    }
+
+    /// Ask for the prices of this country (two letters, as in `CA`); anything that is
+    /// not a country code leaves it as it was.
+    pub fn in_country(mut self, code: &str) -> Self {
+        if let Some(country) = crate::region::country(code) {
+            self.country = country;
+        }
+        self
     }
 
     /// Which of these apps Steam marks as adult only. One request for the lot; if it
@@ -177,13 +192,44 @@ impl Steam {
         if !crate::model::valid_key(SourceKind::Steam, key) {
             return Err(Error::NotFound(format!("\"{key}\" is not a Steam app number")));
         }
-        let text = self.http.get(&format!("{}/appdetails?appids={key}&l=english&cc=US", self.api))?;
+        let text = self.http.get(&format!("{}/appdetails?appids={key}&l=english&cc={}", self.api, self.country))?;
         let mut answer: std::collections::HashMap<String, Envelope> = serde_json::from_str(&text)?;
         answer
             .remove(key)
             .filter(|envelope| envelope.success)
             .and_then(|envelope| envelope.data)
             .ok_or_else(|| Error::NotFound(format!("Steam has nothing under number {key}.")))
+    }
+
+    /// How well a Windows game runs on Linux through Proton, as players report it at
+    /// ProtonDB (`GET /reports/summaries/<id>.json`: a tier, and how many reports it
+    /// rests on). One sentence for the page, or nothing when ProtonDB has too little
+    /// to say or cannot be reached: the page then says only that Proton is used.
+    /// ProtonDB does not document this for others; it is read loosely and never needed.
+    fn on_linux(&self, id: u64) -> Option<[String; 2]> {
+        #[derive(serde::Deserialize)]
+        struct Reports {
+            #[serde(default)]
+            tier: String,
+            #[serde(default)]
+            total: u64,
+        }
+        let text = self.http.get(&format!("{}/reports/summaries/{id}.json", self.protondb)).ok()?;
+        let reports: Reports = serde_json::from_str(&text).ok()?;
+        let verdict = match reports.tier.as_str() {
+            "native" | "platinum" => {
+                "Made for Windows. On Linux, Steam runs it through Proton, and players say it runs perfectly."
+            }
+            "gold" => "Made for Windows. On Linux, Steam runs it through Proton, and players say it runs well.",
+            "silver" => {
+                "Made for Windows. On Linux, Steam runs it through Proton, and players say it runs with small problems."
+            }
+            "bronze" => "Made for Windows. On Linux, Steam runs it through Proton, and players say it runs badly.",
+            "borked" => "Made for Windows. Players say it does not run on Linux, even through Steam's Proton.",
+            _ => return None,
+        };
+        (reports.total >= 5)
+            .then(|| [verdict.to_string(), format!("{} players reported on it at ProtonDB.", reports.total)])
     }
 
     /// Does Steam run it on this system? Windows games run on Linux through Proton.
@@ -315,14 +361,12 @@ struct Screenshot {
 fn price_text(price: Option<&Price>, free: bool) -> Option<String> {
     match price {
         Some(p) if p.amount == 0 => Some("Free".to_string()),
-        Some(p) => Some(p.final_formatted.clone().filter(|t| !t.is_empty()).unwrap_or_else(|| {
-            let amount = format!("{}.{:02}", p.amount / 100, p.amount % 100);
-            if p.currency == "USD" {
-                format!("${amount}")
-            } else {
-                format!("{amount} {}", p.currency)
-            }
-        })),
+        Some(p) => Some(
+            p.final_formatted
+                .clone()
+                .filter(|t| !t.is_empty())
+                .unwrap_or_else(|| crate::region::money(p.amount, &p.currency)),
+        ),
         None if free => Some("Free".to_string()),
         None => None,
     }
@@ -349,7 +393,7 @@ impl Source for Steam {
         if query.trim().chars().count() < 2 {
             return Ok(Vec::new());
         }
-        let url = format!("{}/storesearch/?term={}&l=english&cc=US", self.api, url_encode(query.trim()));
+        let url = format!("{}/storesearch/?term={}&l=english&cc={}", self.api, url_encode(query.trim()), self.country);
         let found: Found = serde_json::from_str(&self.http.get(&url)?)?;
         let hits: Vec<_> = found
             .items
@@ -405,17 +449,21 @@ impl Source for Steam {
         app.icon_url = own_picture(d.header_image.clone());
         app.adult = adult_only(&d.content_descriptors.ids);
         // What the person should know before pressing the button, most important first.
-        let mut notices = Vec::new();
+        let mut notices: Vec<String> = Vec::new();
         if d.release_date.as_ref().is_some_and(|r| r.coming_soon) {
-            notices.push("Not released yet.");
+            notices.push("Not released yet.".to_string());
         }
         if !self.present {
-            notices.push("Steam is not installed on this device. Install Steam first, then come back.");
+            notices.push("Steam is not installed on this device. Install Steam first, then come back.".to_string());
         }
         if self.runs_here(&d.platforms) == Some(false) {
-            notices.push(
-                "Made for Windows. On Linux, Steam runs it through Proton, which works for most games but not all.",
-            );
+            match self.on_linux(d.steam_appid) {
+                Some(reported) => notices.extend(reported),
+                None => notices.push(
+                    "Made for Windows. On Linux, Steam runs it through Proton, which works for most games but not all."
+                        .to_string(),
+                ),
+            }
         }
         if !notices.is_empty() {
             app.warning = Some(notices.join(" "));

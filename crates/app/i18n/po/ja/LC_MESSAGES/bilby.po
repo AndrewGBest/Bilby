@@ -16,6 +16,14 @@ msgctxt "FamilyRow"
 msgid ", unofficial"
 msgstr "、非公式"
 
+msgctxt "ReviewForm"
+msgid "1 star"
+msgstr "星 1 つ"
+
+msgctxt "TvShell"
+msgid "1 star"
+msgstr "星 1 つ"
+
 msgctxt "TvShell"
 msgid "A PIN guards these settings and adult content"
 msgstr "PIN がこれらの設定と成人向けコンテンツを保護します"
@@ -31,6 +39,14 @@ msgstr "ファイルを取得する前に毎回フォルダーの選択画面が
 msgctxt "TvQuestion"
 msgid "A game controller is connected. Bilby has a layout with large text for the sofa, driven with the arrow keys of a remote or keyboard. You can change this later in Settings."
 msgstr "ゲームコントローラーが接続されています。Bilby には、ソファから使いやすい大きな文字のレイアウトがあり、リモコンやキーボードの矢印キーで操作できます。あとで「設定」から変更できます。"
+
+msgctxt "ReviewForm"
+msgid "A short title"
+msgstr "短いタイトル"
+
+msgctxt "TvShell"
+msgid "A short title"
+msgstr "短いタイトル"
 
 msgctxt "DetailsBody"
 msgid "About"
@@ -59,6 +75,10 @@ msgstr "このウェブサイトについて"
 msgctxt "WhatsNew"
 msgid "About this website"
 msgstr "このウェブサイトについて"
+
+msgctxt "SettingsBody"
+msgid "Accounts"
+msgstr "アカウント"
 
 msgctxt "TvShell"
 msgid "Accounts"
@@ -181,6 +201,10 @@ msgid "Ask where to save each download"
 msgstr "ダウンロードのたびに保存先を確認"
 
 msgctxt "SettingsBody"
+msgid "Asks the system for its full speed while a Windows app runs."
+msgstr "Windows アプリの実行中、システムに最大の速度を求めます。"
+
+msgctxt "SettingsBody"
 msgid "Automatic"
 msgstr "自動"
 
@@ -235,6 +259,10 @@ msgstr "Bilby は、起動時と、開いたままの間は数時間ごとにア
 msgctxt "SettingsBody"
 msgid "Bilby keeps a short list, chosen by people, of the apps and websites nearly everyone looks for: a browser, a video player, the big names. On, the home page starts with them in the version for this device, and they are placed a little higher in a search. Off, you get only what the sources' own figures say."
 msgstr "Bilby には、ブラウザー、動画プレーヤー、有名どころなど、ほとんどの人が探すアプリやウェブサイトを人の手で選んだ短い一覧があります。オンにすると、ホームの最初にこのデバイス向けのバージョンで表示され、検索でも少し上に表示されます。オフにすると、提供元の数値だけに基づいて表示されます。"
+
+msgctxt "SettingsBody"
+msgid "Bilby sets Windows programs up to run here through Proton, each in a folder of its own. Most programs work, not all. The first one needs about 700 MB of downloads."
+msgstr "Bilby は Windows プログラムを Proton でここで動くように、それぞれ専用のフォルダーに設定します。ほとんどは動きますが、すべてではありません。最初の 1 つには約 700 MB のダウンロードが必要です。"
 
 msgctxt "TvShell"
 msgid "Bilby {0} is available. You have {1}"
@@ -377,6 +405,10 @@ msgid "Choose a version"
 msgstr "バージョンを選択"
 
 msgctxt "TvShell"
+msgid "Choose done when it is typed. Back puts the keyboard away."
+msgstr "入力が終わったら「完了」を選びます。戻るでキーボードを閉じます。"
+
+msgctxt "TvShell"
 msgid "Choose enter when it is typed. Back cancels."
 msgstr "入力が終わったら「確定」を選んでください。戻るボタンでキャンセルします。"
 
@@ -432,6 +464,14 @@ msgctxt "CommandBox"
 msgid "Copy"
 msgstr "コピー"
 
+msgctxt "ReviewForm"
+msgid "Copy and open"
+msgstr "コピーして開く"
+
+msgctxt "TvShell"
+msgid "Copy and open"
+msgstr "コピーして開く"
+
 msgctxt "CommandBox"
 msgid "Copy command"
 msgstr "コマンドをコピー"
@@ -439,6 +479,14 @@ msgstr "コマンドをコピー"
 msgctxt "DetailsBody"
 msgid "Couldn't load this app"
 msgstr "このアプリを読み込めませんでした"
+
+msgctxt "SettingsBody"
+msgid "Country for prices"
+msgstr "価格の国"
+
+msgctxt "TvShell"
+msgid "Country for prices"
+msgstr "価格の国"
 
 msgctxt "SettingsBody"
 msgid "Dark"
@@ -491,6 +539,10 @@ msgstr "見つける"
 msgctxt "MobileShell"
 msgid "Discover"
 msgstr "見つける"
+
+msgctxt "TvShell"
+msgid "Done"
+msgstr "完了"
 
 msgctxt "DetailsBody"
 msgid "Download"
@@ -549,6 +601,14 @@ msgid "Everything works without signing in, but GitHub then allows only 60 reque
 msgstr "サインインしなくてもすべて使えますが、その場合 GitHub はネットワーク全体で 1 時間に 60 回のリクエストしか許可しないため、数回の検索で使い切ることがあります。サインインすると 5,000 回に増えます。Bilby がアカウントへのアクセスを求めることはありません。"
 
 msgctxt "SettingsBody"
+msgid "Family"
+msgstr "ファミリー"
+
+msgctxt "TvShell"
+msgid "Family"
+msgstr "ファミリー"
+
+msgctxt "SettingsBody"
 msgid "Family and adult content"
 msgstr "ファミリーと成人向けコンテンツ"
 
@@ -600,6 +660,10 @@ msgctxt "SettingsBody"
 msgid "Four digits. With a PIN set, it is asked for to change anything in this card and to open adult content, in place of the question about being an adult."
 msgstr "4 桁の数字です。PIN を設定すると、このカードの設定を変更するときや成人向けコンテンツを開くときに、成人かどうかの質問の代わりに PIN を求められます。"
 
+msgctxt "SettingsBody"
+msgid "Frames a second and temperatures, drawn over the app by MangoHud."
+msgstr "MangoHud がアプリの上にフレームレートと温度を表示します。"
+
 msgctxt "DetailsBody"
 msgid "From"
 msgstr "提供元"
@@ -607,6 +671,22 @@ msgstr "提供元"
 msgctxt "TvShell"
 msgid "From"
 msgstr "提供元"
+
+msgctxt "SettingsBody"
+msgid "GE-Proton"
+msgstr "GE-Proton"
+
+msgctxt "TvShell"
+msgid "GE-Proton"
+msgstr "GE-Proton"
+
+msgctxt "SettingsBody"
+msgid "GOG"
+msgstr "GOG"
+
+msgctxt "SettingsBody"
+msgid "General"
+msgstr "一般"
 
 msgctxt "TvShell"
 msgid "General"
@@ -644,6 +724,10 @@ msgstr[0] "ほかのデバイス用のファイル {n} 件を隠す"
 msgctxt "TvShell"
 msgid "Home"
 msgstr "ホーム"
+
+msgctxt "SettingsBody"
+msgid "How Windows apps run"
+msgstr "Windows アプリの動かし方"
 
 msgctxt "DetailsBody"
 msgid "In your favourites"
@@ -733,6 +817,14 @@ msgctxt "TvShell"
 msgid "Installing updates"
 msgstr "アップデートをインストール中"
 
+msgctxt "ReviewForm"
+msgid "It goes to:"
+msgstr "送信先："
+
+msgctxt "TvShell"
+msgid "It goes to:"
+msgstr "送信先："
+
 msgctxt "SettingsBody"
 msgid "Keep Bilby in the system tray when its window is closed"
 msgstr "ウィンドウを閉じても Bilby をシステムトレイに残す"
@@ -761,6 +853,10 @@ msgctxt "TvShell"
 msgid "Language"
 msgstr "言語"
 
+msgctxt "TvShell"
+msgid "Language and country"
+msgstr "言語と国"
+
 msgctxt "LibraryBody"
 msgid "Last checked {}"
 msgstr "最終確認：{}"
@@ -768,6 +864,26 @@ msgstr "最終確認：{}"
 msgctxt "SettingsBody"
 msgid "Layout"
 msgstr "レイアウト"
+
+msgctxt "ReviewForm"
+msgid "Leave it at:"
+msgstr "投稿先："
+
+msgctxt "TvShell"
+msgid "Leave it at:"
+msgstr "投稿先："
+
+msgctxt "ReviewForm"
+msgid "Leave the review at {}"
+msgstr "{} にレビューを投稿"
+
+msgctxt "TvShell"
+msgid "Leave the review at {}"
+msgstr "{} にレビューを投稿"
+
+msgctxt "TvShell"
+msgid "Left and Right to change"
+msgstr "左右で変更"
 
 msgctxt "DesktopShell"
 msgid "Library"
@@ -818,6 +934,26 @@ msgctxt "TvShell"
 msgid "More choices"
 msgstr "ほかの選択肢"
 
+msgctxt "TvShell"
+msgid "Name"
+msgstr "名前"
+
+msgctxt "ReviewForm"
+msgid "Name to show next to your review"
+msgstr "レビューの横に表示する名前"
+
+msgctxt "TvShell"
+msgid "Name to show next to your review"
+msgstr "レビューの横に表示する名前"
+
+msgctxt "SettingsBody"
+msgid "Needs GameMode, which is not on this device. Install it and this starts working."
+msgstr "GameMode が必要ですが、このデバイスにはありません。インストールすると使えるようになります。"
+
+msgctxt "SettingsBody"
+msgid "Needs MangoHud, which is not on this device. Install it and this starts working."
+msgstr "MangoHud が必要ですが、このデバイスにはありません。インストールすると使えるようになります。"
+
 msgctxt "GateOverlay"
 msgid "No"
 msgstr "いいえ"
@@ -846,6 +982,14 @@ msgctxt "AppTile"
 msgid "Not for this device"
 msgstr "このデバイス非対応"
 
+msgctxt "ReviewForm"
+msgid "Not now"
+msgstr "今はしない"
+
+msgctxt "TvShell"
+msgid "Not now"
+msgstr "今はしない"
+
 msgctxt "DesktopShell"
 msgid "Nothing featured for this device yet"
 msgstr "このデバイス向けのおすすめはまだありません"
@@ -862,6 +1006,10 @@ msgctxt "TvShell"
 msgid "Nothing for this TV yet. Press Up to search."
 msgstr "このテレビ向けのものはまだありません。上を押して検索できます。"
 
+msgctxt "SettingsBody"
+msgid "Off"
+msgstr "オフ"
+
 msgctxt "TvSetting"
 msgid "Off"
 msgstr "オフ"
@@ -875,6 +1023,14 @@ msgid "Off, adult things are only ever found by searching. On, they may also app
 msgstr "オフにすると、成人向けのものは検索でのみ見つかります。オンにすると、ホームにも表示されることがありますが、ほかの場所と同じように隠して表示されます。"
 
 msgctxt "SettingsBody"
+msgid "Offer Windows apps"
+msgstr "Windows アプリを表示する"
+
+msgctxt "TvShell"
+msgid "Offer Windows apps, set up to run here through Proton"
+msgstr "Windows アプリを表示し、Proton でここで動くように設定する"
+
+msgctxt "SettingsBody"
 msgid "Offer betas and release candidates as soon as they are published. They may be unstable."
 msgstr "ベータ版やリリース候補版を、公開され次第提案します。不安定な場合があります。"
 
@@ -885,6 +1041,10 @@ msgstr "アプリのテスト版を提案"
 msgctxt "FamilyRow"
 msgid "Official"
 msgstr "公式"
+
+msgctxt "SettingsBody"
+msgid "On"
+msgstr "オン"
 
 msgctxt "TvSetting"
 msgid "On"
@@ -924,6 +1084,10 @@ msgstr "ダウンロードフォルダーを開く"
 
 msgctxt "SettingsBody"
 msgid "Open folder"
+msgstr "フォルダーを開く"
+
+msgctxt "SettingsBody"
+msgid "Open its folder"
 msgstr "フォルダーを開く"
 
 msgctxt "TvShell"
@@ -986,6 +1150,10 @@ msgctxt "SettingsBody"
 msgid "Paste a token"
 msgstr "トークンを貼り付け"
 
+msgctxt "SettingsBody"
+msgid "Performance figures"
+msgstr "パフォーマンス表示"
+
 msgctxt "TvShell"
 msgid "Pick letters, then choose search"
 msgstr "文字を選んでから「検索」を選んでください"
@@ -1023,6 +1191,10 @@ msgid "Press Back to stop."
 msgstr "「戻る」を押すと中止します。"
 
 msgctxt "TvShell"
+msgid "Press Left or Right for another country"
+msgstr "左または右を押して別の国を選択"
+
+msgctxt "TvShell"
 msgid "Press OK again to remove {} from this TV"
 msgstr "もう一度 OK を押すと {} をこのテレビから削除します"
 
@@ -1033,6 +1205,10 @@ msgstr "OK を押すとキーボードが開きます"
 msgctxt "TvShell"
 msgid "Press OK for the next language"
 msgstr "OK を押すと次の言語に切り替わります"
+
+msgctxt "TvShell"
+msgid "Press OK to type"
+msgstr "OK を押して入力"
 
 msgctxt "DetailsBody"
 msgid "Price"
@@ -1045,6 +1221,14 @@ msgstr "価格"
 msgctxt "DetailsBody"
 msgid "Project page"
 msgstr "プロジェクトページ"
+
+msgctxt "SettingsBody"
+msgid "Proton version"
+msgstr "Proton のバージョン"
+
+msgctxt "TvShell"
+msgid "Proton version for Windows apps"
+msgstr "Windows アプリ用の Proton バージョン"
 
 msgctxt "SettingsBody"
 msgid "QR code to scan with the Steam app"
@@ -1195,6 +1379,10 @@ msgid "Results"
 msgstr "結果"
 
 msgctxt "TvShell"
+msgid "Review"
+msgstr "レビュー"
+
+msgctxt "TvShell"
 msgid "Review {0} of {1}"
 msgstr "レビュー {0} / {1}"
 
@@ -1221,6 +1409,10 @@ msgstr "レビューはほかの人が書いたもので、GNOME と KDE のア�
 msgctxt "TvShell"
 msgid "Reviews are written by other people and come from the ratings service the GNOME and KDE app stores use."
 msgstr "レビューはほかの人が書いたもので、GNOME と KDE のアプリストアが使っている評価サービスから取得しています。"
+
+msgctxt "SettingsBody"
+msgid "Same as the others"
+msgstr "他と同じ"
 
 msgctxt "SettingsBody"
 msgid "Save"
@@ -1310,6 +1502,26 @@ msgctxt "TvShell"
 msgid "Searching…"
 msgstr "検索中…"
 
+msgctxt "ReviewForm"
+msgid "Send review"
+msgstr "レビューを送信"
+
+msgctxt "TvShell"
+msgid "Send review"
+msgstr "レビューを送信"
+
+msgctxt "ReviewForm"
+msgid "Send your review"
+msgstr "レビューを送信しましょう"
+
+msgctxt "TvShell"
+msgid "Send your review"
+msgstr "レビューを送信しましょう"
+
+msgctxt "TvShell"
+msgid "Sending…"
+msgstr "送信中…"
+
 msgctxt "SettingsBody"
 msgid "Set a PIN"
 msgstr "PIN を設定"
@@ -1395,6 +1607,10 @@ msgid "Show less of {}"
 msgstr "{} の表示を減らす"
 
 msgctxt "SettingsBody"
+msgid "Show performance figures"
+msgstr "パフォーマンス表示を出す"
+
+msgctxt "SettingsBody"
 msgid "Show ratings and reviews"
 msgstr "評価とレビューを表示"
 
@@ -1420,6 +1636,10 @@ msgid "Sign in in a browser"
 msgstr "ブラウザーでサインイン"
 
 msgctxt "SettingsBody"
+msgid "Sign in on GOG's page in the window that opened. Close it to stop."
+msgstr "開いたウィンドウで GOG のページにサインインしてください。中止するにはウィンドウを閉じます。"
+
+msgctxt "SettingsBody"
 msgid "Sign in on Steam's page in Longboard, then choose to share your library."
 msgstr "Longboard で Steam のページにサインインし、ライブラリの共有を選んでください。"
 
@@ -1430,6 +1650,10 @@ msgstr "Longboard で Steam のページにサインインし、ライブラリ�
 msgctxt "SettingsBody"
 msgid "Sign in on Steam's page in the window that opened. Close it to stop."
 msgstr "開いたウィンドウで Steam のページにサインインしてください。中止するにはウィンドウを閉じます。"
+
+msgctxt "SettingsBody"
+msgid "Sign in to GOG"
+msgstr "GOG にサインイン"
 
 msgctxt "TvShell"
 msgid "Sign in to GitHub for more searches an hour"
@@ -1452,6 +1676,10 @@ msgid "Sign in to Steam with a QR code, to see what you own"
 msgstr "QR コードで Steam にサインインして、持っているゲームを確認"
 
 msgctxt "SettingsBody"
+msgid "Sign in to see which GOG games you already own. GOG's own sign-in page opens in a small window; Bilby asks GOG once for the list and keeps only that, on this device."
+msgstr "サインインすると、すでに持っている GOG のゲームがわかります。GOG のサインインページが小さなウィンドウで開きます。Bilby は GOG に一度だけ一覧を問い合わせ、その一覧だけをこのデバイスに保存します。"
+
+msgctxt "SettingsBody"
 msgid "Sign in to see which Steam games you already own. Bilby keeps only the list of what you own, on this device. Choose how:"
 msgstr "サインインすると、すでに持っている Steam ゲームがわかります。Bilby が保存するのは持っているものの一覧だけで、このデバイス上に保存されます。方法を選んでください："
 
@@ -1470,6 +1698,10 @@ msgstr "サインアウト"
 msgctxt "TvShell"
 msgid "Sign out"
 msgstr "サインアウト"
+
+msgctxt "SettingsBody"
+msgid "Sign out of GOG"
+msgstr "GOG からサインアウト"
 
 msgctxt "SettingsBody"
 msgid "Sign out of GitHub"
@@ -1494,6 +1726,10 @@ msgstr "GitHub にサインインしました"
 msgctxt "TvShell"
 msgid "Signed in to Steam  ·  {}"
 msgstr "Steam にサインイン済み  ·  {}"
+
+msgctxt "SettingsBody"
+msgid "Signed in. Bilby knows {} in your GOG library and marks them Owned."
+msgstr "サインインしました。Bilby は GOG ライブラリの {} を認識し、「所有済み」と表示します。"
 
 msgctxt "SettingsBody"
 msgid "Signed in. Bilby knows {} in your Steam library and marks them Owned."
@@ -1536,6 +1772,22 @@ msgid "Sounds: a quiet tick or pop as you move about and press things."
 msgstr "サウンド：移動したりボタンを押したりするときに、小さな音が鳴ります。"
 
 msgctxt "SettingsBody"
+msgid "Standard"
+msgstr "標準"
+
+msgctxt "TvShell"
+msgid "Standard"
+msgstr "標準"
+
+msgctxt "SettingsBody"
+msgid "Standard follows Valve's own Proton and is the steady choice. GE-Proton is a community build with newer fixes, which some games need. Either is fetched the first time it is used."
+msgstr "「標準」は Valve 自身の Proton に従う安定した選択です。GE-Proton はより新しい修正を含むコミュニティ版で、一部のゲームに必要です。どちらも初回使用時に取得されます。"
+
+msgctxt "TvShell"
+msgid "Stars"
+msgstr "星"
+
+msgctxt "SettingsBody"
 msgid "Steam"
 msgstr "Steam"
 
@@ -1552,12 +1804,40 @@ msgid "Stop waiting"
 msgstr "待つのをやめる"
 
 msgctxt "SettingsBody"
+msgid "Stop waiting for GOG"
+msgstr "GOG を待つのをやめる"
+
+msgctxt "SettingsBody"
 msgid "Stop waiting for Steam"
 msgstr "Steam を待つのをやめる"
+
+msgctxt "ReviewForm"
+msgid "Stop writing the review"
+msgstr "レビューを書くのをやめる"
+
+msgctxt "TvShell"
+msgid "Stop writing the review"
+msgstr "レビューを書くのをやめる"
 
 msgctxt "SettingsBody"
 msgid "Storage"
 msgstr "ストレージ"
+
+msgctxt "SettingsBody"
+msgid "Storage and about"
+msgstr "ストレージと情報"
+
+msgctxt "SettingsBody"
+msgid "Stores"
+msgstr "ストア"
+
+msgctxt "TvShell"
+msgid "Stores"
+msgstr "ストア"
+
+msgctxt "SettingsBody"
+msgid "Stores are asked for this country's prices, in its own money."
+msgstr "ストアにはこの国の価格を、その国の通貨で問い合わせます。"
 
 msgctxt "TvShell"
 msgid "Switch"
@@ -1607,9 +1887,21 @@ msgctxt "SettingsBody"
 msgid "The code refreshes by itself."
 msgstr "コードは自動で更新されます。"
 
+msgctxt "ReviewForm"
+msgid "The name to show next to it"
+msgstr "横に表示する名前"
+
+msgctxt "TvShell"
+msgid "The name to show next to it"
+msgstr "横に表示する名前"
+
 msgctxt "SettingsBody"
 msgid "The store only lists apps with a file that can be installed here. This is what it detected."
 msgstr "ストアには、ここにインストールできるファイルのあるアプリだけが表示されます。検出された内容は次のとおりです。"
+
+msgctxt "SettingsBody"
+msgid "These apply to every Windows app, unless an app below says otherwise."
+msgstr "下のアプリで別の指定がない限り、すべての Windows アプリに適用されます。"
 
 msgctxt "SettingsBody"
 msgid "They come from the service the GNOME and KDE app stores use (odrs.gnome.org). Star ratings arrive as one file a day for every app. Written reviews are asked for when you open the page of an app that has them, which tells that service which app it was. Nothing that identifies you is sent."
@@ -1634,6 +1926,18 @@ msgstr "ここでの登録が解除されるだけです。アンインストー
 msgctxt "TvShell"
 msgid "This store"
 msgstr "このストア"
+
+msgctxt "TvShell"
+msgid "Title"
+msgstr "タイトル"
+
+msgctxt "ReviewForm"
+msgid "Title of your review"
+msgstr "レビューのタイトル"
+
+msgctxt "TvShell"
+msgid "Title of your review"
+msgstr "レビューのタイトル"
 
 msgctxt "DesktopShell"
 msgid "Try a different name, or check the spelling. Projects without a file for {} are left out."
@@ -1676,8 +1980,8 @@ msgid "Unofficial"
 msgstr "非公式"
 
 msgctxt "TvShell"
-msgid "Up and Down move through the list. OK changes the highlighted setting."
-msgstr "上下で一覧を移動します。OK で選択中の設定を変更します。"
+msgid "Up and Down move through the list. OK changes the highlighted setting. Left is the list of sections."
+msgstr "上下でリストを移動します。OK で選択中の設定を変更します。左はセクションの一覧です。"
 
 msgctxt "AppRow"
 msgid "Update"
@@ -1775,6 +2079,10 @@ msgctxt "LibraryItem"
 msgid "Updating…"
 msgstr "アップデート中…"
 
+msgctxt "SettingsBody"
+msgid "Use GameMode"
+msgstr "GameMode を使う"
+
 msgctxt "TvQuestion"
 msgid "Use the TV layout"
 msgstr "テレビ用レイアウトを使う"
@@ -1863,6 +2171,14 @@ msgctxt "Welcome"
 msgid "Welcome to Bilby"
 msgstr "Bilby へようこそ"
 
+msgctxt "ReviewForm"
+msgid "What do you think of it?"
+msgstr "どう思いますか？"
+
+msgctxt "TvShell"
+msgid "What do you think of it?"
+msgstr "どう思いますか？"
+
 msgctxt "OptionCard"
 msgid "What happens when I install {}"
 msgstr "{} をインストールするとどうなりますか"
@@ -1874,6 +2190,10 @@ msgstr "みんなのレビュー"
 msgctxt "OptionCard"
 msgid "What will happen?"
 msgstr "どうなりますか？"
+
+msgctxt "TvShell"
+msgid "What you have typed"
+msgstr "入力した内容"
 
 msgctxt "WhatsNew"
 msgid "What's new"
@@ -1891,6 +2211,18 @@ msgctxt "TvShell"
 msgid "Where apps come from"
 msgstr "アプリの提供元"
 
+msgctxt "SettingsBody"
+msgid "Windows apps"
+msgstr "Windows アプリ"
+
+msgctxt "SettingsBody"
+msgid "Windows apps you install show up here, each with its own choices."
+msgstr "インストールした Windows アプリがここに表示され、それぞれ個別に設定できます。"
+
+msgctxt "SettingsBody"
+msgid "Windows settings"
+msgstr "Windows の設定"
+
 msgctxt "DetailsBody"
 msgid "Works on"
 msgstr "対応環境"
@@ -1898,6 +2230,14 @@ msgstr "対応環境"
 msgctxt "TvShell"
 msgid "Works on"
 msgstr "対応環境"
+
+msgctxt "ReviewForm"
+msgid "Write a review"
+msgstr "レビューを書く"
+
+msgctxt "TvShell"
+msgid "Write a review"
+msgstr "レビューを書く"
 
 msgctxt "Welcome"
 msgid "You are seeing apps for {}. Anything that cannot be installed on this device is hidden."
@@ -1915,6 +2255,10 @@ msgctxt "SystemBody"
 msgid "You may be asked for your password. Keep the device on until this finishes."
 msgstr "パスワードを求められることがあります。完了するまでデバイスの電源を切らないでください。"
 
+msgctxt "SettingsBody"
+msgid "Your Windows apps"
+msgstr "あなたの Windows アプリ"
+
 msgctxt "LibraryBody"
 msgid "Your library is empty"
 msgstr "ライブラリは空です"
@@ -1926,6 +2270,22 @@ msgstr "自分の提供元"
 msgctxt "TvShell"
 msgid "Your password is needed"
 msgstr "パスワードが必要です"
+
+msgctxt "ReviewForm"
+msgid "Your review"
+msgstr "あなたのレビュー"
+
+msgctxt "TvShell"
+msgid "Your review"
+msgstr "あなたのレビュー"
+
+msgctxt "ReviewForm"
+msgid "Your review of {}"
+msgstr "{} のレビュー"
+
+msgctxt "TvShell"
+msgid "Your review of {}"
+msgstr "{} のレビュー"
 
 msgctxt "TvShell"
 msgid "an older one"
@@ -2056,6 +2416,14 @@ msgstr "{} ダウンロード"
 msgctxt "AppTile"
 msgid "{} sources"
 msgstr "{} 件の提供元"
+
+msgctxt "ReviewForm"
+msgid "{} stars"
+msgstr "スター {} 件"
+
+msgctxt "TvShell"
+msgid "{} stars"
+msgstr "スター {} 件"
 
 msgctxt "DesktopShell"
 msgid "{}. Everything shown works here."

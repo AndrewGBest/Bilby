@@ -62,6 +62,19 @@ pub trait Http: Send + Sync {
         Err(Error::Unsupported("cannot send that request".into()))
     }
 
+    /// GET one person's data, showing a key for their account. Never cached, and
+    /// neither the key nor the answer is written anywhere.
+    fn get_signed(&self, url: &str, _authorization: &str) -> Result<String> {
+        Err(Error::Unsupported(format!("cannot send a request to {url}")))
+    }
+
+    /// POST JSON that changes something at the other end (a review someone wrote).
+    /// Never cached and never repeated. What the server says is returned even when it
+    /// refuses, since its answer says why.
+    fn submit_json(&self, url: &str, _body: &str) -> Result<String> {
+        Err(Error::Unsupported(format!("cannot send a request to {url}")))
+    }
+
     /// GitHub's request allowance as of the last API response, if any was seen.
     fn quota(&self) -> Option<Quota> {
         None
@@ -225,6 +238,26 @@ impl Http for NetHttp {
         self.get(url)
     }
 
+    fn get_signed(&self, url: &str, authorization: &str) -> Result<String> {
+        match self.agent.get(url).set("Authorization", authorization).set("Accept", "application/json").call() {
+            Ok(resp) => resp.into_string().map_err(|e| Error::Network(e.to_string())),
+            Err(ureq::Error::Status(code, _)) => Err(Error::Status { code, url: url.to_string() }),
+            Err(e) => Err(Error::Network(describe_transport_error(url, &e))),
+        }
+    }
+
+    fn submit_json(&self, url: &str, body: &str) -> Result<String> {
+        match self.agent.post(url).set("Content-Type", "application/json").send_string(body) {
+            Ok(resp) => resp.into_string().map_err(|e| Error::Network(e.to_string())),
+            // A refusal comes with its reason, which is what the person needs to see.
+            Err(ureq::Error::Status(code, resp)) => match resp.into_string() {
+                Ok(text) if text.trim_start().starts_with('{') => Ok(text),
+                _ => Err(Error::Status { code, url: url.to_string() }),
+            },
+            Err(e) => Err(Error::Network(describe_transport_error(url, &e))),
+        }
+    }
+
     fn post_form(&self, url: &str, body: &str) -> Result<String> {
         let request = self
             .agent
@@ -297,7 +330,9 @@ impl<H: Http> CachedHttp<H> {
     /// to a stale answer when the network or the allowance fails.
     fn cached(&self, key: &str, ask: impl FnOnce() -> Result<String>) -> Result<String> {
         let path = self.path_for(key);
-        let cached = || std::fs::read_to_string(&path).ok();
+        // An empty file is not an answer: it is what a device that lost power in the
+        // middle of writing one leaves behind.
+        let cached = || std::fs::read_to_string(&path).ok().filter(|body| !body.is_empty());
         let fresh = std::fs::metadata(&path)
             .and_then(|m| m.modified())
             .ok()
@@ -310,8 +345,13 @@ impl<H: Http> CachedHttp<H> {
         }
         match ask() {
             Ok(body) => {
-                if std::fs::create_dir_all(&self.dir).is_ok() {
-                    let _ = std::fs::write(&path, &body);
+                // Written beside it and moved into place, so that what is there is
+                // always a whole answer or the one before it.
+                if !body.is_empty() && std::fs::create_dir_all(&self.dir).is_ok() {
+                    let partial = path.with_extension("part");
+                    if std::fs::write(&partial, &body).is_ok() && std::fs::rename(&partial, &path).is_err() {
+                        let _ = std::fs::remove_file(&partial);
+                    }
                 }
                 Ok(body)
             }
@@ -343,6 +383,14 @@ impl<H: Http> Http for CachedHttp<H> {
         self.inner.get_private(url)
     }
 
+    fn get_signed(&self, url: &str, authorization: &str) -> Result<String> {
+        self.inner.get_signed(url, authorization)
+    }
+
+    fn submit_json(&self, url: &str, body: &str) -> Result<String> {
+        self.inner.submit_json(url, body)
+    }
+
     fn download(&self, url: &str, dest: &Path, progress: &mut dyn FnMut(u64, Option<u64>) -> bool) -> Result<String> {
         self.inner.download(url, dest, progress)
     }
@@ -367,6 +415,14 @@ impl<H: Http + ?Sized> Http for std::sync::Arc<H> {
 
     fn get_private(&self, url: &str) -> Result<String> {
         (**self).get_private(url)
+    }
+
+    fn get_signed(&self, url: &str, authorization: &str) -> Result<String> {
+        (**self).get_signed(url, authorization)
+    }
+
+    fn submit_json(&self, url: &str, body: &str) -> Result<String> {
+        (**self).submit_json(url, body)
     }
 
     fn get(&self, url: &str) -> Result<String> {
@@ -424,6 +480,21 @@ mod tests {
         inner.fail.store(true, Ordering::SeqCst);
         assert_eq!(expired.get("https://x/a").unwrap(), "{\"ok\":true}");
         assert!(expired.get("https://x/never-seen").is_err());
+
+        // A device that lost power while writing leaves an empty file: that is not an
+        // answer, however new it is. It is asked for again, and a whole one kept.
+        inner.fail.store(false, Ordering::SeqCst);
+        let before = inner.calls.load(Ordering::SeqCst);
+        let written: Vec<_> = std::fs::read_dir(&dir).unwrap().flatten().map(|entry| entry.path()).collect();
+        assert_eq!(written.len(), 1, "nothing half-written is left beside the answer: {written:?}");
+        std::fs::write(&written[0], "").unwrap();
+        assert_eq!(cache.get("https://x/a").unwrap(), "{\"ok\":true}");
+        assert_eq!(inner.calls.load(Ordering::SeqCst), before + 1);
+        assert_eq!(std::fs::read_to_string(&written[0]).unwrap(), "{\"ok\":true}");
+        // And with the network down, an empty file is no stale answer to fall back on.
+        std::fs::write(&written[0], "").unwrap();
+        inner.fail.store(true, Ordering::SeqCst);
+        assert!(expired.get("https://x/a").is_err());
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

@@ -915,7 +915,35 @@ impl Http for DemoHttp {
         Err(Error::NotFound(url.to_string()))
     }
 
+    fn get_signed(&self, url: &str, authorization: &str) -> Result<String> {
+        // What the fictional GOG account owns, told to whoever shows its key.
+        if url == crate::gog_account::OWNED_URL && authorization == "Bearer demo-gog-key" {
+            return Ok(json!({ "owned": [1207658924u64, 1495134320u64] }).to_string());
+        }
+        Err(Error::NotFound("that address".to_string()))
+    }
+
+    fn submit_json(&self, url: &str, body: &str) -> Result<String> {
+        // The fictional ratings service takes one review of an app from each person,
+        // as the real one does. Nothing is kept: it goes by what the review says.
+        if url == crate::reviewing::ODRS_SUBMIT {
+            let again = serde_json::from_str::<Value>(body)
+                .ok()
+                .is_some_and(|v| v["summary"].as_str().is_some_and(|title| title.eq_ignore_ascii_case("again")));
+            return Ok(match again {
+                true => json!({ "success": false, "msg": "already reviewed this app" }),
+                false => json!({ "success": true, "msg": "added" }),
+            }
+            .to_string());
+        }
+        Err(Error::NotFound("that address".to_string()))
+    }
+
     fn get_private(&self, url: &str) -> Result<String> {
+        // Signing in to the fictional GOG: its one-time code is swapped for a key.
+        if url.starts_with(crate::gog_account::TOKEN_URL) && url.contains("code=one-time-code-1") {
+            return Ok(json!({ "access_token": "demo-gog-key", "user_id": "48628349957132247" }).to_string());
+        }
         if url.starts_with(crate::steam_qr::OWNED_URL) && url.contains("steamid=76561198000000001") {
             return Ok(
                 json!({ "response": { "game_count": 2, "games": [{ "appid": 620 }, { "appid": 440 }] } }).to_string()

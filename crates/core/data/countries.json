@@ -1,0 +1,13 @@
+{
+  "_comment": "Countries whose prices the stores can be asked for, each under the name it gives itself (or its usual English one where the letters might not be drawn). In the order they are offered: the Americas, Europe, the Middle East and Africa, Asia, Oceania.",
+  "countries": [
+    ["US", "United States"], ["CA", "Canada"], ["MX", "México"], ["BR", "Brasil"], ["AR", "Argentina"], ["CL", "Chile"], ["CO", "Colombia"],
+    ["GB", "United Kingdom"], ["IE", "Ireland"], ["FR", "France"], ["DE", "Deutschland"], ["AT", "Österreich"], ["CH", "Schweiz / Suisse"],
+    ["NL", "Nederland"], ["BE", "België / Belgique"], ["ES", "España"], ["PT", "Portugal"], ["IT", "Italia"], ["SE", "Sverige"],
+    ["NO", "Norge"], ["DK", "Danmark"], ["FI", "Suomi"], ["PL", "Polska"], ["CZ", "Česko"], ["HU", "Magyarország"], ["RO", "România"],
+    ["GR", "Greece"], ["TR", "Türkiye"], ["UA", "Україна"], ["IL", "Israel"], ["SA", "السعودية"], ["AE", "الإمارات"], ["EG", "مصر"],
+    ["ZA", "South Africa"], ["IN", "India"], ["JP", "日本"], ["KR", "대한민국"], ["CN", "中国"], ["TW", "台灣"], ["HK", "香港"],
+    ["SG", "Singapore"], ["MY", "Malaysia"], ["TH", "Thailand"], ["ID", "Indonesia"], ["PH", "Philippines"], ["VN", "Việt Nam"],
+    ["AU", "Australia"], ["NZ", "New Zealand"]
+  ]
+}

@@ -227,6 +227,43 @@ component TvButton inherits Rectangle {
     }
 }
 
+// One row of the form for writing a review: what it is, what has been put in it,
+// and, while it is highlighted and empty, how to fill it.
+component TvWriteRow inherits Rectangle {
+    in property <length> u;
+    in property <string> name;
+    in property <string> value;
+    in property <string> hint;
+    in property <bool> focused;
+    in property <bool> tall;
+    in property <bool> gold;
+    callback clicked;
+    height: (root.tall ? 62 : 34) * u;
+    border-radius: 8 * u;
+    background: root.focused ? Theme.surface-2 : Theme.surface;
+    border-width: root.focused ? 2 * u : 0.5 * u;
+    border-color: root.focused ? white : Theme.stroke;
+    clip: true;
+    accessible-role: button;
+    accessible-action-default => { root.clicked(); }
+    TouchArea {
+        clicked => { root.clicked(); }
+    }
+    Text { x: 12 * u; y: 0; width: 84 * u; height: 34 * u; text: root.name; color: Theme.text-dim; font-size: 12 * u; font-weight: 700; vertical-alignment: center; }
+    Text {
+        x: 100 * u;
+        y: root.tall ? 8 * u : 0;
+        width: parent.width - 112 * u;
+        height: parent.height - (root.tall ? 14 * u : 0);
+        text: root.value != "" ? root.value : root.focused ? root.hint : "";
+        color: root.value == "" ? Theme.text-dim : root.gold ? Theme.warn : Theme.text;
+        font-size: (root.gold ? 16 : 13) * u;
+        wrap: root.tall ? word-wrap : no-wrap;
+        overflow: elide;
+        vertical-alignment: root.tall ? top : center;
+    }
+}
+
 // One line of an app's details: what it is on the left, the value beside it.
 component TvFact inherits Rectangle {
     in property <string> name;
@@ -281,6 +318,10 @@ export component TvShell inherits Rectangle {
     function osk-done() {
         if (Store.password-ask) {
             Store.password-submit();
+        } else if (Store.osk-target != 0) {
+            // A review's words: typed, and back to the review.
+            root.osk = false;
+            Store.osk-target = 0;
         } else {
             root.run-search();
         }
@@ -335,7 +376,9 @@ export component TvShell inherits Rectangle {
     }
     function enter-bar() {
         // From Home, Up lands on Search: it is what people go up there for.
-        root.tab = root.on-cats ? 5 : Store.page == 2 ? 1 : Store.page == 3 ? 3 : Store.page == 4 ? 4 : 2;
+        // From an app's page there is no search bar to land on: the entry of the page
+        // the app was opened from, or Home.
+        root.tab = root.on-cats || (root.cats-open && Store.details-open) ? 5 : Store.page == 2 ? 1 : Store.page == 3 ? 3 : Store.page == 4 ? 4 : Store.details-open ? 0 : 2;
         root.zone = 1;
     }
     // The entry of the top bar to the left or right of the focused one.
@@ -369,6 +412,10 @@ export component TvShell inherits Rectangle {
     }
     // Go where the focused entry of the top bar leads.
     function activate-tab() {
+        // From an app's page, the page is put away first.
+        if (Store.details-open) {
+            Store.close-details();
+        }
         root.cur-row = 0;
         root.cur-col = 0;
         if (root.tab == 5) {
@@ -416,9 +463,24 @@ export component TvShell inherits Rectangle {
     property <int> src-first: 16 + root.steam-rows;
     // The language is the last row, after the sources.
     property <int> lang-row: root.src-first + Store.sources.length;
+    // Then the country whose prices are asked for.
+    property <int> country-row: root.lang-row + 1;
     // And after it, whether to show what does not run here.
-    property <int> all-row: root.lang-row + 1;
-    property <int> auto-row: root.all-row + 1;
+    property <int> all-row: root.country-row + 1;
+    // Where Windows programs can be set up to run: whether to offer them.
+    property <int> win-row: Store.windows-possible ? root.all-row + 1 : -1;
+    // And, while they are offered, which Proton runs them.
+    property <int> proton-row: Store.windows-possible && Store.windows-apps ? root.win-row + 1 : -1;
+    property <int> auto-row: root.all-row + 1 + (Store.windows-possible ? 1 : 0) + (root.proton-row > 0 ? 1 : 0);
+    // The sections of the list, on the left: where each begins, to jump to. `set-nav`
+    // is the remote being in that list, `set-at` the section it points at there.
+    property <bool> set-nav: false;
+    property <int> set-at: 0;
+    property <[string]> set-names: [@tr("General"), @tr("Family"), @tr("Accounts"), @tr("Stores"), @tr("Language and country"), @tr("Other devices"), @tr("Updates")];
+    property <[int]> set-starts: [1, 8, 14, root.src-first, root.lang-row, root.all-row, root.auto-row];
+    // The section the highlighted setting is in.
+    property <int> set-in: root.sys-row >= root.auto-row ? 6 : root.sys-row >= root.all-row ? 5 : root.sys-row >= root.lang-row ? 4 : root.sys-row >= root.src-first ? 3 : root.sys-row >= 14 ? 2 : root.sys-row >= 8 ? 1 : 0;
+    changed on-settings => { root.set-nav = false; }
     property <int> set-last: root.auto-row;
     changed set-last => { root.sys-row = min(root.sys-row, root.set-last); }
     // Rows below the eighth push the list up, so the focused one is always on screen.
@@ -466,9 +528,77 @@ export component TvShell inherits Rectangle {
             root.reading = false;
         }
     }
+    // Writing one: somewhere takes a review of this app.
+    property <bool> can-review: Store.review-places.length > 0;
+    // The highlight is on "Write a review", which sits before the first review.
+    property <bool> on-write: root.sec == 3 && root.can-review && (root.rev < 0 || !root.has-reviews);
+    property <bool> writing: false;
+    changed can-review => {
+        if (!root.can-review) {
+            root.writing = false;
+        }
+    }
+    // The rows of the form: 0 the stars, 1 the title, 2 the text, 3 the name (only
+    // where the review is sent from here), then the places when there is more than
+    // one, then send and stop.
+    property <int> w-row: 0;
+    property <int> w-stars: 0;
+    property <int> w-np: Store.review-places.length > 1 ? Store.review-places.length : 0;
+    property <int> w-send: 4 + root.w-np;
+    function w-move(d: int) {
+        root.w-row = max(0, min(root.w-send + 1, root.w-row + d));
+        if (root.w-row == 3 && !Store.review-from-here) {
+            root.w-row += d;
+        }
+    }
+    function w-open() {
+        root.w-row = 0;
+        root.w-stars = 0;
+        Store.review-title = "";
+        Store.review-text = "";
+        root.writing = true;
+    }
+    function w-type(field: int) {
+        Store.osk-target = field;
+        Store.osk-open();
+        root.osk = true;
+    }
+    function w-send-it() {
+        // A store's own box is filled by pasting: the words go on the clipboard.
+        if (Store.review-copies && Store.review-text != "") {
+            clip.text = Store.review-title == "" ? Store.review-text : Store.review-title + "\n\n" + Store.review-text;
+            clip.select-all();
+            clip.copy();
+        }
+        Store.send-review(root.w-stars, Store.review-title, Store.review-text, Store.review-name);
+    }
+    function w-ok() {
+        if (Store.review-state == 2) {
+            root.writing = false;
+        } else if (Store.review-state == 1) {
+            // Being sent: nothing to press.
+        } else if (root.w-row == 0) {
+            root.w-stars = root.w-stars >= 5 ? 1 : root.w-stars + 1;
+        } else if (root.w-row <= 3) {
+            root.w-type(root.w-row);
+        } else if (root.w-row < root.w-send) {
+            Store.toggle-review-place(Store.review-places[root.w-row - 4].id);
+        } else if (root.w-row == root.w-send) {
+            root.w-send-it();
+        } else {
+            root.writing = false;
+        }
+    }
     // The app page is a column of sections the highlight moves down through:
     // 0 the buttons, 1 pictures, 2 the description, 3 reviews, 4 the details.
     property <int> sec: 0;
+    // An app's page opens with the highlight on the page, wherever it was before.
+    property <bool> on-app: Store.details-open;
+    changed on-app => {
+        if (root.on-app && root.zone == 1) {
+            root.zone = 0;
+        }
+    }
     property <bool> has-pics: Store.screenshots.length > 0;
     property <bool> has-about: Store.about != "" || Store.notes != "";
     // Which picture and which review the highlight is on in their rows.
@@ -481,7 +611,7 @@ export component TvShell inherits Rectangle {
     // In the opened description: 0 is the text, 1 and up its links.
     property <int> link: 0;
     function sec-exists(n: int) -> bool {
-        return n == 0 || (n == 1 && root.has-pics) || (n == 2 && root.has-about) || (n == 3 && root.has-reviews) || n == 4;
+        return n == 0 || (n == 1 && root.has-pics) || (n == 2 && root.has-about) || (n == 3 && (root.has-reviews || root.can-review)) || n == 4;
     }
     function sec-down() {
         if (root.sec < 1 && root.sec-exists(1)) { root.sec = 1; }
@@ -525,6 +655,7 @@ export component TvShell inherits Rectangle {
     changed shown-id => {
         root.remove-armed = false;
         root.reading = false;
+        root.writing = false;
         root.rev = 0;
         root.act = 0;
         root.files = false;
@@ -630,6 +761,7 @@ export component TvShell inherits Rectangle {
                         Store.password-cancel();
                     } else {
                         root.osk = false;
+                        Store.osk-target = 0;
                     }
                 } else if (event.text == Key.UpArrow) {
                     Store.osk-move(0);
@@ -660,7 +792,12 @@ export component TvShell inherits Rectangle {
                 search.set-selection-offsets(search.text.character-count, search.text.character-count);
                 return accept;
             }
-            if (root.zone == 1 && !Store.details-open) {
+            if (root.zone == 1) {
+                if (Store.details-open && (event.text == Key.DownArrow || event.text == Key.Escape || event.text == Key.Back || event.text == Key.Backspace)) {
+                    // On an app's page, Down or Back returns to the page.
+                    root.zone = 0;
+                    return accept;
+                }
                 if (event.text == Key.LeftArrow) {
                     // Search is its own row under the tabs, so sideways steps over it.
                     if (root.tab != 2) {
@@ -751,6 +888,26 @@ export component TvShell inherits Rectangle {
                 } else if (event.text == Key.Escape || event.text == Key.Back || event.text == Key.Backspace) {
                     root.tab = 0;
                     root.activate-tab();
+                } else if (root.set-nav) {
+                    // In the list of sections: Up and Down along it, Right or OK into
+                    // the one pointed at.
+                    if (event.text == Key.UpArrow) {
+                        if (root.set-at == 0) {
+                            root.set-nav = false;
+                            root.enter-bar();
+                        } else {
+                            root.set-at -= 1;
+                        }
+                    } else if (event.text == Key.DownArrow) {
+                        root.set-at = min(root.set-names.length - 1, root.set-at + 1);
+                    } else if (event.text == Key.RightArrow || event.text == Key.Return || event.text == " ") {
+                        root.sys-row = root.set-starts[root.set-at];
+                        root.set-nav = false;
+                    }
+                } else if (event.text == Key.LeftArrow && root.sys-row != root.country-row) {
+                    // Left is the list of sections, on the one this setting is in.
+                    root.set-at = root.set-in;
+                    root.set-nav = true;
                 } else if (event.text == Key.UpArrow) {
                     if (root.sys-row <= 1) {
                         root.enter-bar();
@@ -759,6 +916,9 @@ export component TvShell inherits Rectangle {
                     }
                 } else if (event.text == Key.DownArrow) {
                     root.sys-row = min(root.set-last, root.sys-row + 1);
+                } else if (root.sys-row == root.country-row && (event.text == Key.LeftArrow || event.text == Key.RightArrow || event.text == Key.Return || event.text == " ")) {
+                    // A long list: Right or OK is the next country, Left the one before.
+                    Store.step-country(event.text != Key.LeftArrow);
                 } else if (event.text == Key.Return || event.text == " " || event.text == Key.LeftArrow || event.text == Key.RightArrow) {
                     // OK, Left or Right switches the focused setting.
                     if (root.sys-row == 1) {
@@ -825,6 +985,10 @@ export component TvShell inherits Rectangle {
                         Store.next-language();
                     } else if (root.sys-row == root.all-row) {
                         Store.set-show-everything(!Store.show-everything);
+                    } else if (root.sys-row == root.win-row) {
+                        Store.set-windows-apps(!Store.windows-apps);
+                    } else if (root.sys-row == root.proton-row) {
+                        Store.set-windows-proton(1 - Store.windows-proton);
                     } else if (root.sys-row == root.auto-row) {
                         Store.set-auto-update(!Store.auto-update);
                     } else if (root.sys-row >= root.src-first) {
@@ -869,6 +1033,8 @@ export component TvShell inherits Rectangle {
                         root.files = false;
                     } else if (root.reading) {
                         root.reading = false;
+                    } else if (root.writing) {
+                        root.writing = false;
                     } else {
                         Store.close-details();
                     }
@@ -937,6 +1103,28 @@ export component TvShell inherits Rectangle {
                             Store.install(root.opt - root.pre);
                         }
                     }
+                } else if (root.writing) {
+                    // Writing a review: Up and Down along the form, OK on a row to
+                    // change it, Left and Right for the stars.
+                    if (Store.review-state != 0) {
+                        if (event.text == Key.Return || event.text == " ") {
+                            root.w-ok();
+                        }
+                    } else if (event.text == Key.DownArrow) {
+                        root.w-move(1);
+                    } else if (event.text == Key.UpArrow) {
+                        root.w-move(-1);
+                    } else if (event.text == Key.RightArrow && root.w-row == 0) {
+                        root.w-stars = min(5, root.w-stars + 1);
+                    } else if (event.text == Key.LeftArrow && root.w-row == 0) {
+                        root.w-stars = max(1, root.w-stars - 1);
+                    } else if (event.text == Key.RightArrow && root.w-row == root.w-send) {
+                        root.w-row = root.w-send + 1;
+                    } else if (event.text == Key.LeftArrow && root.w-row == root.w-send + 1) {
+                        root.w-row = root.w-send;
+                    } else if (event.text == Key.Return || event.text == " ") {
+                        root.w-ok();
+                    }
                 } else if (root.reading) {
                     if (event.text == Key.DownArrow || event.text == Key.RightArrow) {
                         root.rev = min(Store.reviews.length - 1, root.rev + 1);
@@ -952,7 +1140,12 @@ export component TvShell inherits Rectangle {
                 } else if (event.text == Key.DownArrow) {
                     root.sec-down();
                 } else if (event.text == Key.UpArrow) {
-                    root.sec-up();
+                    if (root.sec == 0) {
+                        // Up from the top of the page is the top bar, as on every other page.
+                        root.enter-bar();
+                    } else {
+                        root.sec-up();
+                    }
                 } else if (root.sec == 1) {
                     // The row of pictures: sideways along it, OK for the one highlighted, large.
                     if (event.text == Key.RightArrow) {
@@ -970,12 +1163,17 @@ export component TvShell inherits Rectangle {
                     }
                 } else if (root.sec == 3) {
                     // The row of reviews: sideways along it, OK to read the one highlighted.
+                    // "Write a review" comes before the first of them.
                     if (event.text == Key.RightArrow) {
                         root.rev = min(Store.reviews.length - 1, root.rev + 1);
                     } else if (event.text == Key.LeftArrow) {
-                        root.rev = max(0, root.rev - 1);
+                        root.rev = max(root.can-review ? -1 : 0, root.rev - 1);
                     } else if (event.text == Key.Return || event.text == " ") {
-                        root.reading = true;
+                        if (root.on-write) {
+                            root.w-open();
+                        } else {
+                            root.reading = true;
+                        }
                     }
                 } else if (root.sec == 4) {
                     // The details: nothing to press.
@@ -1079,34 +1277,34 @@ export component TvShell inherits Rectangle {
                 u: root.u;
                 text: @tr("Home");
                 current: Store.page == 0 && !Store.details-open && !root.cats-open;
-                focused: root.zone == 1 && root.tab == 0 && !Store.details-open && !search.has-focus;
+                focused: root.zone == 1 && root.tab == 0 && !search.has-focus;
             }
             TvTab {
                 u: root.u;
                 text: Store.updates-count > 0 ? @tr("Library  ·  {n} update" | "Library  ·  {n} updates" % Store.updates-count) : @tr("Library");
                 current: root.on-library;
-                focused: root.zone == 1 && root.tab == 1 && !Store.details-open && !search.has-focus;
+                focused: root.zone == 1 && root.tab == 1 && !search.has-focus;
                 attention: Store.updates-count > 0;
             }
             if root.has-cats : TvTab {
                 u: root.u;
                 text: @tr("Categories");
                 current: root.cats-open && (Store.page == 0 || Store.page == 1) && !Store.details-open;
-                focused: root.zone == 1 && root.tab == 5 && !Store.details-open && !search.has-focus;
+                focused: root.zone == 1 && root.tab == 5 && !search.has-focus;
             }
             Rectangle { horizontal-stretch: 1; }
             TvTab {
                 u: root.u;
                 text: @tr("Settings");
                 current: root.on-settings;
-                focused: root.zone == 1 && root.tab == 3 && !Store.details-open && !search.has-focus;
+                focused: root.zone == 1 && root.tab == 3 && !search.has-focus;
             }
             // The device, its updates, and the way back to the desktop layout.
             TvTab {
                 u: root.u;
                 text: Store.device-name + (Store.system-state == 3 ? "  ·  " + Store.system-headline : "");
                 current: root.on-system;
-                focused: root.zone == 1 && root.tab == 4 && !Store.details-open && !search.has-focus;
+                focused: root.zone == 1 && root.tab == 4 && !search.has-focus;
                 attention: Store.system-state == 3;
             }
         }
@@ -1229,28 +1427,28 @@ export component TvShell inherits Rectangle {
                         u: root.u;
                         text: @tr("Update now");
                         primary: true;
-                        focused: root.zone == 0 && root.sys-row == 0 && root.sys-act == 0;
+                        focused: root.zone == 0 && !root.set-nav && root.sys-row == 0 && root.sys-act == 0;
                         clicked => { Store.system-update(); }
                     }
                     if root.sys-can-restart && !root.sys-working : TvButton {
                         u: root.u;
                         text: @tr("Restart now");
                         primary: true;
-                        focused: root.zone == 0 && root.sys-row == 0 && root.sys-act == 0;
+                        focused: root.zone == 0 && !root.set-nav && root.sys-row == 0 && root.sys-act == 0;
                         clicked => { Store.system-restart-now(); }
                     }
                     if Store.system-supported && !root.sys-working : TvButton {
                         u: root.u;
                         text: @tr("Check again");
                         primary: !root.sys-lead;
-                        focused: root.zone == 0 && root.sys-row == 0 && root.sys-act == (root.sys-lead ? 1 : 0);
+                        focused: root.zone == 0 && !root.set-nav && root.sys-row == 0 && root.sys-act == (root.sys-lead ? 1 : 0);
                         clicked => { Store.system-check(); }
                     }
                     TvButton {
                         u: root.u;
                         text: @tr("Desktop layout");
                         primary: false;
-                        focused: root.zone == 0 && root.sys-row == 0 && root.sys-act == root.sys-last;
+                        focused: root.zone == 0 && !root.set-nav && root.sys-row == 0 && root.sys-act == root.sys-last;
                         clicked => { Store.set-interface(1); }
                     }
                 }
@@ -1293,10 +1491,60 @@ export component TvShell inherits Rectangle {
                 x: margin;
                 y: 124 * u;
                 width: 330 * u;
-                text: @tr("Up and Down move through the list. OK changes the highlighted setting.");
+                text: @tr("Up and Down move through the list. OK changes the highlighted setting. Left is the list of sections.");
                 color: Theme.text-dim;
                 font-size: 13 * u;
                 wrap: word-wrap;
+            }
+            // The sections, to jump between: the one the highlight is in is marked.
+            VerticalLayout {
+                x: margin - 8 * u;
+                y: 190 * u;
+                width: 300 * u;
+                spacing: 4 * u;
+                alignment: start;
+                for name[i] in root.set-names : Rectangle {
+                    property <bool> pointed: root.set-nav && root.zone == 0 && i == root.set-at;
+                    property <bool> here: i == root.set-in;
+                    height: 30 * u;
+                    border-radius: 8 * u;
+                    background: self.pointed ? Theme.surface-2 : transparent;
+                    border-width: self.pointed ? 2 * u : 0;
+                    border-color: white;
+                    accessible-role: button;
+                    accessible-label: name;
+                    accessible-action-default => {
+                        root.sys-row = root.set-starts[i];
+                        root.set-nav = false;
+                    }
+                    TouchArea {
+                        clicked => {
+                            root.sys-row = root.set-starts[i];
+                            root.set-nav = false;
+                            root.zone = 0;
+                            scope.focus();
+                        }
+                    }
+                    Rectangle {
+                        x: 0;
+                        y: (parent.height - self.height) / 2;
+                        width: 3 * u;
+                        height: 16 * u;
+                        border-radius: 1.5 * u;
+                        background: parent.here ? Theme.accent : transparent;
+                    }
+                    Text {
+                        x: 12 * u;
+                        width: parent.width - 20 * u;
+                        height: parent.height;
+                        text: name;
+                        color: parent.here || parent.pointed ? Theme.text : Theme.text-dim;
+                        font-size: 14 * u;
+                        font-weight: parent.here ? 700 : 600;
+                        vertical-alignment: center;
+                        overflow: elide;
+                    }
+                }
             }
             Rectangle {
                 x: margin + 380 * u;
@@ -1317,21 +1565,21 @@ export component TvShell inherits Rectangle {
                         u: root.u;
                         label: @tr("Ratings and reviews");
                         on: Store.show-ratings;
-                        focused: root.zone == 0 && root.sys-row == 1;
+                        focused: root.zone == 0 && !root.set-nav && root.sys-row == 1;
                         clicked => { Store.set-ratings(!Store.show-ratings); }
                     }
                     TvSetting {
                         u: root.u;
                         label: @tr("Check for updates when Bilby opens");
                         on: Store.check-updates-on-start;
-                        focused: root.zone == 0 && root.sys-row == 2;
+                        focused: root.zone == 0 && !root.set-nav && root.sys-row == 2;
                         clicked => { Store.set-check-on-start(!Store.check-updates-on-start); }
                     }
                     TvSetting {
                         u: root.u;
                         label: @tr("Offer test versions of apps");
                         on: Store.include-prereleases;
-                        focused: root.zone == 0 && root.sys-row == 3;
+                        focused: root.zone == 0 && !root.set-nav && root.sys-row == 3;
                         clicked => { Store.set-prereleases(!Store.include-prereleases); }
                     }
                     TvSetting {
@@ -1339,21 +1587,21 @@ export component TvShell inherits Rectangle {
                         label: @tr("Use the desktop layout, for a mouse and keyboard");
                         value: @tr("Switch");
                         on: false;
-                        focused: root.zone == 0 && root.sys-row == 4;
+                        focused: root.zone == 0 && !root.set-nav && root.sys-row == 4;
                         clicked => { Store.set-interface(1); }
                     }
                     TvSetting {
                         u: root.u;
                         label: @tr("Recommend the apps everyone knows, on Home and in searches");
                         on: Store.show-essentials;
-                        focused: root.zone == 0 && root.sys-row == 5;
+                        focused: root.zone == 0 && !root.set-nav && root.sys-row == 5;
                         clicked => { Store.set-essentials(!Store.show-essentials); }
                     }
                     TvSetting {
                         u: root.u;
                         label: @tr("Sounds: a quiet tick as you move about");
                         on: Store.sounds;
-                        focused: root.zone == 0 && root.sys-row == 6;
+                        focused: root.zone == 0 && !root.set-nav && root.sys-row == 6;
                         clicked => { Store.set-sounds(!Store.sounds); }
                     }
                     TvSetting {
@@ -1361,7 +1609,7 @@ export component TvShell inherits Rectangle {
                         label: @tr("Kind of app to offer first when there is a choice");
                         value: Store.prefer-kind == 1 ? @tr("Flatpak") : Store.prefer-kind == 2 ? @tr("AppImage") : Store.prefer-kind == 3 ? @tr("System packages") : @tr("Automatic");
                         on: false;
-                        focused: root.zone == 0 && root.sys-row == 7;
+                        focused: root.zone == 0 && !root.set-nav && root.sys-row == 7;
                         clicked => { Store.set-prefer-kind(Store.prefer-kind >= 3 ? 0 : Store.prefer-kind + 1); }
                     }
                     Rectangle { height: 4 * u; }
@@ -1370,40 +1618,40 @@ export component TvShell inherits Rectangle {
                         u: root.u;
                         label: @tr("Family mode: nothing for adults is shown anywhere");
                         on: Store.family-mode;
-                        focused: root.zone == 0 && root.sys-row == 8;
+                        focused: root.zone == 0 && !root.set-nav && root.sys-row == 8;
                         clicked => { Store.set-family-mode(!Store.family-mode); }
                     }
                     TvSetting {
                         u: root.u;
                         label: Store.family-mode ? @tr("Adult content on Home (off in Family mode)") : @tr("Adult content on Home, covered until chosen");
                         on: Store.adult-on-home && !Store.family-mode;
-                        focused: root.zone == 0 && root.sys-row == 9;
+                        focused: root.zone == 0 && !root.set-nav && root.sys-row == 9;
                     }
                     TvSetting {
                         u: root.u;
                         label: Store.family-mode ? @tr("Adult content uncovered (off in Family mode)") : @tr("Show adult content uncovered, with no question");
                         on: Store.adult-uncovered && !Store.family-mode;
-                        focused: root.zone == 0 && root.sys-row == 10;
+                        focused: root.zone == 0 && !root.set-nav && root.sys-row == 10;
                     }
                     TvSetting {
                         u: root.u;
                         label: Store.has-pin ? @tr("A PIN guards these settings and adult content") : @tr("Set a PIN to guard these settings and adult content");
                         value: Store.has-pin ? @tr("Change") : @tr("Set a PIN");
                         on: Store.has-pin;
-                        focused: root.zone == 0 && root.sys-row == 11;
+                        focused: root.zone == 0 && !root.set-nav && root.sys-row == 11;
                     }
                     TvSetting {
                         u: root.u;
                         label: Store.has-pin ? @tr("Ask for the PIN to install or remove apps") : @tr("Ask for the PIN to install or remove apps (set a PIN first)");
                         on: Store.pin-for-installs;
-                        focused: root.zone == 0 && root.sys-row == 12;
+                        focused: root.zone == 0 && !root.set-nav && root.sys-row == 12;
                     }
                     TvSetting {
                         u: root.u;
                         label: Store.has-pin ? @tr("Remove the PIN") : @tr("No PIN is set");
                         value: Store.has-pin ? @tr("Remove") : "—";
                         on: false;
-                        focused: root.zone == 0 && root.sys-row == 13;
+                        focused: root.zone == 0 && !root.set-nav && root.sys-row == 13;
                     }
                     Rectangle { height: 4 * u; }
                     Text { text: @tr("This store"); color: Theme.text; font-size: 14 * u; font-weight: 700; }
@@ -1412,7 +1660,7 @@ export component TvShell inherits Rectangle {
                         label: Store.store-update != "" ? @tr("Bilby {0} is available. You have {1}", Store.store-update, Store.app-version) : "Bilby " + Store.app-version;
                         value: Store.store-update != "" ? @tr("Update") : @tr("Check for updates");
                         on: false;
-                        focused: root.zone == 0 && root.sys-row == 14;
+                        focused: root.zone == 0 && !root.set-nav && root.sys-row == 14;
                         clicked => { Store.check-store-update(); }
                     }
                     Rectangle { height: 4 * u; }
@@ -1422,7 +1670,7 @@ export component TvShell inherits Rectangle {
                         label: Store.has-token ? @tr("Signed in to GitHub") : Store.signin-state != 0 ? @tr("Signing in to GitHub…") : @tr("Sign in to GitHub for more searches an hour");
                         value: Store.has-token ? @tr("Sign out") : Store.signin-state != 0 ? @tr("Cancel") : @tr("Sign in");
                         on: Store.has-token;
-                        focused: root.zone == 0 && root.sys-row == 15;
+                        focused: root.zone == 0 && !root.set-nav && root.sys-row == 15;
                     }
                     // The code to enter at GitHub, on a phone or computer.
                     if Store.signin-state == 2 : VerticalLayout {
@@ -1443,14 +1691,14 @@ export component TvShell inherits Rectangle {
                         label: Store.steam-signed-in ? @tr("Signed in to Steam  ·  {}", Store.steam-summary) : Store.steam-state == 3 ? @tr("Scan the code with the Steam app on your phone") : Store.steam-state != 0 ? @tr("Sign in on Steam's page in Longboard, then share your library") : @tr("Sign in to Steam with a QR code, to see what you own");
                         value: Store.steam-state != 0 ? @tr("Cancel") : Store.steam-signed-in ? @tr("Sign out") : @tr("Show code");
                         on: Store.steam-signed-in;
-                        focused: root.zone == 0 && root.sys-row == 16;
+                        focused: root.zone == 0 && !root.set-nav && root.sys-row == 16;
                     }
                     if root.steam-rows > 1 : TvSetting {
                         u: root.u;
                         label: @tr("Or sign in to Steam in a browser (Longboard)");
                         value: @tr("Open");
                         on: false;
-                        focused: root.zone == 0 && root.sys-row == 17;
+                        focused: root.zone == 0 && !root.set-nav && root.sys-row == 17;
                     }
                     Rectangle { height: 4 * u; }
                     Text { text: @tr("Where apps come from"); color: Theme.text; font-size: 14 * u; font-weight: 700; }
@@ -1458,7 +1706,7 @@ export component TvShell inherits Rectangle {
                         u: root.u;
                         label: source.label;
                         on: source.on;
-                        focused: root.zone == 0 && root.sys-row == root.src-first + i;
+                        focused: root.zone == 0 && !root.set-nav && root.sys-row == root.src-first + i;
                         clicked => { Store.set-source(source.id, !source.on); }
                     }
                     Rectangle { height: 4 * u; }
@@ -1469,8 +1717,18 @@ export component TvShell inherits Rectangle {
                         label: @tr("Press OK for the next language");
                         value: Store.language-name;
                         on: false;
-                        focused: root.zone == 0 && root.sys-row == root.lang-row;
+                        focused: root.zone == 0 && !root.set-nav && root.sys-row == root.lang-row;
                         clicked => { Store.next-language(); }
+                    }
+                    Rectangle { height: 4 * u; }
+                    Text { text: @tr("Country for prices"); color: Theme.text; font-size: 14 * u; font-weight: 700; }
+                    TvSetting {
+                        u: root.u;
+                        label: @tr("Press Left or Right for another country");
+                        value: Store.country-name;
+                        on: false;
+                        focused: root.zone == 0 && !root.set-nav && root.sys-row == root.country-row;
+                        clicked => { Store.step-country(true); }
                     }
                     Rectangle { height: 4 * u; }
                     Text { text: @tr("Other devices"); color: Theme.text; font-size: 14 * u; font-weight: 700; }
@@ -1478,8 +1736,23 @@ export component TvShell inherits Rectangle {
                         u: root.u;
                         label: @tr("Also show apps that do not run on this device");
                         on: Store.show-everything;
-                        focused: root.zone == 0 && root.sys-row == root.all-row;
+                        focused: root.zone == 0 && !root.set-nav && root.sys-row == root.all-row;
                         clicked => { Store.set-show-everything(!Store.show-everything); }
+                    }
+                    if Store.windows-possible : TvSetting {
+                        u: root.u;
+                        label: @tr("Offer Windows apps, set up to run here through Proton");
+                        on: Store.windows-apps;
+                        focused: root.zone == 0 && !root.set-nav && root.sys-row == root.win-row;
+                        clicked => { Store.set-windows-apps(!Store.windows-apps); }
+                    }
+                    if root.proton-row > 0 : TvSetting {
+                        u: root.u;
+                        label: @tr("Proton version for Windows apps");
+                        value: Store.windows-proton == 1 ? @tr("GE-Proton") : @tr("Standard");
+                        on: false;
+                        focused: root.zone == 0 && !root.set-nav && root.sys-row == root.proton-row;
+                        clicked => { Store.set-windows-proton(1 - Store.windows-proton); }
                     }
                     Rectangle { height: 4 * u; }
                     Text { text: @tr("Updates"); color: Theme.text; font-size: 14 * u; font-weight: 700; }
@@ -1487,7 +1760,7 @@ export component TvShell inherits Rectangle {
                         u: root.u;
                         label: @tr("Update apps automatically");
                         on: Store.auto-update;
-                        focused: root.zone == 0 && root.sys-row == root.auto-row;
+                        focused: root.zone == 0 && !root.set-nav && root.sys-row == root.auto-row;
                         clicked => { Store.set-auto-update(!Store.auto-update); }
                     }
                     Rectangle { height: 8 * u; }
@@ -1697,7 +1970,7 @@ export component TvShell inherits Rectangle {
             property <length> head-h: head.preferred-height + 14 * u;
             property <length> pics-h: root.has-pics ? 156 * u : 0;
             property <length> about-h: root.has-about ? 158 * u : 0;
-            property <length> revs-h: root.has-reviews ? 176 * u : 0;
+            property <length> revs-h: root.has-reviews ? 176 * u : root.can-review ? 50 * u : 0;
             property <length> wanted: root.sec == 0 || root.files ? 0 : (root.sec == 1 ? self.head-h : root.sec == 2 ? self.head-h + self.pics-h : root.sec == 3 ? self.head-h + self.pics-h + self.about-h : self.head-h + self.pics-h + self.about-h + self.revs-h) - 56 * u;
             property <length> shift: max(0, min(self.wanted, column.preferred-height - self.height + 20 * u));
            column := VerticalLayout {
@@ -1754,7 +2027,7 @@ export component TvShell inherits Rectangle {
                         text: Store.details-error != "" ? @tr("Try again") : root.main-action;
                         progress: root.busy ? Store.install-progress : -1;
                         primary: true;
-                        focused: root.act == 0 && !root.files && !root.reading && root.sec == 0;
+                        focused: root.act == 0 && !root.files && !root.reading && root.sec == 0 && root.zone != 1;
                         clicked => {
                             root.act = 0;
                             root.press-main();
@@ -1763,7 +2036,7 @@ export component TvShell inherits Rectangle {
                     TvButton {
                         u: root.u;
                         text: Store.is-favourite ? @tr("★  In favourites") : @tr("☆  Favourite");
-                        focused: (root.act == 1 || (root.act == 0 && root.main-action == "" && Store.details-error == "")) && !root.files && !root.reading && root.sec == 0;
+                        focused: (root.act == 1 || (root.act == 0 && root.main-action == "" && Store.details-error == "")) && !root.files && !root.reading && root.sec == 0 && root.zone != 1;
                         clicked => {
                             root.act = 1;
                             Store.toggle-favourite();
@@ -1775,7 +2048,7 @@ export component TvShell inherits Rectangle {
                     if root.has-files : TvButton {
                         u: root.u;
                         text: root.choices == 0 ? @tr("Versions and files") : root.nfiles == 0 && Store.app-family.length > 0 ? @tr("Other ways to use {}", Store.app-family-name) : @tr("More choices");
-                        focused: root.act == 2 && !root.files && !root.reading && root.sec == 0;
+                        focused: root.act == 2 && !root.files && !root.reading && root.sec == 0 && root.zone != 1;
                         clicked => {
                             root.act = 2;
                             root.opt = 0;
@@ -1786,7 +2059,7 @@ export component TvShell inherits Rectangle {
                     if root.has-helper : TvButton {
                         u: root.u;
                         text: Store.helper-label;
-                        focused: root.act == root.helper-idx && !root.files && !root.reading && root.sec == 0;
+                        focused: root.act == root.helper-idx && !root.files && !root.reading && root.sec == 0 && root.zone != 1;
                         clicked => {
                             root.act = root.helper-idx;
                             Store.open(Store.helper-id);
@@ -1795,7 +2068,7 @@ export component TvShell inherits Rectangle {
                     if root.removable : TvButton {
                         u: root.u;
                         text: root.remove-armed ? @tr("Confirm") : Store.in-library ? @tr("Remove") : @tr("Uninstall");
-                        focused: root.act == root.remove-idx && !root.files && !root.reading && root.sec == 0;
+                        focused: root.act == root.remove-idx && !root.files && !root.reading && root.sec == 0 && root.zone != 1;
                         clicked => {
                             root.act = root.remove-idx;
                             if (root.remove-armed) {
@@ -1902,10 +2175,23 @@ export component TvShell inherits Rectangle {
                 }
             }
             // ---- reviews: a row of them; OK reads the highlighted one in full ----
-            if root.has-reviews && !root.files : VerticalLayout {
+            if (root.has-reviews || root.can-review) && !root.files : VerticalLayout {
                 spacing: 8 * u;
-                Text { text: @tr("Reviews") + (Store.app.rating != "" ? "   ★ " + Store.app.rating + "   " + Store.app.rating-count : ""); color: root.sec == 3 ? Theme.text : Theme.text-dim; font-size: 13 * u; font-weight: 700; }
-                Rectangle {
+                HorizontalLayout {
+                    alignment: start;
+                    spacing: 14 * u;
+                    Text { text: @tr("Reviews") + (Store.app.rating != "" ? "   ★ " + Store.app.rating + "   " + Store.app.rating-count : ""); color: root.sec == 3 ? Theme.text : Theme.text-dim; font-size: 13 * u; font-weight: 700; vertical-alignment: center; }
+                    if root.can-review : TvButton {
+                        u: root.u;
+                        text: @tr("Write a review");
+                        focused: root.on-write && !root.writing && root.zone != 1;
+                        accessible-role: button;
+                        accessible-label: self.text;
+                        accessible-action-default => { root.w-open(); }
+                        clicked => { root.w-open(); }
+                    }
+                }
+                if root.has-reviews : Rectangle {
                     height: 138 * u;
                     clip: true;
                     Rectangle {
@@ -1976,13 +2262,163 @@ export component TvShell inherits Rectangle {
           }
 
             // ---- on top of the page: a review in full, a picture large, the description opened ----
-            if root.reading || root.viewer || root.about-open : Rectangle {
+            if root.reading || root.viewer || root.about-open || root.writing : Rectangle {
                 x: 0;
                 y: 0;
                 width: parent.width;
                 height: parent.height;
                 background: Theme.bg;
                 TouchArea { }
+            }
+            // ---- writing a review: the form, and while the keyboard is up, only
+            // the words being typed, clear of the keys ----
+            if root.writing && root.osk && Store.osk-target != 0 : VerticalLayout {
+                x: margin;
+                y: 14 * u;
+                width: parent.width - 2 * margin;
+                spacing: 6 * u;
+                alignment: start;
+                Text { text: Store.osk-target == 1 ? @tr("A short title") : Store.osk-target == 2 ? @tr("What do you think of it?") : @tr("The name to show next to it"); color: Theme.text-dim; font-size: 13 * u; font-weight: 700; }
+                Rectangle {
+                    height: 150 * u;
+                    border-radius: 10 * u;
+                    background: Theme.surface-2;
+                    border-width: 2 * u;
+                    border-color: white;
+                    clip: true;
+                    accessible-role: text;
+                    accessible-label: @tr("What you have typed");
+                    Text {
+                        property <string> typed: Store.osk-target == 1 ? Store.review-title : Store.osk-target == 2 ? Store.review-text : Store.review-name;
+                        x: 12 * u;
+                        width: parent.width - 24 * u;
+                        // The end of long text stays in view: that is where the typing is.
+                        y: min(10 * u, parent.height - self.preferred-height - 10 * u);
+                        text: self.typed + "▏";
+                        color: Theme.text;
+                        font-size: 15 * u;
+                        wrap: word-wrap;
+                    }
+                }
+                Text { text: @tr("Choose done when it is typed. Back puts the keyboard away."); color: Theme.text-dim; font-size: 11 * u; }
+            }
+            if root.writing && !(root.osk && Store.osk-target != 0) : VerticalLayout {
+                x: margin;
+                y: 20 * u;
+                width: min(720 * u, parent.width - 2 * margin);
+                spacing: 7 * u;
+                alignment: start;
+                Text { text: @tr("Your review of {}", Store.app.name); color: Theme.text; font-size: 22 * u; font-weight: 800; overflow: elide; }
+                if Store.review-state == 2 : Text {
+                    text: Store.review-result;
+                    color: Theme.text;
+                    font-size: 14 * u;
+                    wrap: word-wrap;
+                    accessible-role: text;
+                    accessible-label: self.text;
+                }
+                if Store.review-state == 2 : HorizontalLayout {
+                    alignment: start;
+                    padding-top: 8 * u;
+                    TvButton { u: root.u; text: @tr("Done"); primary: true; focused: true; clicked => { root.writing = false; } }
+                }
+                if Store.review-state != 2 : TvWriteRow {
+                    u: root.u;
+                    name: @tr("Stars");
+                    value: root.w-stars == 0 ? "☆☆☆☆☆" : root.w-stars == 1 ? "★☆☆☆☆" : root.w-stars == 2 ? "★★☆☆☆" : root.w-stars == 3 ? "★★★☆☆" : root.w-stars == 4 ? "★★★★☆" : "★★★★★";
+                    hint: @tr("Left and Right to change");
+                    gold: root.w-stars > 0;
+                    focused: root.w-row == 0;
+                    accessible-label: root.w-stars == 1 ? @tr("1 star") : @tr("{} stars", root.w-stars);
+                    clicked => { root.w-row = 0; root.w-ok(); }
+                }
+                if Store.review-state != 2 : TvWriteRow {
+                    u: root.u;
+                    name: @tr("Title");
+                    value: Store.review-title;
+                    hint: @tr("Press OK to type");
+                    focused: root.w-row == 1;
+                    accessible-label: @tr("Title of your review");
+                    clicked => { root.w-row = 1; root.w-ok(); }
+                }
+                if Store.review-state != 2 : TvWriteRow {
+                    u: root.u;
+                    name: @tr("Review");
+                    value: Store.review-text;
+                    hint: @tr("Press OK to type");
+                    tall: true;
+                    focused: root.w-row == 2;
+                    accessible-label: @tr("Your review");
+                    clicked => { root.w-row = 2; root.w-ok(); }
+                }
+                if Store.review-state != 2 && Store.review-from-here : TvWriteRow {
+                    u: root.u;
+                    name: @tr("Name");
+                    value: Store.review-name;
+                    hint: @tr("Press OK to type");
+                    focused: root.w-row == 3;
+                    accessible-label: @tr("Name to show next to your review");
+                    clicked => { root.w-row = 3; root.w-ok(); }
+                }
+                if Store.review-state != 2 : Text { text: Store.review-places.length > 1 ? @tr("Leave it at:") : @tr("It goes to:"); color: Theme.text-dim; font-size: 11 * u; }
+                for place[i] in Store.review-places : Rectangle {
+                    property <bool> focused: root.w-np > 0 && root.w-row == 4 + i;
+                    visible: Store.review-state != 2;
+                    height: self.visible ? place-box.preferred-height : 0;
+                    border-radius: 8 * u;
+                    background: self.focused ? Theme.surface-2 : transparent;
+                    border-width: self.focused ? 2 * u : 0;
+                    border-color: white;
+                    accessible-role: AccessibleRole.switch;
+                    accessible-label: @tr("Leave the review at {}", place.name);
+                    accessible-checkable: root.w-np > 0;
+                    accessible-checked: place.chosen;
+                    accessible-action-default => { Store.toggle-review-place(place.id); }
+                    place-box := HorizontalLayout {
+                        width: parent.width;
+                        padding: 6 * u;
+                        spacing: 10 * u;
+                        if root.w-np > 0 : Text { text: place.chosen ? "☑" : "☐"; color: place.chosen ? Theme.accent : Theme.text-dim; font-size: 16 * u; vertical-alignment: center; }
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            spacing: 1 * u;
+                            Text { text: place.name; color: Theme.text; font-size: 12 * u; font-weight: 700; }
+                            Text { text: place.note; color: Theme.text-dim; font-size: 10 * u; wrap: word-wrap; }
+                        }
+                    }
+                }
+                if Store.review-state != 2 && Store.review-problem != "" : Text {
+                    text: Store.review-problem;
+                    color: Theme.bad;
+                    font-size: 12 * u;
+                    wrap: word-wrap;
+                    accessible-role: text;
+                    accessible-label: self.text;
+                }
+                if Store.review-state != 2 : HorizontalLayout {
+                    alignment: start;
+                    spacing: 12 * u;
+                    padding-top: 4 * u;
+                    TvButton {
+                        u: root.u;
+                        text: Store.review-state == 1 ? @tr("Sending…") : Store.review-copies && !Store.review-from-here ? @tr("Copy and open") : @tr("Send review");
+                        primary: true;
+                        focused: root.w-row == root.w-send;
+                        accessible-role: button;
+                        accessible-label: @tr("Send your review");
+                        accessible-action-default => { root.w-row = root.w-send; root.w-ok(); }
+                        clicked => { root.w-row = root.w-send; root.w-ok(); }
+                    }
+                    TvButton {
+                        u: root.u;
+                        text: @tr("Not now");
+                        focused: root.w-row == root.w-send + 1;
+                        accessible-role: button;
+                        accessible-label: @tr("Stop writing the review");
+                        accessible-action-default => { root.writing = false; }
+                        clicked => { root.writing = false; }
+                    }
+                }
             }
             if root.reading : VerticalLayout {
                 x: margin;
@@ -2383,6 +2819,14 @@ export component TvShell inherits Rectangle {
                 horizontal-alignment: center;
             }
         }
+    }
+    // Never seen: it only carries a review's words to the clipboard.
+    clip := TextInput {
+        visible: false;
+        width: 0;
+        height: 0;
+        single-line: false;
+        accessible-role: none;
     }
     if root.osk || Store.password-ask : Rectangle {
         property <length> key: 40 * u;

@@ -90,6 +90,68 @@ pub fn steam_result(page: &str, message: &str) -> Option<String> {
     Some(serde_json::json!({ "steamid": id, "owned": owned }).to_string())
 }
 
+/// GOG's sign-in page, as its own launcher opens it. Once the person has signed in,
+/// GOG sends the window to [`GOG_DONE`] with a one-time code in the address.
+pub const GOG_START: &str = "https://auth.gog.com/auth?client_id=46899977096215655&redirect_uri=https%3A%2F%2Fembed.gog.com%2Fon_login_success%3Forigin%3Dclient&response_type=code&layout=client2";
+
+/// Where GOG sends a browser that has signed in.
+pub const GOG_DONE: &str = "https://embed.gog.com/on_login_success?";
+
+/// May the sign-in window go to this address? GOG's own sites, and the "are you a
+/// robot" check its sign-in page shows.
+pub fn gog_may_visit(url: &str) -> bool {
+    if url == "about:blank" {
+        return true;
+    }
+    let Some(host) = https_host(url) else { return false };
+    let path = url.strip_prefix("https://").and_then(|rest| rest.find('/').map(|at| &rest[at..])).unwrap_or("/");
+    host == "gog.com"
+        || host.ends_with(".gog.com")
+        || host == "www.recaptcha.net"
+        || (host == "www.google.com" && path.starts_with("/recaptcha/"))
+}
+
+/// The one-time code in the address GOG sends a signed-in browser to, as one line of
+/// JSON. The code is good for a single question and only for a few minutes.
+pub fn gog_result(url: &str) -> Option<String> {
+    let query = url.strip_prefix(GOG_DONE)?;
+    let query = query.split('#').next()?;
+    let code = query.split('&').find_map(|pair| pair.strip_prefix("code="))?;
+    let plain = |c: char| c.is_ascii_alphanumeric() || c == '-' || c == '_';
+    ((8..=400).contains(&code.len()) && code.chars().all(plain))
+        .then(|| serde_json::json!({ "code": code }).to_string())
+}
+
+/// Whose sign-in page the window shows.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Site {
+    Steam,
+    Gog,
+}
+
+impl Site {
+    fn name(self) -> &'static str {
+        match self {
+            Site::Steam => "Steam",
+            Site::Gog => "GOG",
+        }
+    }
+
+    fn start(self) -> &'static str {
+        match self {
+            Site::Steam => STEAM_START,
+            Site::Gog => GOG_START,
+        }
+    }
+
+    fn may_visit(self, url: &str) -> bool {
+        match self {
+            Site::Steam => steam_may_visit(url),
+            Site::Gog => gog_may_visit(url),
+        }
+    }
+}
+
 enum Happened {
     Done(String),
     At(String),
@@ -99,6 +161,13 @@ enum Happened {
 /// when the list was handed over, 3 when the person closed the window, 2 when the
 /// window could not be made.
 pub fn run_steam(data_dir: &Path) -> ! {
+    run(Site::Steam, data_dir)
+}
+
+/// Show a store's sign-in page and wait. Prints what the store handed over and ends
+/// the program: with 0 when it did, 3 when the person closed the window, 2 when the
+/// window could not be made.
+pub fn run(site: Site, data_dir: &Path) -> ! {
     use tao::dpi::LogicalSize;
     use tao::event::{Event, WindowEvent};
     use tao::event_loop::{ControlFlow, EventLoopBuilder};
@@ -107,7 +176,7 @@ pub fn run_steam(data_dir: &Path) -> ! {
 
     let event_loop = EventLoopBuilder::<Happened>::with_user_event().build();
     let window = match WindowBuilder::new()
-        .with_title("Sign in to Steam")
+        .with_title(format!("Sign in to {}", site.name()))
         .with_inner_size(LogicalSize::new(520.0, 760.0))
         .build(&event_loop)
     {
@@ -120,12 +189,23 @@ pub fn run_steam(data_dir: &Path) -> ! {
 
     let mut context = WebContext::new(Some(data_dir.to_path_buf()));
     let done = event_loop.create_proxy();
+    let arrived = event_loop.create_proxy();
     let moved = event_loop.create_proxy();
     let builder = WebViewBuilder::new_with_web_context(&mut context)
-        .with_url(STEAM_START)
-        .with_initialization_script(STEAM_SCRIPT)
+        .with_url(site.start())
+        // Only Steam's pages are asked anything; GOG's answer is the address it sends
+        // the window to.
+        .with_initialization_script(if site == Site::Steam { STEAM_SCRIPT } else { "" })
         .with_devtools(false)
-        .with_navigation_handler(|url| steam_may_visit(&url))
+        .with_navigation_handler(move |url| {
+            if site == Site::Gog {
+                if let Some(result) = gog_result(&url) {
+                    let _ = arrived.send_event(Happened::Done(result));
+                    return false;
+                }
+            }
+            site.may_visit(&url)
+        })
         .with_new_window_req_handler(|_, _| NewWindowResponse::Deny)
         .with_on_page_load_handler(move |event, url| {
             if matches!(event, PageLoadEvent::Finished) {
@@ -133,6 +213,9 @@ pub fn run_steam(data_dir: &Path) -> ! {
             }
         })
         .with_ipc_handler(move |request| {
+            if site != Site::Steam {
+                return;
+            }
             if let Some(result) = steam_result(&request.uri().to_string(), request.body()) {
                 let _ = done.send_event(Happened::Done(result));
             }
@@ -171,9 +254,9 @@ pub fn run_steam(data_dir: &Path) -> ! {
             Event::UserEvent(Happened::At(url)) => {
                 let host = https_host(&url).unwrap_or_default();
                 window.set_title(&if host.is_empty() {
-                    "Sign in to Steam".to_string()
+                    format!("Sign in to {}", site.name())
                 } else {
-                    format!("Sign in to Steam  ·  {host}")
+                    format!("Sign in to {}  ·  {host}", site.name())
                 });
             }
             Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => std::process::exit(3),
@@ -182,13 +265,15 @@ pub fn run_steam(data_dir: &Path) -> ! {
     })
 }
 
-/// The command line of the sign-in window: `steam --data-dir <dir>`. Ends the program.
+/// The command line of the sign-in window: `steam --data-dir <dir>`, or `gog` in
+/// place of `steam`. Ends the program.
 pub fn main_with(args: &[String]) -> ! {
     let dir = args.iter().position(|a| a == "--data-dir").and_then(|at| args.get(at + 1));
     match (args.first().map(String::as_str), dir) {
-        (Some("steam"), Some(dir)) => run_steam(Path::new(dir)),
+        (Some("steam"), Some(dir)) => run(Site::Steam, Path::new(dir)),
+        (Some("gog"), Some(dir)) => run(Site::Gog, Path::new(dir)),
         _ => {
-            eprintln!("usage: steam --data-dir <dir>");
+            eprintln!("usage: steam|gog --data-dir <dir>");
             std::process::exit(2);
         }
     }
@@ -224,6 +309,34 @@ mod tests {
         ] {
             assert!(!steam_may_visit(no), "{no}");
         }
+    }
+
+    #[test]
+    fn the_gog_window_only_goes_to_gog_and_hands_over_only_the_code() {
+        for ok in [
+            GOG_START,
+            "https://login.gog.com/login",
+            "https://www.gog.com/",
+            "https://www.recaptcha.net/recaptcha/api2/anchor",
+        ] {
+            assert!(gog_may_visit(ok), "{ok}");
+        }
+        for no in [
+            "http://login.gog.com/",
+            "https://gog.com.example.org/",
+            "https://evilgog.com/",
+            "https://login.gog.com@example.org/",
+        ] {
+            assert!(!gog_may_visit(no), "{no}");
+        }
+        assert_eq!(
+            gog_result("https://embed.gog.com/on_login_success?origin=client&code=Abc_123-xyz").unwrap(),
+            r#"{"code":"Abc_123-xyz"}"#
+        );
+        assert!(gog_result("https://embed.gog.com/on_login_success?origin=client").is_none(), "no code");
+        assert!(gog_result("https://embed.gog.com.example.org/on_login_success?code=Abc_123-xyz").is_none());
+        assert!(gog_result("https://example.org/?https://embed.gog.com/on_login_success?code=Abc_123-xyz").is_none());
+        assert!(gog_result("https://embed.gog.com/on_login_success?code=a%22b%3Cscript%3E").is_none(), "nothing odd");
     }
 
     #[test]

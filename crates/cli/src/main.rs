@@ -74,12 +74,22 @@ fn main() -> ExitCode {
             _ => i += 1,
         }
     }
-    let platform = platform.unwrap_or_else(Platform::detect);
+    let pretending = platform.is_some();
+    let mut platform = platform.unwrap_or_else(Platform::detect);
     let dirs = Dirs::for_current_user();
     let state_path = dirs.config.join(if demo { "demo-state.json" } else { "state.json" });
     let saved = State::load(&state_path);
+    // Windows programs, set up to run here through Proton: on the real device only.
+    if !pretending && !demo {
+        platform.offer_windows(!saved.settings.hide_windows_apps);
+    }
     let token = std::env::var("GITHUB_TOKEN").ok().or(Some(saved.settings.github_token.clone()));
-    let catalog = if demo { Catalog::demo(platform) } else { Catalog::live(platform, token, dirs.cache.clone()) };
+    // Prices are those of the country in the settings, else the one the system is set to.
+    let country = bilby_core::region::country(&saved.settings.country)
+        .or_else(bilby_core::region::from_env)
+        .unwrap_or_else(|| "US".to_string());
+    let catalog =
+        if demo { Catalog::demo(platform) } else { Catalog::live_in(platform, token, dirs.cache.clone(), &country) };
     let mut catalog = catalog;
     catalog.include_prereleases = saved.settings.include_prereleases;
 

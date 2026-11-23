@@ -16,6 +16,14 @@ msgctxt "FamilyRow"
 msgid ", unofficial"
 msgstr ", अनौपचारिक"
 
+msgctxt "ReviewForm"
+msgid "1 star"
+msgstr "1 स्टार"
+
+msgctxt "TvShell"
+msgid "1 star"
+msgstr "1 स्टार"
+
 msgctxt "TvShell"
 msgid "A PIN guards these settings and adult content"
 msgstr "PIN इन सेटिंग्स और वयस्क सामग्री की सुरक्षा करता है"
@@ -31,6 +39,14 @@ msgstr "हर फ़ाइल लाने से पहले फ़ोल्�
 msgctxt "TvQuestion"
 msgid "A game controller is connected. Bilby has a layout with large text for the sofa, driven with the arrow keys of a remote or keyboard. You can change this later in Settings."
 msgstr "गेम कंट्रोलर जुड़ा है। Bilby में सोफ़े से इस्तेमाल के लिए बड़े अक्षरों वाला लेआउट है, जो रिमोट या कीबोर्ड के तीर बटनों से चलता है। इसे बाद में सेटिंग्स में बदल सकते हैं।"
+
+msgctxt "ReviewForm"
+msgid "A short title"
+msgstr "छोटा सा शीर्षक"
+
+msgctxt "TvShell"
+msgid "A short title"
+msgstr "छोटा सा शीर्षक"
 
 msgctxt "DetailsBody"
 msgid "About"
@@ -59,6 +75,10 @@ msgstr "इस वेबसाइट के बारे में"
 msgctxt "WhatsNew"
 msgid "About this website"
 msgstr "इस वेबसाइट के बारे में"
+
+msgctxt "SettingsBody"
+msgid "Accounts"
+msgstr "खाते"
 
 msgctxt "TvShell"
 msgid "Accounts"
@@ -181,6 +201,10 @@ msgid "Ask where to save each download"
 msgstr "हर डाउनलोड के लिए पूछें कि कहाँ सेव करना है"
 
 msgctxt "SettingsBody"
+msgid "Asks the system for its full speed while a Windows app runs."
+msgstr "Windows ऐप चलते समय सिस्टम से उसकी पूरी रफ़्तार माँगता है।"
+
+msgctxt "SettingsBody"
 msgid "Automatic"
 msgstr "अपने-आप"
 
@@ -235,6 +259,10 @@ msgstr "Bilby आपके ऐप्स के अपडेट मिलते �
 msgctxt "SettingsBody"
 msgid "Bilby keeps a short list, chosen by people, of the apps and websites nearly everyone looks for: a browser, a video player, the big names. On, the home page starts with them in the version for this device, and they are placed a little higher in a search. Off, you get only what the sources' own figures say."
 msgstr "Bilby के पास लोगों की चुनी हुई एक छोटी सूची है, उन ऐप और वेबसाइटों की जिन्हें लगभग हर कोई ढूँढता है: ब्राउज़र, वीडियो प्लेयर, बड़े नाम। चालू होने पर होम पेज उन्हीं से शुरू होता है, इस डिवाइस के वर्शन में, और खोज में वे थोड़ा ऊपर दिखते हैं। बंद होने पर आपको सिर्फ़ वही मिलता है जो स्रोतों के अपने आँकड़े बताते हैं।"
+
+msgctxt "SettingsBody"
+msgid "Bilby sets Windows programs up to run here through Proton, each in a folder of its own. Most programs work, not all. The first one needs about 700 MB of downloads."
+msgstr "Bilby Windows प्रोग्रामों को Proton के ज़रिए यहाँ चलने के लिए सेट करता है, हर एक अपने फ़ोल्डर में। ज़्यादातर चलते हैं, सब नहीं। पहले के लिए लगभग 700 MB डाउनलोड चाहिए।"
 
 msgctxt "TvShell"
 msgid "Bilby {0} is available. You have {1}"
@@ -377,6 +405,10 @@ msgid "Choose a version"
 msgstr "वर्शन चुनें"
 
 msgctxt "TvShell"
+msgid "Choose done when it is typed. Back puts the keyboard away."
+msgstr "लिख लेने पर «हो गया» चुनें। वापस दबाने से कीबोर्ड हट जाता है।"
+
+msgctxt "TvShell"
 msgid "Choose enter when it is typed. Back cancels."
 msgstr "टाइप हो जाने पर “एंटर” चुनें। वापस बटन से रद्द होता है।"
 
@@ -432,6 +464,14 @@ msgctxt "CommandBox"
 msgid "Copy"
 msgstr "कॉपी करें"
 
+msgctxt "ReviewForm"
+msgid "Copy and open"
+msgstr "कॉपी करें और खोलें"
+
+msgctxt "TvShell"
+msgid "Copy and open"
+msgstr "कॉपी करें और खोलें"
+
 msgctxt "CommandBox"
 msgid "Copy command"
 msgstr "कमांड कॉपी करें"
@@ -439,6 +479,14 @@ msgstr "कमांड कॉपी करें"
 msgctxt "DetailsBody"
 msgid "Couldn't load this app"
 msgstr "यह ऐप लोड नहीं हो सका"
+
+msgctxt "SettingsBody"
+msgid "Country for prices"
+msgstr "कीमतों के लिए देश"
+
+msgctxt "TvShell"
+msgid "Country for prices"
+msgstr "कीमतों के लिए देश"
 
 msgctxt "SettingsBody"
 msgid "Dark"
@@ -491,6 +539,10 @@ msgstr "खोजें और जानें"
 msgctxt "MobileShell"
 msgid "Discover"
 msgstr "खोजें और जानें"
+
+msgctxt "TvShell"
+msgid "Done"
+msgstr "हो गया"
 
 msgctxt "DetailsBody"
 msgid "Download"
@@ -549,6 +601,14 @@ msgid "Everything works without signing in, but GitHub then allows only 60 reque
 msgstr "साइन इन किए बिना भी सब कुछ चलता है, पर तब GitHub आपके पूरे नेटवर्क के लिए घंटे में सिर्फ़ 60 अनुरोध देता है, जो कुछ ही खोजों में खत्म हो सकते हैं। साइन इन करने पर यह 5,000 हो जाता है। Bilby आपके खाते की कोई पहुँच नहीं माँगता।"
 
 msgctxt "SettingsBody"
+msgid "Family"
+msgstr "परिवार"
+
+msgctxt "TvShell"
+msgid "Family"
+msgstr "परिवार"
+
+msgctxt "SettingsBody"
 msgid "Family and adult content"
 msgstr "फ़ैमिली और वयस्क सामग्री"
 
@@ -600,6 +660,10 @@ msgctxt "SettingsBody"
 msgid "Four digits. With a PIN set, it is asked for to change anything in this card and to open adult content, in place of the question about being an adult."
 msgstr "चार अंक। PIN सेट होने पर इस कार्ड में कुछ भी बदलने और वयस्क सामग्री खोलने के लिए यही माँगा जाता है, वयस्क होने के सवाल की जगह।"
 
+msgctxt "SettingsBody"
+msgid "Frames a second and temperatures, drawn over the app by MangoHud."
+msgstr "फ़्रेम प्रति सेकंड और तापमान, जिन्हें MangoHud ऐप के ऊपर दिखाता है।"
+
 msgctxt "DetailsBody"
 msgid "From"
 msgstr "स्रोत"
@@ -607,6 +671,22 @@ msgstr "स्रोत"
 msgctxt "TvShell"
 msgid "From"
 msgstr "स्रोत"
+
+msgctxt "SettingsBody"
+msgid "GE-Proton"
+msgstr "GE-Proton"
+
+msgctxt "TvShell"
+msgid "GE-Proton"
+msgstr "GE-Proton"
+
+msgctxt "SettingsBody"
+msgid "GOG"
+msgstr "GOG"
+
+msgctxt "SettingsBody"
+msgid "General"
+msgstr "सामान्य"
 
 msgctxt "TvShell"
 msgid "General"
@@ -645,6 +725,10 @@ msgstr[1] "अन्य डिवाइस की {n} फ़ाइलें छ�
 msgctxt "TvShell"
 msgid "Home"
 msgstr "होम"
+
+msgctxt "SettingsBody"
+msgid "How Windows apps run"
+msgstr "Windows ऐप कैसे चलते हैं"
 
 msgctxt "DetailsBody"
 msgid "In your favourites"
@@ -734,6 +818,14 @@ msgctxt "TvShell"
 msgid "Installing updates"
 msgstr "अपडेट इंस्टॉल हो रहे हैं"
 
+msgctxt "ReviewForm"
+msgid "It goes to:"
+msgstr "यह यहाँ जाती है:"
+
+msgctxt "TvShell"
+msgid "It goes to:"
+msgstr "यह यहाँ जाती है:"
+
 msgctxt "SettingsBody"
 msgid "Keep Bilby in the system tray when its window is closed"
 msgstr "विंडो बंद होने पर Bilby को सिस्टम ट्रे में रखें"
@@ -762,6 +854,10 @@ msgctxt "TvShell"
 msgid "Language"
 msgstr "भाषा"
 
+msgctxt "TvShell"
+msgid "Language and country"
+msgstr "भाषा और देश"
+
 msgctxt "LibraryBody"
 msgid "Last checked {}"
 msgstr "पिछली जाँच {}"
@@ -769,6 +865,26 @@ msgstr "पिछली जाँच {}"
 msgctxt "SettingsBody"
 msgid "Layout"
 msgstr "लेआउट"
+
+msgctxt "ReviewForm"
+msgid "Leave it at:"
+msgstr "इसे यहाँ छोड़ें:"
+
+msgctxt "TvShell"
+msgid "Leave it at:"
+msgstr "इसे यहाँ छोड़ें:"
+
+msgctxt "ReviewForm"
+msgid "Leave the review at {}"
+msgstr "समीक्षा यहाँ छोड़ें: {}"
+
+msgctxt "TvShell"
+msgid "Leave the review at {}"
+msgstr "समीक्षा यहाँ छोड़ें: {}"
+
+msgctxt "TvShell"
+msgid "Left and Right to change"
+msgstr "बदलने के लिए बाएँ और दाएँ दबाएँ"
 
 msgctxt "DesktopShell"
 msgid "Library"
@@ -820,6 +936,26 @@ msgctxt "TvShell"
 msgid "More choices"
 msgstr "और विकल्प"
 
+msgctxt "TvShell"
+msgid "Name"
+msgstr "नाम"
+
+msgctxt "ReviewForm"
+msgid "Name to show next to your review"
+msgstr "आपकी समीक्षा के साथ दिखने वाला नाम"
+
+msgctxt "TvShell"
+msgid "Name to show next to your review"
+msgstr "आपकी समीक्षा के साथ दिखने वाला नाम"
+
+msgctxt "SettingsBody"
+msgid "Needs GameMode, which is not on this device. Install it and this starts working."
+msgstr "इसके लिए GameMode चाहिए, जो इस डिवाइस पर नहीं है। उसे इंस्टॉल करें और यह काम करने लगेगा।"
+
+msgctxt "SettingsBody"
+msgid "Needs MangoHud, which is not on this device. Install it and this starts working."
+msgstr "इसके लिए MangoHud चाहिए, जो इस डिवाइस पर नहीं है। उसे इंस्टॉल करें और यह काम करने लगेगा।"
+
 msgctxt "GateOverlay"
 msgid "No"
 msgstr "नहीं"
@@ -848,6 +984,14 @@ msgctxt "AppTile"
 msgid "Not for this device"
 msgstr "इस डिवाइस के लिए नहीं"
 
+msgctxt "ReviewForm"
+msgid "Not now"
+msgstr "अभी नहीं"
+
+msgctxt "TvShell"
+msgid "Not now"
+msgstr "अभी नहीं"
+
 msgctxt "DesktopShell"
 msgid "Nothing featured for this device yet"
 msgstr "इस डिवाइस के लिए अभी कुछ चुनिंदा नहीं है"
@@ -864,6 +1008,10 @@ msgctxt "TvShell"
 msgid "Nothing for this TV yet. Press Up to search."
 msgstr "इस TV के लिए अभी कुछ नहीं है। खोजने के लिए ऊपर दबाएँ।"
 
+msgctxt "SettingsBody"
+msgid "Off"
+msgstr "बंद"
+
 msgctxt "TvSetting"
 msgid "Off"
 msgstr "बंद"
@@ -877,6 +1025,14 @@ msgid "Off, adult things are only ever found by searching. On, they may also app
 msgstr "बंद होने पर वयस्क चीज़ें सिर्फ़ खोजने पर मिलती हैं। चालू होने पर वे होम पेज पर भी दिख सकती हैं, बाकी जगहों की तरह ढकी हुई।"
 
 msgctxt "SettingsBody"
+msgid "Offer Windows apps"
+msgstr "Windows ऐप दिखाएँ"
+
+msgctxt "TvShell"
+msgid "Offer Windows apps, set up to run here through Proton"
+msgstr "Windows ऐप दिखाएँ, जो Proton के ज़रिए यहाँ चलने के लिए सेट किए जाते हैं"
+
+msgctxt "SettingsBody"
 msgid "Offer betas and release candidates as soon as they are published. They may be unstable."
 msgstr "बीटा और रिलीज़ कैंडिडेट जारी होते ही दिखाएँ। ये अस्थिर हो सकते हैं।"
 
@@ -887,6 +1043,10 @@ msgstr "ऐप के टेस्ट वर्शन दिखाएँ"
 msgctxt "FamilyRow"
 msgid "Official"
 msgstr "आधिकारिक"
+
+msgctxt "SettingsBody"
+msgid "On"
+msgstr "चालू"
 
 msgctxt "TvSetting"
 msgid "On"
@@ -927,6 +1087,10 @@ msgstr "डाउनलोड फ़ोल्डर खोलें"
 msgctxt "SettingsBody"
 msgid "Open folder"
 msgstr "फ़ोल्डर खोलें"
+
+msgctxt "SettingsBody"
+msgid "Open its folder"
+msgstr "इसका फ़ोल्डर खोलें"
 
 msgctxt "TvShell"
 msgid "Open link {}"
@@ -988,6 +1152,10 @@ msgctxt "SettingsBody"
 msgid "Paste a token"
 msgstr "टोकन पेस्ट करें"
 
+msgctxt "SettingsBody"
+msgid "Performance figures"
+msgstr "प्रदर्शन के आँकड़े"
+
 msgctxt "TvShell"
 msgid "Pick letters, then choose search"
 msgstr "अक्षर चुनें, फिर खोजें चुनें"
@@ -1025,6 +1193,10 @@ msgid "Press Back to stop."
 msgstr "रोकने के लिए वापस दबाएँ।"
 
 msgctxt "TvShell"
+msgid "Press Left or Right for another country"
+msgstr "दूसरे देश के लिए बायाँ या दायाँ दबाएँ"
+
+msgctxt "TvShell"
 msgid "Press OK again to remove {} from this TV"
 msgstr "{} को इस TV से हटाने के लिए फिर से OK दबाएँ"
 
@@ -1035,6 +1207,10 @@ msgstr "कीबोर्ड के लिए OK दबाएँ"
 msgctxt "TvShell"
 msgid "Press OK for the next language"
 msgstr "अगली भाषा के लिए OK दबाएँ"
+
+msgctxt "TvShell"
+msgid "Press OK to type"
+msgstr "लिखने के लिए OK दबाएँ"
 
 msgctxt "DetailsBody"
 msgid "Price"
@@ -1047,6 +1223,14 @@ msgstr "कीमत"
 msgctxt "DetailsBody"
 msgid "Project page"
 msgstr "प्रोजेक्ट पेज"
+
+msgctxt "SettingsBody"
+msgid "Proton version"
+msgstr "Proton संस्करण"
+
+msgctxt "TvShell"
+msgid "Proton version for Windows apps"
+msgstr "Windows ऐप के लिए Proton संस्करण"
 
 msgctxt "SettingsBody"
 msgid "QR code to scan with the Steam app"
@@ -1197,6 +1381,10 @@ msgid "Results"
 msgstr "नतीजे"
 
 msgctxt "TvShell"
+msgid "Review"
+msgstr "समीक्षा"
+
+msgctxt "TvShell"
 msgid "Review {0} of {1}"
 msgstr "समीक्षा {1} में से {0}"
 
@@ -1223,6 +1411,10 @@ msgstr "समीक्षाएँ दूसरे लोगों ने ल�
 msgctxt "TvShell"
 msgid "Reviews are written by other people and come from the ratings service the GNOME and KDE app stores use."
 msgstr "समीक्षाएँ दूसरे लोगों ने लिखी हैं और उसी रेटिंग सेवा से आती हैं जिसे GNOME और KDE के ऐप स्टोर इस्तेमाल करते हैं।"
+
+msgctxt "SettingsBody"
+msgid "Same as the others"
+msgstr "बाक़ियों जैसा"
 
 msgctxt "SettingsBody"
 msgid "Save"
@@ -1312,6 +1504,26 @@ msgctxt "TvShell"
 msgid "Searching…"
 msgstr "खोज हो रही है…"
 
+msgctxt "ReviewForm"
+msgid "Send review"
+msgstr "समीक्षा भेजें"
+
+msgctxt "TvShell"
+msgid "Send review"
+msgstr "समीक्षा भेजें"
+
+msgctxt "ReviewForm"
+msgid "Send your review"
+msgstr "अपनी समीक्षा भेजें"
+
+msgctxt "TvShell"
+msgid "Send your review"
+msgstr "अपनी समीक्षा भेजें"
+
+msgctxt "TvShell"
+msgid "Sending…"
+msgstr "भेजा जा रहा है…"
+
 msgctxt "SettingsBody"
 msgid "Set a PIN"
 msgstr "PIN सेट करें"
@@ -1397,6 +1609,10 @@ msgid "Show less of {}"
 msgstr "{} कम दिखाएँ"
 
 msgctxt "SettingsBody"
+msgid "Show performance figures"
+msgstr "प्रदर्शन के आँकड़े दिखाएँ"
+
+msgctxt "SettingsBody"
 msgid "Show ratings and reviews"
 msgstr "रेटिंग और समीक्षाएँ दिखाएँ"
 
@@ -1423,6 +1639,10 @@ msgid "Sign in in a browser"
 msgstr "ब्राउज़र में साइन इन करें"
 
 msgctxt "SettingsBody"
+msgid "Sign in on GOG's page in the window that opened. Close it to stop."
+msgstr "जो विंडो खुली है उसमें GOG के पेज पर साइन इन करें। रोकने के लिए उसे बंद करें।"
+
+msgctxt "SettingsBody"
 msgid "Sign in on Steam's page in Longboard, then choose to share your library."
 msgstr "Longboard में Steam के पेज पर साइन इन करें, फिर अपनी लाइब्रेरी शेयर करना चुनें।"
 
@@ -1433,6 +1653,10 @@ msgstr "Longboard में Steam के पेज पर साइन इन �
 msgctxt "SettingsBody"
 msgid "Sign in on Steam's page in the window that opened. Close it to stop."
 msgstr "जो विंडो खुली है उसमें Steam के पेज पर साइन इन करें। रोकने के लिए उसे बंद करें।"
+
+msgctxt "SettingsBody"
+msgid "Sign in to GOG"
+msgstr "GOG में साइन इन करें"
 
 msgctxt "TvShell"
 msgid "Sign in to GitHub for more searches an hour"
@@ -1455,6 +1679,10 @@ msgid "Sign in to Steam with a QR code, to see what you own"
 msgstr "अपने गेम देखने के लिए QR कोड से Steam में साइन इन करें"
 
 msgctxt "SettingsBody"
+msgid "Sign in to see which GOG games you already own. GOG's own sign-in page opens in a small window; Bilby asks GOG once for the list and keeps only that, on this device."
+msgstr "साइन इन करके देखें कि GOG के कौन से गेम आपके पास पहले से हैं। GOG का अपना साइन-इन पेज एक छोटी विंडो में खुलता है; Bilby GOG से एक बार सूची माँगता है और सिर्फ़ वही रखता है, इसी डिवाइस पर।"
+
+msgctxt "SettingsBody"
 msgid "Sign in to see which Steam games you already own. Bilby keeps only the list of what you own, on this device. Choose how:"
 msgstr "साइन इन करके देखें कि कौन-से Steam गेम पहले से आपके पास हैं। Bilby सिर्फ़ आपके गेम की सूची रखता है, इसी डिवाइस पर। तरीका चुनें:"
 
@@ -1473,6 +1701,10 @@ msgstr "साइन आउट करें"
 msgctxt "TvShell"
 msgid "Sign out"
 msgstr "साइन आउट करें"
+
+msgctxt "SettingsBody"
+msgid "Sign out of GOG"
+msgstr "GOG से साइन आउट करें"
 
 msgctxt "SettingsBody"
 msgid "Sign out of GitHub"
@@ -1497,6 +1729,10 @@ msgstr "GitHub में साइन इन है"
 msgctxt "TvShell"
 msgid "Signed in to Steam  ·  {}"
 msgstr "Steam में साइन इन है  ·  {}"
+
+msgctxt "SettingsBody"
+msgid "Signed in. Bilby knows {} in your GOG library and marks them Owned."
+msgstr "साइन इन हो गया। Bilby आपकी GOG लाइब्रेरी के {} जानता है और उन पर “आपके पास है” लगाता है।"
 
 msgctxt "SettingsBody"
 msgid "Signed in. Bilby knows {} in your Steam library and marks them Owned."
@@ -1539,6 +1775,22 @@ msgid "Sounds: a quiet tick or pop as you move about and press things."
 msgstr "आवाज़ें: इधर-उधर जाने और कुछ दबाने पर हल्की टिक या पॉप।"
 
 msgctxt "SettingsBody"
+msgid "Standard"
+msgstr "मानक"
+
+msgctxt "TvShell"
+msgid "Standard"
+msgstr "मानक"
+
+msgctxt "SettingsBody"
+msgid "Standard follows Valve's own Proton and is the steady choice. GE-Proton is a community build with newer fixes, which some games need. Either is fetched the first time it is used."
+msgstr "मानक Valve के अपने Proton पर चलता है और स्थिर विकल्प है। GE-Proton समुदाय का बनाया संस्करण है जिसमें नए सुधार हैं, जिनकी कुछ गेम को ज़रूरत होती है। दोनों में से जो भी हो, पहली बार इस्तेमाल पर लाया जाता है।"
+
+msgctxt "TvShell"
+msgid "Stars"
+msgstr "सितारे"
+
+msgctxt "SettingsBody"
 msgid "Steam"
 msgstr "Steam"
 
@@ -1555,12 +1807,40 @@ msgid "Stop waiting"
 msgstr "इंतज़ार बंद करें"
 
 msgctxt "SettingsBody"
+msgid "Stop waiting for GOG"
+msgstr "GOG का इंतज़ार बंद करें"
+
+msgctxt "SettingsBody"
 msgid "Stop waiting for Steam"
 msgstr "Steam का इंतज़ार बंद करें"
+
+msgctxt "ReviewForm"
+msgid "Stop writing the review"
+msgstr "समीक्षा लिखना बंद करें"
+
+msgctxt "TvShell"
+msgid "Stop writing the review"
+msgstr "समीक्षा लिखना बंद करें"
 
 msgctxt "SettingsBody"
 msgid "Storage"
 msgstr "स्टोरेज"
+
+msgctxt "SettingsBody"
+msgid "Storage and about"
+msgstr "स्टोरेज और जानकारी"
+
+msgctxt "SettingsBody"
+msgid "Stores"
+msgstr "स्टोर"
+
+msgctxt "TvShell"
+msgid "Stores"
+msgstr "स्टोर"
+
+msgctxt "SettingsBody"
+msgid "Stores are asked for this country's prices, in its own money."
+msgstr "स्टोर से इसी देश की कीमतें, उसकी अपनी मुद्रा में, पूछी जाती हैं।"
 
 msgctxt "TvShell"
 msgid "Switch"
@@ -1610,9 +1890,21 @@ msgctxt "SettingsBody"
 msgid "The code refreshes by itself."
 msgstr "कोड अपने-आप रीफ़्रेश होता है।"
 
+msgctxt "ReviewForm"
+msgid "The name to show next to it"
+msgstr "इसके साथ दिखने वाला नाम"
+
+msgctxt "TvShell"
+msgid "The name to show next to it"
+msgstr "इसके साथ दिखने वाला नाम"
+
 msgctxt "SettingsBody"
 msgid "The store only lists apps with a file that can be installed here. This is what it detected."
 msgstr "स्टोर सिर्फ़ वही ऐप दिखाता है जिनकी कोई फ़ाइल यहाँ इंस्टॉल हो सकती है। इसने यह पहचाना है।"
+
+msgctxt "SettingsBody"
+msgid "These apply to every Windows app, unless an app below says otherwise."
+msgstr "ये हर Windows ऐप पर लागू होते हैं, जब तक नीचे कोई ऐप कुछ और न कहे।"
 
 msgctxt "SettingsBody"
 msgid "They come from the service the GNOME and KDE app stores use (odrs.gnome.org). Star ratings arrive as one file a day for every app. Written reviews are asked for when you open the page of an app that has them, which tells that service which app it was. Nothing that identifies you is sent."
@@ -1637,6 +1929,18 @@ msgstr "इससे ऐप सिर्फ़ यहाँ से भुला�
 msgctxt "TvShell"
 msgid "This store"
 msgstr "यह स्टोर"
+
+msgctxt "TvShell"
+msgid "Title"
+msgstr "शीर्षक"
+
+msgctxt "ReviewForm"
+msgid "Title of your review"
+msgstr "आपकी समीक्षा का शीर्षक"
+
+msgctxt "TvShell"
+msgid "Title of your review"
+msgstr "आपकी समीक्षा का शीर्षक"
 
 msgctxt "DesktopShell"
 msgid "Try a different name, or check the spelling. Projects without a file for {} are left out."
@@ -1679,8 +1983,8 @@ msgid "Unofficial"
 msgstr "अनौपचारिक"
 
 msgctxt "TvShell"
-msgid "Up and Down move through the list. OK changes the highlighted setting."
-msgstr "ऊपर और नीचे से सूची में चलें। OK से चुनी हुई सेटिंग बदलती है।"
+msgid "Up and Down move through the list. OK changes the highlighted setting. Left is the list of sections."
+msgstr "ऊपर और नीचे से सूची में चलें। OK हाइलाइट की गई सेटिंग बदलता है। बायाँ अनुभागों की सूची है।"
 
 msgctxt "AppRow"
 msgid "Update"
@@ -1778,6 +2082,10 @@ msgctxt "LibraryItem"
 msgid "Updating…"
 msgstr "अपडेट हो रहा है…"
 
+msgctxt "SettingsBody"
+msgid "Use GameMode"
+msgstr "GameMode इस्तेमाल करें"
+
 msgctxt "TvQuestion"
 msgid "Use the TV layout"
 msgstr "TV लेआउट इस्तेमाल करें"
@@ -1866,6 +2174,14 @@ msgctxt "Welcome"
 msgid "Welcome to Bilby"
 msgstr "Bilby में आपका स्वागत है"
 
+msgctxt "ReviewForm"
+msgid "What do you think of it?"
+msgstr "आपको यह कैसा लगा?"
+
+msgctxt "TvShell"
+msgid "What do you think of it?"
+msgstr "आपको यह कैसा लगा?"
+
 msgctxt "OptionCard"
 msgid "What happens when I install {}"
 msgstr "{} इंस्टॉल करने पर क्या होता है"
@@ -1877,6 +2193,10 @@ msgstr "लोगों ने क्या लिखा"
 msgctxt "OptionCard"
 msgid "What will happen?"
 msgstr "क्या होगा?"
+
+msgctxt "TvShell"
+msgid "What you have typed"
+msgstr "आपने जो लिखा है"
 
 msgctxt "WhatsNew"
 msgid "What's new"
@@ -1894,6 +2214,18 @@ msgctxt "TvShell"
 msgid "Where apps come from"
 msgstr "ऐप कहाँ से आते हैं"
 
+msgctxt "SettingsBody"
+msgid "Windows apps"
+msgstr "Windows ऐप"
+
+msgctxt "SettingsBody"
+msgid "Windows apps you install show up here, each with its own choices."
+msgstr "आपके इंस्टॉल किए Windows ऐप यहाँ दिखते हैं, हर एक अपने विकल्पों के साथ।"
+
+msgctxt "SettingsBody"
+msgid "Windows settings"
+msgstr "Windows सेटिंग"
+
 msgctxt "DetailsBody"
 msgid "Works on"
 msgstr "इन पर चलता है"
@@ -1901,6 +2233,14 @@ msgstr "इन पर चलता है"
 msgctxt "TvShell"
 msgid "Works on"
 msgstr "इन पर चलता है"
+
+msgctxt "ReviewForm"
+msgid "Write a review"
+msgstr "समीक्षा लिखें"
+
+msgctxt "TvShell"
+msgid "Write a review"
+msgstr "समीक्षा लिखें"
 
 msgctxt "Welcome"
 msgid "You are seeing apps for {}. Anything that cannot be installed on this device is hidden."
@@ -1918,6 +2258,10 @@ msgctxt "SystemBody"
 msgid "You may be asked for your password. Keep the device on until this finishes."
 msgstr "आपसे पासवर्ड माँगा जा सकता है। पूरा होने तक डिवाइस चालू रखें।"
 
+msgctxt "SettingsBody"
+msgid "Your Windows apps"
+msgstr "आपके Windows ऐप"
+
 msgctxt "LibraryBody"
 msgid "Your library is empty"
 msgstr "आपकी लाइब्रेरी खाली है"
@@ -1929,6 +2273,22 @@ msgstr "आपके अपने स्रोत"
 msgctxt "TvShell"
 msgid "Your password is needed"
 msgstr "आपका पासवर्ड चाहिए"
+
+msgctxt "ReviewForm"
+msgid "Your review"
+msgstr "आपकी समीक्षा"
+
+msgctxt "TvShell"
+msgid "Your review"
+msgstr "आपकी समीक्षा"
+
+msgctxt "ReviewForm"
+msgid "Your review of {}"
+msgstr "{} पर आपकी समीक्षा"
+
+msgctxt "TvShell"
+msgid "Your review of {}"
+msgstr "{} पर आपकी समीक्षा"
 
 msgctxt "TvShell"
 msgid "an older one"
@@ -2065,6 +2425,14 @@ msgstr "{} डाउनलोड"
 msgctxt "AppTile"
 msgid "{} sources"
 msgstr "{} स्रोत"
+
+msgctxt "ReviewForm"
+msgid "{} stars"
+msgstr "{} स्टार"
+
+msgctxt "TvShell"
+msgid "{} stars"
+msgstr "{} स्टार"
 
 msgctxt "DesktopShell"
 msgid "{}. Everything shown works here."

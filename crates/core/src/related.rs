@@ -107,6 +107,10 @@ impl Family {
         // website, then its other apps, and last the apps others made.
         if platform.form_factor == FormFactor::Tv {
             here.sort_by_key(|m| m.rank_on_tv());
+        } else {
+            // On a computer or a phone, the service's own app comes before its website:
+            // Plex's desktop app, not plex.tv in a browser window.
+            here.sort_by_key(|m| m.rank_off_tv());
         }
         here
     }
@@ -118,8 +122,19 @@ impl Family {
 }
 
 impl Member {
-    fn is_website(&self) -> bool {
+    pub(crate) fn is_website(&self) -> bool {
         self.id.starts_with("web:")
+    }
+
+    /// Where it stands on a computer or a phone, lowest first: the service's own app
+    /// for such a device, then its website, then its app for a TV, then others' apps.
+    fn rank_off_tv(&self) -> u8 {
+        match (self.official, self.is_website(), self.made_for_tv) {
+            (true, false, false) => 0,
+            (_, true, _) => 1,
+            (true, false, true) => 2,
+            (false, false, _) => 3,
+        }
     }
 
     /// Where it stands on a TV, lowest first.
@@ -249,9 +264,11 @@ mod tests {
         assert_eq!(order("plex", &tv), ["Plex HTPC", "Plex website", "Plex for desktop", "Plexamp"]);
         // No TV app of YouTube's own: its website stays ahead of the apps others made.
         assert_eq!(order("youtube", &tv), ["YouTube website", "VacuumTube", "FreeTube"]);
-        // On a computer the list's own order stands.
+        // On a computer the service's own apps for one lead, then its website, then
+        // its app for a TV.
         let desktop = Platform::preset("linux-x64-debian").unwrap();
-        assert_eq!(order("plex", &desktop), ["Plex website", "Plex for desktop", "Plex HTPC", "Plexamp"]);
+        assert_eq!(order("plex", &desktop), ["Plex for desktop", "Plexamp", "Plex website", "Plex HTPC"]);
+        assert_eq!(order("youtube", &desktop), ["YouTube website", "VacuumTube", "FreeTube"]);
         let first = family_named(list, "plex").unwrap().first_here(&sources, &tv).unwrap();
         assert_eq!(first.id, "flathub:tv.plex.PlexHTPC");
     }

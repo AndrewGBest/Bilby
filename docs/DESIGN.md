@@ -51,7 +51,8 @@ Komi Store and Obtainium showed that release pages can be a store. Bilby builds 
 that idea and takes it further in four directions:
 
 - **Every source at once.** Release pages, Flathub, the Snap Store, the distribution's
-  own repositories, the AUR, winget, Homebrew, Steam, the Mac App Store, F-Droid and
+  own repositories, the AUR, winget, Homebrew, Steam, the Mac App Store, the Microsoft
+  Store, F-Droid and
   websites, merged into one result per app.
 - **A real TV interface**, driven entirely by a remote.
 - **A compatibility engine that knows Linux**: deb or rpm or pacman, glibc or musl,
@@ -181,6 +182,9 @@ and appears only on the systems it applies to:
 | F-Droid | | | | ✓ | Bilby fetches the APK |
 | Steam | ✓ | ✓ | ✓ | | Bilby hands over to the Steam app |
 | Mac App Store | | ✓ | | | Bilby hands over to the App Store app |
+| Microsoft Store | ✓ | | | | Bilby hands over to the Store app |
+| GOG | ✓ | ✓ | ✓ | | Bilby opens the game's page on gog.com |
+| Google Play | | | | ✓ | Bilby hands over to Google Play |
 | Web apps | ✓ | ✓ | ✓ | | Adds the site among the device's apps |
 
 **One press, no commands.** A package from a distribution's repository, a snap or a
@@ -360,7 +364,8 @@ Flatpak has taken the app out of it.
 Some things can only be installed by the store that sells them. For those Bilby is
 the front door: it finds the app, shows its price, pictures and ratings, and opens
 that store's own app on it (`steam://install/620`,
-`macappstore://apps.apple.com/app/id...`). Signing in, paying, downloading and
+`macappstore://apps.apple.com/app/id...`,
+`ms-windows-store://pdp/?ProductId=...`). Signing in, paying, downloading and
 updating stay with that store.
 
 For Steam, Bilby reads the files Steam keeps beside its library to know what is
@@ -513,7 +518,7 @@ it out. Bilby never runs as administrator itself.
 | Archive, bare program | Download, verify, show in the downloads folder |
 | AUR | A terminal opens on the build |
 | Web app | An entry among the device's apps |
-| Steam, Mac App Store | The other store's app takes over |
+| Steam, Mac App Store, Microsoft Store | The other store's app takes over |
 
 Downloads can be cancelled; a cancelled or failed download leaves no file behind.
 What an install needs first (FUSE for an AppImage, Longboard for a website on a TV) is
@@ -883,8 +888,10 @@ no Slint dependency and could be licensed separately if that were ever wanted.
    x64 build of Bilby running on Windows on Arm.
 6. System updates on openSUSE, and moving to a distribution's next release.
 7. Writing reviews, top charts, and Open for packages the system installed.
-8. More sources: the Microsoft Store through winget, self-hosted Forgejo and Gitea,
-   Nix.
+8. More sources: self-hosted Forgejo and Gitea, Nix; and the stores of other
+   systems for running their software here (Windows programs through Wine and
+   Proton), which the Microsoft Store's catalog, searchable from any device, is a
+   start on.
 9. Languages: a native speaker's review of each, mirrored layout for Arabic, more
    languages.
 

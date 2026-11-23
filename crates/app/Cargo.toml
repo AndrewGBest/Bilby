@@ -47,9 +47,58 @@ bilby-signin = { path = "../signin" }
 
 [target.'cfg(target_os = "android")'.dependencies]
 slint = { version = "1.19", default-features = false, features = ["std", "compat-1-2", "backend-android-activity-06"] }
+# Asking Android's Java side to open things (see src/android.rs). The version the
+# Android backend underneath already uses.
+jni = "0.21"
 
 [dev-dependencies]
 i-slint-backend-testing = "=1.19.0"
 
 [build-dependencies]
 slint-build = "1.19"
+
+# The Android package (built with `cargo apk build --lib`, see docs/ANDROID.md). One
+# APK serves phones, tablets and TVs: the launcher entry for a phone, and the one a
+# TV's home screen looks for.
+[package.metadata.android]
+package = "io.github.andrewgbest.bilby"
+apk_name = "bilby"
+# 64-bit ARM only: the drawing library underneath (Skia) comes ready-built for it and
+# not for 32-bit ARM, which some older phones and TV sticks still use. An emulator on
+# a PC is built for by naming its target: `--target x86_64-linux-android`.
+build_targets = ["aarch64-linux-android"]
+resources = "../../packaging/android/res"
+
+[package.metadata.android.sdk]
+min_sdk_version = 24
+target_sdk_version = 34
+
+[[package.metadata.android.uses_permission]]
+name = "android.permission.INTERNET"
+
+# Installing what was downloaded goes through Android's own installer, which asks.
+[[package.metadata.android.uses_permission]]
+name = "android.permission.REQUEST_INSTALL_PACKAGES"
+
+# A TV has no touch screen, and a phone is not a TV: neither is required.
+[[package.metadata.android.uses_feature]]
+name = "android.hardware.touchscreen"
+required = false
+
+[[package.metadata.android.uses_feature]]
+name = "android.software.leanback"
+required = false
+
+[package.metadata.android.application]
+label = "Bilby"
+icon = "@mipmap/ic_launcher"
+banner = "@drawable/banner"
+
+[package.metadata.android.application.activity]
+label = "Bilby"
+launch_mode = "singleTask"
+config_changes = "orientation|screenSize|screenLayout|keyboard|keyboardHidden|navigation|uiMode"
+
+[[package.metadata.android.application.activity.intent_filter]]
+actions = ["android.intent.action.MAIN"]
+categories = ["android.intent.category.LAUNCHER", "android.intent.category.LEANBACK_LAUNCHER"]

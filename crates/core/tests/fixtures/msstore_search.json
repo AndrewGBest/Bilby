@@ -1,0 +1,163 @@
+{
+ "Path": "/search",
+ "Payload": {
+  "SearchResults": [
+   {
+    "ProductId": "9NKX70BBCDRN",
+    "Title": "Forza Horizon 5 Standard Edition",
+    "Images": [
+     {
+      "ImageType": "Poster",
+      "Url": "https://store-images.s-microsoft.com/image/apps.49800.13718773309227929.bebdcc0e-1ed5-4778-8732-f4ef65a2f445.9ac09d39-064d-466c-81ca-2f1b6f0b95c5",
+      "Height": 2160,
+      "Width": 1440
+     },
+     {
+      "ImageType": "BoxArt",
+      "Url": "https://store-images.s-microsoft.com/image/apps.18975.13718773309227929.bebdcc0e-1ed5-4778-8732-f4ef65a2f445.125d6b3b-492f-4e5f-8037-7ade230c8224",
+      "Height": 2160,
+      "Width": 2160
+     }
+    ],
+    "DisplayPrice": "Included",
+    "StrikethroughPrice": "​",
+    "Price": 0.0,
+    "AverageRating": 4.2,
+    "RatingsCount": "18K",
+    "PlaintextPassName": "Xbox Game Pass",
+    "LongDescription": "Your Ultimate Horizon Adventure awaits! Explore the vibrant and ever-evolving open world landscapes of Mexico with limitless, fun driving action in hundreds of the world’s greatest cars. ",
+    "ProductFamilyName": "Games",
+    "Categories": [
+     "Racing & flying"
+    ],
+    "ReleaseDate": "2021-11-09T05:00:00Z",
+    "LastModifiedDate": "2026-10-27T17:58:55.4146617Z",
+    "PublisherName": "Xbox Game Studios"
+   },
+   {
+    "ProductId": "9WZDNCRFJ26J",
+    "Title": "Asphalt 8: Airborne",
+    "Images": [
+     {
+      "ImageType": "logo",
+      "Url": "https://store-images.s-microsoft.com/image/apps.59967.9007199266242715.f6aa2a48-7470-4625-9005-632840f004d7.cab2d9e4-8c2c-49c0-9b2b-88a64f7cb95e",
+      "Height": 300,
+      "Width": 300
+     },
+     {
+      "ImageType": "Poster",
+      "Url": "https://store-images.s-microsoft.com/image/apps.25479.9007199266242715.f6aa2a48-7470-4625-9005-632840f004d7.e1da6307-6edd-4cf1-83b8-dfeee22031ec",
+      "Height": 1080,
+      "Width": 720
+     },
+     {
+      "ImageType": "BoxArt",
+      "Url": "https://store-images.s-microsoft.com/image/apps.20659.9007199266242715.f6aa2a48-7470-4625-9005-632840f004d7.28f32768-749e-4268-a927-aa970c131b00",
+      "Height": 1080,
+      "Width": 1080
+     }
+    ],
+    "DisplayPrice": "Free",
+    "Price": 0.0,
+    "AverageRating": 4.7,
+    "RatingsCount": "312K",
+    "LongDescription": "LEAVE GRAVITY IN THE DUST!\r\n• 300+ OFFICIAL SPEED MACHINES: Ferrari, Ducati, Lamborghini, McLaren, Bugatti, Mercedes, Audi, Ford, Chevrolet… From bikes to cars, we got ‘em all!\r\n• STUNNING GRAPHICS: Interactions between the vehicles, environments & tracks are fully physics-based!\r\n• INTENSE ARCADE GAMEPLAY: Feel the thrill of gravity-defying racing across 50+ high-speed tracks!\r\n• HIGH-OCTANE MULT",
+    "ProductFamilyName": "Games",
+    "Categories": [
+     "Racing & flying",
+     "Simulation",
+     "Sports"
+    ],
+    "ReleaseDate": "2013-11-13T02:56:16.6146894Z",
+    "LastModifiedDate": "2026-10-15T03:30:42.1020967Z",
+    "PublisherName": "GAMELOFT  SA"
+   },
+   {
+    "ProductId": "9NC3260BPBJ0",
+    "Title": "Forza Horizon 6 Official Theme",
+    "Images": [
+     {
+      "ImageType": "logo",
+      "Url": "https://store-images.s-microsoft.com/image/apps.60336.13576062783786855.382ee97e-aaf1-43ec-883d-8cf85a5f0110.1543b379-b1bf-4b4b-818b-7050128e8689",
+      "Height": 300,
+      "Width": 300
+     }
+    ],
+    "DisplayPrice": "Free",
+    "Price": 0.0,
+    "AverageRating": 4.5,
+    "RatingsCount": "40",
+    "LongDescription": "Celebrate your driving adventure across the breathtaking landscapes of Japan in over 550 real-world cars with the Forza Horizon 6 Official Theme. This pack includes several high-resolution wallpapers, including artwork and screenshots pulled directly from the video game. Japan awaits.",
+    "ProductFamilyName": "Apps",
+    "Categories": [
+     "Personalization"
+    ],
+    "ReleaseDate": "2026-06-18T20:37:25Z",
+    "LastModifiedDate": "2026-06-24T19:12:05.1851816Z",
+    "PublisherName": "Microsoft Studios"
+   },
+   {
+    "ProductId": "9P1HX37NMJLT",
+    "Title": "Forza Horizon 5 Deluxe Edition",
+    "Images": [
+     {
+      "ImageType": "BoxArt",
+      "Url": "https://store-images.s-microsoft.com/image/apps.30953.14506879174941978.138d3eab-0b06-443b-a252-c99592521394.14d1c0fa-a49d-46bb-b177-7173e55078c7",
+      "Height": 2160,
+      "Width": 2160
+     },
+     {
+      "ImageType": "Poster",
+      "Url": "https://store-images.s-microsoft.com/image/apps.7859.14506879174941978.138d3eab-0b06-443b-a252-c99592521394.33a348aa-892d-49b8-9ef2-6ff06c22cf96",
+      "Height": 2160,
+      "Width": 1440
+     }
+    ],
+    "DisplayPrice": "$31.99",
+    "StrikethroughPrice": "$79.99",
+    "Price": 31.99,
+    "AverageRating": 4.1,
+    "RatingsCount": "15K",
+    "LongDescription": "Your Ultimate Horizon Adventure awaits! Explore the vibrant and ever-evolving open world landscapes of Mexico with limitless, fun driving action in hundreds of the world’s greatest cars. The Deluxe Edition includes the full game and Car Pass.",
+    "ProductFamilyName": "Games",
+    "Categories": [
+     "Racing & flying"
+    ],
+    "ReleaseDate": "2021-11-09T05:00:00Z",
+    "LastModifiedDate": "2026-10-27T18:00:00.848623Z",
+    "PublisherName": "Xbox Game Studios"
+   },
+   {
+    "ProductId": "9PNSZ7GMWCQZ",
+    "Title": "Forza Horizon 5: Hot Wheels",
+    "Images": [
+     {
+      "ImageType": "Poster",
+      "Url": "https://store-images.s-microsoft.com/image/apps.39564.14337700501983954.bd1bedb1-636e-4cb5-9fb9-6bda5bd998e8.dbc769de-db5a-4dd9-9298-04874b1b40ff",
+      "Height": 2160,
+      "Width": 1440
+     },
+     {
+      "ImageType": "BoxArt",
+      "Url": "https://store-images.s-microsoft.com/image/apps.8266.14337700501983954.bd1bedb1-636e-4cb5-9fb9-6bda5bd998e8.cbfcac7c-2f17-4cdb-a1ca-e8e235900f30",
+      "Height": 2160,
+      "Width": 2160
+     }
+    ],
+    "DisplayPrice": "$7.99",
+    "StrikethroughPrice": "$19.99",
+    "Price": 7.99,
+    "AverageRating": 3.6,
+    "RatingsCount": "456",
+    "LongDescription": "Calling all daredevil drivers and creators! Blast off to the visually stunning, exhilarating new Horizon Hot Wheels Park in the clouds high above Mexico. Experience the fastest, most extreme tracks ever devised. Design, build, and share your own Hot Wheels adventure with over 80 distinct, snappable track pieces. Race 10 amazing new cars including the lightning fast 2021 Hennessey Venom F5 and the ",
+    "ProductFamilyName": "Games",
+    "Categories": [
+     "Add-on"
+    ],
+    "ReleaseDate": "2022-07-19T17:00:00Z",
+    "LastModifiedDate": "2026-10-27T21:00:03.5440563Z"
+   }
+  ],
+  "NextUri": null
+ }
+}

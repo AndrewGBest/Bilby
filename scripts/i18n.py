@@ -37,7 +37,7 @@ PUT_TOGETHER = [
     "today", "yesterday", "1 day ago", "{} days ago", "1 month ago", "{} months ago", "1 year ago", "{} years ago",
     "1 rating",
     # The on-screen keyboard's wide keys.
-    "space", "delete", "search", "shift", "enter",
+    "space", "delete", "search", "shift", "enter", "done",
 ]
 LITERAL = re.compile(r'"((?:[^"\\]|\\.)*)"')
 
@@ -97,6 +97,9 @@ def rust_strings():
         for line in source.split("\n"):
             stripped = line.strip()
             if stripped.startswith(("//", "#[", "eprintln!", "println!", "debug_assert", "assert")) or ".expect(" in line:
+                continue
+            # Names of folders and marks in files, which nobody is shown.
+            if "(not shown)" in line:
                 continue
             for literal in LITERAL.finditer(line):
                 text = unescape(literal.group(1))

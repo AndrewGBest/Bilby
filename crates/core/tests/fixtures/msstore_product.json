@@ -1,0 +1,101 @@
+{
+ "Path": "/products/9NCBCSZSJRSB",
+ "Payload": {
+  "ProductId": "9NCBCSZSJRSB",
+  "Title": "Spotify - Music and Podcasts",
+  "Images": [
+   {
+    "ImageType": "logo",
+    "Url": "https://store-images.s-microsoft.com/image/apps.52679.13571498826857201.ebadc309-c05b-4746-9461-e12a3baa05a1.37abf729-b8c2-4e0b-a779-dac55fedc974",
+    "Height": 50,
+    "Width": 50
+   },
+   {
+    "ImageType": "logo",
+    "Url": "https://store-images.s-microsoft.com/image/apps.12272.13571498826857201.ebadc309-c05b-4746-9461-e12a3baa05a1.91a54ed8-7c4f-40e4-9187-5c514927308f",
+    "Height": 75,
+    "Width": 75
+   },
+   {
+    "ImageType": "logo",
+    "Url": "https://store-images.s-microsoft.com/image/apps.40747.13571498826857201.ebadc309-c05b-4746-9461-e12a3baa05a1.125fcd3b-e77a-48d6-9551-9e8df19f543c",
+    "Height": 100,
+    "Width": 100
+   },
+   {
+    "ImageType": "hero",
+    "Url": "https://store-images.s-microsoft.com/image/apps.19923.13571498826857201.b5f74f11-d59e-47fe-9613-1c3e91cff740.2bde81f8-83a8-466e-a609-74994653f956",
+    "Height": 1080,
+    "Width": 1920
+   },
+   {
+    "ImageType": "BoxArt",
+    "Url": "https://store-images.s-microsoft.com/image/apps.24630.13571498826857201.240a1cdf-342f-4448-bf2a-8b69d503382b.a38632c0-3269-48ea-8790-6986c247282d",
+    "Height": 2160,
+    "Width": 2160
+   },
+   {
+    "ImageType": "logo",
+    "Url": "https://store-images.s-microsoft.com/image/apps.10546.13571498826857201.6603a5e2-631f-4f29-9b08-f96589723808.dc893fe0-ecbc-4846-9ac6-b13886604095",
+    "Height": 300,
+    "Width": 300
+   },
+   {
+    "ImageType": "tile",
+    "Url": "https://store-images.s-microsoft.com/image/apps.65200.13571498826857201.ebadc309-c05b-4746-9461-e12a3baa05a1.9c63198e-9a00-492e-81b9-b034b52451a4",
+    "Height": 300,
+    "Width": 300
+   },
+   {
+    "ImageType": "tile",
+    "Url": "https://store-images.s-microsoft.com/image/apps.57452.13571498826857201.ebadc309-c05b-4746-9461-e12a3baa05a1.4ae62b85-3d44-495f-a354-de1b0c447387",
+    "Height": 620,
+    "Width": 620
+   },
+   {
+    "ImageType": "tile",
+    "Url": "https://store-images.s-microsoft.com/image/apps.42850.13571498826857201.ebadc309-c05b-4746-9461-e12a3baa05a1.5bfb65ad-d9b7-4dcc-aab9-f3e790cde493",
+    "Height": 300,
+    "Width": 620
+   },
+   {
+    "ImageType": "screenshot",
+    "Url": "https://store-images.s-microsoft.com/image/apps.19060.13571498826857201.9e5279fd-e041-4012-99b9-9eea9e581054.f4dfc459-dae3-4ab8-8f40-18aa7ae9762f",
+    "Height": 1080,
+    "Width": 1920
+   },
+   {
+    "ImageType": "screenshot",
+    "Url": "https://store-images.s-microsoft.com/image/apps.10064.13571498826857201.9e5279fd-e041-4012-99b9-9eea9e581054.a62cf979-98df-4469-bf6d-a36785bc67b6",
+    "Height": 1080,
+    "Width": 1920
+   },
+   {
+    "ImageType": "screenshot",
+    "Url": "https://store-images.s-microsoft.com/image/apps.5409.13571498826857201.9e5279fd-e041-4012-99b9-9eea9e581054.839a2668-fa0e-4eef-b61b-a1533d430b51",
+    "Height": 1080,
+    "Width": 1920
+   }
+  ],
+  "DisplayPrice": "Free",
+  "Price": 0.0,
+  "AverageRating": 4.2,
+  "RatingCount": 34828,
+  "Description": "Love music and podcasts? Play your favorite songs, podcasts and albums on Windows with Spotify.\n \nStream the tracks you love instantly, browse the charts or fire up curated playlists in every genre and mood. Discover new music too, with awesome playlists built just for you.\n\nStay productive and focused with the perfect playlist or podcast via Focus Timer, available in the Clock app. You can also access Spotify to listen to your favorite podcast or playlist by opening the Game Bar (tap windows + G to launch)\n \nSpotify also offers 5+ million podcast titles, including originals and exclusives tha",
+  "ProductFamilyName": "Apps",
+  "Categories": [
+   "Music"
+  ],
+  "ReleaseDateUtc": "2017-10-24T12:04:25.5351383Z",
+  "LastUpdateDateUtc": "2026-11-18T13:09:44Z",
+  "PublisherName": "Spotify AB",
+  "ApproximateSizeInBytes": 227483806,
+  "Version": "",
+  "AppWebsiteUrl": "https://www.spotify.com",
+  "Platforms": [
+   "x86",
+   "x64",
+   "ARM64"
+  ]
+ }
+}

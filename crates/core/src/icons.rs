@@ -39,6 +39,9 @@ pub fn icon_key(id: &AppId) -> Option<String> {
         | SourceKind::FDroid
         | SourceKind::Steam
         | SourceKind::MacAppStore
+        | SourceKind::MicrosoftStore
+        | SourceKind::Gog
+        | SourceKind::GooglePlay
         | SourceKind::Own => None,
     }
 }

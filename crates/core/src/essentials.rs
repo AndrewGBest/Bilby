@@ -96,16 +96,26 @@ impl Essential {
     }
 
     /// The version of it this device can use: the first id whose source applies here.
-    /// On a TV, a service that has an app of its own for TVs is shown as that app
-    /// (Plex as Plex HTPC) and not as its website.
+    /// A service that has an app of its own for this kind of device is shown as that
+    /// app and not as its website: Plex HTPC on a TV, Plex's desktop app on a computer.
     pub fn here(&self, sources: &[SourceKind], platform: &Platform) -> Option<AppSummary> {
-        let listed = self.ids.iter().filter_map(|id| AppId::parse(id)).find(|id| sources.contains(&id.source))?;
+        // An Android TV's build of an app often goes by another name on Google Play
+        // than the phone's, which is the one the list has: a TV is not offered those.
+        let on_tv = platform.form_factor == FormFactor::Tv;
+        let listed = self
+            .ids
+            .iter()
+            .filter_map(|id| AppId::parse(id))
+            .filter(|id| !(on_tv && id.source == SourceKind::GooglePlay))
+            .find(|id| sources.contains(&id.source))?;
         let families = crate::related::families();
-        let for_tv = (platform.form_factor == FormFactor::Tv)
+        // Only where the list names the service by its website: an app the list
+        // names itself is the one meant.
+        let for_tv = (on_tv || listed.source == SourceKind::Web)
             .then(|| crate::related::family_of(families, &listed.to_string()))
             .flatten()
             .and_then(|family| family.first_here(sources, platform))
-            .filter(|first| first.official && first.made_for_tv)
+            .filter(|first| first.official && if on_tv { first.made_for_tv } else { !first.is_website() })
             .and_then(|first| AppId::parse(&first.id));
         let mut app = AppSummary::new(for_tv.unwrap_or(listed), self.name.clone());
         app.summary = self.summary.clone();
@@ -215,6 +225,30 @@ mod tests {
         let mut p = device("linux-x64-debian");
         p.form_factor = FormFactor::Mobile;
         p
+    }
+
+    #[test]
+    fn a_services_own_app_is_shown_before_its_website_on_a_computer() {
+        let desktop = device("linux-x64-debian");
+        let plex = all().iter().find(|app| app.name == "Plex").unwrap();
+        // With Flathub: Plex's desktop app. Without it: the website. On a TV: Plex HTPC.
+        let with_flathub = [SourceKind::Web, SourceKind::Flathub];
+        assert_eq!(plex.here(&with_flathub, &desktop).unwrap().id.to_string(), "flathub:tv.plex.PlexDesktop");
+        assert_eq!(plex.here(&[SourceKind::Web], &desktop).unwrap().id.to_string(), "web:plex.tv");
+        assert_eq!(plex.here(&with_flathub, &tv()).unwrap().id.to_string(), "flathub:tv.plex.PlexHTPC");
+        // The same for the others the list names by their website.
+        let spotify = all().iter().find(|app| app.name == "Spotify").unwrap();
+        assert_eq!(spotify.here(&with_flathub, &desktop).unwrap().id.to_string(), "flathub:com.spotify.Client");
+        // YouTube has no app of its own for a computer: its website stays first, ahead
+        // of the apps others made for it.
+        let youtube = all().iter().find(|app| app.name == "YouTube").unwrap();
+        assert_eq!(youtube.here(&with_flathub, &desktop).unwrap().id.to_string(), "web:youtube.com");
+        let family = crate::related::family_of(crate::related::families(), "web:plex.tv").unwrap();
+        let order: Vec<&str> = family.here(&with_flathub, &desktop).iter().map(|m| m.id.as_str()).collect();
+        assert_eq!(order[..2], ["flathub:tv.plex.PlexDesktop", "flathub:com.plexamp.Plexamp"], "{order:?}");
+        assert!(
+            order.iter().position(|id| *id == "web:plex.tv") < order.iter().position(|id| id.ends_with("PlexHTPC"))
+        );
     }
 
     #[test]

@@ -1,0 +1,44 @@
+{
+ "Path": "/ratings/product/9NCBCSZSJRSB",
+ "Payload": {
+  "Reviews": [
+   {
+    "ProductId": "9NCBCSZSJRSB",
+    "ReviewerName": "Jacob",
+    "Rating": 2,
+    "HelpfulPositive": 64,
+    "HelpfulNegative": 8,
+    "ReviewId": "71f40009-8fb3-c76d-24ca-cf050abcc563",
+    "ReviewText": "Spotify is a great music streaming service, honestly my second favorite to Groove.  But Groove is no longer with us.  This UWP  application (YES it, like all other apps in the Windows store are in fact UWP despite the fact if they use features such as deployment to different devices, Cortana integra",
+    "Title": "Development Mandatory",
+    "SubmittedDateTimeUtc": "2018-01-11T15:48:51.0274262Z",
+    "UpdatedSinceResponse": false
+   },
+   {
+    "ProductId": "9NCBCSZSJRSB",
+    "ReviewerName": "Daniel",
+    "Rating": 3,
+    "HelpfulPositive": 11,
+    "HelpfulNegative": 0,
+    "ReviewId": "8f09c161-9849-2edc-623a-637d6ee7de7d",
+    "ReviewText": "It'd be nice if there was an optional tablet mode interface for surface users or at least have music keep playing when the device goes to sleep.",
+    "Title": "Tablet Mode?",
+    "SubmittedDateTimeUtc": "2017-07-16T06:17:40.5582378Z",
+    "UpdatedSinceResponse": false
+   },
+   {
+    "ProductId": "9NCBCSZSJRSB",
+    "ReviewerName": "Eli",
+    "Rating": 3,
+    "HelpfulPositive": 209,
+    "HelpfulNegative": 58,
+    "ReviewId": "a33ae8fe-ddf7-a028-3c22-aa6ac7df82d6",
+    "ReviewText": "Every song that I listen to it repeats a little bit of the song and its gets really annoying because it does it to ever song that I have one my playlist I have tried everything except uninstalling the app which I might do like right now but if that doesn't work I might just go back to YouTube music.",
+    "Title": "My songs keep replaying a beat or something",
+    "SubmittedDateTimeUtc": "2022-03-22T02:11:33.3800658Z",
+    "UpdatedSinceResponse": false
+   }
+  ],
+  "TotalItems": 8225
+ }
+}

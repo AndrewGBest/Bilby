@@ -799,6 +799,31 @@ fn steam_apps_are_found_and_handed_to_steam() {
     assert_eq!(release.assets[0].url, "https://store.steampowered.com/app/620");
     assert!(without.summary("620").unwrap().warning.unwrap().contains("Steam is not installed"));
 
+    // A game made only for Windows: its page says how players find it on Linux, from
+    // ProtonDB; where ProtonDB has nothing or cannot be reached, only that Proton is used.
+    let windows_only = fixture("steam_app.json").replace("\"linux\": true", "\"linux\": false");
+    assert_ne!(windows_only, fixture("steam_app.json"));
+    let notice = |protondb: Option<&str>| {
+        let mut routes = vec![("/st/appdetails?appids=620&l=english&cc=US", Reply::json(&windows_only))];
+        if let Some(answer) = protondb {
+            routes.push(("/st/protondb/reports/summaries/620.json", Reply::json(answer)));
+        }
+        let server = Server::start(routes);
+        let steam = Steam::with_api(Arc::new(client(&server, None)), &server.url("/st"), &linux, vec![], true);
+        steam.summary("620").unwrap().warning.unwrap()
+    };
+    let gold = notice(Some(
+        r#"{"bestReportedTier":"platinum","confidence":"strong","score":0.79,"tier":"gold","total":2109}"#,
+    ));
+    assert!(gold.contains("players say it runs well") && gold.contains("2109 players reported"), "{gold}");
+    let borked = notice(Some(r#"{"tier":"borked","total":412}"#));
+    assert!(borked.contains("does not run on Linux"), "{borked}");
+    for unsure in
+        [None, Some(r#"{"tier":"pending","total":2}"#), Some(r#"{"tier":"platinum","total":1}"#), Some("not json")]
+    {
+        assert!(notice(unsure).contains("works for most games but not all"), "{unsure:?}");
+    }
+
     assert!(!with_steam.available_on(&Platform::preset("android-arm64").unwrap()));
     assert!(matches!(with_steam.summary("620x"), Err(Error::NotFound(_))));
     for (path, headers) in server.requests() {
@@ -813,6 +838,11 @@ fn mac_app_store_apps_are_found_and_handed_to_the_app_store() {
     let server = Server::start(vec![
         ("/as/search?term=pixelmator&entity=macSoftware&country=us&limit=5", Reply::json(&fixture_text)),
         ("/as/lookup?id=6746662575&entity=macSoftware&country=us", Reply::json(&fixture_text)),
+        (
+            "/as/us/rss/customerreviews/id=6746662575/sortBy=mostHelpful/json",
+            Reply::json(&fixture("appstore_reviews.json")),
+        ),
+        ("/as/us/rss/customerreviews/id=1/sortBy=mostHelpful/json", Reply::json(r#"{"feed":{"author":{}}}"#)),
     ]);
     let source = MacAppStore::with_api(Arc::new(client(&server, None)), &server.url("/as"));
     assert!(source.available_on(&Platform::preset("macos-arm64").unwrap()));
@@ -829,4 +859,201 @@ fn mac_app_store_apps_are_found_and_handed_to_the_app_store() {
     let release = &source.releases("6746662575").unwrap()[0];
     assert_eq!(release.assets[0].url, "macappstore://apps.apple.com/app/id6746662575");
     assert!(release.assets[0].size > 0 && release.published.len() == 10);
+
+    // What people wrote, from Apple's feed; an app nobody reviewed has none.
+    let reviews = source.reviews("6746662575");
+    assert_eq!(reviews.len(), 3);
+    assert_eq!((reviews[0].stars, reviews[0].title.as_str()), (5, "The whole enchilada"));
+    assert!(reviews.iter().all(|r| !r.text.is_empty() && !r.author.is_empty() && r.date.len() == 10));
+    assert_eq!(reviews[0].version, "4.2");
+    assert!(source.reviews("1").is_empty() && source.reviews("../x").is_empty());
+}
+
+#[test]
+fn microsoft_store_apps_and_games_are_found_and_handed_to_the_store_app() {
+    use bilby_core::source::msstore::MicrosoftStore;
+    const WHERE: &str = "market=US&locale=en-US&deviceFamily=Windows.Desktop";
+    let server = Server::start(vec![
+        (&format!("/ms/search?{WHERE}&query=forza"), Reply::json(&fixture("msstore_search.json"))),
+        (&format!("/ms/products/9NCBCSZSJRSB?{WHERE}"), Reply::json(&fixture("msstore_product.json"))),
+        (&format!("/ms/ratings/product/9NCBCSZSJRSB?{WHERE}"), Reply::json(&fixture("msstore_reviews.json"))),
+    ]);
+    let source = MicrosoftStore::with_api(Arc::new(client(&server, None)), &server.url("/ms"));
+    assert!(source.available_on(&Platform::preset("windows-x64").unwrap()));
+    assert!(!source.available_on(&Platform::preset("macos-arm64").unwrap()));
+    assert!(!source.available_on(&Platform::preset("linux-x64-debian").unwrap()));
+
+    // A search finds apps and games; an add-on to a game is not something to install.
+    let hits = source.search("forza", 10).unwrap();
+    let names: Vec<&str> = hits.iter().map(|app| app.name.as_str()).collect();
+    assert_eq!(hits[0].id, AppId::new(SourceKind::MicrosoftStore, "9NKX70BBCDRN"));
+    assert!(names.contains(&"Asphalt 8: Airborne") && names.contains(&"Forza Horizon 6 Official Theme"), "{names:?}");
+    assert!(!names.iter().any(|name| name.contains("Hot Wheels")), "{names:?}");
+    assert_eq!(hits[0].author, "Xbox Game Studios");
+    assert_eq!(hits[0].price.as_deref(), Some("Included with Xbox Game Pass"));
+    let priced = hits.iter().find(|app| app.name.contains("Deluxe")).unwrap();
+    assert_eq!(priced.price.as_deref(), Some("$31.99"));
+    assert_eq!(hits.iter().find(|app| app.name.contains("Asphalt")).unwrap().price.as_deref(), Some("Free"));
+    // "18K" ratings is eighteen thousand.
+    let rating = hits[0].rating.unwrap();
+    assert!(rating.stars > 4.0 && rating.count >= 1000, "{rating:?}");
+    for app in &hits {
+        let icon = app.icon_url.as_deref().unwrap_or_else(|| panic!("{} has no picture", app.name));
+        assert!(icon.starts_with("https://store-images.s-microsoft.com/image/") && icon.ends_with("?w=256&h=256"));
+        assert_eq!(app.homepage, format!("https://apps.microsoft.com/detail/{}", app.id.key));
+    }
+
+    // One app in full: its page, its pictures, and the link that opens the Store on it.
+    let spotify = source.summary("9NCBCSZSJRSB").unwrap();
+    assert_eq!((spotify.name.as_str(), spotify.author.as_str()), ("Spotify - Music and Podcasts", "Spotify AB"));
+    assert_eq!(spotify.price.as_deref(), Some("Free"));
+    assert_eq!(spotify.rating.unwrap().count, 34828);
+    assert!(spotify.summary.starts_with("Love music and podcasts?") && !spotify.summary.contains('\n'));
+    assert!(source.about("9NCBCSZSJRSB").unwrap().unwrap().len() > spotify.summary.len());
+    let pictures = source.pictures("9NCBCSZSJRSB");
+    assert_eq!(pictures.len(), 3);
+    assert!(pictures.iter().all(|url| url.ends_with("?w=1280&format=jpg")));
+    let release = &source.releases("9NCBCSZSJRSB").unwrap()[0];
+    assert_eq!(release.assets[0].url, "ms-windows-store://pdp/?ProductId=9NCBCSZSJRSB");
+    assert!(bilby_core::install::store_link_ok(&release.assets[0].url));
+    assert!(release.assets[0].size > 1_000_000 && release.published == "2026-11-18");
+
+    // What people wrote there, with the Store's bare carriage returns made line breaks.
+    let reviews = source.reviews("9NCBCSZSJRSB");
+    assert_eq!(reviews.len(), 3);
+    assert_eq!(
+        (reviews[0].stars, reviews[0].title.as_str(), reviews[0].author.as_str()),
+        (2, "Development Mandatory", "Jacob")
+    );
+    assert!(reviews.iter().all(|r| (1..=5).contains(&r.stars) && !r.text.contains('\r') && r.date.len() == 10));
+    assert!(source.reviews("9ZZZZZZZZZZZ").is_empty());
+
+    // Not an id, and an id the store does not have: neither is asked for as a path.
+    assert!(matches!(source.summary("../secrets"), Err(Error::NotFound(_))));
+    assert!(matches!(source.summary("9ZZZZZZZZZZZ"), Err(Error::NotFound(_))));
+    for (path, headers) in server.requests() {
+        assert!(!headers.contains_key("authorization"), "the GitHub token must not go to Microsoft ({path})");
+    }
+}
+
+#[test]
+fn gog_games_are_found_with_what_people_think_of_them_and_handed_to_gogs_website() {
+    use bilby_core::source::gog::Gog;
+    let search = "/cat/catalog?limit=10&query=like:stardew&order=desc:score&productType=in:game,pack&countryCode=US&locale=en-US&currencyCode=USD";
+    let server = Server::start(vec![
+        (search, Reply::json(&fixture("gog_search.json"))),
+        (
+            "/api/products/1453375253?expand=description,screenshots,downloads",
+            Reply::json(&fixture("gog_product.json")),
+        ),
+        (
+            "/api/products/1453375253/prices?countryCode=US",
+            Reply::json(
+                r#"{"_embedded":{"prices":[{"currency":{"code":"USD"},"basePrice":"1499 USD","finalPrice":"1499 USD"}]}}"#,
+            ),
+        ),
+        ("/rev/products/1453375253/averageRating", Reply::json(r#"{"value":4.7999999999999998,"count":4242}"#)),
+        (
+            "/api/v2/games/1453375253",
+            Reply::json(
+                r#"{"_embedded":{"developers":[{"name":"ConcernedApe"}],"publisher":{"name":"ConcernedApe"}}}"#,
+            ),
+        ),
+        (
+            "/rev/products/1453375253/reviews?language=in:en-US&limit=20&order=desc:votes",
+            Reply::json(&fixture("gog_reviews.json")),
+        ),
+    ]);
+    let http = || Arc::new(client(&server, None));
+    let on = |preset: &str| {
+        let platform = Platform::preset(preset).unwrap();
+        Gog::with_apis(http(), &platform, &server.url("/cat"), &server.url("/api"), &server.url("/rev"))
+    };
+    let source = on("linux-x64-debian");
+    // Two of the five listed are made for Windows alone: Linux is not offered those.
+    assert_eq!(on("windows-x64").search("stardew", 10).unwrap().len(), 5);
+    assert_eq!(source.search("stardew", 10).unwrap().len(), 3);
+    for preset in ["windows-x64", "macos-arm64", "linux-x64-debian"] {
+        assert!(source.available_on(&Platform::preset(preset).unwrap()), "{preset}");
+    }
+    assert!(!source.available_on(&Platform::preset("android-arm64").unwrap()));
+
+    // A search: price, and the rating GOG gives out of fifty, as stars out of five.
+    let hits = source.search("stardew", 10).unwrap();
+    assert_eq!(hits[0].id, AppId::new(SourceKind::Gog, "1453375253"));
+    assert_eq!((hits[0].name.as_str(), hits[0].price.as_deref()), ("Stardew Valley", Some("$14.99")));
+    let rating = hits[0].rating.unwrap();
+    assert!((rating.stars - 4.8).abs() < 0.01 && rating.count == 4242, "{rating:?}");
+    assert_eq!(hits[0].popularity, Some(4242));
+    assert!(hits[0].icon_url.as_deref().unwrap().starts_with("https://images.gog-statics.com/"));
+    // Nobody has rated the second: no stars are made up for it. Add-ons are left out.
+    assert!(hits[1].rating.is_none());
+    assert!(hits.iter().all(|app| !app.name.contains("Soundtrack")));
+
+    // Its own page: price and rating from where GOG keeps them, pictures, reviews.
+    let game = source.summary("1453375253").unwrap();
+    assert_eq!(game.price.as_deref(), Some("$14.99"));
+    assert_eq!(game.author, "ConcernedApe");
+    assert_eq!(game.rating.unwrap().count, 4242);
+    assert_eq!(game.homepage, "https://www.gog.com/en/game/stardew_valley");
+    assert!(!game.summary.is_empty() && !game.summary.contains('<'), "{}", game.summary);
+    assert!(!source.about("1453375253").unwrap().unwrap().contains("<p"));
+    let pictures = source.pictures("1453375253");
+    assert_eq!(pictures.len(), 3);
+    assert!(pictures.iter().all(|url| url.ends_with("_ggvgl_2x.jpg") && url.contains(".gog-statics.com/")));
+    let reviews = source.reviews("1453375253");
+    assert_eq!(reviews.len(), 3);
+    assert!(reviews.iter().all(|r| (1..=5).contains(&r.stars) && !r.text.is_empty() && r.date.len() == 10));
+    assert!(!reviews[0].author.is_empty() && !reviews[0].title.is_empty());
+
+    // It runs on all three systems; each is offered its own, and all lead to GOG's page.
+    let release = &source.releases("1453375253").unwrap()[0];
+    assert_eq!(release.assets.len(), 3);
+    for asset in &release.assets {
+        assert_eq!(asset.url, "https://www.gog.com/en/game/stardew_valley");
+        assert!(bilby_core::install::store_link_ok(&asset.url) && asset.size > 1_000_000);
+    }
+    assert_eq!(release.published.len(), 10);
+    assert!(matches!(source.summary("../secrets"), Err(Error::NotFound(_))));
+    assert!(matches!(source.summary("42"), Err(Error::NotFound(_))));
+    assert!(source.reviews("x/../y").is_empty());
+}
+
+#[test]
+fn a_google_play_page_is_read_and_google_play_is_never_searched() {
+    use bilby_core::source::play::GooglePlay;
+    let server = Server::start(vec![(
+        "/gp/store/apps/details?id=com.mojang.minecraftpe&hl=en&gl=CA",
+        Reply::json(&fixture("play_app.html")),
+    )]);
+    let source = GooglePlay::with_site(Arc::new(client(&server, None)), &server.url("/gp")).in_country("ca");
+    assert!(source.available_on(&Platform::preset("android-arm64").unwrap()));
+    assert!(!source.available_on(&Platform::preset("linux-x64-debian").unwrap()));
+
+    // The page's own description of the app: who made it, what people think of it,
+    // how many have installed it, and the price in the country asked for.
+    let app = source.summary("com.mojang.minecraftpe").unwrap();
+    assert_eq!(app.id, AppId::new(SourceKind::GooglePlay, "com.mojang.minecraftpe"));
+    assert!(app.name.starts_with("Minecraft") && app.author == "Mojang", "{} by {}", app.name, app.author);
+    assert_eq!(app.price.as_deref(), Some("$9.99"));
+    let rating = app.rating.unwrap();
+    assert!(rating.stars > 4.0 && rating.count > 1_000_000, "{rating:?}");
+    assert_eq!(app.downloads, Some(100_000_000));
+    assert_eq!(app.popularity, Some(100_000_000));
+    assert!(app.icon_url.as_deref().unwrap().starts_with("https://play-lh.googleusercontent.com/"));
+    let release = &source.releases("com.mojang.minecraftpe").unwrap()[0];
+    assert_eq!(release.assets[0].url, "https://play.google.com/store/apps/details?id=com.mojang.minecraftpe");
+    assert!(bilby_core::install::store_link_ok(&release.assets[0].url));
+
+    // A search asks Google nothing: it finds the names everyone knows in Bilby's own list.
+    let asked = server.requests().len();
+    let hits = source.search("spotify", 10).unwrap();
+    assert_eq!(hits[0].id, AppId::new(SourceKind::GooglePlay, "com.spotify.music"));
+    assert!(source.search("some app nobody listed", 10).unwrap().is_empty());
+    assert_eq!(server.requests().len(), asked, "no request was made for a search");
+    for (path, _) in server.requests() {
+        assert!(path.starts_with("/gp/store/apps/details?id="), "only an app's own page is read: {path}");
+    }
+    assert!(matches!(source.summary("../secrets"), Err(Error::NotFound(_))));
+    assert!(matches!(source.summary("com.example.nothing"), Err(Error::NotFound(_))));
 }

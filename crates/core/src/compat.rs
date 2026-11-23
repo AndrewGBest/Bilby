@@ -32,7 +32,27 @@ impl Verdict {
     }
 }
 
+/// What a Windows installer's page says on a Linux that can be made to run it.
+pub const VIA_PROTON: &str =
+    "Made for Windows. Bilby sets it up to run here through Proton. Most programs work, not all.";
+
 pub fn evaluate(info: &AssetInfo, p: &Platform) -> Verdict {
+    // 0. A Windows installer on a Linux where the store can set Windows programs up
+    //    (see `winrun`): usable, said plainly, and below anything made for Linux.
+    if p.runs_windows() && info.os == TargetOs::Known(Os::Windows) && info.format == Format::Exe {
+        let score = match &info.arch {
+            // The one that says it is 64-bit first, then one that does not say.
+            TargetArch::One(Arch::X86_64) => 6,
+            TargetArch::Unknown | TargetArch::Any | TargetArch::Universal => 5,
+            // 32-bit programs run in the same Windows.
+            TargetArch::One(Arch::X86) => 4,
+            TargetArch::One(a) => return Verdict::no(format!("Built for {a} processors")),
+            TargetArch::Foreign(a) => return Verdict::no(format!("Built for {a} processors")),
+        };
+        let score = if info.debug { score - 3 } else { score };
+        return Verdict { level: Level::Compatible, note: Some(VIA_PROTON.to_string()), score };
+    }
+
     // 1. Operating system.
     match &info.os {
         TargetOs::Known(os) if *os == p.os => {}
@@ -373,6 +393,30 @@ mod tests {
         for (preset, expected) in cases {
             assert_eq!(best(DESKTOP_APP, preset), Some(expected), "{preset}");
         }
+    }
+
+    #[test]
+    fn a_windows_installer_is_offered_where_the_store_can_set_it_up_and_ranked_last() {
+        let mut linux = Platform::preset("linux-x64-debian").unwrap();
+        let on = |p: &Platform, name: &str| evaluate(&classify(name).unwrap(), p);
+        // Not offered unless the device was found able and the person wants it.
+        assert_eq!(on(&linux, "app-setup-x64.exe").level, Level::Incompatible);
+        linux.linux.as_mut().unwrap().windows = true;
+        let exe = on(&linux, "app-setup-x64.exe");
+        assert_eq!((exe.level, exe.note.as_deref()), (Level::Compatible, Some(VIA_PROTON)));
+        assert_eq!(on(&linux, "app-setup.exe").level, Level::Compatible);
+        assert!(exe.score > on(&linux, "app-setup.exe").score, "the 64-bit installer is offered first");
+        assert_eq!(on(&linux, "app-win32-setup.exe").level, Level::Compatible);
+        assert_eq!(on(&linux, "app-windows-arm64-setup.exe").level, Level::Incompatible);
+        // Anything made for Linux comes first, even one that needs emulation's caveat.
+        for native in ["app-x86_64.AppImage", "app-linux-x86_64.tar.gz", "app_amd64.deb"] {
+            assert!(on(&linux, native).score > exe.score, "{native}");
+        }
+        // Other kinds of Windows file, and other devices, are as before.
+        assert_eq!(on(&linux, "app-x64.msi").level, Level::Incompatible);
+        let mut arm = Platform::preset("linux-arm64-debian").unwrap();
+        arm.linux.as_mut().unwrap().windows = true;
+        assert_eq!(on(&arm, "app-setup-x64.exe").level, Level::Incompatible);
     }
 
     #[test]

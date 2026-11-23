@@ -174,6 +174,12 @@ fn liked(app: &AppSummary) -> f32 {
         // Recommendations on Steam; ratings on the App Store.
         SourceKind::Steam => 100_000.0,
         SourceKind::MacAppStore => 5_000.0,
+        // Ratings on the Microsoft Store, which has many more people rating.
+        SourceKind::MicrosoftStore => 20_000.0,
+        // Ratings on GOG.
+        SourceKind::Gog => 5_000.0,
+        // Installs on Google Play, where the well-known are counted in hundreds of millions.
+        SourceKind::GooglePlay => 50_000_000.0,
         // Installs in the last month.
         SourceKind::Flathub => 100_000.0,
         SourceKind::Aur => 1_500.0,

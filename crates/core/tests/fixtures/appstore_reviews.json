@@ -1,0 +1,120 @@
+{
+ "feed": {
+  "entry": [
+   {
+    "author": {
+     "uri": {
+      "label": "https://itunes.apple.com/us/reviews/id234856087"
+     },
+     "name": {
+      "label": "The RedCalvin"
+     },
+     "label": ""
+    },
+    "updated": {
+     "label": "2026-04-23T16:02:50-07:00"
+    },
+    "im:rating": {
+     "label": "5"
+    },
+    "im:version": {
+     "label": "4.2"
+    },
+    "id": {
+     "label": "13990057895"
+    },
+    "title": {
+     "label": "The whole enchilada"
+    },
+    "content": {
+     "label": "Apple Creator Studio is an outstanding value for anyone serious about creative work. Final Cut Pro, Logic Pro, Motion, Compressor, and Pixelmator Pro already make this a powerful bundle, but what really surprised me is how much better Keynote, Pages, and Numbers feel with the added intelligent tools",
+     "attributes": {
+      "type": "text"
+     }
+    },
+    "im:voteSum": {
+     "label": "2"
+    },
+    "im:voteCount": {
+     "label": "2"
+    }
+   },
+   {
+    "author": {
+     "uri": {
+      "label": "https://itunes.apple.com/us/reviews/id101694364"
+     },
+     "name": {
+      "label": "SpauldingGrate"
+     },
+     "label": ""
+    },
+    "updated": {
+     "label": "2026-06-05T11:17:06-07:00"
+    },
+    "im:rating": {
+     "label": "4"
+    },
+    "im:version": {
+     "label": "4.2"
+    },
+    "id": {
+     "label": "14147737157"
+    },
+    "title": {
+     "label": "Maybe Canva on Nvidia Spark?"
+    },
+    "content": {
+     "label": "I love the original features and still use them weekly: SuperResolution, Repair, and automation via Shortucts or Apple Script. Easy to use. I get work done fast. Amazing!   However, Pixelmator Pro was once bulletproof; It is now buggy. They used to add amazing new features like vector editing. Now t",
+     "attributes": {
+      "type": "text"
+     }
+    },
+    "im:voteSum": {
+     "label": "31"
+    },
+    "im:voteCount": {
+     "label": "33"
+    }
+   },
+   {
+    "author": {
+     "uri": {
+      "label": "https://itunes.apple.com/us/reviews/id208596678"
+     },
+     "name": {
+      "label": "skylarrromo"
+     },
+     "label": ""
+    },
+    "updated": {
+     "label": "2026-05-07T19:17:48-07:00"
+    },
+    "im:rating": {
+     "label": "2"
+    },
+    "im:version": {
+     "label": "4.2"
+    },
+    "id": {
+     "label": "14040039239"
+    },
+    "title": {
+     "label": "Subscriptions Are Not Cool To The OG Users"
+    },
+    "content": {
+     "label": "I’ve been using the original Pixelmator Pro for around 7–8 years and genuinely loved it. It was one of the few creative apps I always recommended because it felt polished, reliable, and fairly priced as a one-time purchase.\nEver since Apple acquired the app and transitioned things into the new “Crea",
+     "attributes": {
+      "type": "text"
+     }
+    },
+    "im:voteSum": {
+     "label": "68"
+    },
+    "im:voteCount": {
+     "label": "69"
+    }
+   }
+  ]
+ }
+}

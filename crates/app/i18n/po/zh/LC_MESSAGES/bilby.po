@@ -16,6 +16,14 @@ msgctxt "FamilyRow"
 msgid ", unofficial"
 msgstr "，非官方"
 
+msgctxt "ReviewForm"
+msgid "1 star"
+msgstr "1 颗星"
+
+msgctxt "TvShell"
+msgid "1 star"
+msgstr "1 颗星"
+
 msgctxt "TvShell"
 msgid "A PIN guards these settings and adult content"
 msgstr "PIN 保护这些设置和成人内容"
@@ -31,6 +39,14 @@ msgstr "每次下载文件前都会打开文件夹选择器。退出选择器即
 msgctxt "TvQuestion"
 msgid "A game controller is connected. Bilby has a layout with large text for the sofa, driven with the arrow keys of a remote or keyboard. You can change this later in Settings."
 msgstr "已连接游戏手柄。Bilby 有适合在沙发上使用的大字布局，可用遥控器或键盘的方向键操作。之后可在“设置”中更改。"
+
+msgctxt "ReviewForm"
+msgid "A short title"
+msgstr "简短的标题"
+
+msgctxt "TvShell"
+msgid "A short title"
+msgstr "简短的标题"
 
 msgctxt "DetailsBody"
 msgid "About"
@@ -59,6 +75,10 @@ msgstr "关于此网站"
 msgctxt "WhatsNew"
 msgid "About this website"
 msgstr "关于此网站"
+
+msgctxt "SettingsBody"
+msgid "Accounts"
+msgstr "账户"
 
 msgctxt "TvShell"
 msgid "Accounts"
@@ -181,6 +201,10 @@ msgid "Ask where to save each download"
 msgstr "每次下载都询问保存位置"
 
 msgctxt "SettingsBody"
+msgid "Asks the system for its full speed while a Windows app runs."
+msgstr "在 Windows 应用运行时请求系统全速运行。"
+
+msgctxt "SettingsBody"
 msgid "Automatic"
 msgstr "自动"
 
@@ -235,6 +259,10 @@ msgstr "Bilby 会在发现更新时自动为你的应用安装：打开时检查
 msgctxt "SettingsBody"
 msgid "Bilby keeps a short list, chosen by people, of the apps and websites nearly everyone looks for: a browser, a video player, the big names. On, the home page starts with them in the version for this device, and they are placed a little higher in a search. Off, you get only what the sources' own figures say."
 msgstr "Bilby 有一份由人工挑选的简短列表，收录几乎人人都会找的应用和网站：浏览器、视频播放器和各大知名应用。开启后，首页会先展示它们适合此设备的版本，搜索时它们的排名也会略微靠前。关闭后，只按来源自身的数据显示。"
+
+msgctxt "SettingsBody"
+msgid "Bilby sets Windows programs up to run here through Proton, each in a folder of its own. Most programs work, not all. The first one needs about 700 MB of downloads."
+msgstr "Bilby 会将 Windows 程序设置为通过 Proton 在此运行，每个程序都有自己的文件夹。大多数可用，但不是全部。第一个需要下载约 700 MB。"
 
 msgctxt "TvShell"
 msgid "Bilby {0} is available. You have {1}"
@@ -377,6 +405,10 @@ msgid "Choose a version"
 msgstr "选择版本"
 
 msgctxt "TvShell"
+msgid "Choose done when it is typed. Back puts the keyboard away."
+msgstr "输入完后选择“完成”。按返回可收起键盘。"
+
+msgctxt "TvShell"
 msgid "Choose enter when it is typed. Back cancels."
 msgstr "输入完成后选择“确定”。按返回键取消。"
 
@@ -432,6 +464,14 @@ msgctxt "CommandBox"
 msgid "Copy"
 msgstr "复制"
 
+msgctxt "ReviewForm"
+msgid "Copy and open"
+msgstr "复制并打开"
+
+msgctxt "TvShell"
+msgid "Copy and open"
+msgstr "复制并打开"
+
 msgctxt "CommandBox"
 msgid "Copy command"
 msgstr "复制命令"
@@ -439,6 +479,14 @@ msgstr "复制命令"
 msgctxt "DetailsBody"
 msgid "Couldn't load this app"
 msgstr "无法加载此应用"
+
+msgctxt "SettingsBody"
+msgid "Country for prices"
+msgstr "价格所用的国家/地区"
+
+msgctxt "TvShell"
+msgid "Country for prices"
+msgstr "价格所用的国家/地区"
 
 msgctxt "SettingsBody"
 msgid "Dark"
@@ -491,6 +539,10 @@ msgstr "发现"
 msgctxt "MobileShell"
 msgid "Discover"
 msgstr "发现"
+
+msgctxt "TvShell"
+msgid "Done"
+msgstr "完成"
 
 msgctxt "DetailsBody"
 msgid "Download"
@@ -549,6 +601,14 @@ msgid "Everything works without signing in, but GitHub then allows only 60 reque
 msgstr "不登录也能使用全部功能，但 GitHub 对你的整个网络每小时只允许 60 次请求，搜索几次就可能用完。登录后可提高到 5,000 次。Bilby 不要求访问你的账户。"
 
 msgctxt "SettingsBody"
+msgid "Family"
+msgstr "家庭"
+
+msgctxt "TvShell"
+msgid "Family"
+msgstr "家庭"
+
+msgctxt "SettingsBody"
 msgid "Family and adult content"
 msgstr "家庭与成人内容"
 
@@ -600,6 +660,10 @@ msgctxt "SettingsBody"
 msgid "Four digits. With a PIN set, it is asked for to change anything in this card and to open adult content, in place of the question about being an adult."
 msgstr "四位数字。设置 PIN 后，更改此卡片中的任何设置或打开成人内容时都需要输入它，不再询问你是否成年。"
 
+msgctxt "SettingsBody"
+msgid "Frames a second and temperatures, drawn over the app by MangoHud."
+msgstr "由 MangoHud 在应用上显示每秒帧数和温度。"
+
 msgctxt "DetailsBody"
 msgid "From"
 msgstr "来自"
@@ -607,6 +671,22 @@ msgstr "来自"
 msgctxt "TvShell"
 msgid "From"
 msgstr "来自"
+
+msgctxt "SettingsBody"
+msgid "GE-Proton"
+msgstr "GE-Proton"
+
+msgctxt "TvShell"
+msgid "GE-Proton"
+msgstr "GE-Proton"
+
+msgctxt "SettingsBody"
+msgid "GOG"
+msgstr "GOG"
+
+msgctxt "SettingsBody"
+msgid "General"
+msgstr "通用"
 
 msgctxt "TvShell"
 msgid "General"
@@ -644,6 +724,10 @@ msgstr[0] "隐藏 {n} 个适用于其他设备的文件"
 msgctxt "TvShell"
 msgid "Home"
 msgstr "首页"
+
+msgctxt "SettingsBody"
+msgid "How Windows apps run"
+msgstr "Windows 应用的运行方式"
 
 msgctxt "DetailsBody"
 msgid "In your favourites"
@@ -733,6 +817,14 @@ msgctxt "TvShell"
 msgid "Installing updates"
 msgstr "正在安装更新"
 
+msgctxt "ReviewForm"
+msgid "It goes to:"
+msgstr "它会发送到："
+
+msgctxt "TvShell"
+msgid "It goes to:"
+msgstr "它会发送到："
+
 msgctxt "SettingsBody"
 msgid "Keep Bilby in the system tray when its window is closed"
 msgstr "关闭窗口后让 Bilby 留在系统托盘"
@@ -761,6 +853,10 @@ msgctxt "TvShell"
 msgid "Language"
 msgstr "语言"
 
+msgctxt "TvShell"
+msgid "Language and country"
+msgstr "语言和国家/地区"
+
 msgctxt "LibraryBody"
 msgid "Last checked {}"
 msgstr "上次检查：{}"
@@ -768,6 +864,26 @@ msgstr "上次检查：{}"
 msgctxt "SettingsBody"
 msgid "Layout"
 msgstr "布局"
+
+msgctxt "ReviewForm"
+msgid "Leave it at:"
+msgstr "留在这里："
+
+msgctxt "TvShell"
+msgid "Leave it at:"
+msgstr "留在这里："
+
+msgctxt "ReviewForm"
+msgid "Leave the review at {}"
+msgstr "在 {} 留下评价"
+
+msgctxt "TvShell"
+msgid "Leave the review at {}"
+msgstr "在 {} 留下评价"
+
+msgctxt "TvShell"
+msgid "Left and Right to change"
+msgstr "按左右键更改"
 
 msgctxt "DesktopShell"
 msgid "Library"
@@ -818,6 +934,26 @@ msgctxt "TvShell"
 msgid "More choices"
 msgstr "更多选项"
 
+msgctxt "TvShell"
+msgid "Name"
+msgstr "名字"
+
+msgctxt "ReviewForm"
+msgid "Name to show next to your review"
+msgstr "显示在你评价旁边的名字"
+
+msgctxt "TvShell"
+msgid "Name to show next to your review"
+msgstr "显示在你评价旁边的名字"
+
+msgctxt "SettingsBody"
+msgid "Needs GameMode, which is not on this device. Install it and this starts working."
+msgstr "需要 GameMode，而此设备上没有。安装后即可生效。"
+
+msgctxt "SettingsBody"
+msgid "Needs MangoHud, which is not on this device. Install it and this starts working."
+msgstr "需要 MangoHud，而此设备上没有。安装后即可生效。"
+
 msgctxt "GateOverlay"
 msgid "No"
 msgstr "否"
@@ -846,6 +982,14 @@ msgctxt "AppTile"
 msgid "Not for this device"
 msgstr "不适用于此设备"
 
+msgctxt "ReviewForm"
+msgid "Not now"
+msgstr "以后再说"
+
+msgctxt "TvShell"
+msgid "Not now"
+msgstr "以后再说"
+
 msgctxt "DesktopShell"
 msgid "Nothing featured for this device yet"
 msgstr "暂时没有适合此设备的精选内容"
@@ -862,6 +1006,10 @@ msgctxt "TvShell"
 msgid "Nothing for this TV yet. Press Up to search."
 msgstr "暂时没有适合这台电视的内容。按上键搜索。"
 
+msgctxt "SettingsBody"
+msgid "Off"
+msgstr "关"
+
 msgctxt "TvSetting"
 msgid "Off"
 msgstr "关"
@@ -875,6 +1023,14 @@ msgid "Off, adult things are only ever found by searching. On, they may also app
 msgstr "关闭时，成人内容只能通过搜索找到。开启时，它们也可能出现在首页，并像其他地方一样被遮盖。"
 
 msgctxt "SettingsBody"
+msgid "Offer Windows apps"
+msgstr "提供 Windows 应用"
+
+msgctxt "TvShell"
+msgid "Offer Windows apps, set up to run here through Proton"
+msgstr "提供 Windows 应用，并设置为通过 Proton 在此运行"
+
+msgctxt "SettingsBody"
 msgid "Offer betas and release candidates as soon as they are published. They may be unstable."
 msgstr "测试版和候选版本一发布就提供。它们可能不稳定。"
 
@@ -885,6 +1041,10 @@ msgstr "提供应用的测试版本"
 msgctxt "FamilyRow"
 msgid "Official"
 msgstr "官方"
+
+msgctxt "SettingsBody"
+msgid "On"
+msgstr "开"
 
 msgctxt "TvSetting"
 msgid "On"
@@ -925,6 +1085,10 @@ msgstr "打开下载文件夹"
 msgctxt "SettingsBody"
 msgid "Open folder"
 msgstr "打开文件夹"
+
+msgctxt "SettingsBody"
+msgid "Open its folder"
+msgstr "打开其文件夹"
 
 msgctxt "TvShell"
 msgid "Open link {}"
@@ -986,6 +1150,10 @@ msgctxt "SettingsBody"
 msgid "Paste a token"
 msgstr "粘贴令牌"
 
+msgctxt "SettingsBody"
+msgid "Performance figures"
+msgstr "性能数据"
+
 msgctxt "TvShell"
 msgid "Pick letters, then choose search"
 msgstr "选择字母，然后选择搜索"
@@ -1023,6 +1191,10 @@ msgid "Press Back to stop."
 msgstr "按返回键停止。"
 
 msgctxt "TvShell"
+msgid "Press Left or Right for another country"
+msgstr "按左或右选择其他国家/地区"
+
+msgctxt "TvShell"
 msgid "Press OK again to remove {} from this TV"
 msgstr "再按一次 OK，从这台电视移除 {}"
 
@@ -1033,6 +1205,10 @@ msgstr "按 OK 打开键盘"
 msgctxt "TvShell"
 msgid "Press OK for the next language"
 msgstr "按 OK 切换到下一种语言"
+
+msgctxt "TvShell"
+msgid "Press OK to type"
+msgstr "按 OK 键输入"
 
 msgctxt "DetailsBody"
 msgid "Price"
@@ -1045,6 +1221,14 @@ msgstr "价格"
 msgctxt "DetailsBody"
 msgid "Project page"
 msgstr "项目主页"
+
+msgctxt "SettingsBody"
+msgid "Proton version"
+msgstr "Proton 版本"
+
+msgctxt "TvShell"
+msgid "Proton version for Windows apps"
+msgstr "Windows 应用使用的 Proton 版本"
 
 msgctxt "SettingsBody"
 msgid "QR code to scan with the Steam app"
@@ -1195,6 +1379,10 @@ msgid "Results"
 msgstr "结果"
 
 msgctxt "TvShell"
+msgid "Review"
+msgstr "评价"
+
+msgctxt "TvShell"
 msgid "Review {0} of {1}"
 msgstr "第 {0} 条评价，共 {1} 条"
 
@@ -1221,6 +1409,10 @@ msgstr "评价由其他用户撰写，来自 GNOME 和 KDE 应用商店使用的
 msgctxt "TvShell"
 msgid "Reviews are written by other people and come from the ratings service the GNOME and KDE app stores use."
 msgstr "评价由其他用户撰写，来自 GNOME 和 KDE 应用商店使用的评分服务。"
+
+msgctxt "SettingsBody"
+msgid "Same as the others"
+msgstr "与其他相同"
 
 msgctxt "SettingsBody"
 msgid "Save"
@@ -1310,6 +1502,26 @@ msgctxt "TvShell"
 msgid "Searching…"
 msgstr "正在搜索…"
 
+msgctxt "ReviewForm"
+msgid "Send review"
+msgstr "发送评价"
+
+msgctxt "TvShell"
+msgid "Send review"
+msgstr "发送评价"
+
+msgctxt "ReviewForm"
+msgid "Send your review"
+msgstr "发送你的评价"
+
+msgctxt "TvShell"
+msgid "Send your review"
+msgstr "发送你的评价"
+
+msgctxt "TvShell"
+msgid "Sending…"
+msgstr "正在发送…"
+
 msgctxt "SettingsBody"
 msgid "Set a PIN"
 msgstr "设置 PIN"
@@ -1395,6 +1607,10 @@ msgid "Show less of {}"
 msgstr "收起 {}"
 
 msgctxt "SettingsBody"
+msgid "Show performance figures"
+msgstr "显示性能数据"
+
+msgctxt "SettingsBody"
 msgid "Show ratings and reviews"
 msgstr "显示评分和评价"
 
@@ -1420,6 +1636,10 @@ msgid "Sign in in a browser"
 msgstr "在浏览器中登录"
 
 msgctxt "SettingsBody"
+msgid "Sign in on GOG's page in the window that opened. Close it to stop."
+msgstr "在打开的窗口中的 GOG 页面上登录。关闭窗口即可停止。"
+
+msgctxt "SettingsBody"
 msgid "Sign in on Steam's page in Longboard, then choose to share your library."
 msgstr "在 Longboard 中打开的 Steam 页面上登录，然后选择共享你的 Steam 库。"
 
@@ -1430,6 +1650,10 @@ msgstr "在 Longboard 中的 Steam 页面登录，然后共享你的 Steam 库"
 msgctxt "SettingsBody"
 msgid "Sign in on Steam's page in the window that opened. Close it to stop."
 msgstr "在打开的窗口中的 Steam 页面上登录。关闭窗口即可停止。"
+
+msgctxt "SettingsBody"
+msgid "Sign in to GOG"
+msgstr "登录 GOG"
 
 msgctxt "TvShell"
 msgid "Sign in to GitHub for more searches an hour"
@@ -1452,6 +1676,10 @@ msgid "Sign in to Steam with a QR code, to see what you own"
 msgstr "用二维码登录 Steam，查看你拥有的内容"
 
 msgctxt "SettingsBody"
+msgid "Sign in to see which GOG games you already own. GOG's own sign-in page opens in a small window; Bilby asks GOG once for the list and keeps only that, on this device."
+msgstr "登录后可查看你已经拥有哪些 GOG 游戏。GOG 自己的登录页面会在一个小窗口中打开；Bilby 只向 GOG 请求一次列表，并且只把这份列表保存在此设备上。"
+
+msgctxt "SettingsBody"
 msgid "Sign in to see which Steam games you already own. Bilby keeps only the list of what you own, on this device. Choose how:"
 msgstr "登录后可查看你已拥有哪些 Steam 游戏。Bilby 只在此设备上保存你拥有的游戏列表。请选择方式："
 
@@ -1470,6 +1698,10 @@ msgstr "退出登录"
 msgctxt "TvShell"
 msgid "Sign out"
 msgstr "退出登录"
+
+msgctxt "SettingsBody"
+msgid "Sign out of GOG"
+msgstr "退出 GOG"
 
 msgctxt "SettingsBody"
 msgid "Sign out of GitHub"
@@ -1494,6 +1726,10 @@ msgstr "已登录 GitHub"
 msgctxt "TvShell"
 msgid "Signed in to Steam  ·  {}"
 msgstr "已登录 Steam  ·  {}"
+
+msgctxt "SettingsBody"
+msgid "Signed in. Bilby knows {} in your GOG library and marks them Owned."
+msgstr "已登录。Bilby 已知你的 GOG 库中有 {}，并将它们标记为“已拥有”。"
 
 msgctxt "SettingsBody"
 msgid "Signed in. Bilby knows {} in your Steam library and marks them Owned."
@@ -1536,6 +1772,22 @@ msgid "Sounds: a quiet tick or pop as you move about and press things."
 msgstr "声音：移动和按键时发出轻微的滴答声或啪嗒声。"
 
 msgctxt "SettingsBody"
+msgid "Standard"
+msgstr "标准"
+
+msgctxt "TvShell"
+msgid "Standard"
+msgstr "标准"
+
+msgctxt "SettingsBody"
+msgid "Standard follows Valve's own Proton and is the steady choice. GE-Proton is a community build with newer fixes, which some games need. Either is fetched the first time it is used."
+msgstr "“标准”跟随 Valve 自己的 Proton，是稳妥的选择。GE-Proton 是社区构建，包含较新的修复，有些游戏需要它。两者都会在首次使用时下载。"
+
+msgctxt "TvShell"
+msgid "Stars"
+msgstr "星级"
+
+msgctxt "SettingsBody"
 msgid "Steam"
 msgstr "Steam"
 
@@ -1552,12 +1804,40 @@ msgid "Stop waiting"
 msgstr "停止等待"
 
 msgctxt "SettingsBody"
+msgid "Stop waiting for GOG"
+msgstr "停止等待 GOG"
+
+msgctxt "SettingsBody"
 msgid "Stop waiting for Steam"
 msgstr "停止等待 Steam"
+
+msgctxt "ReviewForm"
+msgid "Stop writing the review"
+msgstr "不写评价了"
+
+msgctxt "TvShell"
+msgid "Stop writing the review"
+msgstr "不写评价了"
 
 msgctxt "SettingsBody"
 msgid "Storage"
 msgstr "存储"
+
+msgctxt "SettingsBody"
+msgid "Storage and about"
+msgstr "存储与关于"
+
+msgctxt "SettingsBody"
+msgid "Stores"
+msgstr "商店"
+
+msgctxt "TvShell"
+msgid "Stores"
+msgstr "商店"
+
+msgctxt "SettingsBody"
+msgid "Stores are asked for this country's prices, in its own money."
+msgstr "向商店查询该国家/地区的价格，并以其货币显示。"
 
 msgctxt "TvShell"
 msgid "Switch"
@@ -1607,9 +1887,21 @@ msgctxt "SettingsBody"
 msgid "The code refreshes by itself."
 msgstr "二维码会自动刷新。"
 
+msgctxt "ReviewForm"
+msgid "The name to show next to it"
+msgstr "显示在它旁边的名字"
+
+msgctxt "TvShell"
+msgid "The name to show next to it"
+msgstr "显示在它旁边的名字"
+
 msgctxt "SettingsBody"
 msgid "The store only lists apps with a file that can be installed here. This is what it detected."
 msgstr "商店只列出有可在此安装的文件的应用。以下是它检测到的信息。"
+
+msgctxt "SettingsBody"
+msgid "These apply to every Windows app, unless an app below says otherwise."
+msgstr "这些设置适用于所有 Windows 应用，除非下面的某个应用另有设定。"
 
 msgctxt "SettingsBody"
 msgid "They come from the service the GNOME and KDE app stores use (odrs.gnome.org). Star ratings arrive as one file a day for every app. Written reviews are asked for when you open the page of an app that has them, which tells that service which app it was. Nothing that identifies you is sent."
@@ -1634,6 +1926,18 @@ msgstr "这只会让 Bilby 不再记录此应用。要卸载它，请使用系�
 msgctxt "TvShell"
 msgid "This store"
 msgstr "本商店"
+
+msgctxt "TvShell"
+msgid "Title"
+msgstr "标题"
+
+msgctxt "ReviewForm"
+msgid "Title of your review"
+msgstr "评价的标题"
+
+msgctxt "TvShell"
+msgid "Title of your review"
+msgstr "评价的标题"
 
 msgctxt "DesktopShell"
 msgid "Try a different name, or check the spelling. Projects without a file for {} are left out."
@@ -1676,8 +1980,8 @@ msgid "Unofficial"
 msgstr "非官方"
 
 msgctxt "TvShell"
-msgid "Up and Down move through the list. OK changes the highlighted setting."
-msgstr "上下键在列表中移动。OK 键更改高亮的设置。"
+msgid "Up and Down move through the list. OK changes the highlighted setting. Left is the list of sections."
+msgstr "上下键在列表中移动。确定键更改高亮的设置。左键是分区列表。"
 
 msgctxt "AppRow"
 msgid "Update"
@@ -1775,6 +2079,10 @@ msgctxt "LibraryItem"
 msgid "Updating…"
 msgstr "正在更新…"
 
+msgctxt "SettingsBody"
+msgid "Use GameMode"
+msgstr "使用 GameMode"
+
 msgctxt "TvQuestion"
 msgid "Use the TV layout"
 msgstr "使用电视布局"
@@ -1863,6 +2171,14 @@ msgctxt "Welcome"
 msgid "Welcome to Bilby"
 msgstr "欢迎使用 Bilby"
 
+msgctxt "ReviewForm"
+msgid "What do you think of it?"
+msgstr "你觉得它怎么样？"
+
+msgctxt "TvShell"
+msgid "What do you think of it?"
+msgstr "你觉得它怎么样？"
+
 msgctxt "OptionCard"
 msgid "What happens when I install {}"
 msgstr "安装 {} 时会发生什么"
@@ -1874,6 +2190,10 @@ msgstr "用户评价"
 msgctxt "OptionCard"
 msgid "What will happen?"
 msgstr "会发生什么？"
+
+msgctxt "TvShell"
+msgid "What you have typed"
+msgstr "你已输入的内容"
 
 msgctxt "WhatsNew"
 msgid "What's new"
@@ -1891,6 +2211,18 @@ msgctxt "TvShell"
 msgid "Where apps come from"
 msgstr "应用来源"
 
+msgctxt "SettingsBody"
+msgid "Windows apps"
+msgstr "Windows 应用"
+
+msgctxt "SettingsBody"
+msgid "Windows apps you install show up here, each with its own choices."
+msgstr "你安装的 Windows 应用会显示在这里，每个都有自己的选项。"
+
+msgctxt "SettingsBody"
+msgid "Windows settings"
+msgstr "Windows 设置"
+
 msgctxt "DetailsBody"
 msgid "Works on"
 msgstr "适用于"
@@ -1898,6 +2230,14 @@ msgstr "适用于"
 msgctxt "TvShell"
 msgid "Works on"
 msgstr "适用于"
+
+msgctxt "ReviewForm"
+msgid "Write a review"
+msgstr "写评价"
+
+msgctxt "TvShell"
+msgid "Write a review"
+msgstr "写评价"
 
 msgctxt "Welcome"
 msgid "You are seeing apps for {}. Anything that cannot be installed on this device is hidden."
@@ -1915,6 +2255,10 @@ msgctxt "SystemBody"
 msgid "You may be asked for your password. Keep the device on until this finishes."
 msgstr "可能会要求你输入密码。完成前请保持设备开启。"
 
+msgctxt "SettingsBody"
+msgid "Your Windows apps"
+msgstr "你的 Windows 应用"
+
 msgctxt "LibraryBody"
 msgid "Your library is empty"
 msgstr "你的应用库是空的"
@@ -1926,6 +2270,22 @@ msgstr "你自己的来源"
 msgctxt "TvShell"
 msgid "Your password is needed"
 msgstr "需要你的密码"
+
+msgctxt "ReviewForm"
+msgid "Your review"
+msgstr "你的评价"
+
+msgctxt "TvShell"
+msgid "Your review"
+msgstr "你的评价"
+
+msgctxt "ReviewForm"
+msgid "Your review of {}"
+msgstr "你对 {} 的评价"
+
+msgctxt "TvShell"
+msgid "Your review of {}"
+msgstr "你对 {} 的评价"
 
 msgctxt "TvShell"
 msgid "an older one"
@@ -2056,6 +2416,14 @@ msgstr "{} 下载"
 msgctxt "AppTile"
 msgid "{} sources"
 msgstr "{} 个来源"
+
+msgctxt "ReviewForm"
+msgid "{} stars"
+msgstr "{} 颗星"
+
+msgctxt "TvShell"
+msgid "{} stars"
+msgstr "{} 颗星"
 
 msgctxt "DesktopShell"
 msgid "{}. Everything shown works here."

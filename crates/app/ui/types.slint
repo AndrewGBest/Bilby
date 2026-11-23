@@ -77,6 +77,18 @@ export struct ReviewRow {
     meta: string,
 }
 
+// Somewhere a review of the open app can be left.
+export struct ReviewPlace {
+    // "odrs", or a store's short name ("steam").
+    id: string,
+    name: string,
+    // What choosing it does.
+    note: string,
+    // Sent from here; otherwise the store's own page is opened.
+    from-here: bool,
+    chosen: bool,
+}
+
 export struct Fact {
     name: string,
     value: string,
@@ -93,6 +105,16 @@ export struct SystemUpdate {
 
 // A source of apps that can be switched on and off, or filtered by.
 // One app among several for the same service ("YouTube": VacuumTube, FreeTube, ...).
+// A Windows app that is installed, and what it does differently from the others.
+export struct WindowsApp {
+    id: string,
+    name: string,
+    // 0 the same as the others, 1 the standard Proton, 2 GE-Proton.
+    proton: int,
+    // Performance figures: 0 the same as the others, 1 on, 2 off.
+    overlay: int,
+}
+
 export struct VersionChoice {
     id: string,
     // "VacuumTube".
@@ -224,6 +246,27 @@ export global Store {
     in property <[image]> screenshots;
     // Written reviews, for apps a ratings service knows. Empty for every other app.
     in property <[ReviewRow]> reviews;
+    // Where a review of the open app can be left. Empty when nowhere takes one.
+    in property <[ReviewPlace]> review-places;
+    // One of the chosen places is a store's own page: the words are copied for it.
+    in property <bool> review-copies;
+    // One of the chosen places takes the review from here, with a title and a name.
+    in property <bool> review-from-here;
+    // The name shown next to the last review, offered again.
+    in-out property <string> review-name;
+    // What is being written where there is no keyboard to type with (a TV): the
+    // on-screen keyboard types into these.
+    in-out property <string> review-title;
+    in-out property <string> review-text;
+    // What the on-screen keyboard types into: 0 the search, 1 a review's title,
+    // 2 its text, 3 the name shown next to it.
+    in-out property <int> osk-target;
+    // 0 writing, 1 being sent, 2 done.
+    in property <int> review-state;
+    // Why the review cannot be sent yet, or why it was refused.
+    in property <string> review-problem;
+    // What became of it, a line for each place.
+    in property <string> review-result;
     in property <string> warning;
     in property <string> homepage;
     // Set when nothing in the app's releases fits this machine.
@@ -311,6 +354,11 @@ export global Store {
     in property <bool> steam-signed-in;
     // "312 games and tools", when signed in.
     in property <string> steam-summary;
+    // GOG: 0 idle, 1 waiting for the sign-in window.
+    in property <int> gog-state;
+    in property <bool> gog-available;
+    in property <bool> gog-signed-in;
+    in property <string> gog-summary;
     in property <int> signin-state;
     in property <string> signin-code;
     in property <string> downloads-dir;
@@ -336,6 +384,29 @@ export global Store {
     in property <bool> show-essentials;
     // Also show what does not run on this device (marked, and not installable).
     in property <bool> show-everything;
+    // Windows programs can be set up to run on this device, and whether they are offered.
+    in property <bool> windows-possible;
+    in property <bool> windows-apps;
+    callback set-windows-apps(bool);
+    // Which part of the settings is showing: 0 general, 1 stores, 2 accounts,
+    // 3 Windows apps, 4 family, 5 updates, 6 storage and about.
+    in-out property <int> settings-section;
+    // How Windows apps run in general: 0 the standard Proton, 1 GE-Proton; whether
+    // performance figures are drawn and GameMode used, and whether those are installed.
+    in property <int> windows-proton;
+    in property <bool> windows-overlay;
+    in property <bool> windows-gamemode;
+    in property <bool> has-mangohud;
+    in property <bool> has-gamemode;
+    callback set-windows-proton(int);
+    callback set-windows-overlay(bool);
+    callback set-windows-gamemode(bool);
+    // The Windows apps that are installed, each with what it does differently.
+    in property <[WindowsApp]> windows-installed;
+    // An app's own choices: its id, Proton (0 same, 1 standard, 2 GE), figures (0 same, 1 on, 2 off).
+    callback set-windows-app(string, int, int);
+    callback open-windows-tool(string);
+    callback open-windows-folder(string);
     in property <bool> auto-update;
     // This desktop has a system tray, and closing the window keeps the store in it.
     in property <bool> tray-available;
@@ -382,6 +453,14 @@ export global Store {
     callback set-language(string);
     // The one after the current one, for a remote.
     callback next-language();
+    // The countries whose prices the stores can be asked for, "System" first; `on`
+    // marks the one chosen.
+    in property <[SourceChoice]> countries;
+    in property <string> country-name;
+    // By code ("CA"); empty for the system's own.
+    callback set-country(string);
+    // The one after the current one (or, with `false`, before it), for a remote.
+    callback step-country(bool);
     // The TV's on-screen keyboard: its keys as they now show, and which is highlighted.
     in property <[OskKey]> osk-keys;
     in property <int> osk-at;
@@ -434,6 +513,12 @@ export global Store {
     callback steam-signin-qr();
     callback steam-cancel();
     callback steam-signout();
+    callback gog-signin();
+    callback gog-cancel();
+    callback gog-signout();
+    callback toggle-review-place(string);
+    // Stars, title, text, and the name to show.
+    callback send-review(int, string, string, string);
     callback clear-cache();
     callback clear-recent();
     callback open-url(string);

@@ -27,6 +27,11 @@ pub struct Settings {
     /// The language to show the store in, as a code such as `fr`. Empty: the
     /// system's own.
     pub language: String,
+    /// The country whose prices the stores are asked for, as two letters such as
+    /// `CA`. Empty: the one the system is set to.
+    pub country: String,
+    /// Do not offer Windows programs on Linux, set up to run through Proton.
+    pub hide_windows_apps: bool,
     /// Which interface to use: `desktop`, `tv`, or anything else for "decide for me".
     pub interface: String,
     /// The "is this a TV?" question was answered or dismissed; it is asked once.
@@ -160,6 +165,14 @@ pub struct State {
     pub settings: Settings,
     /// The Steam account the person signed in to, and what it owns.
     pub steam: Option<crate::steam_account::Account>,
+    /// The GOG account the person signed in to, and what it owns.
+    pub gog: Option<crate::gog_account::Account>,
+    /// A made-up id sent with reviews written here, so that the ratings service can
+    /// tell one person's reviews together without knowing whose they are. Made the
+    /// first time a review is sent.
+    pub reviewer: String,
+    /// The name last shown next to a review, offered again the next time.
+    pub reviewer_name: String,
     pub library: Vec<InstalledApp>,
     pub recent_searches: Vec<String>,
     pub favourites: Vec<Favourite>,
