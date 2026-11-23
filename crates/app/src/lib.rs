@@ -6536,6 +6536,7 @@ fn android_main(android_app: slint::android::AndroidApp) {
         programs: Vec::new(),
         cache: internal.join("cache"),
         config: internal.join("config"),
+        desktop: None,
     };
     // Addresses and other stores' pages are shown by Android: its browser, Google Play.
     let options = Options {
