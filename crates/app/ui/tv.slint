@@ -70,6 +70,53 @@ component TvTile inherits Rectangle {
     }
 }
 
+// A category on the page of categories: its name, and a stripe of its own colour.
+component TvKind inherits Rectangle {
+    in property <AppCard> kind;
+    in property <bool> focused;
+    in property <length> u;
+    callback clicked;
+    accessible-role: button;
+    accessible-label: kind.name;
+    accessible-action-default => { root.clicked(); }
+    Rectangle {
+        x: focused ? -5 * u : 0;
+        y: focused ? -3 * u : 0;
+        width: parent.width + (focused ? 10 * u : 0);
+        height: parent.height + (focused ? 6 * u : 0);
+        border-radius: 10 * u;
+        background: focused ? Theme.surface-2 : Theme.surface;
+        border-width: focused ? 2 * u : 0.5 * u;
+        border-color: focused ? white : Theme.stroke;
+        opacity: focused ? 1 : 0.82;
+        clip: true;
+        animate x, y, width, height, border-width, opacity, background { duration: 130ms; easing: ease-out; }
+        TouchArea {
+            clicked => { root.clicked(); }
+        }
+        Rectangle {
+            x: 14 * u;
+            y: (parent.height - self.height) / 2;
+            width: 4 * u;
+            height: 26 * u;
+            border-radius: 2 * u;
+            background: kind.tint;
+        }
+        Text {
+            x: 30 * u;
+            width: parent.width - 42 * u;
+            height: parent.height;
+            text: kind.name;
+            color: Theme.text;
+            font-size: 14 * u;
+            font-weight: 700;
+            wrap: word-wrap;
+            overflow: elide;
+            vertical-alignment: center;
+        }
+    }
+}
+
 // An entry of the top bar: where you are is underlined, where the remote points is boxed.
 component TvTab inherits Rectangle {
     in property <string> text;
@@ -209,12 +256,21 @@ export component TvShell inherits Rectangle {
     property <bool> on-library: Store.page == 2 && !Store.details-open;
     // Home and a page of search results both have the search bar: it stays where it
     // is when a search has been made, so the next one is one press away.
-    property <bool> has-search: Store.page == 0 || Store.page == 1;
+    property <bool> has-search: (Store.page == 0 || Store.page == 1) && !root.on-cats;
+    // The page of categories: open from its button in the top bar, and still open
+    // underneath a category chosen from it, so Back from that one returns to it.
+    property <bool> cats-open: false;
+    property <bool> has-cats: Store.tv-categories.length > 1;
+    property <bool> on-cats: root.cats-open && root.has-cats && Store.page == 0 && !Store.details-open;
+    // The category the remote points at there, counted along the rows of four.
+    property <int> cat-at: 0;
+    changed has-cats => { root.cat-at = 0; }
     // The on-screen keyboard is up, typing into the search bar.
     property <bool> osk: false;
     // Run the search that has been typed and go to what it finds.
     function run-search() {
         root.osk = false;
+        root.cats-open = false;
         Store.search(Store.query);
         root.cur-row = 0;
         root.cur-col = 0;
@@ -262,7 +318,7 @@ export component TvShell inherits Rectangle {
     property <length> files-at: 0;
     // Where the remote's focus is: 0 the grid of apps, 1 the top bar, 2 the library's
     // own buttons. `tab` is the focused entry of the top bar: Home, Library, Search,
-    // This TV.
+    // Settings, This TV, and 5 for Categories, which sits after Library.
     property <int> zone: 0;
     property <int> tab: 0;
     property <int> lib-act: 0;
@@ -279,13 +335,51 @@ export component TvShell inherits Rectangle {
     }
     function enter-bar() {
         // From Home, Up lands on Search: it is what people go up there for.
-        root.tab = Store.page == 2 ? 1 : Store.page == 3 ? 3 : Store.page == 4 ? 4 : 2;
+        root.tab = root.on-cats ? 5 : Store.page == 2 ? 1 : Store.page == 3 ? 3 : Store.page == 4 ? 4 : 2;
         root.zone = 1;
+    }
+    // The entry of the top bar to the left or right of the focused one.
+    pure function tab-left() -> int {
+        root.tab == 4 ? 3 : root.tab == 3 ? (root.has-cats ? 5 : 1) : root.tab == 5 ? 1 : 0
+    }
+    pure function tab-right() -> int {
+        root.tab == 0 ? 1 : root.tab == 1 ? (root.has-cats ? 5 : 3) : root.tab == 5 ? 3 : 4
+    }
+    // Back from what a search found, or from a category in full: to the page of
+    // categories if it came from there, else Home.
+    function back-from-results() {
+        if (root.cats-open) {
+            Store.leave-search();
+            root.cur-row = 0;
+            root.cur-col = 0;
+            root.zone = 0;
+        } else {
+            root.tab = 0;
+            root.activate-tab();
+        }
+    }
+    // Show everything in one of the categories, from their page.
+    function open-category(at: int) {
+        root.cat-at = max(0, min(Store.tv-categories.length - 1, at));
+        root.cur-row = 0;
+        root.cur-col = 0;
+        root.zone = 0;
+        scope.focus();
+        Store.open(Store.tv-categories[root.cat-at].id);
     }
     // Go where the focused entry of the top bar leads.
     function activate-tab() {
         root.cur-row = 0;
         root.cur-col = 0;
+        if (root.tab == 5) {
+            // The categories take the page: whatever search was open is put away.
+            Store.leave-search();
+            root.cats-open = true;
+            root.cat-at = 0;
+            root.zone = 0;
+            return;
+        }
+        root.cats-open = false;
         if (root.tab == 0) {
             // Home is Home: a search that was open is put away.
             Store.leave-search();
@@ -570,11 +664,11 @@ export component TvShell inherits Rectangle {
                 if (event.text == Key.LeftArrow) {
                     // Search is its own row under the tabs, so sideways steps over it.
                     if (root.tab != 2) {
-                        root.tab = root.tab == 3 ? 1 : max(0, root.tab - 1);
+                        root.tab = root.tab-left();
                     }
                 } else if (event.text == Key.RightArrow) {
                     if (root.tab != 2) {
-                        root.tab = root.tab == 1 ? 3 : min(4, root.tab + 1);
+                        root.tab = root.tab-right();
                     }
                 } else if (event.text == Key.UpArrow) {
                     // From search, up to the tabs.
@@ -587,6 +681,8 @@ export component TvShell inherits Rectangle {
                         if (rows.length > 0) {
                             root.zone = 0;
                         }
+                    } else if (root.on-cats) {
+                        root.zone = 0;
                     } else if (root.has-search) {
                         // On Home, down from any tab is search. Only OK changes page.
                         root.tab = 2;
@@ -605,11 +701,44 @@ export component TvShell inherits Rectangle {
                 } else if (event.text == Key.Escape || event.text == Key.Back || event.text == Key.Backspace) {
                     // Back from anywhere but Home goes Home; on Home there is nowhere
                     // further back, so the system may have the key.
-                    if (Store.page == 0) {
+                    if (Store.page == 0 && !root.on-cats) {
                         return reject;
                     }
                     root.tab = 0;
                     root.activate-tab();
+                }
+                return accept;
+            }
+            if (root.on-cats) {
+                // The page of categories: four to a row, OK opens the one pointed at.
+                if (event.text == Key.RightArrow) {
+                    if (Math.mod(root.cat-at, 4) < 3 && root.cat-at + 1 < Store.tv-categories.length) {
+                        root.cat-at += 1;
+                    }
+                } else if (event.text == Key.LeftArrow) {
+                    if (Math.mod(root.cat-at, 4) > 0) {
+                        root.cat-at -= 1;
+                    }
+                } else if (event.text == Key.DownArrow) {
+                    if (root.cat-at + 4 < Store.tv-categories.length) {
+                        root.cat-at += 4;
+                    } else if (floor(root.cat-at / 4) < floor((Store.tv-categories.length - 1) / 4)) {
+                        // The last row is a short one: its last category is the nearest.
+                        root.cat-at = Store.tv-categories.length - 1;
+                    }
+                } else if (event.text == Key.UpArrow) {
+                    if (root.cat-at >= 4) {
+                        root.cat-at -= 4;
+                    } else {
+                        root.enter-bar();
+                    }
+                } else if (event.text == Key.Return || event.text == " ") {
+                    root.open-category(root.cat-at);
+                } else if (event.text == Key.Escape || event.text == Key.Back || event.text == Key.Backspace) {
+                    root.tab = 0;
+                    root.activate-tab();
+                } else {
+                    return reject;
                 }
                 return accept;
             }
@@ -924,9 +1053,8 @@ export component TvShell inherits Rectangle {
                 }
             } else if (event.text == Key.Escape || event.text == Key.Back || event.text == Key.Backspace) {
                 if (Store.page == 1) {
-                    // Back from what a search found is Home.
-                    root.tab = 0;
-                    root.activate-tab();
+                    // Back from what a search found is Home; from a category, the categories.
+                    root.back-from-results();
                 } else {
                     // Back from the apps goes up to the top bar, as on other TV stores.
                     root.enter-bar();
@@ -950,7 +1078,7 @@ export component TvShell inherits Rectangle {
             TvTab {
                 u: root.u;
                 text: @tr("Home");
-                current: Store.page == 0 && !Store.details-open;
+                current: Store.page == 0 && !Store.details-open && !root.cats-open;
                 focused: root.zone == 1 && root.tab == 0 && !Store.details-open && !search.has-focus;
             }
             TvTab {
@@ -959,6 +1087,12 @@ export component TvShell inherits Rectangle {
                 current: root.on-library;
                 focused: root.zone == 1 && root.tab == 1 && !Store.details-open && !search.has-focus;
                 attention: Store.updates-count > 0;
+            }
+            if root.has-cats : TvTab {
+                u: root.u;
+                text: @tr("Categories");
+                current: root.cats-open && (Store.page == 0 || Store.page == 1) && !Store.details-open;
+                focused: root.zone == 1 && root.tab == 5 && !Store.details-open && !search.has-focus;
             }
             Rectangle { horizontal-stretch: 1; }
             TvTab {
@@ -1023,6 +1157,7 @@ export component TvShell inherits Rectangle {
                 single-line: true;
                 vertical-alignment: center;
                 accepted => {
+                    root.cats-open = false;
                     Store.search(self.text);
                     root.cur-row = 0;
                     root.cur-col = 0;
@@ -1402,7 +1537,39 @@ export component TvShell inherits Rectangle {
         }
 
         // ---- home: the focused app in large type, rows of apps below ----
-        if !Store.details-open && !root.on-system && !root.on-settings : FadeIn {
+        // ---- categories: every kind of app there is, on a page of their own ----
+        if root.on-cats : FadeIn {
+            Text {
+                x: margin;
+                y: 70 * u;
+                text: @tr("Categories");
+                color: Theme.text;
+                font-size: 30 * u;
+                font-weight: 800;
+            }
+            Rectangle {
+                y: 122 * u;
+                height: parent.height - self.y;
+                clip: true;
+                Rectangle {
+                    // Rows below the fifth push the page up, so the one pointed at is on screen.
+                    y: 8 * u - max(0, floor(root.cat-at / 4) - 4) * 74 * u;
+                    animate y { duration: 220ms; easing: ease-out; }
+                    for kind[i] in Store.tv-categories : TvKind {
+                        x: margin + Math.mod(i, 4) * (tile-w + tile-gap);
+                        y: floor(i / 4) * 74 * u;
+                        width: tile-w;
+                        height: 58 * u;
+                        u: root.u;
+                        kind: kind;
+                        focused: root.zone == 0 && i == root.cat-at;
+                        clicked => { root.open-category(i); }
+                    }
+                }
+            }
+        }
+
+        if !Store.details-open && !root.on-system && !root.on-settings && !root.on-cats : FadeIn {
             VerticalLayout {
                 x: margin;
                 y: (root.has-search ? 110 : 74) * u;

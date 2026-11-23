@@ -21,6 +21,9 @@ pub struct Essential {
     pub summary: String,
     /// browse, media, chat, games, work or tools.
     pub kind: String,
+    /// Where it sits in the list of categories, when that is not what its kind says.
+    #[serde(default)]
+    pub category: String,
     /// The ids it goes by, best first.
     pub ids: Vec<String>,
     /// The kinds of device it suits (`desktop`, `tv`, `mobile`). Empty for all of them.
@@ -70,6 +73,22 @@ pub fn is_essential(id: &AppId, platform: &Platform) -> bool {
 impl Essential {
     pub fn suits_device(&self, platform: &Platform) -> bool {
         self.suits.is_empty() || self.suits.iter().any(|kind| kind == form(platform))
+    }
+
+    /// The category it is filed under (a key of `categories::ALL`): the one it names,
+    /// or the usual one for its kind.
+    pub fn shelf(&self) -> &str {
+        if !self.category.is_empty() {
+            return &self.category;
+        }
+        match self.kind.as_str() {
+            "browse" => "browsers",
+            "media" => "video",
+            "chat" => "chat",
+            "games" => "games",
+            "work" => "office",
+            _ => "utilities",
+        }
     }
 
     fn leads_on(&self, platform: &Platform) -> bool {
@@ -210,6 +229,7 @@ mod tests {
         let forms = ["desktop", "tv", "mobile"];
         for app in list {
             assert!(!app.summary.is_empty() && kinds.contains(&app.kind.as_str()), "{}", app.name);
+            assert!(crate::categories::keys().contains(&app.shelf()), "{}: {}", app.name, app.shelf());
             assert!(app.suits.iter().chain(&app.top).all(|f| forms.contains(&f.as_str())), "{}", app.name);
             // It cannot lead on a kind of device it does not suit.
             assert!(app.top.iter().all(|f| app.suits.is_empty() || app.suits.contains(f)), "{}", app.name);

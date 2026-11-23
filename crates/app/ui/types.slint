@@ -167,6 +167,9 @@ export global Store {
     in property <AppCard> spotlight;
     // Same content arranged for the TV grid: library and search results come first.
     in property <[Section]> tv-rows;
+    // The kinds of app there are, for the TV's page of categories: each a tile whose id
+    // opens everything of that kind.
+    in property <[AppCard]> tv-categories;
     // The TV's Library page: updates first, then what is installed, then favourites.
     in property <[Section]> tv-library-rows;
     // 0 discover, 1 search, 2 library, 3 settings, 4 this device (reached from the

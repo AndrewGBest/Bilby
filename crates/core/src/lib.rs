@@ -6,6 +6,7 @@
 //! * [`source`]   – where apps come from (GitHub Releases, the AUR, ...)
 //! * [`index`]    – the starter list bundled for the Discover page
 //! * [`catalog`]  – glue: browse / search / details, filtered to this machine
+//! * [`categories`] – the kinds of app there are: video, music, games, office, ...
 //! * [`icons`]    – app pictures, fetched from the source and cached
 //! * [`install`]  – what installing a given file means on this machine
 //! * [`os`]       – the operating system: what it is, and its own updates
@@ -16,6 +17,7 @@
 pub mod appstream;
 pub mod asset;
 pub mod catalog;
+pub mod categories;
 pub mod compat;
 pub mod demo;
 pub mod error;

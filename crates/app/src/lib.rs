@@ -1617,6 +1617,20 @@ impl App {
             tv_library.push(section("Favourites", state.favourites.iter().map(|f| self.favourite_card(f)).collect()));
         }
         store.set_tv_library_rows(ModelRc::new(VecModel::from(tv_library)));
+        // The kinds of app there are, each one a way in to all of that kind. They have a
+        // page of their own, behind a button at the top: they are not a row among the rows.
+        let kinds: Vec<AppCard> = self
+            .catalog()
+            .categories()
+            .iter()
+            .map(|title| {
+                let id = format!("{CATEGORY_CARD}{title}");
+                AppCard { name: l(title), tint: tint_for(&id), id: id.into(), ..Default::default() }
+            })
+            .collect();
+        if store.get_tv_categories().iter().ne(kinds.iter().cloned()) {
+            store.set_tv_categories(ModelRc::new(VecModel::from(kinds)));
+        }
         // TV home: search results, then the store.
         // TV: a search is the whole page. The likeliest few first, then the rest by
         // kind, so a game is not buried under packages or the other way round.
@@ -1636,27 +1650,6 @@ impl App {
                 });
             }
         } else if found.is_empty() {
-            // The kinds of app there are, each one a way in to all of that kind.
-            let kinds: Vec<AppCard> = featured
-                .iter()
-                .map(|row| {
-                    let id = format!("{CATEGORY_CARD}{}", row.title);
-                    AppCard {
-                        name: l(&row.title),
-                        initials: initials(&i18n::tr(&row.title)).into(),
-                        tint: tint_for(&id),
-                        id: id.into(),
-                        ..Default::default()
-                    }
-                })
-                .collect();
-            let mut home = home;
-            if kinds.len() > 1 {
-                home.insert(
-                    1.min(home.len()),
-                    Section { title: l("Categories"), apps: ModelRc::new(VecModel::from(kinds)) },
-                );
-            }
             tv.extend(home);
         } else {
             const TOP: usize = 6;
@@ -2592,7 +2585,8 @@ impl App {
     /// back to every category; `as_page` gives it the page to itself, as on a TV.
     pub fn browse_category(self: &Arc<Self>, ui: &AppWindow, name: &str, as_page: bool) {
         let store = ui.global::<Store>();
-        let mut titles: Vec<String> = self.catalog().featured().into_iter().map(|row| row.title).collect();
+        let mut titles: Vec<String> = self.catalog().categories();
+        titles.extend(self.catalog().featured().into_iter().map(|row| row.title));
         titles.extend(self.collections.lock().unwrap().iter().map(|row| row.title.clone()));
         let Some(title) = titles.into_iter().find(|title| title == name || i18n::tr(title) == name) else {
             *self.browsing.lock().unwrap() = None;

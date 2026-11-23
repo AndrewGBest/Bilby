@@ -361,7 +361,11 @@ impl Source for Flathub {
     fn collection(&self, title: &str, limit: usize) -> Vec<AppSummary> {
         let kind = KINDS.iter().find(|(name, _)| *name == title).map(|(_, paths)| paths.to_vec());
         let list = LISTS.iter().find(|(name, _)| *name == title).map(|(_, path)| vec![format!("{path}?")]);
-        let Some(paths) = kind.map(|paths| paths.iter().map(|p| p.to_string()).collect::<Vec<_>>()).or(list) else {
+        // Or one of the store's categories, which says itself what Flathub calls it.
+        let category = crate::categories::find(title).filter(|c| !c.flathub.is_empty()).map(|c| c.flathub.to_vec());
+        let Some(paths) =
+            category.or(kind).map(|paths| paths.iter().map(|p| p.to_string()).collect::<Vec<_>>()).or(list)
+        else {
             return Vec::new();
         };
         const PAGE: usize = 50;

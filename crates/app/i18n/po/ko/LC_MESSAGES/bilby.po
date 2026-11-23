@@ -293,6 +293,10 @@ msgid "Cancel updating {}"
 msgstr "{} 업데이트 취소"
 
 msgctxt "TvShell"
+msgid "Categories"
+msgstr "카테고리"
+
+msgctxt "TvShell"
 msgid "Change"
 msgstr "변경"
 

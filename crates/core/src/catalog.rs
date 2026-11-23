@@ -371,17 +371,43 @@ impl Catalog {
         sections
     }
 
-    /// One of the home page's rows in full: the names everyone knows first, then all
-    /// that the sources file under it. Fetched over the network.
+    /// The kinds of app this device can be shown, by name: a store's list of
+    /// categories, not the home page's rows. Costs no network requests. A category is
+    /// listed when there is something to put in it: names the store knows itself, or a
+    /// source in use that files apps under it.
+    pub fn categories(&self) -> Vec<String> {
+        let active = self.active_sources();
+        crate::categories::ALL
+            .iter()
+            .filter(|category| category.suits(&self.platform))
+            .filter(|category| {
+                (active.contains(&SourceKind::Flathub) && !category.flathub.is_empty())
+                    || (self.essentials && !category.known(&active, &self.platform).is_empty())
+            })
+            .map(|category| category.title.to_string())
+            .collect()
+    }
+
+    /// A category, or one of the home page's rows, in full: the names everyone knows
+    /// first, then all that the sources file under it. Fetched over the network.
     pub fn category(&self, title: &str, limit: usize) -> Vec<AppSummary> {
-        let mut apps: Vec<AppSummary> =
-            self.featured().into_iter().find(|row| row.title == title).map(|row| row.apps).unwrap_or_default();
+        let mut apps: Vec<AppSummary> = match crate::categories::find(title) {
+            Some(category) if self.essentials => category.known(&self.active_sources(), &self.platform),
+            _ => Vec::new(),
+        };
+        // A row of the home page with this name holds what the bundled list adds to it.
+        for app in self.featured().into_iter().find(|row| row.title == title).map(|row| row.apps).unwrap_or_default() {
+            if !apps.iter().any(|seen| seen.id == app.id || seen.name.eq_ignore_ascii_case(&app.name)) {
+                apps.push(app);
+            }
+        }
         for source in &self.sources {
             if !self.uses(source.as_ref()) {
                 continue;
             }
             for app in source.collection(title, limit) {
-                if !apps.iter().any(|seen| seen.id == app.id) {
+                // One of each name, as on the home page: not Spotify and Spotify again.
+                if !apps.iter().any(|seen| seen.id == app.id || seen.name.eq_ignore_ascii_case(&app.name)) {
                     apps.push(app);
                 }
             }

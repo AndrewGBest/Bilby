@@ -293,6 +293,10 @@ msgid "Cancel updating {}"
 msgstr "Cancelar la actualización de {}"
 
 msgctxt "TvShell"
+msgid "Categories"
+msgstr "Categorías"
+
+msgctxt "TvShell"
 msgid "Change"
 msgstr "Cambiar"
 

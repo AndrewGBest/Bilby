@@ -93,7 +93,7 @@ def rust_strings():
         source = source[:tests] if tests > 0 else source
         # A literal may run over several lines with a trailing backslash.
         source = re.sub(r"\\\n\s*", "", source)
-        own = path.endswith(("lib.rs", "os.rs"))
+        own = path.endswith(("lib.rs", "os.rs", "categories.rs"))
         for line in source.split("\n"):
             stripped = line.strip()
             if stripped.startswith(("//", "#[", "eprintln!", "println!", "debug_assert", "assert")) or ".expect(" in line:

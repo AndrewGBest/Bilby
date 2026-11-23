@@ -691,31 +691,75 @@ fn a_download_asked_for_while_another_is_going_waits_its_turn() {
 
 #[test]
 fn a_category_can_be_chosen_and_browsed_in_full() {
-    // On a TV the home page has a row of categories; choosing one gives it the page.
+    // On a TV the categories have a page of their own; choosing one gives it the page.
     let s = start("linux-tv", Shell::Tv);
     let rows = |s: &Session| -> Vec<(String, Vec<String>)> {
         let rows = s.store().get_tv_rows();
         rows.iter().map(|row| (row.title.to_string(), row.apps.iter().map(|c| c.id.to_string()).collect())).collect()
     };
     let home = rows(&s);
-    let (_, kinds) = home.iter().find(|(title, _)| title == "Categories").expect("a row of categories");
+    assert!(home.iter().all(|(title, _)| title != "Categories"), "the categories are not a row of the home page");
+    let kinds: Vec<String> = s.store().get_tv_categories().iter().map(|kind| kind.id.to_string()).collect();
     assert!(kinds.len() > 1 && kinds.iter().all(|id| id.starts_with("category:")), "{kinds:?}");
-    // Each is one of the home page's own rows.
-    let chosen = kinds[1].clone();
-    let title = chosen.trim_start_matches("category:").to_string();
-    let on_home = home.iter().find(|(name, _)| *name == title).expect("its row on the home page").1.clone();
-    s.store().invoke_open(chosen.into());
+    // They are kinds of app, not the home page's recommendations or where apps come from.
+    let names: Vec<String> = kinds.iter().map(|id| id.trim_start_matches("category:").to_string()).collect();
+    for kind in ["Video", "Music", "Games"] {
+        assert!(names.iter().any(|name| name == kind), "{kind} in {names:?}");
+    }
+    for not_a_kind in ["Essentials", "Made for TV", "Web apps", "Developer tools"] {
+        assert!(names.iter().all(|name| name != not_a_kind), "{not_a_kind} in {names:?}");
+    }
+    // The made-up Flathub files one app, under utilities.
+    let at = names.iter().position(|name| name == "Utilities").expect("utilities");
+    let title = names[at].clone();
+    s.store().invoke_open(kinds[at].clone().into());
     assert_eq!(s.store().get_page(), 1);
     assert!(!s.store().get_details_open() && !s.store().get_searching());
     let browsed = rows(&s);
     assert_eq!(browsed[0].0, title, "the category's name heads the page");
-    assert!(browsed.iter().all(|(name, _)| name != "Categories"));
-    let all: Vec<String> = browsed.iter().flat_map(|(_, apps)| apps.clone()).collect();
-    assert!(on_home.iter().all(|id| all.contains(id)), "everything its row showed, and whatever else there is");
-    // Back is Home again, categories and all.
+    assert!(browsed.iter().all(|(_, apps)| !apps.is_empty()));
+    // Back is Home again.
     s.store().invoke_leave_search();
     assert_eq!(s.store().get_page(), 0);
-    assert!(rows(&s).iter().any(|(name, _)| name == "Categories"));
+    assert_eq!(rows(&s), home);
+
+    // With the remote: Up to the search bar, Up to the top bar, along to Categories.
+    let first = s.store().get_tv_categories().row_data(0).unwrap();
+    // A category's tile is a button with its name; a row's heading is only text.
+    let tiles = |s: &Session| {
+        let button = Some(slint::private_unstable_api::re_exports::AccessibleRole::Button);
+        s.labelled(&first.name).iter().filter(|e| e.accessible_role() == button).count()
+    };
+    assert_eq!(tiles(&s), 0);
+    for key in [Key::UpArrow, Key::UpArrow, Key::RightArrow, Key::RightArrow, Key::Return] {
+        s.press(key);
+    }
+    assert_eq!(tiles(&s), 1, "the page of categories is up");
+    assert_eq!(s.store().get_page(), 0);
+    // Four to a row: Down and Right to the one wanted, and OK opens it in full.
+    for _ in 0..at / 4 {
+        s.press(Key::DownArrow);
+    }
+    for _ in 0..at % 4 {
+        s.press(Key::RightArrow);
+    }
+    s.press(Key::Return);
+    assert_eq!(s.store().get_page(), 1);
+    assert_eq!(rows(&s)[0].0, title);
+    // Back returns to the categories, with the same one still pointed at.
+    s.press(Key::Escape);
+    assert_eq!(s.store().get_page(), 0);
+    assert_eq!(tiles(&s), 1);
+    s.press(Key::Return);
+    assert_eq!(s.store().get_page(), 1);
+    assert_eq!(rows(&s)[0].0, title);
+    // Back twice is Home, where OK opens an app.
+    s.press(Key::Escape);
+    s.press(Key::Escape);
+    assert_eq!(s.store().get_page(), 0);
+    assert_eq!(tiles(&s), 0, "the page of categories is put away");
+    s.press(Key::Return);
+    assert!(s.store().get_details_open());
 
     // On a desktop the chips do it: the section then holds the category in full.
     let s = start("linux-x64-debian", Shell::Desktop);
@@ -1385,16 +1429,13 @@ fn tv_is_driven_entirely_by_the_remote() {
     assert_eq!(s.store().get_install_state(), 3);
     assert!(s.store().get_install_message().contains("not implemented"));
 
-    // Back returns to the grid; Down is the row of categories, Down again and OK
-    // opens the first app of the row after it.
+    // Back returns to the grid; Down and OK opens the first app of the next row.
     s.press(Key::Escape);
     assert!(!s.store().get_details_open());
     s.press(Key::LeftArrow);
     s.press(Key::DownArrow);
-    assert_eq!(rows.row_data(1).unwrap().title, "Categories");
-    s.press(Key::DownArrow);
     s.press(Key::Return);
-    let first_of_next = rows.row_data(2).unwrap().apps.row_data(0).unwrap();
+    let first_of_next = rows.row_data(1).unwrap().apps.row_data(0).unwrap();
     assert_eq!(s.store().get_app().id, first_of_next.id);
 }
 
@@ -2132,9 +2173,10 @@ fn a_tv_remote_reaches_the_system_page_and_updates_from_it() {
     let s = start("linux-tv", Shell::Tv);
     s.app.check_system(&s.ui, false);
     assert_eq!(s.store().get_system_state(), 3);
-    // Up to search, Up to the tabs, Right along them to the device's, OK.
+    // Up to search, Up to the tabs, Right along them (past Library, Categories and Settings) to the device's, OK.
     s.press(Key::UpArrow);
     s.press(Key::UpArrow);
+    s.press(Key::RightArrow);
     s.press(Key::RightArrow);
     s.press(Key::RightArrow);
     s.press(Key::RightArrow);
@@ -2244,6 +2286,7 @@ fn the_tv_layout_has_a_way_back_that_a_remote_can_reach() {
     press(Key::RightArrow);
     press(Key::RightArrow);
     press(Key::RightArrow);
+    press(Key::RightArrow);
     press(Key::Return);
     assert_eq!(ui.global::<Store>().get_page(), 4);
     press(Key::RightArrow);
@@ -2328,6 +2371,7 @@ fn a_tv_remote_reaches_settings_and_can_remove_an_app() {
     s.press(Key::UpArrow);
     s.press(Key::RightArrow);
     s.press(Key::RightArrow);
+    s.press(Key::RightArrow);
     s.press(Key::Return);
     assert_eq!(s.store().get_page(), 3);
     assert!(s.store().get_show_ratings());
@@ -2342,6 +2386,7 @@ fn a_tv_remote_reaches_settings_and_can_remove_an_app() {
     s.press(Key::UpArrow);
     s.press(Key::UpArrow);
     s.press(Key::UpArrow);
+    s.press(Key::LeftArrow);
     s.press(Key::LeftArrow);
     s.press(Key::Return);
     assert_eq!(s.store().get_page(), 2, "Library, from the top bar");
@@ -2457,6 +2502,7 @@ fn signing_in_to_github_shows_a_code_and_keeps_the_token_it_is_given() {
     let tv = start("linux-tv", Shell::Tv);
     tv.press(Key::UpArrow);
     tv.press(Key::UpArrow);
+    tv.press(Key::RightArrow);
     tv.press(Key::RightArrow);
     tv.press(Key::RightArrow);
     tv.press(Key::Return);
@@ -2761,6 +2807,7 @@ fn the_tv_has_a_settings_tab_with_every_setting_reachable_by_remote() {
     let s = start_with("linux-tv", Shell::Tv, Some(r#"{"settings":{"welcomed":true,"reduce_motion":true}}"#));
     s.press(Key::UpArrow);
     s.press(Key::UpArrow);
+    s.press(Key::RightArrow);
     s.press(Key::RightArrow);
     s.press(Key::RightArrow);
     s.press(Key::Return);
@@ -3356,6 +3403,7 @@ fn recommending_the_apps_everyone_knows_can_be_switched_off() {
     let tv = start_with("linux-tv", Shell::Tv, Some(r#"{"settings":{"welcomed":true,"reduce_motion":true}}"#));
     tv.press(Key::UpArrow);
     tv.press(Key::UpArrow);
+    tv.press(Key::RightArrow);
     tv.press(Key::RightArrow);
     tv.press(Key::RightArrow);
     tv.press(Key::Return);
