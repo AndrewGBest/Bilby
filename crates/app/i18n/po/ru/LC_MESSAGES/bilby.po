@@ -117,6 +117,14 @@ msgid "All"
 msgstr "Все"
 
 msgctxt "SettingsBody"
+msgid "Also show apps that do not run on this device"
+msgstr "Показывать и приложения, которые не работают на этом устройстве"
+
+msgctxt "TvShell"
+msgid "Also show apps that do not run on this device"
+msgstr "Показывать и приложения, которые не работают на этом устройстве"
+
+msgctxt "SettingsBody"
 msgid "App menu"
 msgstr "Меню приложений"
 
@@ -810,6 +818,14 @@ msgctxt "GateOverlay"
 msgid "No, I am not"
 msgstr "Нет"
 
+msgctxt "AppRow"
+msgid "Not for this device"
+msgstr "Не для этого устройства"
+
+msgctxt "AppTile"
+msgid "Not for this device"
+msgstr "Не для этого устройства"
+
 msgctxt "DesktopShell"
 msgid "Nothing featured for this device yet"
 msgstr "Для этого устройства пока нет рекомендаций"
@@ -829,6 +845,10 @@ msgstr "Для этого телевизора пока ничего нет. Н�
 msgctxt "TvSetting"
 msgid "Off"
 msgstr "Выкл."
+
+msgctxt "SettingsBody"
+msgid "Off, a search finds only what can be installed here. On, it also finds apps made for other devices and systems: marked “Not for this device”, listed last, and not installable here. The home page keeps to what runs here."
+msgstr "Если выключено, поиск находит только то, что можно установить здесь. Если включено, он находит и приложения для других устройств и систем: они помечены «Не для этого устройства», стоят в конце списка и здесь не устанавливаются. На главной странице остаётся только то, что работает здесь."
 
 msgctxt "SettingsBody"
 msgid "Off, adult things are only ever found by searching. On, they may also appear on the home page, covered like everywhere else."
@@ -909,6 +929,14 @@ msgstr "Или войдите в Steam через браузер (Longboard)"
 msgctxt "SettingsBody"
 msgid "Or type a folder's full path and press Enter"
 msgstr "Или введите полный путь к папке и нажмите Enter"
+
+msgctxt "SettingsBody"
+msgid "Other devices"
+msgstr "Другие устройства"
+
+msgctxt "TvShell"
+msgid "Other devices"
+msgstr "Другие устройства"
 
 msgctxt "DetailsBody"
 msgid "Other versions and files"
@@ -1154,18 +1182,6 @@ msgctxt "TvShell"
 msgid "Reviews are written by other people and come from the ratings service the GNOME and KDE app stores use."
 msgstr "Отзывы пишут другие люди; они берутся из сервиса оценок, которым пользуются магазины приложений GNOME и KDE."
 
-msgctxt "TvShell"
-msgid "Runs on this TV"
-msgstr "Работает на этом телевизоре"
-
-msgctxt "DetailsBody"
-msgid "Runs on this device"
-msgstr "Работает на этом устройстве"
-
-msgctxt "OptionCard"
-msgid "Runs on this device"
-msgstr "Работает на этом устройстве"
-
 msgctxt "SettingsBody"
 msgid "Save"
 msgstr "Сохранить"
@@ -1281,18 +1297,6 @@ msgstr "Настройки"
 msgctxt "TvShell"
 msgid "Settings"
 msgstr "Настройки"
-
-msgctxt "TvShell"
-msgid "Should run on this TV"
-msgstr "Должно работать на этом телевизоре"
-
-msgctxt "DetailsBody"
-msgid "Should run on this device"
-msgstr "Должно работать на этом устройстве"
-
-msgctxt "OptionCard"
-msgid "Should run on this device"
-msgstr "Должно работать на этом устройстве"
 
 msgctxt "SettingsBody"
 msgid "Show Bilby in the app menu"

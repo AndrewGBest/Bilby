@@ -117,6 +117,14 @@ msgid "All"
 msgstr "すべて"
 
 msgctxt "SettingsBody"
+msgid "Also show apps that do not run on this device"
+msgstr "このデバイスで動作しないアプリも表示する"
+
+msgctxt "TvShell"
+msgid "Also show apps that do not run on this device"
+msgstr "このデバイスで動作しないアプリも表示する"
+
+msgctxt "SettingsBody"
 msgid "App menu"
 msgstr "アプリメニュー"
 
@@ -806,6 +814,14 @@ msgctxt "GateOverlay"
 msgid "No, I am not"
 msgstr "いいえ、違います"
 
+msgctxt "AppRow"
+msgid "Not for this device"
+msgstr "このデバイス非対応"
+
+msgctxt "AppTile"
+msgid "Not for this device"
+msgstr "このデバイス非対応"
+
 msgctxt "DesktopShell"
 msgid "Nothing featured for this device yet"
 msgstr "このデバイス向けのおすすめはまだありません"
@@ -825,6 +841,10 @@ msgstr "このテレビ向けのものはまだありません。上を押して
 msgctxt "TvSetting"
 msgid "Off"
 msgstr "オフ"
+
+msgctxt "SettingsBody"
+msgid "Off, a search finds only what can be installed here. On, it also finds apps made for other devices and systems: marked “Not for this device”, listed last, and not installable here. The home page keeps to what runs here."
+msgstr "オフにすると、検索ではここにインストールできるものだけが見つかります。オンにすると、ほかのデバイスやシステム向けのアプリも見つかります。それらには「このデバイス非対応」と表示され、一覧の最後に並び、ここにはインストールできません。ホームには、このデバイスで動作するものだけが表示されます。"
 
 msgctxt "SettingsBody"
 msgid "Off, adult things are only ever found by searching. On, they may also appear on the home page, covered like everywhere else."
@@ -905,6 +925,14 @@ msgstr "またはブラウザー（Longboard）で Steam にサインイン"
 msgctxt "SettingsBody"
 msgid "Or type a folder's full path and press Enter"
 msgstr "またはフォルダーのフルパスを入力して Enter キーを押してください"
+
+msgctxt "SettingsBody"
+msgid "Other devices"
+msgstr "ほかのデバイス"
+
+msgctxt "TvShell"
+msgid "Other devices"
+msgstr "ほかのデバイス"
 
 msgctxt "DetailsBody"
 msgid "Other versions and files"
@@ -1150,18 +1178,6 @@ msgctxt "TvShell"
 msgid "Reviews are written by other people and come from the ratings service the GNOME and KDE app stores use."
 msgstr "レビューはほかの人が書いたもので、GNOME と KDE のアプリストアが使っている評価サービスから取得しています。"
 
-msgctxt "TvShell"
-msgid "Runs on this TV"
-msgstr "このテレビで動作します"
-
-msgctxt "DetailsBody"
-msgid "Runs on this device"
-msgstr "このデバイスで動作します"
-
-msgctxt "OptionCard"
-msgid "Runs on this device"
-msgstr "このデバイスで動作します"
-
 msgctxt "SettingsBody"
 msgid "Save"
 msgstr "保存"
@@ -1277,18 +1293,6 @@ msgstr "設定"
 msgctxt "TvShell"
 msgid "Settings"
 msgstr "設定"
-
-msgctxt "TvShell"
-msgid "Should run on this TV"
-msgstr "このテレビで動作するはずです"
-
-msgctxt "DetailsBody"
-msgid "Should run on this device"
-msgstr "このデバイスで動作するはずです"
-
-msgctxt "OptionCard"
-msgid "Should run on this device"
-msgstr "このデバイスで動作するはずです"
 
 msgctxt "SettingsBody"
 msgid "Show Bilby in the app menu"

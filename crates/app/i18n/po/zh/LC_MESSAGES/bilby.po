@@ -117,6 +117,14 @@ msgid "All"
 msgstr "全部"
 
 msgctxt "SettingsBody"
+msgid "Also show apps that do not run on this device"
+msgstr "同时显示无法在此设备上运行的应用"
+
+msgctxt "TvShell"
+msgid "Also show apps that do not run on this device"
+msgstr "同时显示无法在此设备上运行的应用"
+
+msgctxt "SettingsBody"
 msgid "App menu"
 msgstr "应用菜单"
 
@@ -806,6 +814,14 @@ msgctxt "GateOverlay"
 msgid "No, I am not"
 msgstr "不，我不是"
 
+msgctxt "AppRow"
+msgid "Not for this device"
+msgstr "不适用于此设备"
+
+msgctxt "AppTile"
+msgid "Not for this device"
+msgstr "不适用于此设备"
+
 msgctxt "DesktopShell"
 msgid "Nothing featured for this device yet"
 msgstr "暂时没有适合此设备的精选内容"
@@ -825,6 +841,10 @@ msgstr "暂时没有适合这台电视的内容。按上键搜索。"
 msgctxt "TvSetting"
 msgid "Off"
 msgstr "关"
+
+msgctxt "SettingsBody"
+msgid "Off, a search finds only what can be installed here. On, it also finds apps made for other devices and systems: marked “Not for this device”, listed last, and not installable here. The home page keeps to what runs here."
+msgstr "关闭时，搜索只会找到可在此处安装的内容。开启时，还会找到为其他设备和系统制作的应用：它们标有“不适用于此设备”，排在最后，且无法在此处安装。首页仍只显示能在此设备上运行的内容。"
 
 msgctxt "SettingsBody"
 msgid "Off, adult things are only ever found by searching. On, they may also appear on the home page, covered like everywhere else."
@@ -905,6 +925,14 @@ msgstr "或在浏览器（Longboard）中登录 Steam"
 msgctxt "SettingsBody"
 msgid "Or type a folder's full path and press Enter"
 msgstr "或输入文件夹的完整路径并按 Enter"
+
+msgctxt "SettingsBody"
+msgid "Other devices"
+msgstr "其他设备"
+
+msgctxt "TvShell"
+msgid "Other devices"
+msgstr "其他设备"
 
 msgctxt "DetailsBody"
 msgid "Other versions and files"
@@ -1150,18 +1178,6 @@ msgctxt "TvShell"
 msgid "Reviews are written by other people and come from the ratings service the GNOME and KDE app stores use."
 msgstr "评价由其他用户撰写，来自 GNOME 和 KDE 应用商店使用的评分服务。"
 
-msgctxt "TvShell"
-msgid "Runs on this TV"
-msgstr "可在这台电视上运行"
-
-msgctxt "DetailsBody"
-msgid "Runs on this device"
-msgstr "可在此设备上运行"
-
-msgctxt "OptionCard"
-msgid "Runs on this device"
-msgstr "可在此设备上运行"
-
 msgctxt "SettingsBody"
 msgid "Save"
 msgstr "保存"
@@ -1277,18 +1293,6 @@ msgstr "设置"
 msgctxt "TvShell"
 msgid "Settings"
 msgstr "设置"
-
-msgctxt "TvShell"
-msgid "Should run on this TV"
-msgstr "应该能在这台电视上运行"
-
-msgctxt "DetailsBody"
-msgid "Should run on this device"
-msgstr "应该能在此设备上运行"
-
-msgctxt "OptionCard"
-msgid "Should run on this device"
-msgstr "应该能在此设备上运行"
 
 msgctxt "SettingsBody"
 msgid "Show Bilby in the app menu"

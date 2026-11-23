@@ -49,6 +49,9 @@ pub struct Settings {
     /// Do not recommend the hand-kept list of apps nearly everyone expects: no rows
     /// of them on the home page, no extra weight in a search.
     pub hide_essentials: bool,
+    /// Also show apps that do not run on this device: marked as such, last in a
+    /// search, and not installable here.
+    pub show_everything: bool,
     /// The kind of app to offer first on Linux: "" (what suits the system),
     /// "flatpak", "appimage" or "system".
     pub prefer_kind: String,

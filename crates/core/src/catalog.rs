@@ -34,6 +34,10 @@ pub struct Catalog {
     pub check_limit: usize,
     /// Treat pre-releases like stable releases (a user setting).
     pub include_prereleases: bool,
+    /// Also find what does not run on this device (a user setting): projects with no
+    /// file for it, and what the stores of other systems have. Marked [`NOT_HERE`],
+    /// last in a search, never on the home page and never installable here.
+    pub show_everything: bool,
     /// Sources the person switched off in Settings: not searched, not on the home page.
     /// An app from one can still be opened by its link.
     pub disabled: Vec<SourceKind>,
@@ -110,6 +114,9 @@ pub enum UpdateStatus {
     Unknown(String),
 }
 
+/// What an app is labelled when it is shown although it does not run on this device.
+pub const NOT_HERE: &str = "Not for this device";
+
 impl Catalog {
     pub fn new(platform: Platform, http: Arc<dyn Http>, index: Index) -> Catalog {
         let sources: Vec<Arc<dyn Source>> = vec![
@@ -126,6 +133,7 @@ impl Catalog {
             http,
             check_limit: 8,
             include_prereleases: false,
+            show_everything: false,
             disabled: Vec::new(),
             essentials: true,
             prefer: Default::default(),
@@ -164,6 +172,7 @@ impl Catalog {
             http,
             check_limit: 8,
             include_prereleases: false,
+            show_everything: false,
             disabled: Vec::new(),
             essentials: true,
             prefer: Default::default(),
@@ -246,6 +255,15 @@ impl Catalog {
     /// A source that applies to this device and has not been switched off.
     fn uses(&self, source: &dyn Source) -> bool {
         source.available_on(&self.platform) && !self.disabled.contains(&source.kind())
+    }
+
+    /// Is this source asked in a search? Those of this device; and, when everything is
+    /// to be shown, the stores of other systems that can be asked from anywhere (they
+    /// answer over the network, not through a program only their own system has).
+    fn searched(&self, source: &dyn Source) -> bool {
+        use SourceKind::*;
+        let anywhere = matches!(source.kind(), Flathub | Snap | Aur | FDroid | MacAppStore | Homebrew);
+        self.uses(source) || (self.show_everything && anywhere && !self.disabled.contains(&source.kind()))
     }
 
     /// Every source that applies to this device, switched off or not.
@@ -529,6 +547,20 @@ impl Catalog {
     }
 
     pub fn details(&self, id: &AppId) -> Result<AppDetails> {
+        // Something from another system's store, found because everything is shown:
+        // its page says what it is and that it is not for this device.
+        let elsewhere = self
+            .sources
+            .iter()
+            .find(|s| s.kind() == id.source)
+            .filter(|s| self.show_everything && self.searched(s.as_ref()) && !s.available_on(&self.platform));
+        if let Some(source) = elsewhere {
+            let mut summary = source.summary(&id.key)?;
+            summary.install_label = Some(NOT_HERE.to_string());
+            summary.rating = summary.rating.or_else(|| self.rating_for(&summary.id));
+            let reason = format!("{} is not available on {}", id.source.label(), self.platform.os_name);
+            return Ok(AppDetails { summary, release: None, unavailable_reason: Some(reason), versions: Vec::new() });
+        }
         let source = self.source(id.source)?;
         // "Not found" in a person's terms, not as the URL that was asked for.
         let named = |e: Error| match e {
@@ -591,6 +623,11 @@ impl Catalog {
                 app.install_label = r.options.first().map(|o| o.label());
                 Ok(Some(app))
             }
+            // Nothing for this device, and everything is to be shown: said so.
+            _ if self.show_everything => {
+                app.install_label = Some(NOT_HERE.to_string());
+                Ok(Some(app))
+            }
             _ => Ok(None),
         }
     }
@@ -605,7 +642,7 @@ impl Catalog {
         let mut offline = false;
         // Every source is asked at the same time: the search takes as long as the
         // slowest of them, not as long as all of them one after another.
-        let sources: Vec<&Arc<dyn Source>> = self.sources.iter().filter(|s| self.uses(s.as_ref())).collect();
+        let sources: Vec<&Arc<dyn Source>> = self.sources.iter().filter(|s| self.searched(s.as_ref())).collect();
         let answers: Vec<Result<Vec<AppSummary>>> = std::thread::scope(|scope| {
             let handles: Vec<_> =
                 sources.iter().map(|source| scope.spawn(move || source.search(query, self.check_limit))).collect();
@@ -621,7 +658,10 @@ impl Catalog {
                     continue;
                 }
             };
-            if let Some(label) = source.search_hits_are_final() {
+            // Another system's store: everything it has is for that system.
+            let here = source.available_on(&self.platform);
+            if let Some(label) = source.search_hits_are_final().or((!here).then_some(NOT_HERE)) {
+                let label = if here { label } else { NOT_HERE };
                 let finished = hits.into_iter().take(self.check_limit).map(|mut app| {
                     app.install_label = Some(label.to_string());
                     app
@@ -695,6 +735,8 @@ impl Catalog {
             }
             apps = first.into_iter().chain(rest).collect();
         }
+        // What does not run here comes after everything that does.
+        apps.sort_by_key(|app| app.install_label.as_deref() == Some(NOT_HERE));
         outcome.apps = apps;
         outcome
     }
@@ -715,6 +757,42 @@ mod tests {
     fn best(preset: &str, app: &str) -> String {
         let d = demo(preset).details(&id(app)).unwrap();
         d.release.unwrap().options.first().map(|o| o.asset.name.clone()).unwrap_or_default()
+    }
+
+    #[test]
+    fn what_does_not_run_here_can_be_shown_marked_and_last() {
+        // An Android phone looking for "monitor": two projects have nothing for it.
+        let mut catalog = demo("android-arm64");
+        let usual = catalog.search("monitor");
+        assert_eq!(usual.hidden, 2);
+        assert!(usual.apps.iter().all(|app| app.install_label.as_deref() != Some(NOT_HERE)));
+
+        catalog.show_everything = true;
+        let all = catalog.search("monitor");
+        assert_eq!(all.hidden, 0, "nothing is left out now");
+        assert_eq!(all.apps.len(), usual.apps.len() + 2);
+        let marked: Vec<bool> = all.apps.iter().map(|app| app.install_label.as_deref() == Some(NOT_HERE)).collect();
+        assert_eq!(marked.iter().filter(|m| **m).count(), 2);
+        assert!(marked.windows(2).all(|pair| !pair[0] || pair[1]), "they come last: {marked:?}");
+        // Its page says what is the matter (nothing for this device, or only an
+        // older version).
+        let one = all.apps.last().unwrap();
+        assert!(catalog.details(&one.id).unwrap().unavailable_reason.is_some());
+
+        // A store of another system (Flathub, from a Windows computer) is asked too,
+        // and what it has is marked the same way.
+        let mut windows = demo("windows-x64");
+        assert!(windows.search("quillpad").apps.iter().all(|app| app.id.source != SourceKind::Flathub));
+        windows.show_everything = true;
+        let found = windows.search("quillpad");
+        let flathub: Vec<&AppSummary> = found.apps.iter().filter(|app| app.id.source == SourceKind::Flathub).collect();
+        assert!(!flathub.is_empty() && flathub.iter().all(|app| app.install_label.as_deref() == Some(NOT_HERE)));
+        let page = windows.details(&flathub[0].id).unwrap();
+        assert!(page.release.is_none() && page.versions.is_empty());
+        assert_eq!(page.unavailable_reason.as_deref(), Some("Flathub is not available on Windows 11"));
+        // Switched off in Settings, it is not asked either way.
+        windows.disabled = vec![SourceKind::Flathub];
+        assert!(windows.search("quillpad").apps.iter().all(|app| app.id.source != SourceKind::Flathub));
     }
 
     #[test]

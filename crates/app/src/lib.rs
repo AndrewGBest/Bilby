@@ -554,6 +554,7 @@ fn make_catalog(platform: &Platform, demo: bool, settings: &Settings, dirs: &Dir
         Catalog::live(platform.clone(), token, dirs.cache.clone())
     };
     catalog.include_prereleases = settings.include_prereleases;
+    catalog.show_everything = settings.show_everything;
     catalog.disabled = settings.disabled_sources.iter().filter_map(|name| source_named(name)).collect();
     catalog.use_own_sources(
         settings
@@ -1206,6 +1207,11 @@ impl App {
         if !price.is_empty() {
             stat = if stat.is_empty() { price.clone() } else { format!("{price}  ·  {stat}") };
         }
+        // Shown although it does not run here: that is the one thing its tile says.
+        let not_here = app.install_label.as_deref() == Some(bilby_core::catalog::NOT_HERE);
+        if not_here {
+            stat = i18n::tr(bilby_core::catalog::NOT_HERE);
+        }
         if let Some(url) = &app.icon_url {
             self.icon_urls.lock().unwrap().insert(id.clone(), url.clone());
         }
@@ -1214,6 +1220,7 @@ impl App {
             || app.installed_version.is_some()
             || self.installed_elsewhere(&app.id, &app.name);
         let has_update = matches!(self.updates.lock().unwrap().get(&id), Some(UpdateStatus::Available { .. }));
+        let rating_stars: SharedString = rating.map(bilby_core::ratings::stars_text).unwrap_or_default().into();
         AppCard {
             adult: app.adult,
             stat: l(stat),
@@ -1230,14 +1237,14 @@ impl App {
             popularity: l(popularity),
             initials: initials(&app.name).into(),
             installed,
-            rating: rating.map(bilby_core::ratings::stars_text).unwrap_or_default().into(),
             rating_count: l(rating.map(|r| ratings_text(r.count)).unwrap_or_default()),
             rating_spread: rating.map(spread_shares).unwrap_or_default(),
             // A forge counts the files of the releases it listed; Flathub counts every install.
             downloads_note: l(if app.id.source == SourceKind::Flathub { "in total" } else { "of recent versions" }),
             downloads: downloads.into(),
             price: l(price),
-            headline: l(headline),
+            headline: if not_here { l(bilby_core::catalog::NOT_HERE) } else { l(headline) },
+            rating: if not_here { SharedString::new() } else { rating_stars },
             verified: app.verified,
             more_sources: 0,
             has_update: installed && has_update,
@@ -1601,6 +1608,7 @@ impl App {
         store.set_has_token(!settings.github_token.trim().is_empty());
         store.set_sounds(!settings.mute_sounds);
         store.set_show_essentials(!settings.hide_essentials);
+        store.set_show_everything(settings.show_everything);
         store.set_prefer_kind(bilby_core::compat::Prefer::named(&settings.prefer_kind).number());
         store.set_prefer_applies(self.platform.read().unwrap().os == bilby_core::platform::Os::Linux);
         store.set_own_sources(ModelRc::new(VecModel::from(
@@ -4941,6 +4949,16 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         app.rebuild_catalog();
         app.refresh_settings(ui);
         app.refresh(ui);
+    });
+    on!(on_set_show_everything, |app, ui, on| {
+        app.update_state(ui, |state| state.settings.show_everything = on);
+        // What a search finds depends on it: a new catalog, and the search made again.
+        app.rebuild_catalog();
+        app.refresh_settings(ui);
+        let query = ui.global::<Store>().get_query().to_string();
+        if ui.global::<Store>().get_page() == 1 && !query.trim().is_empty() {
+            app.search(ui, &query);
+        }
     });
     on!(on_set_essentials, |app, ui, on| {
         app.update_state(ui, |state| state.settings.hide_essentials = !on);

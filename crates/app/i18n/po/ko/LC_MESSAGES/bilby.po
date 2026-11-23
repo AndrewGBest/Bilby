@@ -117,6 +117,14 @@ msgid "All"
 msgstr "전체"
 
 msgctxt "SettingsBody"
+msgid "Also show apps that do not run on this device"
+msgstr "이 기기에서 실행되지 않는 앱도 표시"
+
+msgctxt "TvShell"
+msgid "Also show apps that do not run on this device"
+msgstr "이 기기에서 실행되지 않는 앱도 표시"
+
+msgctxt "SettingsBody"
 msgid "App menu"
 msgstr "앱 메뉴"
 
@@ -806,6 +814,14 @@ msgctxt "GateOverlay"
 msgid "No, I am not"
 msgstr "아니요, 아닙니다"
 
+msgctxt "AppRow"
+msgid "Not for this device"
+msgstr "이 기기용 아님"
+
+msgctxt "AppTile"
+msgid "Not for this device"
+msgstr "이 기기용 아님"
+
 msgctxt "DesktopShell"
 msgid "Nothing featured for this device yet"
 msgstr "아직 이 기기용 추천 항목이 없습니다"
@@ -825,6 +841,10 @@ msgstr "아직 이 TV용 항목이 없습니다. 위쪽 버튼을 눌러 검색�
 msgctxt "TvSetting"
 msgid "Off"
 msgstr "끔"
+
+msgctxt "SettingsBody"
+msgid "Off, a search finds only what can be installed here. On, it also finds apps made for other devices and systems: marked “Not for this device”, listed last, and not installable here. The home page keeps to what runs here."
+msgstr "끄면 검색에서 여기에 설치할 수 있는 것만 찾습니다. 켜면 다른 기기와 시스템용으로 만들어진 앱도 찾습니다. 이런 앱은 “이 기기용 아님”(으)로 표시되고 목록 맨 뒤에 나오며 여기에는 설치할 수 없습니다. 홈 화면에는 이 기기에서 실행되는 것만 표시됩니다."
 
 msgctxt "SettingsBody"
 msgid "Off, adult things are only ever found by searching. On, they may also appear on the home page, covered like everywhere else."
@@ -905,6 +925,14 @@ msgstr "또는 브라우저(Longboard)에서 Steam에 로그인"
 msgctxt "SettingsBody"
 msgid "Or type a folder's full path and press Enter"
 msgstr "또는 폴더의 전체 경로를 입력하고 Enter를 누르세요"
+
+msgctxt "SettingsBody"
+msgid "Other devices"
+msgstr "다른 기기"
+
+msgctxt "TvShell"
+msgid "Other devices"
+msgstr "다른 기기"
 
 msgctxt "DetailsBody"
 msgid "Other versions and files"
@@ -1150,18 +1178,6 @@ msgctxt "TvShell"
 msgid "Reviews are written by other people and come from the ratings service the GNOME and KDE app stores use."
 msgstr "리뷰는 다른 사람들이 작성한 것이며 GNOME과 KDE 앱 스토어가 사용하는 평점 서비스에서 가져옵니다."
 
-msgctxt "TvShell"
-msgid "Runs on this TV"
-msgstr "이 TV에서 실행됨"
-
-msgctxt "DetailsBody"
-msgid "Runs on this device"
-msgstr "이 기기에서 실행됨"
-
-msgctxt "OptionCard"
-msgid "Runs on this device"
-msgstr "이 기기에서 실행됨"
-
 msgctxt "SettingsBody"
 msgid "Save"
 msgstr "저장"
@@ -1277,18 +1293,6 @@ msgstr "설정"
 msgctxt "TvShell"
 msgid "Settings"
 msgstr "설정"
-
-msgctxt "TvShell"
-msgid "Should run on this TV"
-msgstr "이 TV에서 실행될 것으로 보임"
-
-msgctxt "DetailsBody"
-msgid "Should run on this device"
-msgstr "이 기기에서 실행될 것으로 보임"
-
-msgctxt "OptionCard"
-msgid "Should run on this device"
-msgstr "이 기기에서 실행될 것으로 보임"
 
 msgctxt "SettingsBody"
 msgid "Show Bilby in the app menu"

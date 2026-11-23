@@ -1900,6 +1900,34 @@ fn updates_that_wait_for_a_restart_offer_one_and_ask_first() {
 }
 
 #[test]
+fn apps_that_do_not_run_here_can_be_shown_and_are_marked_not_installable() {
+    let s = start("android-arm64", Shell::Mobile);
+    s.app.search(&s.ui, "monitor");
+    let usual = s.store().get_results().row_count();
+    assert!(s.store().get_search_note().contains("do not work on this device"));
+
+    // Settings has the switch; with it on, the same search finds them too.
+    s.store().invoke_set_show_everything(true);
+    assert!(s.saved().settings.show_everything);
+    s.app.search(&s.ui, "monitor");
+    let cards: Vec<AppCard> = s.store().get_results().iter().collect();
+    assert_eq!(cards.len(), usual + 2);
+    assert!(!s.store().get_search_note().contains("do not work on this device"));
+    let marked: Vec<&AppCard> = cards.iter().filter(|card| card.headline == "Not for this device").collect();
+    assert_eq!(marked.len(), 2);
+    assert_eq!(cards.last().unwrap().headline, "Not for this device", "they come last");
+    assert!(marked.iter().all(|card| card.stat == "Not for this device" && card.rating.is_empty()));
+    // No quick Install on those.
+    let name = marked[0].name.to_string();
+    assert!(!s.has(&format!("Install {name} now")));
+
+    // Off again: as before.
+    s.store().invoke_set_show_everything(false);
+    s.app.search(&s.ui, "monitor");
+    assert_eq!(s.store().get_results().row_count(), usual);
+}
+
+#[test]
 fn systems_that_update_themselves_get_a_way_to_their_own_updater_instead() {
     let s = start("windows-x64", Shell::Desktop);
     assert!(!s.store().get_system_supported());
@@ -2592,8 +2620,13 @@ fn the_tv_has_a_settings_tab_with_every_setting_reachable_by_remote() {
     for _ in 0..40 {
         s.press(Key::DownArrow);
     }
-    // The last row is the language: OK steps to the next one in the list (from the
+    // The last row is whether to show what does not run here.
+    assert!(!s.saved().settings.show_everything);
+    s.press(Key::Return);
+    assert!(s.saved().settings.show_everything && s.store().get_show_everything());
+    // Above it is the language: OK steps to the next one in the list (from the
     // system's own to English by name, here).
+    s.press(Key::UpArrow);
     assert!(s.saved().settings.language.is_empty());
     s.press(Key::Return);
     assert_eq!(s.saved().settings.language, "en");

@@ -588,7 +588,7 @@ An app's page follows the order of the App Store and Google Play:
 |---|---|---|
 | Top | Icon, name, developer, one button | The same. The button says Install, Update or Open |
 | Key facts | Rating, size, age rating, chart position | Rating, downloads, size, last updated, licence |
-| Reassurance | "Works on this iPhone" | "Runs on this device", and that Bilby checks the download is the genuine file |
+| Reassurance | "Works on this iPhone" | That Bilby checks the download is the genuine file; "Not for this device" where it is not |
 | Screenshots | Up to ten | The source's own (Flathub), else up to four from the project's README, fetched only from the project's own host |
 | Description | First lines, then "more" | The start of the description, with "Read more" |
 | What's New | On the page and in Updates | Release notes, shown above the description once the app is installed |

@@ -117,6 +117,14 @@ msgid "All"
 msgstr "الكل"
 
 msgctxt "SettingsBody"
+msgid "Also show apps that do not run on this device"
+msgstr "إظهار التطبيقات التي لا تعمل على هذا الجهاز أيضًا"
+
+msgctxt "TvShell"
+msgid "Also show apps that do not run on this device"
+msgstr "إظهار التطبيقات التي لا تعمل على هذا الجهاز أيضًا"
+
+msgctxt "SettingsBody"
 msgid "App menu"
 msgstr "قائمة التطبيقات"
 
@@ -816,6 +824,14 @@ msgctxt "GateOverlay"
 msgid "No, I am not"
 msgstr "لا، لست كذلك"
 
+msgctxt "AppRow"
+msgid "Not for this device"
+msgstr "ليس لهذا الجهاز"
+
+msgctxt "AppTile"
+msgid "Not for this device"
+msgstr "ليس لهذا الجهاز"
+
 msgctxt "DesktopShell"
 msgid "Nothing featured for this device yet"
 msgstr "لا شيء مميّز لهذا الجهاز بعد"
@@ -835,6 +851,10 @@ msgstr "لا شيء لهذا التلفاز بعد. اضغط للأعلى للب
 msgctxt "TvSetting"
 msgid "Off"
 msgstr "متوقف"
+
+msgctxt "SettingsBody"
+msgid "Off, a search finds only what can be installed here. On, it also finds apps made for other devices and systems: marked “Not for this device”, listed last, and not installable here. The home page keeps to what runs here."
+msgstr "عند الإيقاف، لا يجد البحث إلا ما يمكن تثبيته هنا. عند التشغيل، يجد أيضًا تطبيقات مصنوعة لأجهزة وأنظمة أخرى: موسومة بعبارة “ليس لهذا الجهاز”، ومدرجة في آخر القائمة، ولا يمكن تثبيتها هنا. تقتصر الصفحة الرئيسية على ما يعمل هنا."
 
 msgctxt "SettingsBody"
 msgid "Off, adult things are only ever found by searching. On, they may also appear on the home page, covered like everywhere else."
@@ -915,6 +935,14 @@ msgstr "أو سجّل الدخول إلى Steam في متصفح (Longboard)"
 msgctxt "SettingsBody"
 msgid "Or type a folder's full path and press Enter"
 msgstr "أو اكتب المسار الكامل لمجلد واضغط Enter"
+
+msgctxt "SettingsBody"
+msgid "Other devices"
+msgstr "أجهزة أخرى"
+
+msgctxt "TvShell"
+msgid "Other devices"
+msgstr "أجهزة أخرى"
 
 msgctxt "DetailsBody"
 msgid "Other versions and files"
@@ -1160,18 +1188,6 @@ msgctxt "TvShell"
 msgid "Reviews are written by other people and come from the ratings service the GNOME and KDE app stores use."
 msgstr "المراجعات يكتبها أشخاص آخرون وتأتي من خدمة التقييمات التي تستخدمها متاجر تطبيقات GNOME و KDE."
 
-msgctxt "TvShell"
-msgid "Runs on this TV"
-msgstr "يعمل على هذا التلفاز"
-
-msgctxt "DetailsBody"
-msgid "Runs on this device"
-msgstr "يعمل على هذا الجهاز"
-
-msgctxt "OptionCard"
-msgid "Runs on this device"
-msgstr "يعمل على هذا الجهاز"
-
 msgctxt "SettingsBody"
 msgid "Save"
 msgstr "حفظ"
@@ -1287,18 +1303,6 @@ msgstr "الإعدادات"
 msgctxt "TvShell"
 msgid "Settings"
 msgstr "الإعدادات"
-
-msgctxt "TvShell"
-msgid "Should run on this TV"
-msgstr "يُفترض أن يعمل على هذا التلفاز"
-
-msgctxt "DetailsBody"
-msgid "Should run on this device"
-msgstr "يُفترض أن يعمل على هذا الجهاز"
-
-msgctxt "OptionCard"
-msgid "Should run on this device"
-msgstr "يُفترض أن يعمل على هذا الجهاز"
 
 msgctxt "SettingsBody"
 msgid "Show Bilby in the app menu"

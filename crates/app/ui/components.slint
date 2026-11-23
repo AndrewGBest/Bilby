@@ -533,7 +533,7 @@ export component AppTile inherits Rectangle {
             }
             Rectangle { horizontal-stretch: 1; }
             // As in any store: get it straight from the list.
-            if !app.installed || app.has-update : Button {
+            if (!app.installed || app.has-update) && app.headline != @tr("Not for this device") : Button {
                 font-size: 12px;
                 min-width: 76px;
                 // A website is added, not installed: nothing is downloaded.
@@ -581,7 +581,7 @@ export component AppRow inherits Rectangle {
                 overflow: elide;
             }
         }
-        if !app.installed || app.has-update : VerticalLayout {
+        if (!app.installed || app.has-update) && app.headline != @tr("Not for this device") : VerticalLayout {
             alignment: center;
             Button {
                 font-size: 12px;
@@ -676,9 +676,9 @@ export component OptionCard inherits Rectangle {
                     spacing: 8px;
                     alignment: start;
                     Text {
-                        // What kind of file it is matters to some people; that it fits
-                        // this device matters to everyone.
-                        text: plain ? (option.native ? @tr("Runs on this device") : @tr("Should run on this device")) : option.label;
+                        // That it runs here goes without saying: only what does not is
+                        // marked as such.
+                        text: option.label;
                         color: Theme.text;
                         font-size: 15px;
                         font-weight: 600;
@@ -1364,7 +1364,7 @@ export component DetailsBody inherits Rectangle {
                 if Store.license != "" && !compact : StatCell { value: Store.license; caption: @tr("licence"); }
             }
 
-            if root.has-option : HorizontalLayout {
+            if root.has-option && root.best.verified : HorizontalLayout {
                 spacing: 6px;
                 alignment: start;
                 VerticalLayout {
@@ -1372,7 +1372,7 @@ export component DetailsBody inherits Rectangle {
                     Image { source: @image-url("icons/shield.svg"); colorize: Theme.ok; width: 14px; height: 14px; }
                 }
                 Text {
-                    text: (root.best.native ? @tr("Runs on this device") : @tr("Should run on this device")) + (root.best.verified ? "  ·  " + @tr("Bilby checks the download is the genuine file") : "");
+                    text: @tr("Bilby checks the download is the genuine file");
                     color: Theme.ok;
                     font-size: 12px;
                     font-weight: 600;
@@ -2132,6 +2132,28 @@ export component SettingsBody inherits Rectangle {
                     VerticalLayout {
                         alignment: center;
                         Toggle { label: @tr("Recommend the apps everyone knows"); checked: Store.show-essentials; toggled(on) => { Store.set-essentials(on); } }
+                    }
+                }
+            }
+
+            SettingsCard {
+                title: @tr("Other devices");
+                HorizontalLayout {
+                    spacing: 12px;
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 2px;
+                        Text { text: @tr("Also show apps that do not run on this device"); color: Theme.text; font-size: 14px; }
+                        Text {
+                            text: @tr("Off, a search finds only what can be installed here. On, it also finds apps made for other devices and systems: marked “Not for this device”, listed last, and not installable here. The home page keeps to what runs here.");
+                            color: Theme.text-dim;
+                            font-size: 12px;
+                            wrap: word-wrap;
+                        }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle { label: @tr("Also show apps that do not run on this device"); checked: Store.show-everything; toggled(on) => { Store.set-show-everything(on); } }
                     }
                 }
             }

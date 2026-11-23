@@ -117,6 +117,14 @@ msgid "All"
 msgstr "सभी"
 
 msgctxt "SettingsBody"
+msgid "Also show apps that do not run on this device"
+msgstr "वे ऐप भी दिखाएँ जो इस डिवाइस पर नहीं चलते"
+
+msgctxt "TvShell"
+msgid "Also show apps that do not run on this device"
+msgstr "वे ऐप भी दिखाएँ जो इस डिवाइस पर नहीं चलते"
+
+msgctxt "SettingsBody"
 msgid "App menu"
 msgstr "ऐप मेन्यू"
 
@@ -808,6 +816,14 @@ msgctxt "GateOverlay"
 msgid "No, I am not"
 msgstr "नहीं"
 
+msgctxt "AppRow"
+msgid "Not for this device"
+msgstr "इस डिवाइस के लिए नहीं"
+
+msgctxt "AppTile"
+msgid "Not for this device"
+msgstr "इस डिवाइस के लिए नहीं"
+
 msgctxt "DesktopShell"
 msgid "Nothing featured for this device yet"
 msgstr "इस डिवाइस के लिए अभी कुछ चुनिंदा नहीं है"
@@ -827,6 +843,10 @@ msgstr "इस TV के लिए अभी कुछ नहीं है। �
 msgctxt "TvSetting"
 msgid "Off"
 msgstr "बंद"
+
+msgctxt "SettingsBody"
+msgid "Off, a search finds only what can be installed here. On, it also finds apps made for other devices and systems: marked “Not for this device”, listed last, and not installable here. The home page keeps to what runs here."
+msgstr "बंद होने पर खोज में सिर्फ़ वही मिलता है जो यहाँ इंस्टॉल हो सकता है। चालू होने पर दूसरे डिवाइस और सिस्टम के लिए बने ऐप भी मिलते हैं: उन पर “इस डिवाइस के लिए नहीं” लिखा होता है, वे सूची में सबसे आख़िर में आते हैं और यहाँ इंस्टॉल नहीं हो सकते। होम पेज पर वही रहता है जो यहाँ चलता है।"
 
 msgctxt "SettingsBody"
 msgid "Off, adult things are only ever found by searching. On, they may also appear on the home page, covered like everywhere else."
@@ -907,6 +927,14 @@ msgstr "या ब्राउज़र (Longboard) में Steam में �
 msgctxt "SettingsBody"
 msgid "Or type a folder's full path and press Enter"
 msgstr "या फ़ोल्डर का पूरा पाथ लिखें और Enter दबाएँ"
+
+msgctxt "SettingsBody"
+msgid "Other devices"
+msgstr "दूसरे डिवाइस"
+
+msgctxt "TvShell"
+msgid "Other devices"
+msgstr "दूसरे डिवाइस"
 
 msgctxt "DetailsBody"
 msgid "Other versions and files"
@@ -1152,18 +1180,6 @@ msgctxt "TvShell"
 msgid "Reviews are written by other people and come from the ratings service the GNOME and KDE app stores use."
 msgstr "समीक्षाएँ दूसरे लोगों ने लिखी हैं और उसी रेटिंग सेवा से आती हैं जिसे GNOME और KDE के ऐप स्टोर इस्तेमाल करते हैं।"
 
-msgctxt "TvShell"
-msgid "Runs on this TV"
-msgstr "इस TV पर चलता है"
-
-msgctxt "DetailsBody"
-msgid "Runs on this device"
-msgstr "इस डिवाइस पर चलता है"
-
-msgctxt "OptionCard"
-msgid "Runs on this device"
-msgstr "इस डिवाइस पर चलता है"
-
 msgctxt "SettingsBody"
 msgid "Save"
 msgstr "सेव करें"
@@ -1279,18 +1295,6 @@ msgstr "सेटिंग्स"
 msgctxt "TvShell"
 msgid "Settings"
 msgstr "सेटिंग्स"
-
-msgctxt "TvShell"
-msgid "Should run on this TV"
-msgstr "इस TV पर चलना चाहिए"
-
-msgctxt "DetailsBody"
-msgid "Should run on this device"
-msgstr "इस डिवाइस पर चलना चाहिए"
-
-msgctxt "OptionCard"
-msgid "Should run on this device"
-msgstr "इस डिवाइस पर चलना चाहिए"
 
 msgctxt "SettingsBody"
 msgid "Show Bilby in the app menu"
