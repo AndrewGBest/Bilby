@@ -225,6 +225,14 @@ msgid "Bilby goes by what its sources say: Steam's adult-only marks, an app's ow
 msgstr "Bilby は提供元の情報をもとに判断します。Steam の成人向け表示、アプリ自身の年齢区分、そしてよく知られた成人向けサイトの一覧です。Bilby が知らないサイトは判別できず、ほとんどの提供元は年齢について何も示していません。"
 
 msgctxt "SettingsBody"
+msgid "Bilby goes on looking for updates there. Its tray icon opens the window again or quits Bilby."
+msgstr "Bilby はそこでアップデートの確認を続けます。トレイのアイコンからウィンドウを開き直したり、Bilby を終了したりできます。"
+
+msgctxt "SettingsBody"
+msgid "Bilby installs updates to your apps as it finds them, when it opens and every few hours while it stays open. Updates that need your password or open an installer still wait for you in the Library."
+msgstr "Bilby は、起動時と、開いたままの間は数時間ごとにアップデートを確認し、見つけ次第アプリに適用します。パスワードが必要なものやインストーラーが開くものは、これまでどおりライブラリであなたを待ちます。"
+
+msgctxt "SettingsBody"
 msgid "Bilby keeps a short list, chosen by people, of the apps and websites nearly everyone looks for: a browser, a video player, the big names. On, the home page starts with them in the version for this device, and they are placed a little higher in a search. Off, you get only what the sources' own figures say."
 msgstr "Bilby には、ブラウザー、動画プレーヤー、有名どころなど、ほとんどの人が探すアプリやウェブサイトを人の手で選んだ短い一覧があります。オンにすると、ホームの最初にこのデバイス向けのバージョンで表示され、検索でも少し上に表示されます。オフにすると、提供元の数値だけに基づいて表示されます。"
 
@@ -320,6 +328,10 @@ msgctxt "SettingsBody"
 msgid "Check for a newer Bilby"
 msgstr "新しい Bilby を確認"
 
+msgctxt "BilbyTray"
+msgid "Check for updates"
+msgstr "アップデートを確認"
+
 msgctxt "LibraryBody"
 msgid "Check for updates"
 msgstr "アップデートを確認"
@@ -403,6 +415,10 @@ msgstr "確認"
 msgctxt "LibraryItem"
 msgid "Confirm removing {}"
 msgstr "{} の削除を確認"
+
+msgctxt "DetailsBody"
+msgid "Confirm uninstalling {}"
+msgstr "{} のアンインストールを確認"
 
 msgctxt "CommandBox"
 msgid "Copied"
@@ -713,6 +729,10 @@ msgctxt "TvShell"
 msgid "Installing updates"
 msgstr "アップデートをインストール中"
 
+msgctxt "SettingsBody"
+msgid "Keep Bilby in the system tray when its window is closed"
+msgstr "ウィンドウを閉じても Bilby をシステムトレイに残す"
+
 msgctxt "TvQuestion"
 msgid "Keep this layout"
 msgstr "このレイアウトのまま使う"
@@ -890,6 +910,10 @@ msgctxt "TvShell"
 msgid "Open"
 msgstr "開く"
 
+msgctxt "BilbyTray"
+msgid "Open Bilby"
+msgstr "Bilby を開く"
+
 msgctxt "SettingsBody"
 msgid "Open downloads folder"
 msgstr "ダウンロードフォルダーを開く"
@@ -1027,6 +1051,18 @@ msgid "QR code to scan with the Steam app"
 msgstr "Steam アプリで読み取る QR コード"
 
 msgctxt "DetailsBody"
+msgid "Queued"
+msgstr "待機中"
+
+msgctxt "TvShell"
+msgid "Queued"
+msgstr "待機中"
+
+msgctxt "BilbyTray"
+msgid "Quit Bilby"
+msgstr "Bilby を終了"
+
+msgctxt "DetailsBody"
 msgid "Ratings"
 msgstr "評価"
 
@@ -1053,6 +1089,10 @@ msgstr "本文"
 msgctxt "LibraryItem"
 msgid "Really remove?"
 msgstr "本当に削除しますか？"
+
+msgctxt "DetailsBody"
+msgid "Really uninstall?"
+msgstr "本当にアンインストールしますか？"
 
 msgctxt "DesktopShell"
 msgid "Recent"
@@ -1615,6 +1655,18 @@ msgctxt "TvShell"
 msgid "Type a name, then press OK"
 msgstr "名前を入力して OK を押してください"
 
+msgctxt "DetailsBody"
+msgid "Uninstall"
+msgstr "アンインストール"
+
+msgctxt "TvShell"
+msgid "Uninstall"
+msgstr "アンインストール"
+
+msgctxt "DetailsBody"
+msgid "Uninstall {}"
+msgstr "{} をアンインストール"
+
 msgctxt "FamilyRow"
 msgid "Unofficial"
 msgstr "非公式"
@@ -1654,6 +1706,14 @@ msgstr "すべてアップデート"
 msgctxt "TvShell"
 msgid "Update all"
 msgstr "すべてアップデート"
+
+msgctxt "SettingsBody"
+msgid "Update apps automatically"
+msgstr "アプリを自動でアップデートする"
+
+msgctxt "TvShell"
+msgid "Update apps automatically"
+msgstr "アプリを自動でアップデートする"
 
 msgctxt "AppRow"
 msgid "Update available"
@@ -1700,6 +1760,10 @@ msgid "Update {} now"
 msgstr "{} を今すぐアップデート"
 
 msgctxt "SettingsBody"
+msgid "Updates"
+msgstr "アップデート"
+
+msgctxt "TvShell"
 msgid "Updates"
 msgstr "アップデート"
 

@@ -7,6 +7,38 @@ import { GateOverlay } from "components.slint";
 
 export { Store, Shell, Theme, AppCard, Section, OptionRow, HiddenRow, Fact, LibraryRow, ReviewRow, SourceChoice, TvChoice, OskKey }
 
+// The store in the system tray: it stays there when its window is closed, keeping
+// things up to date, and its menu brings the window back or ends it.
+export component BilbyTray inherits SystemTrayIcon {
+    tooltip: "Bilby";
+    title: "Bilby";
+    // The store's own picture, given by the program.
+    in property <image> picture;
+    icon: root.picture;
+    // Whether the icon is there at all: closing the window keeps the store only then.
+    in-out property <bool> kept: true;
+    visible: root.kept;
+    callback open();
+    callback check();
+    callback quit();
+    clicked => { root.open(); }
+    Menu {
+        MenuItem {
+            title: @tr("Open Bilby");
+            activated => { root.open(); }
+        }
+        MenuItem {
+            title: @tr("Check for updates");
+            activated => { root.check(); }
+        }
+        MenuSeparator { }
+        MenuItem {
+            title: @tr("Quit Bilby");
+            activated => { root.quit(); }
+        }
+    }
+}
+
 export component AppWindow inherits Window {
     icon: @image-url("icons/logo.svg");
     title: Store.details-open && Store.app.name != "" ? Store.app.name + " · Bilby" : "Bilby";

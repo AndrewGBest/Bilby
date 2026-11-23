@@ -65,6 +65,12 @@ pub trait Source: Send + Sync {
         Vec::new()
     }
 
+    /// One of those lists by its title, as long as the source can make it: a category
+    /// to browse in full, where [`Source::collections`] gives a home page's few.
+    fn collection(&self, title: &str, limit: usize) -> Vec<AppSummary> {
+        self.collections(limit).into_iter().find(|(name, _)| name == title).map(|(_, apps)| apps).unwrap_or_default()
+    }
+
     fn origins(&self) -> Vec<String> {
         Vec::new()
     }

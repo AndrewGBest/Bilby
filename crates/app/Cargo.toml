@@ -27,7 +27,7 @@ image = { version = "0.25", default-features = false, features = ["png", "jpeg"]
 # Remote controls send keys Slint does not pass on (Back, above all); this gives access
 # to the window system's own events so they can be translated.
 [target.'cfg(not(target_os = "android"))'.dependencies]
-slint = { version = "1.19", default-features = false, features = ["unstable-winit-030"] }
+slint = { version = "1.19", default-features = false, features = ["unstable-winit-030", "system-tray"] }
 # The quiet sounds that go with moving about. Playback only: the sounds are made in
 # code, so no decoders are needed.
 rodio = { version = "0.21", default-features = false, features = ["playback"] }

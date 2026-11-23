@@ -93,7 +93,29 @@ pub fn group(apps: Vec<AppSummary>) -> Vec<Group> {
             None => groups.push(Group { lead: app, others: Vec::new() }),
         }
     }
+    // An entry that only hands over a file to unpack and set up by hand does not lead
+    // when the same app can be installed properly from another source: Jellyfin's own
+    // page has a zip for Linux, Flathub has the app.
+    for group in &mut groups {
+        if by_hand(&group.lead) {
+            if let Some(easier) = group.others.iter().position(|other| !by_hand(other) && runs_here(other)) {
+                std::mem::swap(&mut group.lead, &mut group.others[easier]);
+            }
+        }
+    }
     groups
+}
+
+/// Does installing this entry leave the person with a file to unpack and set up
+/// themselves?
+fn by_hand(app: &AppSummary) -> bool {
+    use crate::asset::Format;
+    let label = app.install_label.as_deref().unwrap_or("");
+    [Format::Archive, Format::Binary, Format::ApkBundle].iter().any(|format| label.starts_with(format.label()))
+}
+
+fn runs_here(app: &AppSummary) -> bool {
+    app.install_label.as_deref() != Some(crate::catalog::NOT_HERE)
 }
 
 /// How to say where an entry comes from when choosing between sources.
@@ -131,6 +153,26 @@ mod tests {
         assert_eq!(groups[0].lead.id.to_string(), "apt:vlc", "the best-placed entry leads");
         let others: Vec<String> = groups[0].others.iter().map(|a| a.id.to_string()).collect();
         assert_eq!(others, ["flathub:org.videolan.VLC", "snap:vlc", "winget:VideoLAN.VLC"]);
+    }
+
+    #[test]
+    fn a_file_to_set_up_by_hand_gives_way_to_a_proper_install() {
+        let labelled = |id: &str, name: &str, label: &str| {
+            let mut entry = app(id, name);
+            entry.install_label = Some(label.to_string());
+            entry
+        };
+        let zip = labelled("github:jellyfin/jellyfin-desktop", "jellyfin-desktop", "Portable archive · x86_64");
+        let flatpak = labelled("flathub:org.jellyfin.JellyfinDesktop", "Jellyfin Desktop", "Flatpak");
+        let groups = group(vec![zip.clone(), flatpak.clone()]);
+        assert_eq!(groups.len(), 1);
+        assert_eq!(groups[0].lead.id.to_string(), "flathub:org.jellyfin.JellyfinDesktop");
+        assert_eq!(groups[0].others[0].id.to_string(), "github:jellyfin/jellyfin-desktop");
+        // Not for one that does not run here, and not when the first entry installs itself.
+        let elsewhere = labelled("flathub:org.jellyfin.JellyfinDesktop", "Jellyfin Desktop", crate::catalog::NOT_HERE);
+        assert_eq!(group(vec![zip, elsewhere])[0].lead.id.to_string(), "github:jellyfin/jellyfin-desktop");
+        let appimage = labelled("github:jellyfin/jellyfin-desktop", "jellyfin-desktop", "AppImage · x86_64");
+        assert_eq!(group(vec![appimage, flatpak])[0].lead.id.to_string(), "github:jellyfin/jellyfin-desktop");
     }
 
     #[test]

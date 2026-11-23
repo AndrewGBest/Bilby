@@ -45,6 +45,10 @@ pub struct Site {
     /// States hulu.com answers with Disney+, picture and all.
     #[serde(default)]
     pub icon_from: Option<String>,
+    /// The address of the site's picture itself, where its pages name only one too
+    /// small to show on a TV (Google's is 32 pixels across).
+    #[serde(default)]
+    pub icon: Option<String>,
 }
 
 /// The bundled list. A broken file means no list, not a store that will not start;

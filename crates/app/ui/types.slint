@@ -242,10 +242,14 @@ export global Store {
     in property <bool> can-open;
     // The open app is in the library, so it can be removed from it.
     in property <bool> in-library;
+    // On the device, not installed by the store, and the store can take it off.
+    in property <bool> can-uninstall;
 
     // --- install ----------------------------------------------------------------
     // 0 idle, 1 working, 2 done, 3 failed
     in property <int> install-state;
+    // The app on the page is waiting its turn behind another download.
+    in property <bool> queued;
     in property <int> install-index;
     in property <float> install-progress;
     in property <string> install-message;
@@ -329,6 +333,10 @@ export global Store {
     in property <bool> show-essentials;
     // Also show what does not run on this device (marked, and not installable).
     in property <bool> show-everything;
+    in property <bool> auto-update;
+    // This desktop has a system tray, and closing the window keeps the store in it.
+    in property <bool> tray-available;
+    in property <bool> close-to-tray;
     // The kind of app offered first on Linux: 0 what suits the system, 1 Flatpak,
     // 2 AppImage, 3 the system's own packages. And whether that means anything here.
     in property <int> prefer-kind;
@@ -393,6 +401,8 @@ export global Store {
     callback password-submit();
     callback password-cancel();
     callback open(string);
+    // Fetch everything in the category of this name ("" for none in particular).
+    callback browse-category(string);
     callback close-details();
     callback retry-details();
     callback select-version(int);
@@ -444,6 +454,8 @@ export global Store {
     callback set-sounds(bool);
     callback set-essentials(bool);
     callback set-show-everything(bool);
+    callback set-auto-update(bool);
+    callback set-close-to-tray(bool);
     callback set-prefer-kind(int);
     callback set-family-mode(bool);
     callback set-adult-on-home(bool);

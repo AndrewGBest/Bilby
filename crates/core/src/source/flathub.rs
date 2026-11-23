@@ -280,6 +280,27 @@ impl Flathub {
     }
 }
 
+const LISTS: [(&str, &str); 3] = [
+    ("Popular on Flathub", "popular"),
+    ("Trending on Flathub", "trending"),
+    ("New and updated on Flathub", "recently-updated"),
+];
+// Flathub files every app under what it is for. Those lists, most used first,
+// fill the home page's rows of the same kind: the row is then everything of
+// that kind worth having, not only the handful the store names itself.
+const KINDS: [(&str, &[&str]); 7] = [
+    ("Web browsers", &["category/Network/subcategories?subcategory=WebBrowser&"]),
+    ("Music and video", &["category/AudioVideo?"]),
+    (
+        "Chat, calls and mail",
+        &["category/Network/subcategories?subcategory=Chat&subcategory=InstantMessaging&subcategory=Email&subcategory=VideoConference&"],
+    ),
+    ("Games", &["category/Game?"]),
+    ("Work and create", &["category/Office?", "category/Graphics?"]),
+    ("Handy tools", &["category/Utility?"]),
+    ("Developer tools", &["category/Development?"]),
+];
+
 impl Source for Flathub {
     fn kind(&self) -> SourceKind {
         SourceKind::Flathub
@@ -299,32 +320,12 @@ impl Source for Flathub {
 
     /// Flathub's own lists, for a home page with more on it than the bundled few.
     fn collections(&self, limit: usize) -> Vec<(String, Vec<AppSummary>)> {
-        const LISTS: [(&str, &str); 3] = [
-            ("Popular on Flathub", "popular"),
-            ("Trending on Flathub", "trending"),
-            ("New and updated on Flathub", "recently-updated"),
-        ];
         let fetch = |path: &str| -> Result<Vec<AppSummary>> {
             let url =
                 format!("{}/collection/{path}?page=1&per_page={}&locale={}", self.api, limit.clamp(1, 50), self.locale);
             let resp: SearchResponse = serde_json::from_str(&self.http.get(&url)?)?;
             Ok(self.summaries_of(resp.hits))
         };
-        // Flathub files every app under what it is for. Those lists, most used first,
-        // fill the home page's rows of the same kind: the row is then everything of
-        // that kind worth having, not only the handful the store names itself.
-        const KINDS: [(&str, &[&str]); 7] = [
-            ("Web browsers", &["category/Network/subcategories?subcategory=WebBrowser&"]),
-            ("Music and video", &["category/AudioVideo?"]),
-            (
-                "Chat, calls and mail",
-                &["category/Network/subcategories?subcategory=Chat&subcategory=InstantMessaging&subcategory=Email&subcategory=VideoConference&"],
-            ),
-            ("Games", &["category/Game?"]),
-            ("Work and create", &["category/Office?", "category/Graphics?"]),
-            ("Handy tools", &["category/Utility?"]),
-            ("Developer tools", &["category/Development?"]),
-        ];
         let of_kind = |paths: &[&str]| -> Result<Vec<AppSummary>> {
             let per_list = (limit * 2 / paths.len()).clamp(1, 50);
             let mut lists = Vec::new();
@@ -354,6 +355,38 @@ impl Source for Flathub {
             (done(kinds), done(lists))
         });
         kinds.into_iter().chain(lists).collect()
+    }
+
+    /// One list in full: page after page of it, until there is enough or no more.
+    fn collection(&self, title: &str, limit: usize) -> Vec<AppSummary> {
+        let kind = KINDS.iter().find(|(name, _)| *name == title).map(|(_, paths)| paths.to_vec());
+        let list = LISTS.iter().find(|(name, _)| *name == title).map(|(_, path)| vec![format!("{path}?")]);
+        let Some(paths) = kind.map(|paths| paths.iter().map(|p| p.to_string()).collect::<Vec<_>>()).or(list) else {
+            return Vec::new();
+        };
+        const PAGE: usize = 50;
+        let mut apps: Vec<AppSummary> = Vec::new();
+        for page in 1..=limit.div_ceil(PAGE).max(1) {
+            let mut lists = Vec::new();
+            for path in &paths {
+                let url = format!("{}/collection/{path}page={page}&per_page={PAGE}&locale={}", self.api, self.locale);
+                let hits = self.http.get(&url).ok().and_then(|text| serde_json::from_str::<SearchResponse>(&text).ok());
+                lists.push(hits.map(|resp| self.summaries_of(resp.hits)).unwrap_or_default().into_iter());
+            }
+            let before = apps.len();
+            while lists.iter().any(|list| list.len() > 0) {
+                for app in lists.iter_mut().filter_map(Iterator::next) {
+                    if !apps.iter().any(|seen| seen.id == app.id) {
+                        apps.push(app);
+                    }
+                }
+            }
+            if apps.len() == before || apps.len() >= limit {
+                break;
+            }
+        }
+        apps.truncate(limit);
+        apps
     }
 
     fn summary(&self, key: &str) -> Result<AppSummary> {

@@ -180,7 +180,8 @@ pub fn forget_moved(dir: &Path) {
         return;
     }
     for site in crate::source::web::sites() {
-        let (Some(from), Some(id)) = (&site.icon_from, AppId::parse(&format!("web:{}", site.host))) else { continue };
+        let from = site.icon.as_ref().or(site.icon_from.as_ref());
+        let (Some(from), Some(id)) = (from, AppId::parse(&format!("web:{}", site.host))) else { continue };
         let key = app_key(&id);
         let note = dir.join(format!("{key}.from"));
         if std::fs::read_to_string(&note).is_ok_and(|was| was == *from) {
@@ -213,7 +214,9 @@ pub fn fetch_site(http: &dyn Http, dir: &Path, key: &str, host: &str) -> Result<
     std::fs::create_dir_all(dir)?;
     // A site that sends some visitors to another service's page is asked for its
     // picture at an address of its own that does not.
-    let host = crate::source::web::listed(host).and_then(|site| site.icon_from.as_deref()).unwrap_or(host);
+    let listed = crate::source::web::listed(host);
+    let known = listed.and_then(|site| site.icon.clone());
+    let host = listed.and_then(|site| site.icon_from.as_deref()).unwrap_or(host);
     let asked = format!("https://{host}/");
     // What the page itself says, best first; then where such pictures usually live.
     // A site often answers from another address (plex.tv from watch.plex.tv): what
@@ -248,6 +251,10 @@ pub fn fetch_site(http: &dyn Http, dir: &Path, key: &str, host: &str) -> Result<
     };
     let named = candidates.len().min(6);
     candidates.truncate(named);
+    // Where the store knows the address of a picture large enough to show, that first.
+    if let Some(known) = known {
+        candidates.insert(0, known);
+    }
     for usual in ["apple-touch-icon.png", "apple-touch-icon-precomposed.png", "favicon.ico"] {
         for base in [&base, &asked] {
             let url = format!("{base}{usual}");

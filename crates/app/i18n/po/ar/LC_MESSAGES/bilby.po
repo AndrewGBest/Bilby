@@ -225,6 +225,14 @@ msgid "Bilby goes by what its sources say: Steam's adult-only marks, an app's ow
 msgstr "يعتمد Bilby على ما تقوله مصادره: علامات «للبالغين فقط» في Steam، والتصنيف العمري للتطبيق نفسه، وقائمته لمواقع البالغين المعروفة. الموقع الذي لم يسمع به من قبل لا يتعرف عليه، ومعظم المصادر لا تذكر شيئًا عن العمر إطلاقًا."
 
 msgctxt "SettingsBody"
+msgid "Bilby goes on looking for updates there. Its tray icon opens the window again or quits Bilby."
+msgstr "يواصل Bilby البحث عن التحديثات من هناك. أيقونته في علبة النظام تعيد فتح النافذة أو تنهي Bilby."
+
+msgctxt "SettingsBody"
+msgid "Bilby installs updates to your apps as it finds them, when it opens and every few hours while it stays open. Updates that need your password or open an installer still wait for you in the Library."
+msgstr "يثبّت Bilby تحديثات تطبيقاتك فور العثور عليها، عند فتحه وكل بضع ساعات ما دام مفتوحًا. أما التحديثات التي تحتاج إلى كلمة مرورك أو تفتح برنامج تثبيت فتبقى في انتظارك في المكتبة."
+
+msgctxt "SettingsBody"
 msgid "Bilby keeps a short list, chosen by people, of the apps and websites nearly everyone looks for: a browser, a video player, the big names. On, the home page starts with them in the version for this device, and they are placed a little higher in a search. Off, you get only what the sources' own figures say."
 msgstr "يحتفظ Bilby بقائمة قصيرة، اختارها أشخاص، للتطبيقات والمواقع التي يبحث عنها الجميع تقريبًا: متصفح، مشغّل فيديو، الأسماء الكبيرة. عند التشغيل، تبدأ الصفحة الرئيسية بها في النسخة المناسبة لهذا الجهاز، وتُرفع قليلًا في نتائج البحث. عند الإيقاف، ترى فقط ما تقوله أرقام المصادر نفسها."
 
@@ -320,6 +328,10 @@ msgctxt "SettingsBody"
 msgid "Check for a newer Bilby"
 msgstr "البحث عن إصدار أحدث من Bilby"
 
+msgctxt "BilbyTray"
+msgid "Check for updates"
+msgstr "البحث عن تحديثات"
+
 msgctxt "LibraryBody"
 msgid "Check for updates"
 msgstr "البحث عن تحديثات"
@@ -403,6 +415,10 @@ msgstr "تأكيد"
 msgctxt "LibraryItem"
 msgid "Confirm removing {}"
 msgstr "تأكيد إزالة {}"
+
+msgctxt "DetailsBody"
+msgid "Confirm uninstalling {}"
+msgstr "تأكيد إزالة تثبيت {}"
 
 msgctxt "CommandBox"
 msgid "Copied"
@@ -718,6 +734,10 @@ msgctxt "TvShell"
 msgid "Installing updates"
 msgstr "تثبيت التحديثات"
 
+msgctxt "SettingsBody"
+msgid "Keep Bilby in the system tray when its window is closed"
+msgstr "إبقاء Bilby في علبة النظام عند إغلاق نافذته"
+
 msgctxt "TvQuestion"
 msgid "Keep this layout"
 msgstr "الإبقاء على هذا التخطيط"
@@ -900,6 +920,10 @@ msgctxt "TvShell"
 msgid "Open"
 msgstr "فتح"
 
+msgctxt "BilbyTray"
+msgid "Open Bilby"
+msgstr "فتح Bilby"
+
 msgctxt "SettingsBody"
 msgid "Open downloads folder"
 msgstr "فتح مجلد التنزيلات"
@@ -1037,6 +1061,18 @@ msgid "QR code to scan with the Steam app"
 msgstr "رمز QR لمسحه بتطبيق Steam"
 
 msgctxt "DetailsBody"
+msgid "Queued"
+msgstr "في قائمة الانتظار"
+
+msgctxt "TvShell"
+msgid "Queued"
+msgstr "في قائمة الانتظار"
+
+msgctxt "BilbyTray"
+msgid "Quit Bilby"
+msgstr "إنهاء Bilby"
+
+msgctxt "DetailsBody"
 msgid "Ratings"
 msgstr "التقييمات"
 
@@ -1063,6 +1099,10 @@ msgstr "القراءة"
 msgctxt "LibraryItem"
 msgid "Really remove?"
 msgstr "إزالة فعلًا؟"
+
+msgctxt "DetailsBody"
+msgid "Really uninstall?"
+msgstr "إزالة التثبيت فعلًا؟"
 
 msgctxt "DesktopShell"
 msgid "Recent"
@@ -1630,6 +1670,18 @@ msgctxt "TvShell"
 msgid "Type a name, then press OK"
 msgstr "اكتب اسمًا، ثم اضغط OK"
 
+msgctxt "DetailsBody"
+msgid "Uninstall"
+msgstr "إزالة التثبيت"
+
+msgctxt "TvShell"
+msgid "Uninstall"
+msgstr "إزالة التثبيت"
+
+msgctxt "DetailsBody"
+msgid "Uninstall {}"
+msgstr "إزالة تثبيت {}"
+
 msgctxt "FamilyRow"
 msgid "Unofficial"
 msgstr "غير رسمي"
@@ -1669,6 +1721,14 @@ msgstr "تحديث الكل"
 msgctxt "TvShell"
 msgid "Update all"
 msgstr "تحديث الكل"
+
+msgctxt "SettingsBody"
+msgid "Update apps automatically"
+msgstr "تحديث التطبيقات تلقائيًا"
+
+msgctxt "TvShell"
+msgid "Update apps automatically"
+msgstr "تحديث التطبيقات تلقائيًا"
 
 msgctxt "AppRow"
 msgid "Update available"
@@ -1715,6 +1775,10 @@ msgid "Update {} now"
 msgstr "تحديث {} الآن"
 
 msgctxt "SettingsBody"
+msgid "Updates"
+msgstr "التحديثات"
+
+msgctxt "TvShell"
 msgid "Updates"
 msgstr "التحديثات"
 

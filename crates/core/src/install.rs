@@ -10,7 +10,7 @@
 use crate::asset::{AssetInfo, Format};
 use crate::error::{Error, Result};
 use crate::http::Http;
-use crate::model::Asset;
+use crate::model::{AppId, Asset, SourceKind};
 use crate::platform::{LinuxFamily, Platform};
 use std::path::{Path, PathBuf};
 
@@ -817,6 +817,143 @@ pub fn saves_a_file(action: &Action) -> bool {
     matches!(action, Action::OpenFile | Action::PlaceAppImage | Action::Reveal | Action::AndroidInstaller)
 }
 
+/// Show one of the desktop's own notifications. True when something was found to
+/// show it with. [Run for real with notify-send on KDE. The macOS and Windows forms
+/// are written from their documentation.]
+pub fn notify(title: &str, body: &str) -> bool {
+    use std::process::{Command, Stdio};
+    let quiet = |command: &mut Command| {
+        command.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn().is_ok()
+    };
+    if cfg!(target_os = "macos") {
+        // Passed as arguments, never spliced into the script.
+        let script = "on run argv\ndisplay notification (item 2 of argv) with title (item 1 of argv)\nend run";
+        return quiet(Command::new("osascript").args(["-e", script, title, body]));
+    }
+    if cfg!(windows) {
+        // A balloon from the notification area; the texts arrive as arguments.
+        let script = "Add-Type -AssemblyName System.Windows.Forms; \
+                      $n = New-Object System.Windows.Forms.NotifyIcon; \
+                      $n.Icon = [System.Drawing.SystemIcons]::Information; $n.Visible = $true; \
+                      $n.ShowBalloonTip(10000, $args[0], $args[1], 'Info'); Start-Sleep -Seconds 11; $n.Dispose()";
+        return quiet(Command::new("powershell").args([
+            "-NoProfile",
+            "-WindowStyle",
+            "Hidden",
+            "-Command",
+            script,
+            title,
+            body,
+        ]));
+    }
+    quiet(Command::new("notify-send").args(["--app-name=Bilby", "--icon=bilby", "--", title, body]))
+        || quiet(Command::new("gdbus").args([
+            "call",
+            "--session",
+            "--dest=org.freedesktop.Notifications",
+            "--object-path=/org/freedesktop/Notifications",
+            "--method=org.freedesktop.Notifications.Notify",
+            "Bilby",
+            "0",
+            "bilby",
+            title,
+            body,
+            "[]",
+            "{}",
+            "10000",
+        ]))
+}
+
+/// How the system's own tools take an app off the device, for what they look after:
+/// a package, a snap, a winget package.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Removal {
+    /// What to run. One that starts with `sudo` asks for the system's password.
+    pub command: String,
+    /// Run first, where the tool would otherwise take other things away with it:
+    /// see [`removed_with`].
+    pub rehearsal: Option<String>,
+}
+
+/// The removal of one package and nothing else. Each tool is asked in the way that
+/// refuses when something else needs the package (pacman, rpm), or is rehearsed
+/// first (apt), so that removing one app never quietly takes others with it.
+pub fn removal(id: &AppId, p: &Platform) -> Option<Removal> {
+    let name = id.key.as_str();
+    let plain = !name.is_empty()
+        && !name.starts_with('-')
+        && name.chars().all(|c| c.is_ascii_alphanumeric() || "+-._:@".contains(c));
+    if !plain {
+        return None;
+    }
+    let image = p.linux.as_ref().is_some_and(|l| l.image);
+    let (command, rehearsal) = match id.source {
+        SourceKind::Pacman | SourceKind::Aur => (format!("sudo pacman -R --noconfirm {name}"), None),
+        // On a system that is one image, only what was added on top can come off.
+        SourceKind::Dnf if image => (format!("sudo rpm-ostree uninstall {name}"), None),
+        SourceKind::Dnf | SourceKind::Zypper => (format!("sudo rpm -e {name}"), None),
+        SourceKind::Apt => (format!("sudo apt-get remove -y {name}"), Some(format!("apt-get -s remove {name}"))),
+        SourceKind::Snap => (format!("sudo snap remove {name}"), None),
+        SourceKind::Winget => (format!("winget uninstall --id {name} --exact --silent --disable-interactivity"), None),
+        _ => return None,
+    };
+    Some(Removal { command, rehearsal })
+}
+
+/// What else a rehearsed removal (`apt-get -s remove`) would take away besides the
+/// package itself.
+pub fn removed_with(rehearsal: &str, name: &str) -> Vec<String> {
+    rehearsal
+        .lines()
+        .filter_map(|line| line.strip_prefix("Remv "))
+        .filter_map(|rest| rest.split_whitespace().next())
+        .map(|package| package.split(':').next().unwrap_or(package).to_string())
+        .filter(|package| package != name)
+        .collect()
+}
+
+/// Run a [`Removal`]'s command, asking for the system's password where it needs it.
+pub fn remove_with(removal: &Removal, dirs: &Dirs) -> Result<()> {
+    let mut words = removal.command.split_whitespace();
+    let (program, rest): (PathBuf, Vec<&str>) = match words.next() {
+        Some("sudo") => (dirs.elevate.clone(), words.collect()),
+        Some(program) => (PathBuf::from(program), words.collect()),
+        None => return Err(Error::Unsupported("There is nothing to run.".to_string())),
+    };
+    if let Some(rehearsal) = &removal.rehearsal {
+        let mut words = rehearsal.split_whitespace();
+        let tool = words.next().unwrap_or_default();
+        let said = std::process::Command::new(tool).args(words).stdin(std::process::Stdio::null()).output()?;
+        let name = rest.last().copied().unwrap_or_default();
+        let others = removed_with(&String::from_utf8_lossy(&said.stdout), name);
+        if !said.status.success() || !others.is_empty() {
+            let mut list = others.iter().take(4).cloned().collect::<Vec<_>>().join(", ");
+            if others.len() > 4 {
+                list.push_str(", …");
+            }
+            return Err(Error::Unsupported(if others.is_empty() {
+                format!("{tool} could not say what removing it would do")
+            } else {
+                format!("other things on this device need it ({list})")
+            }));
+        }
+    }
+    run_program(&program, &rest, rest.first().copied().unwrap_or("it"), &mut |_, _| true)
+}
+
+/// Can this step finish with nobody there? Putting an AppImage in place, Flatpak, a
+/// web app, and a command that needs no password can. An installer that opens, a
+/// terminal, another store and anything run as administrator need the person.
+pub fn unattended(plan: &InstallPlan) -> bool {
+    match plan.action {
+        Action::PlaceAppImage | Action::Flatpak | Action::FlatpakBundle | Action::WebApp => true,
+        Action::RunCommand => {
+            plan.command.as_deref().is_some_and(|command| command.split_whitespace().next() != Some("sudo"))
+        }
+        _ => false,
+    }
+}
+
 /// Let the person choose a folder with the system's own dialog, starting at `start`.
 /// `None` when they cancel, or when this system has no dialog the store can call
 /// (then the folder can still be typed into Settings). [Run for real with kdialog on
@@ -1587,6 +1724,30 @@ mod tests {
         assert_eq!(asked.len(), 2, "{asked:?}");
         assert!(!asked[0].contains("--user") && asked[1].starts_with("install --user "), "{asked:?}");
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn what_the_system_looks_after_is_removed_alone_or_not_at_all() {
+        let said = |id: &str, preset: &str| {
+            removal(&AppId::parse(id).unwrap(), &Platform::preset(preset).unwrap()).map(|r| r.command)
+        };
+        assert_eq!(said("pacman:vlc", "linux-x64-arch").as_deref(), Some("sudo pacman -R --noconfirm vlc"));
+        assert_eq!(said("dnf:vlc", "linux-x64-fedora").as_deref(), Some("sudo rpm -e vlc"));
+        assert_eq!(said("apt:vlc", "linux-x64-debian").as_deref(), Some("sudo apt-get remove -y vlc"));
+        assert_eq!(said("snap:vlc", "linux-x64-debian").as_deref(), Some("sudo snap remove vlc"));
+        // Nothing the store cannot name plainly, and nothing it does not know how to remove.
+        assert_eq!(said("github:kestrel-sh/kestrel", "linux-x64-debian"), None);
+        let mut image = Platform::preset("linux-x64-fedora").unwrap();
+        image.linux.as_mut().unwrap().image = true;
+        let layered = removal(&AppId::parse("dnf:vlc").unwrap(), &image).unwrap();
+        assert_eq!(layered.command, "sudo rpm-ostree uninstall vlc");
+        // apt is rehearsed: what else would go is found, and stops the removal.
+        let apt =
+            removal(&AppId::parse("apt:python3").unwrap(), &Platform::preset("linux-x64-debian").unwrap()).unwrap();
+        assert_eq!(apt.rehearsal.as_deref(), Some("apt-get -s remove python3"));
+        let rehearsal = "Reading package lists...\nRemv python3 [3.11.2-1]\nRemv gnome-shell:amd64 [43.9]\nRemv ubuntu-desktop [1.5]\n";
+        assert_eq!(removed_with(rehearsal, "python3"), ["gnome-shell", "ubuntu-desktop"]);
+        assert!(removed_with("Remv vlc:amd64 [3.0]\n", "vlc").is_empty());
     }
 
     #[test]

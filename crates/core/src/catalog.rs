@@ -371,6 +371,34 @@ impl Catalog {
         sections
     }
 
+    /// One of the home page's rows in full: the names everyone knows first, then all
+    /// that the sources file under it. Fetched over the network.
+    pub fn category(&self, title: &str, limit: usize) -> Vec<AppSummary> {
+        let mut apps: Vec<AppSummary> =
+            self.featured().into_iter().find(|row| row.title == title).map(|row| row.apps).unwrap_or_default();
+        for source in &self.sources {
+            if !self.uses(source.as_ref()) {
+                continue;
+            }
+            for app in source.collection(title, limit) {
+                if !apps.iter().any(|seen| seen.id == app.id) {
+                    apps.push(app);
+                }
+            }
+        }
+        // As on the home page: adult things only where asked for, and never what is
+        // not recommended at all.
+        if self.parental.family_mode || !self.parental.adult_on_home {
+            apps.retain(|app| !app.adult);
+        }
+        apps.retain(|app| !app.restricted);
+        for app in &mut apps {
+            app.rating = app.rating.or_else(|| self.rating_for(&app.id));
+        }
+        apps.truncate(limit);
+        apps
+    }
+
     /// Featured apps matching what has been typed so far. Instant and free: it only looks
     /// at the bundled index, so it can run on every keystroke.
     pub fn suggest(&self, query: &str, limit: usize) -> Vec<AppSummary> {
@@ -431,7 +459,18 @@ impl Catalog {
                 });
             }
         }
-        options.sort_by(|a, b| b.verdict.score.cmp(&a.verdict.score).then_with(|| a.asset.name.cmp(&b.asset.name)));
+        // Something that installs and runs as it comes is always ahead of a file the
+        // person has to unpack and set up themselves, however well that file fits.
+        let by_hand = |o: &InstallOption| {
+            use crate::asset::Format;
+            matches!(o.info.format, Format::Archive | Format::Binary | Format::ApkBundle)
+        };
+        options.sort_by(|a, b| {
+            by_hand(a)
+                .cmp(&by_hand(b))
+                .then_with(|| b.verdict.score.cmp(&a.verdict.score))
+                .then_with(|| a.asset.name.cmp(&b.asset.name))
+        });
         ResolvedRelease {
             version: release.version.clone(),
             published: release.published.clone(),

@@ -26,6 +26,8 @@ struct Session {
     opened: Arc<Mutex<Vec<PathBuf>>>,
     /// Programs the store started with arguments (Longboard, Flatpak): which, and with what.
     web_opened: Arc<Mutex<Vec<(PathBuf, String)>>>,
+    /// What the store put in the desktop's notifications.
+    notified: Arc<Mutex<Vec<String>>>,
 }
 
 static COUNTER: AtomicU32 = AtomicU32::new(0);
@@ -95,6 +97,8 @@ fn start_on(preset: &str, shell: Shell, seed: Option<&str>, host: Option<Arc<dyn
     let launched = opened.clone();
     let web_opened: Arc<Mutex<Vec<(PathBuf, String)>>> = Arc::default();
     let web_record = web_opened.clone();
+    let notified: Arc<Mutex<Vec<String>>> = Arc::default();
+    let said = notified.clone();
     let options = Options {
         demo: true,
         inline: true,
@@ -109,6 +113,7 @@ fn start_on(preset: &str, shell: Shell, seed: Option<&str>, host: Option<Arc<dyn
             launched.lock().unwrap().push(path.to_path_buf());
             Ok(())
         })),
+        notifier: Some(Arc::new(move |_title: &str, body: &str| said.lock().unwrap().push(body.to_string()))),
         runner: Some(Arc::new(move |program: &std::path::Path, args: &[String]| {
             web_record.lock().unwrap().push((program.to_path_buf(), args.join(" ")));
             // A Longboard asked to hand back a Steam library: the person agrees.
@@ -136,7 +141,7 @@ fn start_on(preset: &str, shell: Shell, seed: Option<&str>, host: Option<Arc<dyn
     };
     ui.window().set_size(slint::LogicalSize::new(w, h));
     ui.show().unwrap();
-    Session { ui, app, dirs, state_file, opened, web_opened }
+    Session { ui, app, dirs, state_file, opened, web_opened, notified }
 }
 
 /// A store that has been opened before (the first-run welcome is out of the way).
@@ -552,6 +557,177 @@ fn update_all_works_through_the_queue_and_survives_a_failure() {
 }
 
 #[test]
+fn apps_can_be_updated_automatically_and_what_needs_the_person_waits() {
+    // Tidewave's AppImage goes in by itself; Kestrel's archive is only fetched for
+    // the person to unpack, so it waits for them.
+    let library = r#""library":[
+        {"id":"github:kestrel-sh/kestrel","name":"Kestrel","version":"v1.20.0"},
+        {"id":"github:tidewave/tidewave","name":"Tidewave","version":"v3.0.0"}]"#;
+    // Kestrel's version, then Tidewave's, wherever the library lists them.
+    let versions = |s: &Session| -> Vec<String> {
+        let mut apps = s.saved().library;
+        apps.sort_by(|a, b| a.name.cmp(&b.name));
+        apps.into_iter().map(|a| a.version).collect()
+    };
+    let s =
+        start_with("linux-x64-arch", Shell::Desktop, Some(&format!(r#"{{"settings":{{"welcomed":true}},{library}}}"#)));
+    s.store().set_page(3);
+    assert!(!s.store().get_auto_update(), "off unless switched on");
+    s.app.check_updates(&s.ui, false);
+    assert_eq!(versions(&s), ["v1.20.0", "v3.0.0"], "found, and left for the person");
+    assert_eq!(s.store().get_updates_count(), 2);
+
+    // Switched on: what is waiting is installed at once.
+    s.activate("Update apps automatically");
+    assert!(s.saved().settings.auto_update && s.store().get_auto_update());
+    assert_eq!(versions(&s), ["v1.20.0", "v3.4.0"]);
+    assert_eq!(s.store().get_updates_count(), 1, "Kestrel still waits in the Library");
+    assert_eq!(s.store().get_updating_id(), "");
+    assert_eq!(s.store().get_install_state(), 0);
+    // What it had to leave is offered: Kestrel, and the system's six, which want a
+    // password. Later is later: it is not asked again while the window stays open.
+    assert_eq!((s.store().get_gate(), s.store().get_gate_title().as_str()), (1, "Updates are waiting for you"));
+    assert!(
+        s.store().get_gate_text().starts_with("7 updates waiting for you to finish"),
+        "{}",
+        s.store().get_gate_text()
+    );
+    assert_eq!((s.store().get_gate_yes().as_str(), s.store().get_gate_no().as_str()), ("Finish now", "Later"));
+    s.store().invoke_gate_answer(false);
+    assert_eq!(s.store().get_gate(), 0);
+    assert_eq!(versions(&s), ["v1.20.0", "v3.4.0"]);
+    s.app.check_everything(&s.ui);
+    assert_eq!(s.store().get_gate(), 0, "asked once each time the window is opened");
+    assert!(s.notified.lock().unwrap().is_empty(), "and nothing is notified with the window open");
+
+    // Closed to the system tray: a notification says what is waiting, once.
+    s.app.window_closed_to_tray();
+    s.app.check_everything(&s.ui);
+    s.app.check_everything(&s.ui);
+    let said = s.notified.lock().unwrap().clone();
+    assert_eq!(said.len(), 1, "{said:?}");
+    assert!(said[0].starts_with("7 updates waiting for you to finish"));
+    assert_eq!(s.store().get_gate(), 0, "nothing is asked of a window nobody sees");
+    // Opened again, it is asked; "Finish now" does the rest, system and all.
+    s.app.window_opened(&s.ui);
+    assert_eq!(s.store().get_gate(), 1);
+    s.store().invoke_gate_answer(true);
+    assert_eq!(versions(&s), ["v1.21.0", "v3.4.0"]);
+    assert_eq!(s.store().get_system_headline(), "Up to date");
+    assert_eq!(s.store().get_gate(), 0);
+    s.app.window_opened(&s.ui);
+    assert_eq!(s.store().get_gate(), 0, "nothing is left to offer");
+
+    // Staying in the tray is the default, and can be switched off.
+    assert!(s.store().get_close_to_tray() && !s.saved().settings.quit_on_close);
+    s.store().invoke_set_close_to_tray(false);
+    assert!(!s.store().get_close_to_tray() && s.saved().settings.quit_on_close);
+
+    // Kept, and with a PIN on installs it still asks nothing: it was agreed to in
+    // Settings, which the PIN guards.
+    let seed = format!(
+        r#"{{"settings":{{"welcomed":true,"auto_update":true,"pin_hash":"00","pin_salt":"00","pin_for_installs":true}},{library}}}"#
+    );
+    let s = start_with("linux-x64-arch", Shell::Desktop, Some(&seed));
+    assert!(s.store().get_auto_update());
+    s.app.check_everything(&s.ui);
+    assert_eq!(versions(&s), ["v1.20.0", "v3.4.0"]);
+    assert_eq!(s.store().get_gate_title(), "Updates are waiting for you", "no PIN is asked for; the rest is offered");
+    s.store().invoke_gate_answer(false);
+    assert_eq!(s.store().get_gate(), 0);
+    // Switching it off needs no PIN; switching it on does.
+    s.store().invoke_set_auto_update(false);
+    assert!(!s.saved().settings.auto_update && s.store().get_gate() == 0);
+    s.store().invoke_set_auto_update(true);
+    assert!(!s.saved().settings.auto_update && s.store().get_gate() == 2);
+}
+
+#[test]
+fn a_download_asked_for_while_another_is_going_waits_its_turn() {
+    let s = start("linux-x64-arch", Shell::Desktop);
+    let names = |s: &Session| -> Vec<String> { s.saved().library.iter().map(|a| a.name.clone()).collect() };
+    // Something else is downloading.
+    s.app.hold_download(&s.ui, Some(("github:kestrel-sh/kestrel".into(), "Kestrel".into())));
+    s.app.open(&s.ui, "github:tidewave/tidewave");
+    s.app.install(&s.ui, 0);
+    assert!(s.store().get_queued() && s.store().get_install_state() == 0);
+    assert_eq!(s.store().get_toast(), "Tidewave is queued. It starts when Kestrel has finished.");
+    assert!(names(&s).is_empty(), "nothing has started");
+    // Asked again, it leaves the queue.
+    s.app.install(&s.ui, 0);
+    assert!(!s.store().get_queued());
+    assert_eq!(s.store().get_toast(), "Tidewave is no longer queued");
+    // Two wait, and the person moves on to some other page; its own page remembers.
+    s.app.install(&s.ui, 0);
+    s.app.open(&s.ui, "github:lumen-labs/lumen");
+    assert!(!s.store().get_queued());
+    s.app.install(&s.ui, 0);
+    assert!(s.store().get_queued());
+    s.app.open(&s.ui, "github:tidewave/tidewave");
+    assert!(s.store().get_queued(), "still waiting when its page is opened again");
+    s.app.open(&s.ui, "pacman:harbor");
+    // The first finishes: the others follow, in the order they were asked for.
+    s.app.hold_download(&s.ui, None);
+    let mut installed = names(&s);
+    installed.sort();
+    assert_eq!(installed, ["Lumen", "Tidewave"]);
+    assert_eq!(
+        (s.store().get_queued(), s.store().get_install_state()),
+        (false, 0),
+        "the page that is open is left alone"
+    );
+    s.app.open(&s.ui, "github:tidewave/tidewave");
+    assert!(!s.store().get_queued() && !s.store().get_installed_version().is_empty());
+
+    // An update asked for from the Library while something downloads waits as well.
+    let s = start_with("linux-x64-debian", Shell::Desktop, Some(OLD_KESTREL));
+    s.app.check_updates(&s.ui, false);
+    s.app.hold_download(&s.ui, Some(("github:tidewave/tidewave".into(), "Tidewave".into())));
+    s.app.update_app(&s.ui, "github:kestrel-sh/kestrel");
+    assert_eq!(s.saved().library[0].version, "v1.20.0");
+    s.app.hold_download(&s.ui, None);
+    assert_eq!(s.saved().library[0].version, "v1.21.0");
+}
+
+#[test]
+fn a_category_can_be_chosen_and_browsed_in_full() {
+    // On a TV the home page has a row of categories; choosing one gives it the page.
+    let s = start("linux-tv", Shell::Tv);
+    let rows = |s: &Session| -> Vec<(String, Vec<String>)> {
+        let rows = s.store().get_tv_rows();
+        rows.iter().map(|row| (row.title.to_string(), row.apps.iter().map(|c| c.id.to_string()).collect())).collect()
+    };
+    let home = rows(&s);
+    let (_, kinds) = home.iter().find(|(title, _)| title == "Categories").expect("a row of categories");
+    assert!(kinds.len() > 1 && kinds.iter().all(|id| id.starts_with("category:")), "{kinds:?}");
+    // Each is one of the home page's own rows.
+    let chosen = kinds[1].clone();
+    let title = chosen.trim_start_matches("category:").to_string();
+    let on_home = home.iter().find(|(name, _)| *name == title).expect("its row on the home page").1.clone();
+    s.store().invoke_open(chosen.into());
+    assert_eq!(s.store().get_page(), 1);
+    assert!(!s.store().get_details_open() && !s.store().get_searching());
+    let browsed = rows(&s);
+    assert_eq!(browsed[0].0, title, "the category's name heads the page");
+    assert!(browsed.iter().all(|(name, _)| name != "Categories"));
+    let all: Vec<String> = browsed.iter().flat_map(|(_, apps)| apps.clone()).collect();
+    assert!(on_home.iter().all(|id| all.contains(id)), "everything its row showed, and whatever else there is");
+    // Back is Home again, categories and all.
+    s.store().invoke_leave_search();
+    assert_eq!(s.store().get_page(), 0);
+    assert!(rows(&s).iter().any(|(name, _)| name == "Categories"));
+
+    // On a desktop the chips do it: the section then holds the category in full.
+    let s = start("linux-x64-debian", Shell::Desktop);
+    let name = s.store().get_categories().row_data(0).unwrap();
+    s.store().invoke_browse_category(name.clone());
+    let section = s.store().get_sections().iter().find(|section| section.title == name).unwrap();
+    assert!(section.apps.row_count() > 0);
+    s.store().invoke_browse_category("".into());
+    assert!(s.store().get_sections().row_count() > 1);
+}
+
+#[test]
 fn updating_an_app_that_lost_its_build_says_so() {
     // Winspect has nothing for Linux; pretend it was in the library anyway.
     let seed = r#"{"settings":{"welcomed":true},"library":[{"id":"github:winspect/winspect","name":"Winspect","version":"v0.1"}]}"#;
@@ -822,7 +998,7 @@ fn start_as_store_with(preset: &str, store_app: &str, seed: &str) -> Session {
     ui.window().set_size(slint::LogicalSize::new(1280.0, 2400.0));
     ui.show().unwrap();
     let state_file = dirs.config.join("demo-state.json");
-    Session { ui, app, dirs, state_file, opened: Arc::default(), web_opened: Arc::default() }
+    Session { ui, app, dirs, state_file, opened: Arc::default(), web_opened: Arc::default(), notified: Arc::default() }
 }
 
 #[test]
@@ -1209,13 +1385,16 @@ fn tv_is_driven_entirely_by_the_remote() {
     assert_eq!(s.store().get_install_state(), 3);
     assert!(s.store().get_install_message().contains("not implemented"));
 
-    // Back returns to the grid; Down, OK opens the first app of the next row.
+    // Back returns to the grid; Down is the row of categories, Down again and OK
+    // opens the first app of the row after it.
     s.press(Key::Escape);
     assert!(!s.store().get_details_open());
     s.press(Key::LeftArrow);
     s.press(Key::DownArrow);
+    assert_eq!(rows.row_data(1).unwrap().title, "Categories");
+    s.press(Key::DownArrow);
     s.press(Key::Return);
-    let first_of_next = rows.row_data(1).unwrap().apps.row_data(0).unwrap();
+    let first_of_next = rows.row_data(2).unwrap().apps.row_data(0).unwrap();
     assert_eq!(s.store().get_app().id, first_of_next.id);
 }
 
@@ -2620,7 +2799,16 @@ fn the_tv_has_a_settings_tab_with_every_setting_reachable_by_remote() {
     for _ in 0..40 {
         s.press(Key::DownArrow);
     }
-    // The last row is whether to show what does not run here.
+    // The last row is whether apps are updated without being asked.
+    assert!(!s.saved().settings.auto_update);
+    s.press(Key::Return);
+    assert!(s.saved().settings.auto_update && s.store().get_auto_update());
+    // (Switching that on looks for updates at once, and may ask about finishing them.)
+    if s.store().get_gate() != 0 {
+        s.store().invoke_gate_answer(false);
+    }
+    // Above it is whether to show what does not run here.
+    s.press(Key::UpArrow);
     assert!(!s.saved().settings.show_everything);
     s.press(Key::Return);
     assert!(s.saved().settings.show_everything && s.store().get_show_everything());
@@ -2641,6 +2829,44 @@ fn the_tv_has_a_settings_tab_with_every_setting_reachable_by_remote() {
     s.press(Key::RightArrow);
     s.press(Key::Return);
     assert_eq!(s.store().get_page(), 4);
+}
+
+#[test]
+#[cfg(unix)]
+fn apps_the_store_did_not_install_can_be_uninstalled() {
+    // A package pacman installed: the page offers to uninstall it, asked twice.
+    let s = start("linux-x64-arch", Shell::Desktop);
+    s.app.open(&s.ui, "pacman:harbor");
+    let name = s.store().get_app().name.to_string();
+    assert!(s.store().get_can_uninstall() && !s.store().get_in_library());
+    let log = s.dirs.elevate.with_extension("log");
+    s.click(&format!("Uninstall {name}"));
+    assert!(!log.exists(), "nothing happens until it is confirmed");
+    s.click(&format!("Confirm uninstalling {name}"));
+    let asked = std::fs::read_to_string(&log).unwrap();
+    assert_eq!(asked.trim(), "pacman -R --noconfirm harbor", "pacman, with the system's password");
+    assert_eq!(s.store().get_toast(), format!("{name} uninstalled"));
+    assert_eq!(s.store().get_installed_version(), "");
+    // What is not on the device, and what no tool here looks after, has no such button.
+    s.app.open(&s.ui, "pacman:swiftkernel");
+    assert!(!s.store().get_can_uninstall());
+    s.app.open(&s.ui, "github:lumen-labs/lumen");
+    assert!(!s.store().get_can_uninstall());
+
+    // A Flatpak from somewhere else, on a TV: its page has Uninstall, and Flatpak is asked.
+    let s = start("linux-tv", Shell::Tv);
+    let flatpak = s.dirs.flatpak_roots[0].join("app/org.example.Paint/current/active/export/share/applications");
+    std::fs::create_dir_all(&flatpak).unwrap();
+    std::fs::write(flatpak.join("org.example.Paint.desktop"), "[Desktop Entry]\nName=Paint Box\n").unwrap();
+    s.app.scan_installed(&s.ui);
+    s.app.open(&s.ui, "flathub:org.example.Paint");
+    assert!(s.store().get_can_uninstall() && !s.store().get_in_library());
+    s.app.remove_from_library(&s.ui, "flathub:org.example.Paint");
+    let ran = s.web_opened.lock().unwrap().clone();
+    assert!(ran.iter().any(|(_, args)| args == "uninstall --noninteractive --assumeyes org.example.Paint"), "{ran:?}");
+    assert!(s.store().get_toast().starts_with("Uninstalling"));
+    let rows: Vec<String> = s.store().get_tv_library_rows().iter().map(|row| row.title.to_string()).collect();
+    assert!(!rows.contains(&"Also installed here".to_string()), "and it leaves the library's list: {rows:?}");
 }
 
 #[test]

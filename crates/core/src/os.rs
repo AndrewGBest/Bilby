@@ -234,6 +234,12 @@ pub enum Manager {
 }
 
 impl Manager {
+    /// Does updating through it show the system's password prompt? Then it waits for
+    /// the person: nothing that asks is started while nobody is there.
+    pub fn asks_for_password(self) -> bool {
+        matches!(self, Manager::Pacman | Manager::Apt | Manager::Dnf)
+    }
+
     pub fn label(self) -> &'static str {
         match self {
             Manager::Pacman => "pacman",

@@ -225,6 +225,14 @@ msgid "Bilby goes by what its sources say: Steam's adult-only marks, an app's ow
 msgstr "Bilby se fie à ce qu’indiquent ses sources : les mentions « réservé aux adultes » de Steam, la classification d’âge de l’application et sa propre liste de sites pour adultes connus. Un site qu’il ne connaît pas n’est pas reconnu, et la plupart des sources ne disent rien sur l’âge."
 
 msgctxt "SettingsBody"
+msgid "Bilby goes on looking for updates there. Its tray icon opens the window again or quits Bilby."
+msgstr "Bilby continue d'y chercher des mises à jour. Son icône dans la zone de notification rouvre la fenêtre ou quitte Bilby."
+
+msgctxt "SettingsBody"
+msgid "Bilby installs updates to your apps as it finds them, when it opens and every few hours while it stays open. Updates that need your password or open an installer still wait for you in the Library."
+msgstr "Bilby installe les mises à jour de vos applications dès qu'il les trouve, à l'ouverture puis toutes les quelques heures tant qu'il reste ouvert. Les mises à jour qui demandent votre mot de passe ou ouvrent un installateur vous attendent toujours dans la Bibliothèque."
+
+msgctxt "SettingsBody"
 msgid "Bilby keeps a short list, chosen by people, of the apps and websites nearly everyone looks for: a browser, a video player, the big names. On, the home page starts with them in the version for this device, and they are placed a little higher in a search. Off, you get only what the sources' own figures say."
 msgstr "Bilby tient une courte liste, établie par des personnes, des applications et sites web que presque tout le monde cherche : un navigateur, un lecteur vidéo, les grands noms. Activé, la page d’accueil commence par eux, dans la version adaptée à cet appareil, et ils remontent un peu dans les recherches. Désactivé, seuls comptent les chiffres des sources."
 
@@ -320,6 +328,10 @@ msgctxt "SettingsBody"
 msgid "Check for a newer Bilby"
 msgstr "Rechercher une nouvelle version de Bilby"
 
+msgctxt "BilbyTray"
+msgid "Check for updates"
+msgstr "Rechercher des mises à jour"
+
 msgctxt "LibraryBody"
 msgid "Check for updates"
 msgstr "Rechercher des mises à jour"
@@ -403,6 +415,10 @@ msgstr "Confirmer"
 msgctxt "LibraryItem"
 msgid "Confirm removing {}"
 msgstr "Confirmer la suppression de {}"
+
+msgctxt "DetailsBody"
+msgid "Confirm uninstalling {}"
+msgstr "Confirmer la désinstallation de {}"
 
 msgctxt "CommandBox"
 msgid "Copied"
@@ -714,6 +730,10 @@ msgctxt "TvShell"
 msgid "Installing updates"
 msgstr "Installation des mises à jour"
 
+msgctxt "SettingsBody"
+msgid "Keep Bilby in the system tray when its window is closed"
+msgstr "Garder Bilby dans la zone de notification quand sa fenêtre est fermée"
+
 msgctxt "TvQuestion"
 msgid "Keep this layout"
 msgstr "Garder cette interface"
@@ -892,6 +912,10 @@ msgctxt "TvShell"
 msgid "Open"
 msgstr "Ouvrir"
 
+msgctxt "BilbyTray"
+msgid "Open Bilby"
+msgstr "Ouvrir Bilby"
+
 msgctxt "SettingsBody"
 msgid "Open downloads folder"
 msgstr "Ouvrir le dossier des téléchargements"
@@ -1029,6 +1053,18 @@ msgid "QR code to scan with the Steam app"
 msgstr "Code QR à scanner avec l’application Steam"
 
 msgctxt "DetailsBody"
+msgid "Queued"
+msgstr "En attente"
+
+msgctxt "TvShell"
+msgid "Queued"
+msgstr "En attente"
+
+msgctxt "BilbyTray"
+msgid "Quit Bilby"
+msgstr "Quitter Bilby"
+
+msgctxt "DetailsBody"
 msgid "Ratings"
 msgstr "Notes"
 
@@ -1055,6 +1091,10 @@ msgstr "Lecture"
 msgctxt "LibraryItem"
 msgid "Really remove?"
 msgstr "Vraiment supprimer ?"
+
+msgctxt "DetailsBody"
+msgid "Really uninstall?"
+msgstr "Vraiment désinstaller ?"
 
 msgctxt "DesktopShell"
 msgid "Recent"
@@ -1618,6 +1658,18 @@ msgctxt "TvShell"
 msgid "Type a name, then press OK"
 msgstr "Saisissez un nom, puis appuyez sur OK"
 
+msgctxt "DetailsBody"
+msgid "Uninstall"
+msgstr "Désinstaller"
+
+msgctxt "TvShell"
+msgid "Uninstall"
+msgstr "Désinstaller"
+
+msgctxt "DetailsBody"
+msgid "Uninstall {}"
+msgstr "Désinstaller {}"
+
 msgctxt "FamilyRow"
 msgid "Unofficial"
 msgstr "Non officiel"
@@ -1657,6 +1709,14 @@ msgstr "Tout mettre à jour"
 msgctxt "TvShell"
 msgid "Update all"
 msgstr "Tout mettre à jour"
+
+msgctxt "SettingsBody"
+msgid "Update apps automatically"
+msgstr "Mettre à jour les applications automatiquement"
+
+msgctxt "TvShell"
+msgid "Update apps automatically"
+msgstr "Mettre à jour les applications automatiquement"
 
 msgctxt "AppRow"
 msgid "Update available"
@@ -1703,6 +1763,10 @@ msgid "Update {} now"
 msgstr "Mettre à jour {} maintenant"
 
 msgctxt "SettingsBody"
+msgid "Updates"
+msgstr "Mises à jour"
+
+msgctxt "TvShell"
 msgid "Updates"
 msgstr "Mises à jour"
 

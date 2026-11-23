@@ -25,6 +25,7 @@ slint::include_modules!();
 mod activation;
 mod askpass;
 pub mod i18n;
+pub mod instance;
 pub mod osk;
 pub mod sound;
 
@@ -104,6 +105,9 @@ pub struct Options {
     pub layering: Option<PathBuf>,
     /// How the device is restarted. Tests record it instead.
     pub restart: Option<Restart>,
+    /// Shows one of the desktop's notifications: its title and what it says. A real
+    /// start uses the system's own; a demo or a test shows none unless given one.
+    pub notifier: Option<Notifier>,
     /// The machine whose system details and updates are shown. Defaults to this
     /// computer; the demo and previews of other devices get a made-up one.
     pub host: Option<Arc<dyn bilby_core::os::Host>>,
@@ -133,6 +137,9 @@ enum Guarded {
     /// Not a guard: a newer Bilby is in place and the question is whether to restart
     /// Bilby into it now.
     RestartBilby,
+    /// Not a guard: updates that need the person are waiting, and the question is
+    /// whether to finish them now.
+    FinishUpdates,
 }
 
 /// A change to the family and adult-content settings.
@@ -142,6 +149,7 @@ pub enum Change {
     AdultOnHome(bool),
     AdultUncovered(bool),
     PinForInstalls(bool),
+    AutoUpdate(bool),
     SetPin,
     RemovePin,
 }
@@ -207,6 +215,7 @@ fn restart_device() -> bilby_core::Result<()> {
 }
 
 pub type Restart = Arc<dyn Fn() -> bilby_core::Result<()> + Send + Sync>;
+pub type Notifier = Arc<dyn Fn(&str, &str) + Send + Sync>;
 pub type Heard = Arc<dyn Fn(sound::Sound) + Send + Sync>;
 pub type Browser = Arc<dyn Fn(&str) -> bilby_core::Result<()> + Send + Sync>;
 pub type Runner = Arc<dyn Fn(&std::path::Path, &[String]) -> bilby_core::Result<()> + Send + Sync>;
@@ -747,6 +756,22 @@ fn at_the_top(card: AppCard) -> AppCard {
     }
 }
 
+/// A download asked for while another was going: everything needed to start it when
+/// its turn comes, whatever page is open by then.
+struct Waiting {
+    details: AppDetails,
+    option: bilby_core::model::InstallOption,
+    version: String,
+    index: i32,
+    /// Its name as its page gave it.
+    name: String,
+    /// The folder the person chose for it, where each download asks.
+    folder: Option<PathBuf>,
+    /// What its page found it needs first (FUSE, for an AppImage), as it stood then.
+    requirement: Option<AppId>,
+    lacks_fuse: bool,
+}
+
 /// The app currently on the details page.
 #[derive(Default)]
 struct Current {
@@ -808,6 +833,16 @@ pub struct App {
     store_app: Option<AppId>,
     /// Library apps waiting their turn after "Update all".
     update_queue: Mutex<std::collections::VecDeque<String>>,
+    /// The category being browsed in full: its title as the code has it, and its apps
+    /// once they have been fetched.
+    browsing: Mutex<Option<(String, Vec<AppSummary>)>>,
+    /// Downloads waiting their turn behind the one that is going.
+    download_queue: Mutex<std::collections::VecDeque<Waiting>>,
+    /// The queue was started by the store itself, not by the person: only updates
+    /// that need nobody are installed, and nothing is asked.
+    unattended: std::sync::atomic::AtomicBool,
+    /// The install about to start is one of those: no PIN, no "where to save".
+    quiet_install: std::sync::atomic::AtomicBool,
     /// Owners whose picture has been asked for in this session (found or not).
     pictures_requested: Mutex<HashSet<String>>,
     /// How often fetching a picture failed for want of a network, by its key.
@@ -828,6 +863,13 @@ pub struct App {
     /// That has just happened, and the person has not been asked about restarting yet.
     fuse_just_staged: std::sync::atomic::AtomicBool,
     restart: Restart,
+    notifier: Notifier,
+    /// The window is closed and the store is in the system tray.
+    in_tray: std::sync::atomic::AtomicBool,
+    /// "Finish the updates now?" has been asked since the window was last opened.
+    offered: std::sync::atomic::AtomicBool,
+    /// What the last notification said was waiting, so the same is not said twice.
+    notified: Mutex<String>,
     /// A package the app on screen needs before it will run, which the store installs
     /// along with it.
     needed: Mutex<Option<AppId>>,
@@ -1358,13 +1400,25 @@ impl App {
                 }
             }
         }
+        // The category chosen to browse shows everything in it, not a home page's few.
+        let browsing = self.browsing.lock().unwrap().clone();
+        if let Some((title, apps)) = browsing.as_ref().filter(|(_, apps)| !apps.is_empty()) {
+            if let Some(row) = featured.iter_mut().find(|row| row.title == *title) {
+                row.apps = apps.clone();
+            }
+        }
         let to_sections = |list: &[CoreSection]| -> Vec<Section> {
             list.iter().map(|s| Section { title: l(&s.title), apps: self.cards(&s.apps) }).collect()
         };
         // Built once and shared with the TV's rows below: the same tiles, not a second set.
         let home = to_sections(&featured);
         store.set_sections(ModelRc::new(VecModel::from(home.clone())));
-        store.set_categories(ModelRc::new(VecModel::from(featured.iter().map(|s| l(&s.title)).collect::<Vec<_>>())));
+        // Set only when they differ: the chips are made again when this is, and the
+        // one just pressed would lose the keyboard's focus.
+        let categories: Vec<SharedString> = featured.iter().map(|s| l(&s.title)).collect();
+        if store.get_categories().iter().ne(categories.iter().cloned()) {
+            store.set_categories(ModelRc::new(VecModel::from(categories)));
+        }
         if !featured.iter().any(|s| i18n::tr(&s.title) == store.get_category().as_str()) {
             store.set_category(SharedString::new());
         }
@@ -1415,6 +1469,8 @@ impl App {
         store.set_is_favourite(state.is_favourite(store.get_app().id.as_str()));
         store.set_can_open(self.launchable(store.get_app().id.as_str()).is_some());
         store.set_in_library(state.installed(store.get_app().id.as_str()).is_some());
+        store.set_can_uninstall(self.can_uninstall(&state, &store));
+        store.set_queued(self.is_queued(store.get_app().id.as_str()));
         let checked = self.last_checked.load(Ordering::SeqCst);
         store.set_last_checked(l(match now.saturating_sub(checked) {
             _ if checked == 0 => String::new(),
@@ -1565,10 +1621,42 @@ impl App {
         // TV: a search is the whole page. The likeliest few first, then the rest by
         // kind, so a game is not buried under packages or the other way round.
         let mut tv = Vec::new();
+        let browsed = browsing.filter(|_| store.get_page() == 1 && found.is_empty());
         if store.get_searching() {
             // A search is under way: the page waits for it, empty, however often the
             // rest of the store is redrawn meanwhile (a picture arriving does that).
+        } else if let Some((title, apps)) = browsed {
+            // A category in full: row after row of it, under its name.
+            let cards = self.cards(&apps);
+            let all: Vec<AppCard> = cards.iter().collect();
+            for (n, row) in all.chunks(8).enumerate() {
+                tv.push(Section {
+                    title: if n == 0 { l(&title) } else { SharedString::new() },
+                    apps: ModelRc::new(VecModel::from(row.to_vec())),
+                });
+            }
         } else if found.is_empty() {
+            // The kinds of app there are, each one a way in to all of that kind.
+            let kinds: Vec<AppCard> = featured
+                .iter()
+                .map(|row| {
+                    let id = format!("{CATEGORY_CARD}{}", row.title);
+                    AppCard {
+                        name: l(&row.title),
+                        initials: initials(&i18n::tr(&row.title)).into(),
+                        tint: tint_for(&id),
+                        id: id.into(),
+                        ..Default::default()
+                    }
+                })
+                .collect();
+            let mut home = home;
+            if kinds.len() > 1 {
+                home.insert(
+                    1.min(home.len()),
+                    Section { title: l("Categories"), apps: ModelRc::new(VecModel::from(kinds)) },
+                );
+            }
             tv.extend(home);
         } else {
             const TOP: usize = 6;
@@ -1609,6 +1697,8 @@ impl App {
         store.set_sounds(!settings.mute_sounds);
         store.set_show_essentials(!settings.hide_essentials);
         store.set_show_everything(settings.show_everything);
+        store.set_auto_update(settings.auto_update);
+        store.set_close_to_tray(!settings.quit_on_close);
         store.set_prefer_kind(bilby_core::compat::Prefer::named(&settings.prefer_kind).number());
         store.set_prefer_applies(self.platform.read().unwrap().os == bilby_core::platform::Os::Linux);
         store.set_own_sources(ModelRc::new(VecModel::from(
@@ -2302,7 +2392,7 @@ impl App {
                 };
                 (refreshed, bilby_core::os::check(app.host.as_ref(), &app.system))
             },
-            |app, ui, (refreshed, check)| {
+            move |app, ui, (refreshed, check)| {
                 // The Library's card for the device says what was found.
                 let after = app.clone();
                 let weak = ui.as_weak();
@@ -2322,6 +2412,18 @@ impl App {
                 }
                 if let Err(e) = refreshed {
                     app.toast(ui, &e.to_string(), true);
+                }
+                // "Update automatically": what needs no password is installed now; the
+                // rest is the person's to finish.
+                let waiting: Vec<bilby_core::os::Manager> = {
+                    let check = app.system_check.lock().unwrap();
+                    check.as_ref().map(|c| c.pending.iter().map(|p| p.manager).collect()).unwrap_or_default()
+                };
+                let alone = !waiting.is_empty() && waiting.iter().all(|manager| !manager.asks_for_password());
+                if app.state().settings.auto_update && !asked && !installing && alone {
+                    app.update_system(ui);
+                } else {
+                    app.offer_to_finish(ui);
                 }
             },
         );
@@ -2434,6 +2536,7 @@ impl App {
                     Ok(()) => app.toast(ui, "The system is up to date.", false),
                     Err(e) => app.toast(ui, &e.to_string(), true),
                 }
+                app.offer_to_finish(ui);
             },
         );
     }
@@ -2485,8 +2588,52 @@ impl App {
 
     /// Out of a search and back to Home: the box is emptied and the results put away,
     /// so Home shows the store again and not what was last looked for.
+    /// Browse one category in full. `name` is its title as shown, or nothing to go
+    /// back to every category; `as_page` gives it the page to itself, as on a TV.
+    pub fn browse_category(self: &Arc<Self>, ui: &AppWindow, name: &str, as_page: bool) {
+        let store = ui.global::<Store>();
+        let mut titles: Vec<String> = self.catalog().featured().into_iter().map(|row| row.title).collect();
+        titles.extend(self.collections.lock().unwrap().iter().map(|row| row.title.clone()));
+        let Some(title) = titles.into_iter().find(|title| title == name || i18n::tr(title) == name) else {
+            *self.browsing.lock().unwrap() = None;
+            return self.refresh(ui);
+        };
+        if self.browsing.lock().unwrap().as_ref().is_some_and(|(now, _)| *now == title) && !as_page {
+            return;
+        }
+        *self.browsing.lock().unwrap() = Some((title.clone(), Vec::new()));
+        if as_page {
+            self.close_details(ui);
+            *self.results.lock().unwrap() = (String::new(), Vec::new());
+            store.set_query(SharedString::new());
+            store.set_results(ModelRc::default());
+            store.set_page(1);
+            store.set_searching(true);
+        }
+        self.refresh(ui);
+        self.job(
+            move |app| (app.catalog().category(&title, 200), title),
+            move |app, ui, (apps, title)| {
+                // Only if this is still the category that is wanted.
+                let mut browsing = app.browsing.lock().unwrap();
+                let wanted = browsing.as_ref().is_some_and(|(now, _)| *now == title);
+                if wanted {
+                    *browsing = Some((title, apps));
+                }
+                drop(browsing);
+                if wanted {
+                    if as_page {
+                        ui.global::<Store>().set_searching(false);
+                    }
+                    app.refresh(ui);
+                }
+            },
+        );
+    }
+
     pub fn leave_search(&self, ui: &AppWindow) {
         let store = ui.global::<Store>();
+        *self.browsing.lock().unwrap() = None;
         // A search still under way has nowhere to show its answer.
         self.search_generation.fetch_add(1, Ordering::SeqCst);
         *self.result_filter.lock().unwrap() = None;
@@ -2586,6 +2733,9 @@ impl App {
             store.set_page(4);
             return;
         }
+        if let Some(title) = id.strip_prefix(CATEGORY_CARD) {
+            return self.browse_category(ui, title, true);
+        }
         // Something for adults: ask first, once, or for the PIN; never in Family mode.
         let listed_adult = find_card(&store, id).is_some_and(|card| card.adult)
             || id.strip_prefix("web:").and_then(bilby_core::source::web::listed).is_some_and(|site| site.adult)
@@ -2623,6 +2773,7 @@ impl App {
         store.set_is_favourite(self.state().is_favourite(id));
         store.set_can_open(self.launchable(id).is_some());
         store.set_in_library(self.state.lock().unwrap().installed(id).is_some());
+        store.set_can_uninstall(false);
         store.set_details_open(true);
         store.set_details_error(SharedString::new());
         store.set_unavailable(SharedString::new());
@@ -2641,6 +2792,7 @@ impl App {
         store.set_hidden(ModelRc::default());
         // Still being downloaded from an earlier visit to this page: it shows.
         store.set_install_state(if self.installing_is(id) { 1 } else { 0 });
+        store.set_queued(self.is_queued(id));
         store.set_installed_version(
             self.state.lock().unwrap().installed(id).map(|a| a.version.clone()).unwrap_or_default().into(),
         );
@@ -2662,6 +2814,9 @@ impl App {
         // Library cards carry "old → new" as their version; the page shows the release's.
         card.version = SharedString::new();
         store.set_app(at_the_top(card));
+        // Known before anything is fetched for a Flatpak or a Steam game; for a
+        // system package, once its page has loaded.
+        store.set_can_uninstall(self.can_uninstall(&self.state(), &store));
         self.show_app_sources(ui);
         let Some(app_id) = AppId::parse(id) else {
             store.set_details_loading(false);
@@ -2861,6 +3016,7 @@ impl App {
         if store.get_installed_version().is_empty() {
             store.set_installed_version(details.summary.installed_version.clone().unwrap_or_default().into());
         }
+        store.set_can_uninstall(self.can_uninstall(&self.state(), &store));
         // Start on the release the catalog picked (the newest stable one that fits).
         let picked = details.release.as_ref().map(|r| r.version.clone());
         let selected = details.versions.iter().position(|r| Some(&r.version) == picked.as_ref());
@@ -2948,6 +3104,116 @@ impl App {
     /// Update every library app that has an update waiting, one after another. A failure
     /// is reported and the rest carry on.
     pub fn update_all(self: &Arc<Self>, ui: &AppWindow) {
+        self.start_updates(ui, false);
+    }
+
+    /// With "update apps automatically" on: install what the last check found, with
+    /// nobody asked. Updates that need the person stay waiting in the Library.
+    fn update_unattended(self: &Arc<Self>, ui: &AppWindow) {
+        if self.state().settings.auto_update && self.update_queue.lock().unwrap().is_empty() {
+            self.start_updates(ui, true);
+        }
+    }
+
+    /// How many updates the store had to leave for the person (a password, an
+    /// installer), and whether Bilby or the device waits for a restart.
+    fn left_for_the_person(&self, ui: &AppWindow) -> (usize, bool, bool) {
+        let apps = {
+            let updates = self.updates.lock().unwrap();
+            let library = self.state().library;
+            library.iter().filter(|app| matches!(updates.get(&app.id), Some(UpdateStatus::Available { .. }))).count()
+        };
+        let check = self.system_check.lock().unwrap().clone();
+        let system = check.as_ref().map(|c| c.pending.len()).unwrap_or(0);
+        let device = check.as_ref().is_some_and(|c| c.restart_needed);
+        let _ = ui;
+        (apps + system, self.self_new.lock().unwrap().is_some(), device)
+    }
+
+    /// With "update apps automatically" on, when the store has done what it can by
+    /// itself: say what is left for the person. With the window open they are asked,
+    /// once each time it is opened, whether to finish now or later; with the store in
+    /// the system tray, a notification says so instead.
+    pub fn offer_to_finish(self: &Arc<Self>, ui: &AppWindow) {
+        let store = ui.global::<Store>();
+        if !self.state().settings.auto_update || store.get_gate() != 0 {
+            return;
+        }
+        // Still at it: asked when it has finished.
+        if self.unattended.load(Ordering::SeqCst)
+            || !store.get_updating_id().is_empty()
+            || matches!(store.get_system_state(), 1 | 4)
+            || store.get_checking_updates()
+        {
+            return;
+        }
+        // Asked once about everything, not about each half as it comes in: wait until
+        // both the apps and the system have been looked at.
+        let apps_unknown = self.last_checked.load(Ordering::SeqCst) == 0 && !self.state().library.is_empty();
+        let system_unknown = self.system_check.lock().unwrap().is_none() && !self.system.managers.is_empty();
+        if apps_unknown || system_unknown {
+            return;
+        }
+        let (updates, bilby, device) = self.left_for_the_person(ui);
+        if updates == 0 && !bilby && !device {
+            return;
+        }
+        let said = if updates > 0 {
+            format!(
+                "{} waiting for you to finish: a password, an installer or a restart is needed.",
+                plural(updates, "update")
+            )
+        } else if bilby {
+            "A newer Bilby is installed. Restart Bilby to start using it.".to_string()
+        } else {
+            "Updates installed. Restart this device to finish.".to_string()
+        };
+        if self.in_tray.load(Ordering::SeqCst) {
+            let mut notified = self.notified.lock().unwrap();
+            if *notified != said {
+                (self.notifier)("Bilby", &i18n::tr(&said));
+                *notified = said;
+            }
+            return;
+        }
+        if self.offered.swap(true, Ordering::SeqCst) {
+            return;
+        }
+        if updates > 0 {
+            self.ask(ui, 1, "Updates are waiting for you", &said, Guarded::FinishUpdates);
+            store.set_gate_no(l("Later"));
+            store.set_gate_yes(l("Finish now"));
+        } else if bilby {
+            self.ask(ui, 1, "Bilby is updated", &said, Guarded::RestartBilby);
+            store.set_gate_no(l("Later"));
+            store.set_gate_yes(l("Restart Bilby now"));
+        } else {
+            self.ask_restart_for_updates(ui);
+        }
+    }
+
+    /// The window has been opened again from the system tray (or the store started a
+    /// second time): what is waiting for the person is offered afresh.
+    pub fn window_opened(self: &Arc<Self>, ui: &AppWindow) {
+        self.in_tray.store(false, Ordering::SeqCst);
+        self.offered.store(false, Ordering::SeqCst);
+        self.offer_to_finish(ui);
+    }
+
+    /// The window has been closed and the store stays in the system tray.
+    pub fn window_closed_to_tray(&self) {
+        self.in_tray.store(true, Ordering::SeqCst);
+    }
+
+    /// Look for everything there is to update, as "update apps automatically" does when
+    /// the store opens and every few hours after: apps, Bilby itself and the system.
+    pub fn check_everything(self: &Arc<Self>, ui: &AppWindow) {
+        self.check_updates(ui, false);
+        self.check_store_update(ui);
+        self.check_system(ui, false);
+    }
+
+    fn start_updates(self: &Arc<Self>, ui: &AppWindow, unattended: bool) {
         if !ui.global::<Store>().get_updating_id().is_empty() {
             return;
         }
@@ -2960,6 +3226,7 @@ impl App {
                 .map(|app| app.id.clone())
                 .collect()
         };
+        self.unattended.store(unattended, Ordering::SeqCst);
         *self.update_queue.lock().unwrap() = waiting.into();
         self.update_next(ui);
     }
@@ -2971,7 +3238,13 @@ impl App {
             && store.get_install_state() != 1
             && self.installing.lock().unwrap().is_none()
         {
-            let Some(id) = self.update_queue.lock().unwrap().pop_front() else { return };
+            let Some(id) = self.update_queue.lock().unwrap().pop_front() else {
+                // The store's own round is over: what it had to leave is the person's.
+                if self.unattended.swap(false, Ordering::SeqCst) {
+                    self.offer_to_finish(ui);
+                }
+                return;
+            };
             self.update_app(ui, &id);
         }
     }
@@ -2984,6 +3257,11 @@ impl App {
             || !store.get_updating_id().is_empty()
             || self.installing.lock().unwrap().is_some()
         {
+            // Something is downloading: this update takes its turn after it.
+            let mut queue = self.update_queue.lock().unwrap();
+            if self.state.lock().unwrap().installed(id).is_some() && !queue.iter().any(|waiting| waiting == id) {
+                queue.push_back(id.to_string());
+            }
             return;
         }
         let Some(app_id) = AppId::parse(id) else { return };
@@ -3010,6 +3288,15 @@ impl App {
                     return fail(format!("{} no longer has a file for this device", entry.name));
                 };
                 let selected = details.versions.iter().position(|r| r.version == picked);
+                if app.unattended.load(Ordering::SeqCst) {
+                    let alone = details.release.as_ref().is_some_and(|r| install::unattended(&r.options[0].plan));
+                    if !alone {
+                        // It needs the person: it stays waiting in the Library.
+                        store.set_updating_id(SharedString::new());
+                        return app.update_next(ui);
+                    }
+                    app.quiet_install.store(true, Ordering::SeqCst);
+                }
                 // The install step reads the app in focus; make it this one.
                 store.set_app(at_the_top(app.library_card(&entry)));
                 *app.current.lock().unwrap() = Current { id, details: Some(details), selected };
@@ -3209,13 +3496,22 @@ impl App {
         if store.get_install_state() == 1 {
             return;
         }
-        // One at a time: another app's download is still going.
-        let busy = self.installing.lock().unwrap().as_ref().map(|(_, name)| name.clone());
-        if let Some(name) = busy {
-            self.toast(ui, &format!("{name} is still downloading. Start this one when it has finished."), false);
+        // Already waiting its turn: asking again takes it out of the queue.
+        let here = self.current.lock().unwrap().id.clone();
+        let gone = {
+            let mut queue = self.download_queue.lock().unwrap();
+            let at = queue.iter().position(|w| w.details.summary.id.to_string().eq_ignore_ascii_case(&here));
+            at.and_then(|at| queue.remove(at))
+        };
+        if let Some(gone) = gone {
+            store.set_queued(false);
+            self.toast(ui, &format!("{} is no longer queued", gone.name), false);
             return;
         }
-        if self.needs_pin_to_install() {
+        // An update the store installs by itself asks nothing: the person agreed to
+        // that once, in Settings (with the PIN, where there is one).
+        let quiet = self.quiet_install.swap(false, Ordering::SeqCst);
+        if !quiet && self.needs_pin_to_install() {
             let why = "A PIN is needed to install or remove apps on this device.";
             self.ask(ui, 2, "Enter the PIN", why, Guarded::Install(index));
             return;
@@ -3225,7 +3521,7 @@ impl App {
             let current = self.current.lock().unwrap();
             current.release().and_then(|r| r.options.get(index.max(0) as usize).map(|o| o.plan.action.clone()))
         };
-        if action.is_some_and(|action| !self.ask_where_to_save(&action)) {
+        if !quiet && action.is_some_and(|action| !self.ask_where_to_save(&action)) {
             return;
         }
         let (details, option, version) = {
@@ -3235,11 +3531,79 @@ impl App {
             let Some(option) = release.options.get(index.max(0) as usize).cloned() else { return };
             (details, option, release.version.clone())
         };
-        store.set_install_index(index);
-        store.set_install_state(1);
+        let placing = option.plan.action == Action::PlaceAppImage;
+        let requirement = if placing { self.needed.lock().unwrap().clone() } else { None };
+        let lacks_fuse = placing && self.lacks_fuse.load(Ordering::SeqCst);
+        let name = self.name_on_page(&store, &details.summary);
+        let mut waiting = Waiting { details, option, version, index, name, folder: None, requirement, lacks_fuse };
+        // One at a time: behind another app's download, this one waits its turn.
+        let busy = self.installing.lock().unwrap().as_ref().map(|(_, name)| name.clone());
+        if let Some(busy) = busy {
+            waiting.folder = self.asked_folder.lock().unwrap().take();
+            let name = waiting.name.clone();
+            self.download_queue.lock().unwrap().push_back(waiting);
+            store.set_queued(true);
+            self.toast(ui, &format!("{name} is queued. It starts when {busy} has finished."), false);
+            return;
+        }
+        self.start_install(ui, waiting, false);
+    }
+
+    /// For tests, where a download is over before the next thing can be asked for:
+    /// say that one is going (`Some((id, name))`), or that it has just finished.
+    #[doc(hidden)]
+    pub fn hold_download(self: &Arc<Self>, ui: &AppWindow, going: Option<(String, String)>) {
+        let finished = going.is_none();
+        *self.installing.lock().unwrap() = going;
+        if finished {
+            self.start_queued(ui);
+            self.update_next(ui);
+        }
+    }
+
+    /// An app's name as its page gives it, when that page is the one open.
+    fn name_on_page(&self, store: &Store, app: &AppSummary) -> String {
+        let shown = store.get_app();
+        if shown.id.as_str().eq_ignore_ascii_case(&app.id.to_string()) && !shown.name.is_empty() {
+            shown.name.to_string()
+        } else {
+            app.name.clone()
+        }
+    }
+
+    /// Is this app waiting its turn to be downloaded?
+    fn is_queued(&self, id: &str) -> bool {
+        self.download_queue.lock().unwrap().iter().any(|w| w.details.summary.id.to_string().eq_ignore_ascii_case(id))
+    }
+
+    /// Start the next download that was waiting, if nothing is going.
+    fn start_queued(self: &Arc<Self>, ui: &AppWindow) {
+        if self.installing.lock().unwrap().is_some() {
+            return;
+        }
+        let next = self.download_queue.lock().unwrap().pop_front();
+        if let Some(next) = next {
+            self.start_install(ui, next, true);
+        }
+    }
+
+    fn start_install(self: &Arc<Self>, ui: &AppWindow, waiting: Waiting, queued: bool) {
+        let store = ui.global::<Store>();
+        let Waiting { details, option, version, index, name: asked_name, folder, requirement, lacks_fuse } = waiting;
+        // From the queue, the page that is open may be some other app's: its buttons
+        // are left as they are.
+        let on_page = store.get_app().id.as_str().eq_ignore_ascii_case(&details.summary.id.to_string());
+        if on_page || !queued {
+            store.set_install_index(index);
+            store.set_install_state(1);
+            store.set_install_message(SharedString::new());
+            store.set_queued(false);
+        }
         store.set_install_progress(0.0);
-        store.set_install_message(SharedString::new());
-        *self.installing.lock().unwrap() = Some((details.summary.id.to_string(), details.summary.name.clone()));
+        if folder.is_some() {
+            *self.asked_folder.lock().unwrap() = folder;
+        }
+        *self.installing.lock().unwrap() = Some((details.summary.id.to_string(), asked_name.clone()));
         self.cancel_install.store(false, Ordering::SeqCst);
 
         let cancel = self.cancel_install.clone();
@@ -3247,9 +3611,6 @@ impl App {
         let weak = self.ui.clone();
         let work_option = option.clone();
         // What it needs first (FUSE, for an AppImage) is installed first, as part of this.
-        let placing = option.plan.action == Action::PlaceAppImage;
-        let requirement = if placing { self.needed.lock().unwrap().clone() } else { None };
-        let lacks_fuse = placing && self.lacks_fuse.load(Ordering::SeqCst);
         let layering = if lacks_fuse { self.layering.clone() } else { None };
         self.job(
             move |app| {
@@ -3364,7 +3725,8 @@ impl App {
                         // installed by this store, so nothing goes in its library.
                         if matches!(option.plan.action, Action::ShowCommand | Action::OpenStore | Action::RunInTerminal)
                         {
-                            return;
+                            app.start_queued(ui);
+                            return app.update_next(ui);
                         }
                         // The system's package manager installed it and keeps track of
                         // it; the page says so, and the store's own library stays as it is.
@@ -3377,7 +3739,8 @@ impl App {
                                 });
                             }
                             app.toast(ui, &format!("{} is installed", details.summary.name), false);
-                            return;
+                            app.start_queued(ui);
+                            return app.update_next(ui);
                         }
                         // Its name as its page gives it. Updated from the Library, the
                         // page that is open (if any) is some other app's: then its own.
@@ -3385,7 +3748,7 @@ impl App {
                         let name = if shown.id.as_str().eq_ignore_ascii_case(&details.summary.id.to_string()) {
                             shown.name.to_string()
                         } else {
-                            details.summary.name.clone()
+                            asked_name.clone()
                         };
                         let mut entry = InstalledApp::new(
                             &details.summary,
@@ -3413,7 +3776,11 @@ impl App {
                             *app.self_new.lock().unwrap() = Some(file.clone());
                             // Asked wherever the update was started from, the Library
                             // included, where there is no Open button to find.
-                            app.ask_restart_bilby(ui, &version);
+                            // (Installed by the store itself with nobody asking, it is
+                            // offered with whatever else is left, when the round is over.)
+                            if !app.unattended.load(Ordering::SeqCst) {
+                                app.ask_restart_bilby(ui, &version);
+                            }
                             say(format!("Bilby {version} is on this device. Press Open to restart into it; it also starts next time you open Bilby from your app menu."));
                             let previous =
                                 app.state().installed(&id).filter(|a| a.store_managed).and_then(|a| a.path.clone());
@@ -3478,6 +3845,7 @@ impl App {
                     }
                 }
                 // Whatever was waiting its turn behind this one.
+                app.start_queued(ui);
                 app.update_next(ui);
             },
         );
@@ -3524,6 +3892,7 @@ impl App {
                     };
                     app.toast(ui, &message, available == 0 && failed > 0);
                 }
+                app.update_unattended(ui);
             },
         );
     }
@@ -3901,6 +4270,21 @@ impl App {
             }
             return;
         }
+        if matches!(*self.pending.lock().unwrap(), Some(Guarded::FinishUpdates)) {
+            *self.pending.lock().unwrap() = None;
+            self.close_gate(ui);
+            if yes {
+                // Asked for by the person now: passwords and installers may appear.
+                self.update_all(ui);
+                let system = self.system_check.lock().unwrap().as_ref().is_some_and(|c| !c.pending.is_empty());
+                if system {
+                    self.update_system(ui);
+                }
+            } else {
+                self.toast(ui, "They wait in your Library until you are ready.", false);
+            }
+            return;
+        }
         if matches!(*self.pending.lock().unwrap(), Some(Guarded::RestartBilby)) {
             *self.pending.lock().unwrap() = None;
             self.close_gate(ui);
@@ -3984,7 +4368,7 @@ impl App {
                 self.remove_from_library(ui, &id);
             }
             Guarded::Setting(change) => self.apply_setting(ui, change),
-            Guarded::Restart | Guarded::RestartBilby => {}
+            Guarded::Restart | Guarded::RestartBilby | Guarded::FinishUpdates => {}
         }
     }
 
@@ -3999,6 +4383,7 @@ impl App {
                 | Change::AdultOnHome(false)
                 | Change::AdultUncovered(false)
                 | Change::PinForInstalls(true)
+                | Change::AutoUpdate(false)
         );
         if to_change_settings(has_pin, stricter) == Gate::Pin {
             self.ask(ui, 2, "Enter the PIN", "The PIN guards these settings.", Guarded::Setting(change));
@@ -4057,6 +4442,16 @@ impl App {
                     state.settings.adult_uncovered = on;
                     state.settings.adult_confirmed |= on;
                 });
+            }
+            Change::AutoUpdate(on) => {
+                self.update_state(ui, |state| state.settings.auto_update = on);
+                self.refresh_settings(ui);
+                if on {
+                    // Start now with whatever is waiting.
+                    self.offered.store(false, Ordering::SeqCst);
+                    self.check_everything(ui);
+                }
+                return;
             }
             Change::PinForInstalls(on) => {
                 if on && self.state().settings.pin_hash.is_empty() {
@@ -4276,6 +4671,8 @@ impl App {
     /// Start the newer copy of the store that was just placed, and leave.
     fn restart_into_new(&self, ui: &AppWindow) {
         let Some(path) = self.self_new.lock().unwrap().clone() else { return };
+        // The new copy must start as the store, not be taken for a second one of this.
+        let _ = std::fs::remove_file(instance::note(&self.dirs.cache));
         match (self.launcher)(&path) {
             Ok(()) => {
                 self.toast(ui, "Restarting into the new Bilby…", false);
@@ -4467,7 +4864,91 @@ impl App {
         self.toast(ui, message, false);
     }
 
-    pub fn remove_from_library(&self, ui: &AppWindow, id: &str) {
+    /// Is the app on the page one the store did not install, but can take off the
+    /// device: a Flatpak, a Steam game, or something the system's own tools look after?
+    fn can_uninstall(&self, state: &State, store: &Store) -> bool {
+        let id = store.get_app().id.to_string();
+        if id.is_empty() || state.installed(&id).is_some() {
+            return false;
+        }
+        let Some(app) = AppId::parse(&id) else { return false };
+        match app.source {
+            SourceKind::Flathub => bilby_core::source::flathub::is_installed(&self.dirs.flatpak_roots, &app.key),
+            SourceKind::Steam => {
+                self.elsewhere.read().unwrap().apps.iter().any(|(known, _)| known.eq_ignore_ascii_case(&id))
+            }
+            _ => {
+                !store.get_installed_version().is_empty()
+                    && install::removal(&app, &self.platform.read().unwrap()).is_some()
+            }
+        }
+    }
+
+    /// Take an app off the device that the store did not put there. Flatpak and Steam
+    /// are asked to; what the system's own tools look after is removed with them, by
+    /// itself or not at all.
+    fn uninstall_outside(self: &Arc<Self>, ui: &AppWindow, id: &str) {
+        let Some(app_id) = AppId::parse(id) else { return };
+        let store = ui.global::<Store>();
+        let shown = store.get_app();
+        let name = if shown.id == id && !shown.name.is_empty() { shown.name.to_string() } else { app_id.key.clone() };
+        let forget =
+            |app: &App| app.elsewhere.write().unwrap().apps.retain(|(known, _)| !known.eq_ignore_ascii_case(id));
+        match app_id.source {
+            SourceKind::Flathub => {
+                let args = ["uninstall", "--noninteractive", "--assumeyes", app_id.key.as_str()].map(String::from);
+                match (self.runner)(&self.dirs.flatpak, &args) {
+                    Ok(()) => {
+                        forget(self);
+                        if shown.id == id {
+                            store.set_installed_version(SharedString::new());
+                        }
+                        self.refresh(ui);
+                        self.toast(ui, &format!("Uninstalling {name}…"), false);
+                    }
+                    Err(e) => self.toast(ui, &format!("{name} could not be uninstalled: {e}"), true),
+                }
+            }
+            SourceKind::Steam => {
+                // Steam removes its own games, and asks first.
+                match (self.opener)(std::path::Path::new(&format!("steam://uninstall/{}", app_id.key))) {
+                    Ok(()) => self.toast(ui, &format!("Steam asks whether to uninstall {name}"), false),
+                    Err(e) => self.toast(ui, &format!("{name} could not be uninstalled: {e}"), true),
+                }
+            }
+            _ => self.uninstall_with_system(ui, &app_id, &name),
+        }
+    }
+
+    /// Have the system's own tool remove a package, a snap or a winget package.
+    fn uninstall_with_system(self: &Arc<Self>, ui: &AppWindow, app_id: &AppId, name: &str) {
+        let platform = self.platform.read().unwrap().clone();
+        let Some(removal) = install::removal(app_id, &platform) else { return };
+        let later = removal.command.contains("rpm-ostree");
+        self.toast(ui, &format!("Uninstalling {name}…"), false);
+        let (id, name) = (app_id.to_string(), name.to_string());
+        self.job(
+            move |app| install::remove_with(&removal, &app.dirs),
+            move |app, ui, result| {
+                let store = ui.global::<Store>();
+                match result {
+                    Ok(()) if later => app.toast(ui, &format!("{name} will be gone after a restart"), false),
+                    Ok(()) => {
+                        if store.get_app().id == id.as_str() {
+                            store.set_installed_version(SharedString::new());
+                        }
+                        app.toast(ui, &format!("{name} uninstalled"), false);
+                    }
+                    Err(Error::Cancelled) => app.toast(ui, &format!("{name} was not uninstalled"), false),
+                    Err(e) => app.toast(ui, &format!("{name} could not be uninstalled: {e}"), true),
+                }
+                app.scan_installed(ui);
+                app.refresh(ui);
+            },
+        );
+    }
+
+    pub fn remove_from_library(self: &Arc<Self>, ui: &AppWindow, id: &str) {
         if self.store_app.as_ref().is_some_and(|own| own.to_string().eq_ignore_ascii_case(id)) {
             self.toast(ui, "That is Bilby itself, which you are using. To remove it, delete its file.", true);
             return;
@@ -4479,7 +4960,8 @@ impl App {
         }
         let mut removed = None;
         self.update_state(ui, |state| removed = state.remove(id));
-        let Some(entry) = removed else { return };
+        // Not the store's own: something else put it on the device.
+        let Some(entry) = removed else { return self.uninstall_outside(ui, id) };
         self.updates.lock().unwrap().remove(id);
         let mut message = format!("{} removed from your library", entry.name);
         // Only files the store itself placed, and only inside its own Applications folder.
@@ -4511,6 +4993,13 @@ impl App {
         }
         self.refresh(ui);
         self.toast(ui, &message, false);
+        // What the system's package manager installed for the store, it removes too.
+        if let Some(app_id) = AppId::parse(id) {
+            let there = self.catalog().installed_packages().contains(&app_id.key);
+            if there || matches!(app_id.source, SourceKind::Snap | SourceKind::Winget) {
+                self.uninstall_with_system(ui, &app_id, &entry.name);
+            }
+        }
     }
 }
 
@@ -4662,6 +5151,10 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
             None => Some(AppId::new(SourceKind::GitHub, bilby_core::catalog::STORE_REPOSITORY)),
         },
         update_queue: Mutex::new(std::collections::VecDeque::new()),
+        browsing: Mutex::new(None),
+        download_queue: Mutex::new(std::collections::VecDeque::new()),
+        unattended: std::sync::atomic::AtomicBool::new(false),
+        quiet_install: std::sync::atomic::AtomicBool::new(false),
         pictures_requested: Mutex::new(HashSet::new()),
         picture_failures: Mutex::new(HashMap::new()),
         opener: options.opener.clone().unwrap_or_else(|| Arc::new(install::open_with_system)),
@@ -4692,6 +5185,17 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         fuse_staged: std::sync::atomic::AtomicBool::new(false),
         fuse_just_staged: std::sync::atomic::AtomicBool::new(false),
         restart: options.restart.clone().unwrap_or_else(|| Arc::new(restart_device)),
+        notifier: options.notifier.clone().unwrap_or_else(|| {
+            let real = !options.demo && options.platform.is_none() && options.dirs.is_none();
+            Arc::new(move |title: &str, body: &str| {
+                if real {
+                    install::notify(title, body);
+                }
+            })
+        }),
+        in_tray: std::sync::atomic::AtomicBool::new(false),
+        offered: std::sync::atomic::AtomicBool::new(false),
+        notified: Mutex::new(String::new()),
         needed: Mutex::new(None),
         lacks_fuse: std::sync::atomic::AtomicBool::new(false),
         steam: std::sync::RwLock::new(None),
@@ -4950,6 +5454,13 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
         app.refresh_settings(ui);
         app.refresh(ui);
     });
+    on!(on_set_close_to_tray, |app, ui, on| {
+        app.update_state(ui, |state| state.settings.quit_on_close = !on);
+        app.refresh_settings(ui);
+        show_tray(on);
+    });
+    on!(on_browse_category, |app, ui, name| { app.browse_category(ui, &name, false) });
+    on!(on_set_auto_update, |app, ui, on| { app.request_setting(ui, Change::AutoUpdate(on)) });
     on!(on_set_show_everything, |app, ui, on| {
         app.update_state(ui, |state| state.settings.show_everything = on);
         // What a search finds depends on it: a new catalog, and the search made again.
@@ -5193,9 +5704,43 @@ pub fn run(mut options: Options) -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     }
+    // One Bilby at a time: with one already running (in the system tray, perhaps),
+    // this start tells it what was asked for and leaves.
+    let mut later_starts = None;
+    if real && options.dirs.is_none() && options.state_file.is_none() {
+        let message = instance::message(options.open.as_deref(), options.search.as_deref());
+        match instance::claim(&Dirs::for_current_user().cache, &message) {
+            instance::Claim::Second => return Ok(()),
+            instance::Claim::First(listener) => later_starts = Some(listener),
+        }
+    }
     let (ui, app) = build(&options)?;
     #[cfg(not(target_os = "android"))]
     translate_remote_keys(&ui, &app);
+    if let Some(listener) = later_starts {
+        let (app, weak) = (app.clone(), ui.as_weak());
+        instance::listen(listener, move |message| {
+            let (app, weak) = (app.clone(), weak.clone());
+            let _ = slint::invoke_from_event_loop(move || {
+                let Some(ui) = weak.upgrade() else { return };
+                bring_back(&ui, &app);
+                if let Some(target) = message.strip_prefix("open ") {
+                    let id =
+                        AppId::from_user_input(target).map(|id| id.to_string()).unwrap_or_else(|| target.to_string());
+                    app.open(&ui, &id);
+                } else if let Some(query) = message.strip_prefix("search ") {
+                    ui.global::<Store>().set_query(query.into());
+                    app.search(&ui, query);
+                }
+            });
+        });
+    }
+    // On a desktop the store stays in the system tray when its window is closed,
+    // unless that is switched off in Settings. Not on a TV, which has no tray.
+    #[cfg(not(target_os = "android"))]
+    if real && ui.global::<Store>().get_shell() != Shell::Tv {
+        set_up_tray(&ui, &app);
+    }
     let store = ui.global::<Store>();
     if let Some((w, h)) = options.size {
         ui.window().set_size(slint::LogicalSize::new(w as f32, h as f32));
@@ -5213,10 +5758,21 @@ pub fn run(mut options: Options) -> Result<(), Box<dyn std::error::Error>> {
     app.load_ratings(&ui);
     // Quietly look for updates at start-up (unless turned off): it is the reason to open
     // the store again.
-    if !app.state().settings.skip_update_check_on_start {
-        app.check_updates(&ui, false);
-        app.check_store_update(&ui);
-        app.check_system(&ui, false);
+    let settings = app.state().settings;
+    if !settings.skip_update_check_on_start || settings.auto_update {
+        app.check_everything(&ui);
+    }
+    // Left open, as on a TV: look again every few hours, for "update apps automatically".
+    let again = slint::Timer::default();
+    {
+        let (app, weak) = (app.clone(), ui.as_weak());
+        again.start(slint::TimerMode::Repeated, std::time::Duration::from_secs(4 * 60 * 60), move || {
+            if let Some(ui) = weak.upgrade() {
+                if app.state().settings.auto_update {
+                    app.check_everything(&ui);
+                }
+            }
+        });
     }
 
     if let Some(path) = options.screenshot.clone() {
@@ -5224,6 +5780,70 @@ pub fn run(mut options: Options) -> Result<(), Box<dyn std::error::Error>> {
     }
     ui.run()?;
     Ok(())
+}
+
+thread_local! {
+    /// The store's icon in the system tray, where there is a tray to put it in.
+    static TRAY: std::cell::RefCell<Option<BilbyTray>> = const { std::cell::RefCell::new(None) };
+}
+
+/// Show the tray icon, or take it away. With it showing, closing the window leaves
+/// the store running there.
+fn show_tray(on: bool) {
+    TRAY.with(|tray| {
+        if let Some(tray) = tray.borrow().as_ref() {
+            tray.set_kept(on);
+        }
+    });
+}
+
+/// Is the store's icon in the system tray right now?
+fn tray_showing() -> bool {
+    TRAY.with(|tray| tray.borrow().as_ref().is_some_and(|tray| tray.get_kept()))
+}
+
+/// Open the window again, from the tray or because the store was started a second time.
+fn bring_back(ui: &AppWindow, app: &Arc<App>) {
+    let _ = ui.show();
+    ui.window().set_minimized(false);
+    app.window_opened(ui);
+}
+
+#[cfg(not(target_os = "android"))]
+fn set_up_tray(ui: &AppWindow, app: &Arc<App>) {
+    if !instance::has_a_tray() {
+        return;
+    }
+    let Ok(tray) = BilbyTray::new() else { return };
+    tray.set_picture(own_icon());
+    let (opened, weak) = (app.clone(), ui.as_weak());
+    tray.on_open(move || {
+        if let Some(ui) = weak.upgrade() {
+            bring_back(&ui, &opened);
+        }
+    });
+    let (checking, weak) = (app.clone(), ui.as_weak());
+    tray.on_check(move || {
+        if let Some(ui) = weak.upgrade() {
+            checking.check_everything(&ui);
+        }
+    });
+    tray.on_quit(|| {
+        show_tray(false);
+        let _ = slint::quit_event_loop();
+    });
+    tray.set_kept(!app.state().settings.quit_on_close);
+    TRAY.with(|kept| *kept.borrow_mut() = Some(tray));
+    ui.global::<Store>().set_tray_available(true);
+    // Closing the window hides it either way. With the icon in the tray the store
+    // goes on running there; without it, nothing is left and the program ends.
+    let closing = app.clone();
+    ui.window().on_close_requested(move || {
+        if tray_showing() {
+            closing.window_closed_to_tray();
+        }
+        slint::CloseRequestResponse::HideWindow
+    });
 }
 
 /// What an updater is doing, from a line it printed, in a few words for the screen:
@@ -5491,6 +6111,8 @@ const PROJECT_LOGO: &str = "project:";
 
 /// The id of the Library's card for the device itself, which opens its page.
 const SYSTEM_CARD: &str = "bilby:this-device";
+/// A TV tile that is a category, not an app: what follows is the category's title.
+const CATEGORY_CARD: &str = "category:";
 
 /// The store's sign-in window while it is open, so it can be closed from here.
 static SIGNIN_WINDOW: Mutex<Option<std::process::Child>> = Mutex::new(None);

@@ -225,6 +225,14 @@ msgid "Bilby goes by what its sources say: Steam's adult-only marks, an app's ow
 msgstr "Bilby는 소스가 알려 주는 정보를 따릅니다. Steam의 성인 전용 표시, 앱 자체의 연령 등급, 그리고 잘 알려진 성인 사이트 목록입니다. 처음 보는 사이트는 알아보지 못하며, 대부분의 소스는 연령 정보를 전혀 제공하지 않습니다."
 
 msgctxt "SettingsBody"
+msgid "Bilby goes on looking for updates there. Its tray icon opens the window again or quits Bilby."
+msgstr "Bilby는 그곳에서 계속 업데이트를 확인합니다. 트레이 아이콘으로 창을 다시 열거나 Bilby를 종료할 수 있습니다."
+
+msgctxt "SettingsBody"
+msgid "Bilby installs updates to your apps as it finds them, when it opens and every few hours while it stays open. Updates that need your password or open an installer still wait for you in the Library."
+msgstr "Bilby는 열릴 때, 그리고 열려 있는 동안 몇 시간마다 업데이트를 확인하고 찾는 대로 앱에 설치합니다. 비밀번호가 필요하거나 설치 프로그램을 여는 업데이트는 계속 라이브러리에서 기다립니다."
+
+msgctxt "SettingsBody"
 msgid "Bilby keeps a short list, chosen by people, of the apps and websites nearly everyone looks for: a browser, a video player, the big names. On, the home page starts with them in the version for this device, and they are placed a little higher in a search. Off, you get only what the sources' own figures say."
 msgstr "Bilby에는 브라우저, 동영상 플레이어, 유명 서비스처럼 거의 모든 사람이 찾는 앱과 웹사이트를 사람이 직접 고른 짧은 목록이 있습니다. 켜면 홈 화면이 이 기기에 맞는 버전의 추천 앱으로 시작하고, 검색에서도 조금 더 위에 표시됩니다. 끄면 소스 자체의 수치에 따른 결과만 표시됩니다."
 
@@ -320,6 +328,10 @@ msgctxt "SettingsBody"
 msgid "Check for a newer Bilby"
 msgstr "새 Bilby 버전 확인"
 
+msgctxt "BilbyTray"
+msgid "Check for updates"
+msgstr "업데이트 확인"
+
 msgctxt "LibraryBody"
 msgid "Check for updates"
 msgstr "업데이트 확인"
@@ -403,6 +415,10 @@ msgstr "확인"
 msgctxt "LibraryItem"
 msgid "Confirm removing {}"
 msgstr "{} 제거 확인"
+
+msgctxt "DetailsBody"
+msgid "Confirm uninstalling {}"
+msgstr "{} 설치 제거 확인"
 
 msgctxt "CommandBox"
 msgid "Copied"
@@ -713,6 +729,10 @@ msgctxt "TvShell"
 msgid "Installing updates"
 msgstr "업데이트 설치 중"
 
+msgctxt "SettingsBody"
+msgid "Keep Bilby in the system tray when its window is closed"
+msgstr "창을 닫아도 Bilby를 시스템 트레이에 유지"
+
 msgctxt "TvQuestion"
 msgid "Keep this layout"
 msgstr "이 레이아웃 유지"
@@ -890,6 +910,10 @@ msgctxt "TvShell"
 msgid "Open"
 msgstr "열기"
 
+msgctxt "BilbyTray"
+msgid "Open Bilby"
+msgstr "Bilby 열기"
+
 msgctxt "SettingsBody"
 msgid "Open downloads folder"
 msgstr "다운로드 폴더 열기"
@@ -1027,6 +1051,18 @@ msgid "QR code to scan with the Steam app"
 msgstr "Steam 앱으로 스캔할 QR 코드"
 
 msgctxt "DetailsBody"
+msgid "Queued"
+msgstr "대기 중"
+
+msgctxt "TvShell"
+msgid "Queued"
+msgstr "대기 중"
+
+msgctxt "BilbyTray"
+msgid "Quit Bilby"
+msgstr "Bilby 종료"
+
+msgctxt "DetailsBody"
 msgid "Ratings"
 msgstr "평점"
 
@@ -1053,6 +1089,10 @@ msgstr "읽는 중"
 msgctxt "LibraryItem"
 msgid "Really remove?"
 msgstr "정말 제거할까요?"
+
+msgctxt "DetailsBody"
+msgid "Really uninstall?"
+msgstr "정말 설치를 제거할까요?"
 
 msgctxt "DesktopShell"
 msgid "Recent"
@@ -1615,6 +1655,18 @@ msgctxt "TvShell"
 msgid "Type a name, then press OK"
 msgstr "이름을 입력한 다음 OK를 누르세요"
 
+msgctxt "DetailsBody"
+msgid "Uninstall"
+msgstr "설치 제거"
+
+msgctxt "TvShell"
+msgid "Uninstall"
+msgstr "설치 제거"
+
+msgctxt "DetailsBody"
+msgid "Uninstall {}"
+msgstr "{} 설치 제거"
+
 msgctxt "FamilyRow"
 msgid "Unofficial"
 msgstr "비공식"
@@ -1654,6 +1706,14 @@ msgstr "모두 업데이트"
 msgctxt "TvShell"
 msgid "Update all"
 msgstr "모두 업데이트"
+
+msgctxt "SettingsBody"
+msgid "Update apps automatically"
+msgstr "앱 자동 업데이트"
+
+msgctxt "TvShell"
+msgid "Update apps automatically"
+msgstr "앱 자동 업데이트"
 
 msgctxt "AppRow"
 msgid "Update available"
@@ -1700,6 +1760,10 @@ msgid "Update {} now"
 msgstr "지금 {} 업데이트"
 
 msgctxt "SettingsBody"
+msgid "Updates"
+msgstr "업데이트"
+
+msgctxt "TvShell"
 msgid "Updates"
 msgstr "업데이트"
 

@@ -164,11 +164,11 @@ export component MobileShell inherits Rectangle {
                                 padding-bottom: 12px;
                                 spacing: 8px;
                                 alignment: start;
-                                ChoiceChip { text: @tr("All"); selected: Store.category == ""; clicked => { Store.category = ""; } }
+                                ChoiceChip { text: @tr("All"); selected: Store.category == ""; clicked => { Store.category = ""; Store.browse-category(""); } }
                                 for name in Store.categories : ChoiceChip {
                                     text: name;
                                     selected: Store.category == name;
-                                    clicked => { Store.category = name; }
+                                    clicked => { Store.category = name; Store.browse-category(name); }
                                 }
                             }
                         }
@@ -215,7 +215,7 @@ export component MobileShell inherits Rectangle {
                                                 text: @tr("Show all {}", section.apps.length);
                                                 selected: false;
                                                 accessible-label: @tr("Show all {0} in {1}", section.apps.length, section.title);
-                                                clicked => { Store.category = section.title; }
+                                                clicked => { Store.category = section.title; Store.browse-category(section.title); }
                                             }
                                         }
                                     }

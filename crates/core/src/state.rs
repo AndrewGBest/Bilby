@@ -52,6 +52,12 @@ pub struct Settings {
     /// Also show apps that do not run on this device: marked as such, last in a
     /// search, and not installable here.
     pub show_everything: bool,
+    /// Install updates to the library's apps as they are found, without being asked.
+    /// Off unless the person switched it on.
+    pub auto_update: bool,
+    /// Closing the window ends the store. Unless this is set it stays in the system
+    /// tray instead, where there is one, and goes on keeping things up to date.
+    pub quit_on_close: bool,
     /// The kind of app to offer first on Linux: "" (what suits the system),
     /// "flatpak", "appimage" or "system".
     pub prefer_kind: String,

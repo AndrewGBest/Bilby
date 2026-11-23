@@ -225,6 +225,14 @@ msgid "Bilby goes by what its sources say: Steam's adult-only marks, an app's ow
 msgstr "Bilby वही मानता है जो उसके स्रोत बताते हैं: Steam के केवल-वयस्क चिह्न, ऐप की अपनी आयु रेटिंग, और जानी-मानी वयस्क साइटों की उसकी सूची। जिस साइट के बारे में उसने कभी नहीं सुना, उसे वह नहीं पहचानता, और ज़्यादातर स्रोत आयु के बारे में कुछ बताते ही नहीं।"
 
 msgctxt "SettingsBody"
+msgid "Bilby goes on looking for updates there. Its tray icon opens the window again or quits Bilby."
+msgstr "Bilby वहीं से अपडेट खोजता रहता है। ट्रे का आइकन विंडो फिर खोलता है या Bilby बंद करता है।"
+
+msgctxt "SettingsBody"
+msgid "Bilby installs updates to your apps as it finds them, when it opens and every few hours while it stays open. Updates that need your password or open an installer still wait for you in the Library."
+msgstr "Bilby आपके ऐप्स के अपडेट मिलते ही इंस्टॉल कर देता है: खुलने पर, और खुला रहने पर हर कुछ घंटों में। जिन अपडेट को आपका पासवर्ड चाहिए या जो इंस्टॉलर खोलते हैं, वे पहले की तरह लाइब्रेरी में आपका इंतज़ार करते हैं।"
+
+msgctxt "SettingsBody"
 msgid "Bilby keeps a short list, chosen by people, of the apps and websites nearly everyone looks for: a browser, a video player, the big names. On, the home page starts with them in the version for this device, and they are placed a little higher in a search. Off, you get only what the sources' own figures say."
 msgstr "Bilby के पास लोगों की चुनी हुई एक छोटी सूची है, उन ऐप और वेबसाइटों की जिन्हें लगभग हर कोई ढूँढता है: ब्राउज़र, वीडियो प्लेयर, बड़े नाम। चालू होने पर होम पेज उन्हीं से शुरू होता है, इस डिवाइस के वर्शन में, और खोज में वे थोड़ा ऊपर दिखते हैं। बंद होने पर आपको सिर्फ़ वही मिलता है जो स्रोतों के अपने आँकड़े बताते हैं।"
 
@@ -320,6 +328,10 @@ msgctxt "SettingsBody"
 msgid "Check for a newer Bilby"
 msgstr "नया Bilby जाँचें"
 
+msgctxt "BilbyTray"
+msgid "Check for updates"
+msgstr "अपडेट जाँचें"
+
 msgctxt "LibraryBody"
 msgid "Check for updates"
 msgstr "अपडेट जाँचें"
@@ -403,6 +415,10 @@ msgstr "पुष्टि करें"
 msgctxt "LibraryItem"
 msgid "Confirm removing {}"
 msgstr "{} हटाने की पुष्टि करें"
+
+msgctxt "DetailsBody"
+msgid "Confirm uninstalling {}"
+msgstr "{} अनइंस्टॉल करने की पुष्टि करें"
 
 msgctxt "CommandBox"
 msgid "Copied"
@@ -714,6 +730,10 @@ msgctxt "TvShell"
 msgid "Installing updates"
 msgstr "अपडेट इंस्टॉल हो रहे हैं"
 
+msgctxt "SettingsBody"
+msgid "Keep Bilby in the system tray when its window is closed"
+msgstr "विंडो बंद होने पर Bilby को सिस्टम ट्रे में रखें"
+
 msgctxt "TvQuestion"
 msgid "Keep this layout"
 msgstr "यही लेआउट रखें"
@@ -892,6 +912,10 @@ msgctxt "TvShell"
 msgid "Open"
 msgstr "खोलें"
 
+msgctxt "BilbyTray"
+msgid "Open Bilby"
+msgstr "Bilby खोलें"
+
 msgctxt "SettingsBody"
 msgid "Open downloads folder"
 msgstr "डाउनलोड फ़ोल्डर खोलें"
@@ -1029,6 +1053,18 @@ msgid "QR code to scan with the Steam app"
 msgstr "Steam ऐप से स्कैन करने के लिए QR कोड"
 
 msgctxt "DetailsBody"
+msgid "Queued"
+msgstr "कतार में"
+
+msgctxt "TvShell"
+msgid "Queued"
+msgstr "कतार में"
+
+msgctxt "BilbyTray"
+msgid "Quit Bilby"
+msgstr "Bilby बंद करें"
+
+msgctxt "DetailsBody"
 msgid "Ratings"
 msgstr "रेटिंग"
 
@@ -1055,6 +1091,10 @@ msgstr "पढ़ा जा रहा है"
 msgctxt "LibraryItem"
 msgid "Really remove?"
 msgstr "सच में हटाएँ?"
+
+msgctxt "DetailsBody"
+msgid "Really uninstall?"
+msgstr "सच में अनइंस्टॉल करें?"
 
 msgctxt "DesktopShell"
 msgid "Recent"
@@ -1618,6 +1658,18 @@ msgctxt "TvShell"
 msgid "Type a name, then press OK"
 msgstr "नाम लिखें, फिर OK दबाएँ"
 
+msgctxt "DetailsBody"
+msgid "Uninstall"
+msgstr "अनइंस्टॉल करें"
+
+msgctxt "TvShell"
+msgid "Uninstall"
+msgstr "अनइंस्टॉल करें"
+
+msgctxt "DetailsBody"
+msgid "Uninstall {}"
+msgstr "{} अनइंस्टॉल करें"
+
 msgctxt "FamilyRow"
 msgid "Unofficial"
 msgstr "अनौपचारिक"
@@ -1657,6 +1709,14 @@ msgstr "सभी अपडेट करें"
 msgctxt "TvShell"
 msgid "Update all"
 msgstr "सभी अपडेट करें"
+
+msgctxt "SettingsBody"
+msgid "Update apps automatically"
+msgstr "ऐप्स को अपने आप अपडेट करें"
+
+msgctxt "TvShell"
+msgid "Update apps automatically"
+msgstr "ऐप्स को अपने आप अपडेट करें"
 
 msgctxt "AppRow"
 msgid "Update available"
@@ -1703,6 +1763,10 @@ msgid "Update {} now"
 msgstr "{} अभी अपडेट करें"
 
 msgctxt "SettingsBody"
+msgid "Updates"
+msgstr "अपडेट"
+
+msgctxt "TvShell"
 msgid "Updates"
 msgstr "अपडेट"
 

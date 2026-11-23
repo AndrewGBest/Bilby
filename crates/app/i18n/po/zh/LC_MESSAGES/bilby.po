@@ -225,6 +225,14 @@ msgid "Bilby goes by what its sources say: Steam's adult-only marks, an app's ow
 msgstr "Bilby 依据来源提供的信息判断：Steam 的仅限成人标记、应用自身的年龄分级，以及它收录的知名成人网站列表。它没听说过的网站无法识别，而且大多数来源根本不提供年龄信息。"
 
 msgctxt "SettingsBody"
+msgid "Bilby goes on looking for updates there. Its tray icon opens the window again or quits Bilby."
+msgstr "Bilby 会在那里继续检查更新。点击托盘图标可重新打开窗口或退出 Bilby。"
+
+msgctxt "SettingsBody"
+msgid "Bilby installs updates to your apps as it finds them, when it opens and every few hours while it stays open. Updates that need your password or open an installer still wait for you in the Library."
+msgstr "Bilby 会在发现更新时自动为你的应用安装：打开时检查一次，保持打开时每隔几小时再检查一次。需要你输入密码或会打开安装程序的更新，仍会在“应用库”中等你处理。"
+
+msgctxt "SettingsBody"
 msgid "Bilby keeps a short list, chosen by people, of the apps and websites nearly everyone looks for: a browser, a video player, the big names. On, the home page starts with them in the version for this device, and they are placed a little higher in a search. Off, you get only what the sources' own figures say."
 msgstr "Bilby 有一份由人工挑选的简短列表，收录几乎人人都会找的应用和网站：浏览器、视频播放器和各大知名应用。开启后，首页会先展示它们适合此设备的版本，搜索时它们的排名也会略微靠前。关闭后，只按来源自身的数据显示。"
 
@@ -320,6 +328,10 @@ msgctxt "SettingsBody"
 msgid "Check for a newer Bilby"
 msgstr "检查 Bilby 新版本"
 
+msgctxt "BilbyTray"
+msgid "Check for updates"
+msgstr "检查更新"
+
 msgctxt "LibraryBody"
 msgid "Check for updates"
 msgstr "检查更新"
@@ -403,6 +415,10 @@ msgstr "确认"
 msgctxt "LibraryItem"
 msgid "Confirm removing {}"
 msgstr "确认移除 {}"
+
+msgctxt "DetailsBody"
+msgid "Confirm uninstalling {}"
+msgstr "确认卸载 {}"
 
 msgctxt "CommandBox"
 msgid "Copied"
@@ -713,6 +729,10 @@ msgctxt "TvShell"
 msgid "Installing updates"
 msgstr "正在安装更新"
 
+msgctxt "SettingsBody"
+msgid "Keep Bilby in the system tray when its window is closed"
+msgstr "关闭窗口后让 Bilby 留在系统托盘"
+
 msgctxt "TvQuestion"
 msgid "Keep this layout"
 msgstr "保留此布局"
@@ -890,6 +910,10 @@ msgctxt "TvShell"
 msgid "Open"
 msgstr "打开"
 
+msgctxt "BilbyTray"
+msgid "Open Bilby"
+msgstr "打开 Bilby"
+
 msgctxt "SettingsBody"
 msgid "Open downloads folder"
 msgstr "打开下载文件夹"
@@ -1027,6 +1051,18 @@ msgid "QR code to scan with the Steam app"
 msgstr "供 Steam 应用扫描的二维码"
 
 msgctxt "DetailsBody"
+msgid "Queued"
+msgstr "已排队"
+
+msgctxt "TvShell"
+msgid "Queued"
+msgstr "已排队"
+
+msgctxt "BilbyTray"
+msgid "Quit Bilby"
+msgstr "退出 Bilby"
+
+msgctxt "DetailsBody"
 msgid "Ratings"
 msgstr "评分"
 
@@ -1053,6 +1089,10 @@ msgstr "阅读"
 msgctxt "LibraryItem"
 msgid "Really remove?"
 msgstr "确定要移除吗？"
+
+msgctxt "DetailsBody"
+msgid "Really uninstall?"
+msgstr "确定要卸载吗？"
 
 msgctxt "DesktopShell"
 msgid "Recent"
@@ -1615,6 +1655,18 @@ msgctxt "TvShell"
 msgid "Type a name, then press OK"
 msgstr "输入名称，然后按 OK"
 
+msgctxt "DetailsBody"
+msgid "Uninstall"
+msgstr "卸载"
+
+msgctxt "TvShell"
+msgid "Uninstall"
+msgstr "卸载"
+
+msgctxt "DetailsBody"
+msgid "Uninstall {}"
+msgstr "卸载 {}"
+
 msgctxt "FamilyRow"
 msgid "Unofficial"
 msgstr "非官方"
@@ -1654,6 +1706,14 @@ msgstr "全部更新"
 msgctxt "TvShell"
 msgid "Update all"
 msgstr "全部更新"
+
+msgctxt "SettingsBody"
+msgid "Update apps automatically"
+msgstr "自动更新应用"
+
+msgctxt "TvShell"
+msgid "Update apps automatically"
+msgstr "自动更新应用"
 
 msgctxt "AppRow"
 msgid "Update available"
@@ -1700,6 +1760,10 @@ msgid "Update {} now"
 msgstr "立即更新 {}"
 
 msgctxt "SettingsBody"
+msgid "Updates"
+msgstr "更新"
+
+msgctxt "TvShell"
 msgid "Updates"
 msgstr "更新"
 
