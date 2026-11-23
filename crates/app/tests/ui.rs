@@ -2350,7 +2350,10 @@ fn the_desktop_library_lists_apps_the_store_did_not_install_and_opens_their_page
     assert!(s.store().get_can_uninstall(), "a system package is removed with the system's own tools");
 }
 
+// Choosing a browser and writing menu and desktop entries is how Linux does it; on
+// Windows and macOS a web app is a shortcut the system opens.
 #[test]
+#[cfg(target_os = "linux")]
 fn a_web_app_asks_for_a_browser_that_can_give_it_a_window_of_its_own() {
     // A computer whose only browser cannot: the page says so and offers one that can.
     let s = start("linux-x64-arch", Shell::Desktop);
