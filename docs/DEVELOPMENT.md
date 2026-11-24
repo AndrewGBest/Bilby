@@ -153,6 +153,7 @@ crates/cli      bilby-cli     the same store from a terminal
 crates/signin   bilby-signin  the small browser window for signing in to a store
 packaging/                    icons, the Linux menu entry and AppImage script, the macOS bundle
 scripts/i18n.py               gathers the interface's text for translating
+scripts/try.sh                runs the real app without a display and takes a picture
 ```
 
 To add a source, start from a small one such as `crates/core/src/source/snap.rs`. To
