@@ -1,0 +1,69 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo fmt *)",
+      "Bash(cargo check *)",
+      "Bash(cargo clippy *)",
+      "Bash(cargo build *)",
+      "Bash(cargo test *)",
+      "Bash(cargo doc *)",
+      "Bash(cargo tree *)",
+      "Bash(cargo metadata *)",
+      "Bash(cargo run -p bilby-cli *)",
+      "Bash(cargo run -q -p bilby-cli *)",
+      "Bash(python3 scripts/i18n.py*)",
+      "Bash(scripts/try.sh *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "Bash(git branch*)",
+      "Bash(git fetch*)",
+      "Bash(gh run list*)",
+      "Bash(gh run view*)",
+      "Bash(gh run watch*)",
+      "Bash(gh pr list*)",
+      "Bash(gh pr view*)",
+      "Bash(gh pr checks*)",
+      "Bash(gh pr diff*)",
+      "Bash(gh issue list*)",
+      "Bash(gh issue view*)",
+      "Bash(gh release list*)",
+      "Bash(gh release view*)"
+    ],
+    "ask": [
+      "Bash(git push*)",
+      "Bash(gh pr merge*)",
+      "Bash(gh workflow run*)",
+      "Bash(gh release create*)",
+      "Bash(gh release delete*)",
+      "Bash(gh secret *)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/format-rust.sh",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/before-stopping.sh",
+            "timeout": 60,
+            "statusMessage": "Checking formatting and translations"
+          }
+        ]
+      }
+    ]
+  }
+}
