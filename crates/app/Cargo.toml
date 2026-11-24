@@ -55,7 +55,7 @@ bilby-signin = { path = "../signin" }
 slint = { version = "1.19", default-features = false, features = ["std", "compat-1-2", "backend-android-activity-06"] }
 # Asking Android's Java side to open things (see src/android.rs). The version the
 # Android backend underneath already uses.
-jni = "0.21"
+jni = "0.22"
 
 [dev-dependencies]
 i-slint-backend-testing = "=1.19.0"
