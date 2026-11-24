@@ -5,7 +5,7 @@
 //!
 //! The store deliberately does not run anything as root itself. Native packages are
 //! handed to the system's own installer (which asks for the password); AUR builds are
-//! shown as a command for the user to run after reading the PKGBUILD.
+//! shown as a command for the person to run after reading the PKGBUILD.
 
 use crate::asset::{AssetInfo, Format};
 use crate::error::{Error, Result};
@@ -24,7 +24,7 @@ pub enum Action {
     Reveal,
     /// Ask Android's package installer to install the APK.
     AndroidInstaller,
-    /// Nothing is downloaded by the store; the user runs this command. Only a last
+    /// Nothing is downloaded by the store; the person runs this command. Only a last
     /// resort now: when there is no way to run it for them.
     ShowCommand,
     /// The store runs the plan's command itself. One that starts with `sudo` is run
@@ -1428,7 +1428,7 @@ pub fn flatpak_app_id_ok(id: &str) -> bool {
         })
 }
 
-/// The app Flatpak said it was installing: the id out of "app/<id>/<arch>/<branch>".
+/// The app Flatpak said it was installing: the id out of `app/<id>/<arch>/<branch>`.
 fn flatpak_app_named(said: &str) -> Option<String> {
     said.split_whitespace()
         .filter_map(|word| word.strip_prefix("app/"))
@@ -1538,7 +1538,7 @@ pub fn open_with_system(path: &Path) -> Result<()> {
     cmd.arg(path).spawn().map(|_| ()).map_err(|e| Error::Unsupported(format!("Could not open {}: {e}", path.display())))
 }
 
-/// Open a web page in the user's browser. Only `https://` links are opened: URLs come
+/// Open a web page in the person's browser. Only `https://` links are opened: URLs come
 /// from repository metadata, which anyone can write.
 pub fn open_url(url: &str) -> Result<()> {
     if !url.starts_with("https://") || url.chars().any(|c| c.is_whitespace() || c.is_control()) {

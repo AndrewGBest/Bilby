@@ -2,7 +2,12 @@
 // install button on the best option. Built for touch.
 import { Theme } from "theme.slint";
 import { Store } from "types.slint";
-import { AppRow, Busy, ChoiceChip, EmptyState, SearchField, DetailsBody, LibraryBody, SettingsBody, SourceFilter, SystemBody, Appear, FadeIn, Toast, UpdatesBanner, Welcome } from "components.slint";
+import { Busy, ChoiceChip, EmptyState, SearchField, Appear, FadeIn } from "widgets.slint";
+import { AppRow, SourceFilter, UpdatesBanner, Welcome } from "lists.slint";
+import { DetailsBody } from "details.slint";
+import { LibraryBody, SystemBody } from "library.slint";
+import { SettingsBody } from "settings.slint";
+import { Toast } from "overlays.slint";
 
 component Tab inherits Rectangle {
     in property <string> label;

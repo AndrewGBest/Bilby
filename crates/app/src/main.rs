@@ -10,6 +10,10 @@ fn main() -> std::process::ExitCode {
             bilby_signin::main_with(&args[1..]);
         }
     }
+    if std::env::args().skip(1).any(|a| a == "--version" || a == "-V") {
+        println!("bilby {}", env!("CARGO_PKG_VERSION"));
+        return std::process::ExitCode::SUCCESS;
+    }
     let options = match bilby::Options::from_args(std::env::args().skip(1)) {
         Ok(options) => options,
         Err(message) => {

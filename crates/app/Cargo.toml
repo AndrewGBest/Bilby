@@ -1,9 +1,15 @@
 [package]
 name = "bilby"
-description = "App store for GitHub Releases, Codeberg and other repositories that only shows what runs on your device"
+description = "An app store that only shows what runs on your device"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
 
 [lib]
 # cdylib is what Android loads; rlib is what the desktop binary links.

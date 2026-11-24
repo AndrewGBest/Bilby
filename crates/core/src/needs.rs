@@ -189,7 +189,7 @@ mod tests {
 /// and their kin). Such a system has no package manager in the usual sense: a package
 /// is added on top of the image with `rpm-ostree install`, and is there from the next
 /// start. Fedora took FUSE 2 out of these images on purpose and names this as the way
-/// to put it back [https://fedoraproject.org/wiki/Changes/AtomicDesktopDropFuse2].
+/// to put it back (<https://fedoraproject.org/wiki/Changes/AtomicDesktopDropFuse2>).
 pub fn layering_here() -> Option<PathBuf> {
     if !Path::new("/run/ostree-booted").exists() {
         return None;

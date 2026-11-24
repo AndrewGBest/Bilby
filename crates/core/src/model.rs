@@ -459,7 +459,7 @@ impl InstallOption {
     }
 }
 
-/// A file that was filtered out, with the reason shown to the user on request.
+/// A file that was filtered out, with the reason shown to the person on request.
 #[derive(Debug, Clone, PartialEq)]
 pub struct HiddenAsset {
     pub name: String,
@@ -509,6 +509,24 @@ pub fn human_size(bytes: u64) -> String {
     }
 }
 
+/// A time in seconds since 1970 as its `YYYY-MM-DD` date (Howard Hinnant's
+/// civil-from-days). Empty for no time at all.
+pub fn date_from_unix(secs: i64) -> String {
+    if secs <= 0 {
+        return String::new();
+    }
+    let z = secs.div_euclid(86_400) + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z.rem_euclid(146_097);
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = yoe + era * 400 + i64::from(m <= 2);
+    format!("{y:04}-{m:02}-{d:02}")
+}
+
 /// Days since the Unix epoch for a `YYYY-MM-DD` date (Howard Hinnant's days-from-civil).
 fn days_from_date(date: &str) -> Option<i64> {
     let mut parts = date.get(..10)?.split('-').map(|p| p.parse::<i64>().ok());
@@ -555,6 +573,14 @@ pub fn human_count(n: u64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn dates_from_seconds() {
+        assert_eq!(date_from_unix(0), "");
+        assert_eq!(date_from_unix(86_400), "1970-01-02");
+        assert_eq!(date_from_unix(1_700_000_000), "2023-11-14");
+        assert_eq!(date_from_unix(1_709_164_800), "2024-02-29");
+    }
 
     #[test]
     fn ids_round_trip() {

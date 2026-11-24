@@ -200,7 +200,7 @@ struct Shown {
     license: String,
 }
 
-/// Read `winget show`: a "Found Name [Id]" line, then `Field: value` lines.
+/// Read `winget show`: a `Found Name [Id]` line, then `Field: value` lines.
 fn parse_show(text: &str, key: &str) -> Option<Shown> {
     let mut shown = Shown::default();
     let mut found = false;

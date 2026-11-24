@@ -1,0 +1,252 @@
+// An app as lists show it (a tile, a row), and the banners that sit above lists.
+
+import { Theme } from "theme.slint";
+import { AppCard, Store } from "types.slint";
+import { AppIcon, Chip, ChoiceChip, Button } from "widgets.slint";
+
+// Card used in the desktop grid.
+export component AppTile inherits Rectangle {
+    in property <AppCard> app;
+    callback clicked;
+    border-radius: 14px;
+    background: ta.has-hover ? Theme.surface-2 : Theme.surface;
+    border-width: fs.has-focus ? 2px : 1px;
+    border-color: fs.has-focus ? Theme.focus : ta.has-hover ? Theme.accent.with-alpha(0.5) : Theme.stroke;
+    accessible-role: button;
+    accessible-label: app.name;
+    accessible-description: app.summary;
+    accessible-action-default => { root.clicked(); }
+    transform-scale: ta.pressed ? 0.985 : ta.has-hover ? 1.012 : 1;
+    animate background, border-color { duration: Theme.quick; }
+    animate transform-scale { duration: Theme.quick; easing: ease-out; }
+    fs := FocusScope {
+        focus-on-click: false;
+        key-pressed(event) => {
+            if (event.text == Key.Return || event.text == " ") {
+                root.clicked();
+                return accept;
+            }
+            reject
+        }
+        ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                Store.play(1);
+                root.clicked();
+            }
+        }
+    }
+    VerticalLayout {
+        padding: 16px;
+        spacing: 10px;
+        HorizontalLayout {
+            spacing: 12px;
+            AppIcon { initials: app.initials; tint: app.tint; icon: app.icon; }
+            VerticalLayout {
+                alignment: center;
+                spacing: 2px;
+                Text { text: app.name; color: Theme.text; font-size: 16px; font-weight: 600; overflow: elide; }
+                Text { text: app.author; color: Theme.text-dim; font-size: 12px; overflow: elide; }
+            }
+        }
+        // The description takes whatever room is left and is cut to fit it: a long one
+        // must not push the button out of the tile.
+        Rectangle {
+            vertical-stretch: 1;
+            min-height: 0px;
+            preferred-height: 0px;
+            // One line's height, to show whole lines only.
+            line := Text { text: "X"; font-size: 13px; visible: false; }
+            Rectangle {
+                x: 0;
+                y: 0;
+                width: parent.width;
+                height: max(1, floor(parent.height / line.preferred-height)) * line.preferred-height;
+                clip: true;
+                Text {
+                    x: 0;
+                    y: 0;
+                    width: parent.width;
+                    text: app.summary;
+                    color: Theme.text-dim;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                    vertical-alignment: top;
+                }
+            }
+        }
+        HorizontalLayout {
+            spacing: 6px;
+            VerticalLayout {
+                alignment: center;
+                HorizontalLayout {
+                    spacing: 6px;
+                    alignment: start;
+                    if app.installed && !app.has-update : Chip { text: @tr("Installed"); tone: Theme.accent; }
+                    // The score, and how many people gave one: the second is the popularity.
+                    if app.rating != "" : Chip { text: "★ " + app.rating + "  ·  " + app.rating-count; }
+                    if app.rating == "" && app.headline != "" : Chip { text: app.headline; }
+                    if app.rating == "" && app.headline == "" && app.price != "" : Chip { text: app.price; }
+                    if app.more-sources > 0 : Chip { text: @tr("{} sources", app.more-sources + 1); }
+                }
+            }
+            Rectangle { horizontal-stretch: 1; }
+            // As in any store: get it straight from the list.
+            if (!app.installed || app.has-update) && app.headline != @tr("Not for this device") : Button {
+                font-size: 12px;
+                min-width: 76px;
+                // A website is added, not installed: nothing is downloaded.
+                text: app.has-update ? @tr("Update") : app.source == @tr("Web apps") ? @tr("Add") : @tr("Install");
+                primary: app.has-update;
+                accessible-label: (app.has-update ? @tr("Update {} now", app.name) : @tr("Install {} now", app.name));
+                clicked => { Store.quick-install(app.id); }
+            }
+        }
+    }
+}
+
+// Row used in the mobile lists.
+export component AppRow inherits Rectangle {
+    in property <AppCard> app;
+    callback clicked;
+    height: 76px;
+    background: ta.pressed ? Theme.surface-2 : transparent;
+    accessible-role: button;
+    accessible-label: app.name;
+    accessible-description: app.summary;
+    accessible-action-default => { root.clicked(); }
+    ta := TouchArea {
+        clicked => { root.clicked(); }
+    }
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        spacing: 14px;
+        VerticalLayout {
+            alignment: center;
+            AppIcon { initials: app.initials; tint: app.tint; icon: app.icon; size: 48px; }
+        }
+        VerticalLayout {
+            alignment: center;
+            spacing: 3px;
+            horizontal-stretch: 1;
+            Text { text: app.name; color: Theme.text; font-size: 16px; font-weight: 600; overflow: elide; }
+            Text { text: app.summary; color: Theme.text-dim; font-size: 13px; overflow: elide; }
+            Text {
+                text: (app.has-update ? @tr("Update available") + " · " : app.installed ? @tr("Installed") + " · " : "") + (app.rating != "" ? "★ " + app.rating + " (" + app.rating-count + ") · " : app.headline != "" ? app.headline + " · " : "") + (app.author != "" ? app.author : app.source);
+                color: app.has-update || app.installed ? Theme.accent : Theme.text-dim;
+                font-size: 11px;
+                font-weight: 600;
+                overflow: elide;
+            }
+        }
+        if (!app.installed || app.has-update) && app.headline != @tr("Not for this device") : VerticalLayout {
+            alignment: center;
+            Button {
+                font-size: 12px;
+                width: 72px;
+                // A website is added, not installed: nothing is downloaded.
+                text: app.has-update ? @tr("Update") : app.source == @tr("Web apps") ? @tr("Add") : @tr("Install");
+                primary: app.has-update;
+                accessible-label: (app.has-update ? @tr("Update {} now", app.name) : @tr("Install {} now", app.name));
+                clicked => { Store.quick-install(app.id); }
+            }
+        }
+    }
+}
+
+// A one-line nudge on Discover when the library has updates waiting.
+export component UpdatesBanner inherits Rectangle {
+    height: 44px;
+    border-radius: 12px;
+    background: ta.has-hover ? Theme.accent.with-alpha(0.2) : Theme.accent.with-alpha(0.13);
+    border-width: fs.has-focus ? 2px : 0px;
+    border-color: Theme.focus;
+    accessible-role: button;
+    accessible-label: @tr("Show updates");
+    accessible-action-default => { Store.page = 2; }
+    fs := FocusScope {
+        focus-on-click: false;
+        key-pressed(event) => {
+            if (event.text == Key.Return || event.text == " ") {
+                Store.page = 2;
+                return accept;
+            }
+            reject
+        }
+        ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => { Store.page = 2; }
+        }
+    }
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 14px;
+        spacing: 8px;
+        Text {
+            horizontal-stretch: 1;
+            text: @tr("{n} app in your library has an update" | "{n} apps in your library have updates" % Store.updates-count);
+            color: Theme.accent;
+            font-size: 13px;
+            font-weight: 600;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+        Text { text: @tr("View"); color: Theme.accent; font-size: 13px; font-weight: 700; vertical-alignment: center; }
+    }
+}
+
+// Shown once, on first run: what the store does, and what it does not promise.
+export component Welcome inherits Rectangle {
+    in property <bool> compact;
+    border-radius: 14px;
+    background: Theme.accent.with-alpha(0.1);
+    border-width: 1px;
+    border-color: Theme.accent.with-alpha(0.35);
+    VerticalLayout {
+        padding: compact ? 14px : 20px;
+        spacing: 8px;
+        Text { text: @tr("Welcome to Bilby"); color: Theme.text; font-size: 17px; font-weight: 700; }
+        Text {
+            text: "•  " + @tr("You are seeing apps for {}. Anything that cannot be installed on this device is hidden.", Store.platform-title);
+            color: Theme.text;
+            font-size: 13px;
+            wrap: word-wrap;
+        }
+        Text {
+            text: @tr("•  Apps come from many places: package managers, other stores and developers' own release pages. Bilby does not review them, so only install software you trust.");
+            color: Theme.text;
+            font-size: 13px;
+            wrap: word-wrap;
+        }
+        Text {
+            text: @tr("•  There is no account and no server of ours. Your library and settings stay in a file on this device.");
+            color: Theme.text;
+            font-size: 13px;
+            wrap: word-wrap;
+        }
+        HorizontalLayout {
+            alignment: start;
+            padding-top: 4px;
+            Button { text: @tr("Got it"); clicked => { Store.dismiss-welcome(); } }
+        }
+    }
+}
+
+// Under a search: show everything, or only what one source gave.
+export component SourceFilter inherits Flickable {
+    height: 36px;
+    content-width: chips.preferred-width;
+    HorizontalLayout {
+        alignment: start;
+        chips := HorizontalLayout {
+            spacing: 8px;
+            ChoiceChip { text: @tr("All"); selected: Store.source-filter == ""; clicked => { Store.filter-results(""); } }
+            for source in Store.result-sources : ChoiceChip {
+                text: source.label + "  " + source.count;
+                selected: Store.source-filter == source.id;
+                clicked => { Store.filter-results(source.id); }
+            }
+        }
+    }
+}

@@ -12,6 +12,9 @@
 //! refused wherever that is checked. This asks properly: it listens on the store's own
 //! connection for the serials of key presses and clicks, and asks with the newest.
 
+use crate::AppWindow;
+use slint::ComponentHandle;
+use std::cell::RefCell;
 use std::ffi::c_void;
 use wayland_client::globals::{registry_queue_init, GlobalListContents};
 use wayland_client::protocol::{wl_keyboard, wl_pointer, wl_registry, wl_seat, wl_surface};
@@ -187,4 +190,39 @@ impl Dispatch<xdg_activation_token_v1::XdgActivationTokenV1, ()> for Heard {
             heard.token = Some(token);
         }
     }
+}
+
+thread_local! {
+    /// The store's ear on its own Wayland connection, once it has been wanted: `None`
+    /// inside when this is not Wayland or the window system has nothing to ask.
+    static ACTIVATION: RefCell<Option<Option<Activation>>> = const { RefCell::new(None) };
+}
+
+/// Do something with the store's ear on its Wayland connection, setting it up the
+/// first time. `None` when there is none (not Wayland, or no window yet).
+pub(crate) fn wayland_activation<T>(ui: &AppWindow, with: impl FnOnce(&mut Activation) -> T) -> Option<T> {
+    use slint::winit_030::winit::raw_window_handle::{
+        HasDisplayHandle, HasWindowHandle, RawDisplayHandle, RawWindowHandle,
+    };
+    use slint::winit_030::WinitWindowAccessor;
+    ACTIVATION.with(|kept| {
+        let mut kept = kept.borrow_mut();
+        if kept.is_none() {
+            let made = ui.window().with_winit_window(|window| {
+                let (display, surface) =
+                    match (window.display_handle().ok()?.as_raw(), window.window_handle().ok()?.as_raw()) {
+                        (RawDisplayHandle::Wayland(display), RawWindowHandle::Wayland(surface)) => {
+                            (display.display.as_ptr(), surface.surface.as_ptr())
+                        }
+                        _ => return None,
+                    };
+                // SAFETY: both come from the live window, which is kept for as long as
+                // the program runs, on this same thread.
+                unsafe { Activation::on(display, surface) }
+            });
+            // No window yet: try again another time. Otherwise the answer is kept.
+            *kept = Some(made?);
+        }
+        kept.as_mut().and_then(|ear| ear.as_mut()).map(with)
+    })
 }

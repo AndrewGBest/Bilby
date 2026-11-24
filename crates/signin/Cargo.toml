@@ -1,10 +1,15 @@
 [package]
 name = "bilby-signin"
-description = "A small browser window for signing in to another store on its own page."
+description = "A small browser window for signing in to another store on its own page"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
 
 [dependencies]
 wry = "0.57"

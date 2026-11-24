@@ -21,7 +21,7 @@
 use super::Source;
 use crate::asset::{AssetInfo, Format, TargetArch, TargetOs};
 use crate::error::{Error, Result};
-use crate::model::{valid_key, AppId, AppSummary, Asset, Release, SourceKind};
+use crate::model::{date_from_unix, valid_key, AppId, AppSummary, Asset, Release, SourceKind};
 use crate::platform::{Arch, Os, Platform};
 use std::collections::HashMap;
 use std::io::Read;
@@ -34,7 +34,7 @@ pub struct SystemPackage {
     pub name: String,
     pub version: String,
     pub summary: String,
-    /// Repository it comes from, as the user knows it: `cachyos-v3`, `extra`, `noble-updates/main`.
+    /// Repository it comes from, as the person knows it: `cachyos-v3`, `extra`, `noble-updates/main`.
     pub repo: String,
     /// As the package states it: `x86_64`, `x86_64_v3`, `any`, `amd64`, `all`.
     pub arch: String,
@@ -658,22 +658,6 @@ fn arch_of(arch: &str) -> TargetArch {
         "riscv64" => TargetArch::One(Arch::Riscv64),
         _ => TargetArch::Foreign("another architecture"),
     }
-}
-
-fn date_from_unix(secs: i64) -> String {
-    if secs <= 0 {
-        return String::new();
-    }
-    let z = secs.div_euclid(86_400) + 719_468;
-    let era = z.div_euclid(146_097);
-    let doe = z.rem_euclid(146_097);
-    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
-    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-    let mp = (5 * doy + 2) / 153;
-    let d = doy - (153 * mp + 2) / 5 + 1;
-    let m = if mp < 10 { mp + 3 } else { mp - 9 };
-    let y = yoe + era * 400 + i64::from(m <= 2);
-    format!("{y:04}-{m:02}-{d:02}")
 }
 
 /// Libraries, headers, documentation and debug symbols: real packages, rarely what

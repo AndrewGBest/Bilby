@@ -1,6 +1,6 @@
-//! Everything the store remembers, kept in one JSON file on the user's own device.
+//! Everything the store remembers, kept in one JSON file on the person's own device.
 //! There is no account and no server: settings, the library of installed apps and
-//! recent searches live in `state.json` under the user's config directory.
+//! recent searches live in `state.json` under the person's config directory.
 
 use crate::error::Result;
 use crate::model::AppSummary;
@@ -121,7 +121,7 @@ pub struct InstalledApp {
     /// Seconds since the Unix epoch.
     #[serde(default)]
     pub installed_at: u64,
-    /// A newer version the user chose not to be told about. Later versions are
+    /// A newer version the person chose not to be told about. Later versions are
     /// announced as usual.
     #[serde(default)]
     pub skipped_version: String,
@@ -205,7 +205,7 @@ impl State {
         }
         let tmp = path.with_extension("json.tmp");
         std::fs::write(&tmp, serde_json::to_string_pretty(self)?)?;
-        // The file can hold a token: keep it private to the user.
+        // The file can hold a token: keep it private to the person.
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;

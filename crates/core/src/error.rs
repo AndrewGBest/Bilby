@@ -25,7 +25,7 @@ pub enum Error {
         actual: String,
     },
     Unsupported(String),
-    /// The user stopped a download.
+    /// The person stopped a download.
     Cancelled,
 }
 

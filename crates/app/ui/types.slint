@@ -285,7 +285,7 @@ export global Store {
     // Releases that have a file for this machine, newest first, and the one shown.
     in property <[string]> versions;
     in property <int> selected-version;
-    // The open app is in the user's favourites.
+    // The open app is in the person's favourites.
     in property <bool> is-favourite;
     // The store placed this app itself and can start it.
     in property <bool> can-open;
@@ -323,7 +323,7 @@ export global Store {
     in property <[Fact]> system-facts;
     // The store can check for and install this system's updates.
     in property <bool> system-supported;
-    // Why it cannot, or what else the user should know. "" when there is nothing to say.
+    // Why it cannot, or what else the person should know. "" when there is nothing to say.
     in property <string> system-note;
     // The label of a button that opens the system's own update page, "" when none.
     in property <string> system-handoff;

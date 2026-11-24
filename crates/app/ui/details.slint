@@ -1,0 +1,1079 @@
+// An app's own page, shared by the desktop and phone layouts: what it is, the
+// button that installs it, its files and versions, ratings, and writing a review.
+
+import { Theme } from "theme.slint";
+import { OptionRow, Store } from "types.slint";
+import { AppIcon, Chip, ChoiceChip, Button, Busy, ProgressBar, DoneMark, Toggle, EmptyState } from "widgets.slint";
+import { FamilyPanel } from "settings.slint";
+
+// A terminal command with a copy button.
+component CommandBox inherits Rectangle {
+    in property <string> command;
+    property <bool> copied;
+    height: max(34px, cmd.preferred-height + 14px);
+    border-radius: 8px;
+    background: Theme.bg;
+    border-width: 1px;
+    border-color: Theme.stroke;
+    HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 4px;
+        spacing: 6px;
+        Text { text: "$"; color: Theme.text-dim; font-family: "monospace"; font-size: 12px; vertical-alignment: center; }
+        cmd := TextInput {
+            horizontal-stretch: 1;
+            text: root.command;
+            read-only: true;
+            color: Theme.text;
+            font-family: "monospace";
+            font-size: 12px;
+            wrap: char-wrap;
+            single-line: false;
+            vertical-alignment: center;
+            accessible-label: @tr("Command");
+        }
+        Rectangle {
+            width: 54px;
+            accessible-role: button;
+            accessible-label: @tr("Copy command");
+            TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    cmd.select-all();
+                    cmd.copy();
+                    cmd.clear-selection();
+                    root.copied = true;
+                }
+            }
+            Text {
+                text: root.copied ? @tr("Copied") : @tr("Copy");
+                color: root.copied ? Theme.ok : Theme.accent;
+                font-size: 12px;
+                font-weight: 600;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+    }
+}
+
+// One installable file on the details page.
+export component OptionCard inherits Rectangle {
+    in property <OptionRow> option;
+    in property <int> index;
+    in property <bool> recommended;
+    in property <bool> compact;
+    // Only the essentials: what it is, that it is checked, and the button. File name,
+    // size, command and steps appear when the page's details are opened.
+    in property <bool> plain;
+    property <bool> busy: Store.install-state == 1;
+    property <bool> mine: Store.install-index == index && Store.install-state != 0;
+    property <bool> show-steps: false;
+    border-radius: 12px;
+    background: Theme.surface;
+    border-width: 1px;
+    border-color: recommended ? Theme.accent.with-alpha(0.55) : Theme.stroke;
+    VerticalLayout {
+        padding: 14px;
+        spacing: 8px;
+        HorizontalLayout {
+            spacing: 12px;
+            VerticalLayout {
+                horizontal-stretch: 1;
+                spacing: 4px;
+                alignment: center;
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+                    Text {
+                        // That it runs here goes without saying: only what does not is
+                        // marked as such.
+                        text: option.label;
+                        color: Theme.text;
+                        font-size: 15px;
+                        font-weight: 600;
+                        vertical-alignment: center;
+                        overflow: elide;
+                    }
+                    if recommended && !compact && !plain : Chip { text: @tr("Best for this device"); tone: Theme.accent; }
+                    if !option.native && !compact && !plain : Chip { text: @tr("Compatible"); tone: Theme.warn; }
+                }
+                if plain && option.size != "" : Text { text: @tr("{} download", option.size); color: Theme.text-dim; font-size: 12px; overflow: elide; }
+                if !plain : Text {
+                    text: option.size != "" ? option.file + "  ·  " + option.size : option.file;
+                    color: Theme.text-dim;
+                    font-size: 12px;
+                    overflow: elide;
+                }
+            }
+            VerticalLayout {
+                alignment: center;
+                Button {
+                    text: mine && busy ? @tr("Cancel") : recommended && Store.installed-version != "" && Store.installed-version != Store.app.version ? @tr("Update") : recommended && Store.installed-version != "" && option.verb == @tr("Install") ? @tr("Reinstall") : option.verb;
+                    primary: recommended && !(mine && busy);
+                    enabled: !busy || mine;
+                    accessible-label: (mine && busy ? @tr("Cancel") : option.verb) + " " + option.label;
+                    clicked => {
+                        if (mine && busy) {
+                            Store.cancel-install();
+                        } else {
+                            Store.install(index);
+                        }
+                    }
+                }
+            }
+        }
+        if recommended && compact && !plain : HorizontalLayout {
+            alignment: start;
+            Chip { text: @tr("Best for this device"); tone: Theme.accent; }
+        }
+        if option.note != "" : Text { text: option.note; color: Theme.warn; font-size: 12px; wrap: word-wrap; }
+        if option.command != "" && (!plain || Store.is-package) : CommandBox { command: option.command; }
+        if option.verified : HorizontalLayout {
+            spacing: 5px;
+            alignment: start;
+            VerticalLayout {
+                alignment: center;
+                Image { source: @image-url("icons/shield.svg"); colorize: Theme.ok; width: 13px; height: 13px; }
+            }
+            Text {
+                text: plain ? @tr("Bilby checks the download is the genuine file before installing it") : @tr("Checked against the publisher's SHA-256 after download");
+                color: Theme.ok;
+                font-size: 11px;
+                font-weight: 600;
+                vertical-alignment: center;
+                overflow: elide;
+            }
+        }
+        if !plain : HorizontalLayout {
+            alignment: start;
+            Rectangle {
+                height: 18px;
+                width: steps-label.preferred-width;
+                accessible-role: button;
+                accessible-label: @tr("What happens when I install {}", option.label);
+                accessible-expandable: true;
+                accessible-expanded: root.show-steps;
+                accessible-action-default => { root.show-steps = !root.show-steps; }
+                TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => { root.show-steps = !root.show-steps; }
+                }
+                steps-label := Text {
+                    text: root.show-steps ? @tr("Hide steps") : @tr("What will happen?");
+                    color: Theme.text-dim;
+                    font-size: 11px;
+                    font-weight: 600;
+                    vertical-alignment: center;
+                }
+            }
+        }
+        if root.show-steps && !plain : VerticalLayout {
+            spacing: 3px;
+            for step[n] in option.steps : Text {
+                text: (n + 1) + ".  " + step;
+                color: Theme.text-dim;
+                font-size: 12px;
+                wrap: word-wrap;
+            }
+        }
+        if mine && busy : ProgressBar { value: Store.install-progress; }
+        if mine && !busy : HorizontalLayout {
+            spacing: 8px;
+            VerticalLayout {
+                alignment: start;
+                DoneMark { ok: Store.install-state != 3; }
+            }
+            Text {
+                horizontal-stretch: 1;
+                text: Store.install-message;
+                color: Store.install-state == 3 ? Theme.bad : Theme.ok;
+                font-size: 12px;
+                wrap: word-wrap;
+                vertical-alignment: center;
+                accessible-role: text;
+            }
+        }
+    }
+}
+
+// The details page body, shared by the desktop and mobile shells.
+// One fact in the row under an app's name: a value and what it is.
+component StatCell inherits VerticalLayout {
+    in property <string> value;
+    in property <string> caption;
+    spacing: 2px;
+    accessible-role: text;
+    accessible-label: root.value + " " + root.caption;
+    Text { text: root.value; color: Theme.text; font-size: 15px; font-weight: 700; overflow: elide; }
+    Text { text: root.caption; color: Theme.text-dim; font-size: 11px; overflow: elide; }
+}
+
+// The average, how many people gave it, and a bar for each number of stars.
+component RatingSummary inherits HorizontalLayout {
+    spacing: 20px;
+    alignment: start;
+    accessible-role: text;
+    accessible-label: @tr("{0} out of 5, from {1}", Store.app.rating, Store.app.rating-count);
+    VerticalLayout {
+        alignment: center;
+        spacing: 2px;
+        Text { text: Store.app.rating; color: Theme.text; font-size: 40px; font-weight: 700; horizontal-alignment: center; }
+        Text { text: @tr("out of 5"); color: Theme.text-dim; font-size: 11px; horizontal-alignment: center; }
+        Text { text: Store.app.rating-count; color: Theme.text-dim; font-size: 11px; horizontal-alignment: center; }
+    }
+    VerticalLayout {
+        alignment: center;
+        spacing: 4px;
+        for share[i] in Store.app.rating-spread : HorizontalLayout {
+            spacing: 8px;
+            Text { width: 26px; text: (5 - i) + " ★"; color: Theme.text-dim; font-size: 11px; vertical-alignment: center; horizontal-alignment: right; }
+            VerticalLayout {
+                alignment: center;
+                Rectangle {
+                    width: 180px;
+                    height: 6px;
+                    border-radius: 3px;
+                    background: Theme.stroke;
+                    Rectangle {
+                        x: 0;
+                        width: parent.width * share;
+                        height: parent.height;
+                        border-radius: 3px;
+                        background: Theme.warn;
+                        animate width { duration: Theme.slow; easing: ease-out; }
+                    }
+                }
+            }
+            Text { width: 34px; text: round(share * 100) + "%"; color: Theme.text-dim; font-size: 11px; vertical-alignment: center; }
+        }
+    }
+}
+
+// A line of the Information table.
+export component InfoRow inherits Rectangle {
+    in property <string> name;
+    in property <string> value;
+    height: max(34px, v.preferred-height + 14px);
+    accessible-role: text;
+    accessible-label: root.name + ": " + root.value;
+    Rectangle { y: parent.height - 1px; height: 1px; background: Theme.stroke; }
+    Text { x: 0; width: 130px; text: root.name; color: Theme.text-dim; font-size: 13px; vertical-alignment: center; }
+    v := Text {
+        x: 140px;
+        width: parent.width - 140px;
+        text: root.value;
+        color: Theme.text;
+        font-size: 13px;
+        wrap: word-wrap;
+        horizontal-alignment: right;
+        vertical-alignment: center;
+    }
+}
+
+// Long text shown as its first few lines, with the rest one press away.
+component Clamped inherits VerticalLayout {
+    in property <string> text;
+    in property <length> limit: 104px;
+    in property <string> what;
+    // Changes when the page shows something else, which folds the text again.
+    in property <string> key;
+    property <bool> open: false;
+    changed key => { root.open = false; }
+    spacing: 4px;
+    Rectangle {
+        clip: true;
+        height: root.open ? t.preferred-height : min(t.preferred-height, root.limit);
+        t := Text {
+            x: 0;
+            y: 0;
+            width: parent.width;
+            text: root.text;
+            color: Theme.text;
+            font-size: 14px;
+            wrap: word-wrap;
+            vertical-alignment: top;
+        }
+        // Fade the last line out, so a cut reads as "there is more" on any font.
+        if !root.open && t.preferred-height > root.limit : Rectangle {
+            y: parent.height - 26px;
+            height: 26px;
+            background: @linear-gradient(180deg, Theme.bg.with-alpha(0) 0%, Theme.bg 100%);
+        }
+    }
+    // Always there (zero-high when not needed), so the layout's width never depends on
+    // how tall the text turned out to be.
+    Rectangle {
+        property <bool> needed: t.preferred-height > root.limit;
+        height: self.needed ? 28px : 0px;
+        visible: self.needed;
+        accessible-role: button;
+        accessible-label: (root.open ? @tr("Show less of {}", root.what) : @tr("Show all of {}", root.what));
+        accessible-expandable: true;
+        accessible-expanded: root.open;
+        accessible-action-default => { root.open = !root.open; }
+        TouchArea {
+            mouse-cursor: pointer;
+            clicked => { root.open = !root.open; }
+        }
+        Text {
+            x: 0;
+            text: root.open ? @tr("Show less") : @tr("Read more");
+            color: Theme.accent;
+            font-size: 13px;
+            font-weight: 600;
+            vertical-alignment: center;
+        }
+    }
+}
+
+// What changed in the release being shown.
+component WhatsNew inherits Rectangle {
+    height: body.preferred-height;
+    body := VerticalLayout {
+        width: parent.width;
+        spacing: 8px;
+        HorizontalLayout {
+            spacing: 10px;
+            Text {
+                horizontal-stretch: 1;
+                text: Store.is-website ? @tr("About this website") : Store.is-package ? @tr("About this package") : @tr("What's new");
+                color: Theme.text;
+                font-size: 17px;
+                font-weight: 700;
+            }
+            Text {
+                text: Store.app.version != "" && !Store.is-package ? Store.app.version + (Store.release-age != "" ? "  ·  " + Store.release-age : "") : Store.release-age;
+                color: Theme.text-dim;
+                font-size: 12px;
+                vertical-alignment: center;
+            }
+        }
+        Clamped { text: Store.notes; limit: 70px; what: @tr("what is new"); key: Store.app.id + Store.app.version; }
+    }
+}
+
+// An app's page. Laid out the way the big stores do it, because that is what people
+// already know: name and one button at the top, a row of key facts, what it is, what is
+// new, and a table of everything else at the bottom.
+// Writing a review: stars, a few words, and where it goes. One place takes it from
+// here; a store takes it on its own page, opened with the words copied.
+component ReviewForm inherits Rectangle {
+    in property <bool> compact;
+    property <bool> open: false;
+    property <int> stars: 0;
+    property <string> app-id: Store.app.id;
+    property <bool> busy: Store.review-state == 1;
+    property <bool> done: Store.review-state == 2;
+    // Another app's page: its review starts empty.
+    changed app-id => {
+        root.open = false;
+        root.stars = 0;
+        title-input.text = "";
+        text-input.text = "";
+    }
+    height: box.preferred-height;
+    box := VerticalLayout {
+        width: parent.width;
+        spacing: 10px;
+        if !root.open && !root.done : HorizontalLayout {
+            alignment: start;
+            Button {
+                text: @tr("Write a review");
+                primary: false;
+                clicked => {
+                    name-input.text = Store.review-name;
+                    root.open = true;
+                }
+            }
+        }
+        if root.done : Text {
+            text: Store.review-result;
+            color: Theme.text;
+            font-size: 13px;
+            wrap: word-wrap;
+            accessible-role: text;
+            accessible-label: self.text;
+        }
+        Rectangle {
+            visible: root.open && !root.done;
+            height: self.visible ? fields.preferred-height : 0px;
+            border-radius: 12px;
+            background: Theme.surface;
+            border-width: 1px;
+            border-color: Theme.stroke;
+            clip: true;
+            fields := VerticalLayout {
+                width: parent.width;
+                padding: 14px;
+                spacing: 10px;
+                Text { text: @tr("Your review of {}", Store.app.name); color: Theme.text; font-size: 15px; font-weight: 700; wrap: word-wrap; }
+                HorizontalLayout {
+                    alignment: start;
+                    spacing: 4px;
+                    for n in 5 : Rectangle {
+                        width: 38px;
+                        height: 38px;
+                        border-radius: 8px;
+                        background: star-touch.has-hover ? Theme.surface-2 : transparent;
+                        border-width: star-focus.has-focus ? 2px : 0px;
+                        border-color: Theme.focus;
+                        accessible-role: button;
+                        accessible-label: n == 0 ? @tr("1 star") : @tr("{} stars", n + 1);
+                        accessible-action-default => { root.stars = n + 1; }
+                        star-focus := FocusScope {
+                            focus-on-click: false;
+                            key-pressed(event) => {
+                                if (event.text == Key.Return || event.text == " ") {
+                                    root.stars = n + 1;
+                                    return accept;
+                                }
+                                reject
+                            }
+                            star-touch := TouchArea {
+                                mouse-cursor: pointer;
+                                clicked => { root.stars = n + 1; }
+                            }
+                        }
+                        Text {
+                            text: n < root.stars ? "★" : "☆";
+                            color: n < root.stars ? Theme.warn : Theme.text-dim;
+                            font-size: 24px;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+                Rectangle {
+                    height: 38px;
+                    border-radius: 8px;
+                    background: Theme.bg;
+                    border-width: 1px;
+                    border-color: title-input.has-focus ? Theme.focus : Theme.stroke;
+                    title-input := TextInput {
+                        x: 10px;
+                        width: parent.width - 20px;
+                        height: 100%;
+                        color: Theme.text;
+                        font-size: 13px;
+                        single-line: true;
+                        vertical-alignment: center;
+                        accessible-label: @tr("Title of your review");
+                    }
+                    if title-input.text == "" : Text { x: 10px; text: @tr("A short title"); color: Theme.text-dim; font-size: 13px; vertical-alignment: center; }
+                }
+                Rectangle {
+                    height: max(110px, text-input.preferred-height + 20px);
+                    border-radius: 8px;
+                    background: Theme.bg;
+                    border-width: 1px;
+                    border-color: text-input.has-focus ? Theme.focus : Theme.stroke;
+                    text-input := TextInput {
+                        x: 10px;
+                        y: 10px;
+                        width: parent.width - 20px;
+                        height: parent.height - 20px;
+                        color: Theme.text;
+                        font-size: 13px;
+                        single-line: false;
+                        wrap: word-wrap;
+                        accessible-label: @tr("Your review");
+                    }
+                    if text-input.text == "" : Text { x: 10px; y: 10px; text: @tr("What do you think of it?"); color: Theme.text-dim; font-size: 13px; }
+                }
+                Rectangle {
+                    visible: Store.review-from-here;
+                    height: self.visible ? 38px : 0px;
+                    border-radius: 8px;
+                    background: Theme.bg;
+                    border-width: 1px;
+                    border-color: name-input.has-focus ? Theme.focus : Theme.stroke;
+                    name-input := TextInput {
+                        x: 10px;
+                        width: parent.width - 20px;
+                        height: 100%;
+                        color: Theme.text;
+                        font-size: 13px;
+                        single-line: true;
+                        vertical-alignment: center;
+                        accessible-label: @tr("Name to show next to your review");
+                    }
+                    if name-input.text == "" : Text { x: 10px; text: @tr("The name to show next to it"); color: Theme.text-dim; font-size: 13px; vertical-alignment: center; }
+                }
+                Text {
+                    text: Store.review-places.length > 1 ? @tr("Leave it at:") : @tr("It goes to:");
+                    color: Theme.text-dim;
+                    font-size: 12px;
+                }
+                for place in Store.review-places : HorizontalLayout {
+                    spacing: 12px;
+                    if Store.review-places.length > 1 : VerticalLayout {
+                        alignment: center;
+                        Toggle {
+                            checked: place.chosen;
+                            label: @tr("Leave the review at {}", place.name);
+                            toggled(on) => { Store.toggle-review-place(place.id); }
+                        }
+                    }
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 2px;
+                        Text { text: place.name; color: Theme.text; font-size: 13px; font-weight: 600; wrap: word-wrap; }
+                        Text { text: place.note; color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
+                    }
+                }
+                if Store.review-problem != "" : Text {
+                    text: Store.review-problem;
+                    color: Theme.bad;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                    accessible-role: text;
+                    accessible-label: self.text;
+                }
+                if Store.review-result != "" : Text { text: Store.review-result; color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
+                if root.busy : Busy { }
+                HorizontalLayout {
+                    alignment: start;
+                    spacing: 8px;
+                    Button {
+                        text: Store.review-copies && !Store.review-from-here ? @tr("Copy and open") : @tr("Send review");
+                        enabled: !root.busy;
+                        accessible-label: @tr("Send your review");
+                        clicked => {
+                            // A store's own box is filled by pasting: the words go on the clipboard.
+                            if (Store.review-copies && text-input.text != "") {
+                                clip.text = title-input.text == "" ? text-input.text : title-input.text + "\n\n" + text-input.text;
+                                clip.select-all();
+                                clip.copy();
+                            }
+                            Store.send-review(root.stars, title-input.text, text-input.text, name-input.text);
+                        }
+                    }
+                    Button { text: @tr("Not now"); primary: false; enabled: !root.busy; accessible-label: @tr("Stop writing the review"); clicked => { root.open = false; } }
+                }
+            }
+        }
+    }
+    // Never seen: it only carries the words to the clipboard.
+    clip := TextInput {
+        visible: false;
+        width: 0px;
+        height: 0px;
+        single-line: false;
+        accessible-role: none;
+    }
+}
+
+export component DetailsBody inherits Rectangle {
+    in property <bool> compact;
+    property <bool> show-hidden: false;
+    // Every version and every file, including the ones for other devices: one press
+    // away, right under the main button.
+    property <bool> more: false;
+    property <string> shown-id: Store.app.id;
+    changed shown-id => {
+        root.more = false;
+        root.show-hidden = false;
+    }
+    property <length> pad: compact ? 16px : 32px;
+    property <bool> has-option: Store.options.length > 0;
+    property <OptionRow> best: Store.options[0];
+    property <bool> busy: Store.install-state == 1;
+    property <bool> mine: Store.install-index == 0 && Store.install-state != 0;
+    // "installed" alone means the system has it but did not say which version.
+    property <string> uninstall-armed: "";
+    property <bool> is-update: Store.installed-version != "" && Store.installed-version != "installed" && Store.app.version != "" && Store.installed-version != Store.app.version;
+    property <bool> open-instead: Store.can-open && !is-update && !(mine && busy);
+    property <string> action: mine && busy ? @tr("Cancel") : Store.queued ? @tr("Queued") : open-instead ? @tr("Open") : is-update ? @tr("Update") : Store.installed-version != "" && best.verb == @tr("Install") ? @tr("Reinstall") : best.verb;
+    function act() {
+        if (mine && busy) {
+            Store.cancel-install();
+        } else if (open-instead) {
+            Store.launch();
+        } else {
+            Store.install(0);
+        }
+    }
+    Flickable {
+        VerticalLayout {
+            padding: pad;
+            padding-bottom: pad + 24px;
+            spacing: 18px;
+            alignment: start;
+
+            HorizontalLayout {
+                spacing: compact ? 14px : 20px;
+                AppIcon { initials: Store.app.initials; tint: Store.app.tint; icon: Store.app.icon; size: compact ? 64px : 88px; }
+                VerticalLayout {
+                    alignment: center;
+                    spacing: 4px;
+                    horizontal-stretch: 1;
+                    Text { text: Store.app.name; color: Theme.text; font-size: compact ? 24px : 30px; font-weight: 700; overflow: elide; }
+                    Text { text: Store.app.author + (Store.app.verified ? "  ✓ " + @tr("verified") : ""); color: Theme.text-dim; font-size: 14px; overflow: elide; }
+                }
+                if !compact : VerticalLayout {
+                    alignment: center;
+                    HorizontalLayout {
+                        spacing: 8px;
+                        Button {
+                            width: 44px;
+                            text: "";
+                            icon: Store.is-favourite ? @image-url("icons/star-filled.svg") : @image-url("icons/star.svg");
+                            icon-color: Store.is-favourite ? Theme.warn : Theme.text;
+                            primary: false;
+                            accessible-label: Store.is-favourite ? @tr("Remove from favourites") : @tr("Add to favourites");
+                            clicked => { Store.toggle-favourite(); }
+                        }
+                        if root.has-option : Button {
+                            min-width: 150px;
+                            font-size: 15px;
+                            text: root.action;
+                            progress: root.mine && root.busy ? Store.install-progress : -1;
+                            primary: !(root.mine && root.busy);
+                            enabled: !root.busy || root.mine;
+                            accessible-label: (root.mine && root.busy ? @tr("Cancel") : root.open-instead ? @tr("Open") : root.best.verb) + " " + (root.open-instead ? Store.app.name : root.best.label);
+                            clicked => { root.act(); }
+                        }
+                    }
+                }
+            }
+            if compact : HorizontalLayout {
+                spacing: 8px;
+                if root.has-option : Button {
+                    horizontal-stretch: 1;
+                    font-size: 15px;
+                    text: root.action;
+                    progress: root.mine && root.busy ? Store.install-progress : -1;
+                    primary: !(root.mine && root.busy);
+                    enabled: !root.busy || root.mine;
+                    accessible-label: (root.mine && root.busy ? @tr("Cancel") : root.open-instead ? @tr("Open") : root.best.verb) + " " + (root.open-instead ? Store.app.name : root.best.label);
+                    clicked => { root.act(); }
+                }
+                Button {
+                    width: root.has-option ? 48px : self.preferred-width;
+                    horizontal-stretch: root.has-option ? 0 : 1;
+                    text: root.has-option ? "" : (Store.is-favourite ? @tr("In your favourites") : @tr("Add to favourites"));
+                    icon: Store.is-favourite ? @image-url("icons/star-filled.svg") : @image-url("icons/star.svg");
+                    icon-color: Store.is-favourite ? Theme.warn : Theme.text;
+                    primary: false;
+                    accessible-label: Store.is-favourite ? @tr("Remove from favourites") : @tr("Add to favourites");
+                    clicked => { Store.toggle-favourite(); }
+                }
+            }
+            // A service with several apps: which one this is, as a list to choose from.
+            if Store.app-family.length > 0 : FamilyPanel {
+                service: Store.app-family-name;
+                others: Store.app-family;
+                chosen(id) => { Store.open(id); }
+            }
+            // Which source the button installs from, right beside it: always said, with
+            // a link to the app's own page there, and the other sources to switch to
+            // when there is a choice.
+            if Store.app.source != "" && !Store.details-loading : HorizontalLayout {
+                alignment: compact ? center : end;
+                spacing: 8px;
+                Text { text: @tr("From"); color: Theme.text-dim; font-size: 12px; vertical-alignment: center; }
+                if Store.app-sources.length <= 1 : Text {
+                    text: Store.app.source;
+                    color: Theme.text;
+                    font-size: 13px;
+                    font-weight: 600;
+                    vertical-alignment: center;
+                    accessible-role: text;
+                    accessible-label: @tr("Comes from {}", Store.app.source);
+                }
+                for source in Store.app-sources.length > 1 ? Store.app-sources : [] : ChoiceChip {
+                    text: source.label;
+                    selected: source.on;
+                    accessible-label: source.on ? @tr("Installing from {}", source.label) : @tr("Switch to {}", source.label);
+                    clicked => {
+                        if (!source.on) {
+                            Store.open(source.id);
+                        }
+                    }
+                }
+                if Store.source-page != "" : Rectangle {
+                    height: 26px;
+                    width: page-link.preferred-width;
+                    accessible-role: button;
+                    accessible-label: @tr("See it on {}", Store.app.source);
+                    accessible-action-default => { Store.open-url(Store.source-page); }
+                    TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { Store.open-url(Store.source-page); }
+                    }
+                    page-link := Text {
+                        text: @tr("See it there") + "  ↗";
+                        color: Theme.accent;
+                        font-size: 13px;
+                        font-weight: 600;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+            // Always within reach of the main button, never competing with it.
+            if (root.has-option || Store.hidden.length > 0 || Store.versions.length > 1) && !Store.is-website : HorizontalLayout {
+                alignment: compact ? center : end;
+                Rectangle {
+                    height: 26px;
+                    width: more-label.preferred-width;
+                    accessible-role: button;
+                    accessible-label: @tr("Other versions and files");
+                    accessible-expandable: true;
+                    accessible-expanded: root.more;
+                    accessible-action-default => { root.more = !root.more; }
+                    TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { root.more = !root.more; }
+                    }
+                    more-label := Text {
+                        text: root.more ? @tr("Hide other versions and files") + "  ▴" : @tr("Other versions and files") + "  ▾";
+                        color: Theme.accent;
+                        font-size: 13px;
+                        font-weight: 600;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+            if root.more && Store.versions.length > 1 : Flickable {
+                height: 32px;
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+                    VerticalLayout {
+                        alignment: center;
+                        Text { text: @tr("Version"); color: Theme.text-dim; font-size: 12px; font-weight: 700; }
+                    }
+                    for version[i] in Store.versions : ChoiceChip {
+                        text: version;
+                        selected: i == Store.selected-version;
+                        accessible-label: @tr("Version {}", version);
+                        clicked => { Store.select-version(i); }
+                    }
+                }
+            }
+
+
+
+            if root.more && root.has-option : VerticalLayout {
+                spacing: 10px;
+                Text { text: @tr("Every way to install on {}", Store.platform-title); color: Theme.text-dim; font-size: 12px; font-weight: 700; }
+                for option[i] in Store.options : OptionCard {
+                    option: option;
+                    index: i;
+                    recommended: i == 0;
+                    compact: root.compact;
+                }
+            }
+
+            if root.more && Store.hidden.length > 0 : VerticalLayout {
+                spacing: 8px;
+                Rectangle {
+                    height: 32px;
+                    accessible-role: button;
+                    accessible-label: @tr("Files that won't work on this device");
+                    accessible-expandable: true;
+                    accessible-expanded: root.show-hidden;
+                    accessible-action-default => { root.show-hidden = !root.show-hidden; }
+                    TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { root.show-hidden = !root.show-hidden; }
+                    }
+                    Text {
+                        x: 0;
+                        text: (root.show-hidden ? @tr("Hide {n} file for other devices" | "Hide {n} files for other devices" % Store.hidden.length) : @tr("Show {n} file for other devices" | "Show {n} files for other devices" % Store.hidden.length));
+                        color: Theme.accent;
+                        font-size: 13px;
+                        font-weight: 600;
+                        vertical-alignment: center;
+                    }
+                }
+                if root.show-hidden : VerticalLayout {
+                    spacing: 6px;
+                    for row[i] in Store.hidden : HorizontalLayout {
+                        spacing: 10px;
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            alignment: center;
+                            spacing: 1px;
+                            Text { text: row.file; color: Theme.text-dim; font-size: 12px; overflow: elide; }
+                            Text { text: row.reason; color: Theme.text-dim.with-alpha(0.7); font-size: 11px; wrap: word-wrap; }
+                        }
+                        VerticalLayout {
+                            alignment: center;
+                            Button {
+                                property <bool> mine: Store.install-state == 1 && Store.install-index == 1000 + i;
+                                font-size: 12px;
+                                text: self.mine ? @tr("Cancel") : compact ? @tr("Download") : @tr("Download anyway");
+                                primary: false;
+                                enabled: Store.install-state != 1 || self.mine;
+                                accessible-label: (self.mine ? @tr("Cancel downloading {}", row.file) : @tr("Download anyway: {}", row.file));
+                                clicked => {
+                                    if (self.mine) {
+                                        Store.cancel-install();
+                                    } else {
+                                        Store.download-hidden(i);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if root.mine && root.busy : ProgressBar { value: Store.install-progress; }
+            if root.mine && !root.busy && !root.more : HorizontalLayout {
+                spacing: 8px;
+                VerticalLayout {
+                    alignment: start;
+                    DoneMark { ok: Store.install-state != 3; }
+                }
+                Text {
+                    horizontal-stretch: 1;
+                    text: Store.install-message;
+                    color: Store.install-state == 3 ? Theme.bad : Theme.ok;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                    vertical-alignment: center;
+                    accessible-role: text;
+                }
+            }
+
+            if Store.app.summary != "" : Text {
+                text: Store.app.summary;
+                color: Theme.text;
+                font-size: 15px;
+                wrap: word-wrap;
+            }
+
+            // The facts people look for first, as the big stores show them.
+            if root.has-option || Store.app.popularity != "" || Store.app.rating != "" || Store.app.downloads != "" : HorizontalLayout {
+                spacing: compact ? 16px : 36px;
+                alignment: start;
+                if Store.app.rating != "" : StatCell { value: "★ " + Store.app.rating; caption: Store.app.rating-count; }
+                if Store.app.price != "" : StatCell { value: Store.app.price; caption: @tr("on {}", Store.app.source); }
+                if Store.app.downloads != "" : StatCell { value: Store.app.downloads; caption: Store.app.downloads-note; }
+                if Store.app.popularity != "" && !(compact && Store.app.downloads != "") : StatCell { value: Store.app.popularity; caption: @tr("on {}", Store.app.source); }
+                if root.has-option && root.best.size != "" : StatCell { value: root.best.size; caption: @tr("download"); }
+                // On a phone the row holds three facts; the date is under "What's new" too.
+                if Store.release-age != "" && !(compact && Store.app.rating != "" && (Store.app.downloads != "" || Store.app.popularity != "")) : StatCell { value: Store.release-age; caption: @tr("last updated"); }
+                if Store.license != "" && !compact : StatCell { value: Store.license; caption: @tr("licence"); }
+            }
+
+            if root.has-option && root.best.verified : HorizontalLayout {
+                spacing: 6px;
+                alignment: start;
+                VerticalLayout {
+                    alignment: center;
+                    Image { source: @image-url("icons/shield.svg"); colorize: Theme.ok; width: 14px; height: 14px; }
+                }
+                Text {
+                    text: @tr("Bilby checks the download is the genuine file");
+                    color: Theme.ok;
+                    font-size: 12px;
+                    font-weight: 600;
+                    vertical-alignment: center;
+                    wrap: word-wrap;
+                }
+            }
+            // Pictures first, as in any store: they say more than the description.
+            if Store.screenshots.length > 0 : Flickable {
+                height: compact ? 180px : 240px;
+                content-width: shots.preferred-width;
+                shots := HorizontalLayout {
+                    spacing: 12px;
+                    alignment: start;
+                    for shot[i] in Store.screenshots : Rectangle {
+                        height: compact ? 180px : 240px;
+                        width: self.height * shot.width / max(1, shot.height);
+                        border-radius: 10px;
+                        clip: true;
+                        border-width: 1px;
+                        border-color: Theme.stroke;
+                        Image {
+                            source: shot;
+                            width: parent.width;
+                            height: parent.height;
+                            image-fit: cover;
+                            accessible-role: image;
+                            accessible-label: @tr("Picture {0} of {1}", i + 1, Store.app.name);
+                        }
+                    }
+                }
+            }
+
+            if root.has-option && root.best.note != "" : Text { text: root.best.note; color: Theme.warn; font-size: 12px; wrap: word-wrap; }
+
+            if Store.installed-version != "" : Rectangle {
+                height: max(40px, banner.preferred-height + 20px);
+                border-radius: 10px;
+                background: Theme.accent.with-alpha(0.12);
+                banner := Text {
+                    x: 14px;
+                    width: parent.width - 28px;
+                    height: parent.height;
+                    wrap: word-wrap;
+                    text: Store.installed-version == "installed" ? @tr("Installed") : Store.installed-version == Store.app.version || Store.app.version == "" ? @tr("Installed  ·  {}", Store.installed-version) : @tr("Update available  ·  you have {0}, latest is {1}", Store.installed-version, Store.app.version);
+                    color: Theme.accent;
+                    font-size: 13px;
+                    font-weight: 600;
+                    vertical-alignment: center;
+                    
+                }
+            }
+
+            if Store.can-uninstall : HorizontalLayout {
+                alignment: start;
+                Button {
+                    // Asked twice, and only for the app it was first asked about.
+                    property <bool> armed: root.uninstall-armed == Store.app.id;
+                    text: self.armed ? @tr("Really uninstall?") : @tr("Uninstall");
+                    primary: false;
+                    accessible-label: self.armed ? @tr("Confirm uninstalling {}", Store.app.name) : @tr("Uninstall {}", Store.app.name);
+                    clicked => {
+                        if (self.armed) {
+                            root.uninstall-armed = "";
+                            Store.remove-from-library(Store.app.id);
+                        } else {
+                            root.uninstall-armed = Store.app.id;
+                        }
+                    }
+                }
+            }
+
+            if Store.details-loading : VerticalLayout {
+                spacing: 10px;
+                Text { text: @tr("Checking releases against this device…"); color: Theme.text-dim; font-size: 14px; }
+                Busy { }
+            }
+            if Store.details-error != "" : EmptyState {
+                error: true;
+                title: @tr("Couldn't load this app");
+                body: Store.details-error;
+                action: @tr("Try again");
+                acted => { Store.retry-details(); }
+            }
+            if Store.warning != "" : Text { text: Store.warning; color: Theme.warn; font-size: 13px; wrap: word-wrap; }
+            if Store.need-note != "" : Text { text: Store.need-note; color: Theme.warn; font-size: 13px; wrap: word-wrap; }
+            // Something else is needed first, and this store can install it.
+            if Store.helper-id != "" : HorizontalLayout {
+                alignment: start;
+                Button { text: Store.helper-label; clicked => { Store.open(Store.helper-id); } }
+            }
+
+            if Store.unavailable != "" : Rectangle {
+                height: un.preferred-height + 28px;
+                border-radius: 12px;
+                background: Theme.warn.with-alpha(0.1);
+                un := Text {
+                    x: 14px;
+                    width: parent.width - 28px;
+                    text: Store.unavailable;
+                    color: Theme.warn;
+                    font-size: 14px;
+                    wrap: word-wrap;
+                    vertical-alignment: center;
+                }
+            }
+
+
+            // Someone who already has the app wants to know what changed, as in any store.
+            if Store.notes != "" && Store.installed-version != "" : WhatsNew { }
+
+            if Store.about != "" : VerticalLayout {
+                spacing: 8px;
+                Text { text: @tr("About"); color: Theme.text; font-size: 17px; font-weight: 700; }
+                Clamped { text: Store.about; what: @tr("the description"); key: Store.app.id; }
+            }
+
+            // Someone who has not installed it reads what it is first.
+            if Store.notes != "" && Store.installed-version == "" : WhatsNew { }
+
+            // What people who use it wrote. Only apps a ratings service knows have any.
+            if Store.reviews.length > 0 || Store.app.rating-spread.length > 0 || Store.review-places.length > 0 : VerticalLayout {
+                spacing: 10px;
+                Text { text: Store.reviews.length > 0 || Store.review-places.length > 0 ? @tr("Ratings and reviews") : @tr("Ratings"); color: Theme.text; font-size: 17px; font-weight: 700; }
+                // The score with how the stars are spread, as the big stores show it: an
+                // average says little until you see how many people it is an average of.
+                if Store.app.rating-spread.length > 0 : RatingSummary { }
+                if Store.app.rating-spread.length == 0 && Store.app.rating != "" : Text {
+                    text: "★ " + Store.app.rating + "  ·  " + Store.app.rating-count;
+                    color: Theme.text-dim;
+                    font-size: 12px;
+                }
+                for review[i] in Store.reviews : Rectangle {
+                    border-radius: 12px;
+                    background: Theme.surface;
+                    border-width: 1px;
+                    border-color: Theme.stroke;
+                    height: body.preferred-height;
+                    accessible-role: text;
+                    accessible-label: @tr("Review {0}: {1}", i + 1, review.title);
+                    body := VerticalLayout {
+                        width: parent.width;
+                        padding: 14px;
+                        spacing: 5px;
+                        HorizontalLayout {
+                            spacing: 10px;
+                            Text { text: review.stars; color: Theme.warn; font-size: 13px; vertical-alignment: center; }
+                            Text {
+                                horizontal-stretch: 1;
+                                text: review.title;
+                                color: Theme.text;
+                                font-size: 14px;
+                                font-weight: 600;
+                                overflow: elide;
+                                vertical-alignment: center;
+                            }
+                        }
+                        if review.text != "" : Text { text: review.text; color: Theme.text; font-size: 13px; wrap: word-wrap; }
+                        if review.meta != "" : Text { text: review.meta; color: Theme.text-dim; font-size: 11px; overflow: elide; }
+                    }
+                }
+                if Store.reviews.length > 0 || Store.app.rating-spread.length > 0 : Text {
+                    text: Store.reviews.length > 0 ? @tr("Reviews are written by other people and come from the ratings service the GNOME and KDE app stores use.") : @tr("Ratings come from the ratings service the GNOME and KDE app stores use.");
+                    color: Theme.text-dim;
+                    font-size: 11px;
+                    wrap: word-wrap;
+                }
+                if Store.review-places.length > 0 : ReviewForm { compact: root.compact; }
+            }
+
+            // Everything else, where the stores put it: a plain table at the bottom.
+            if root.has-option || Store.license != "" || Store.app.source != "" : VerticalLayout {
+                spacing: 0px;
+                Text { text: @tr("Information"); color: Theme.text; font-size: 17px; font-weight: 700; }
+                Rectangle { height: 6px; }
+                if Store.app.source != "" : InfoRow { name: @tr("From"); value: Store.app.source; }
+                if Store.app.author != "" && Store.app.author != Store.app.source : InfoRow { name: @tr("Made by"); value: Store.app.author + (Store.app.verified ? " " + @tr("(confirmed by {})", Store.app.source) : ""); }
+                if Store.app.price != "" : InfoRow { name: @tr("Price"); value: @tr("{0} on {1}", Store.app.price, Store.app.source); }
+                if Store.app.downloads != "" : InfoRow { name: @tr("Downloads"); value: Store.app.downloads + " " + Store.app.downloads-note; }
+                if Store.app.popularity != "" : InfoRow { name: @tr("Popularity"); value: @tr("{0} on {1}", Store.app.popularity, Store.app.source); }
+                if Store.app.version != "" : InfoRow { name: @tr("Version"); value: Store.app.version; }
+                if Store.release-date != "" : InfoRow { name: @tr("Released"); value: Store.release-date; }
+                if Store.license != "" : InfoRow { name: @tr("Licence"); value: Store.license; }
+                if root.has-option : InfoRow { name: @tr("Works on"); value: Store.platform-title; }
+                if root.has-option : InfoRow { name: @tr("Kind of file"); value: root.best.label; }
+                if root.has-option && root.best.size != "" : InfoRow { name: @tr("Download size"); value: root.best.size; }
+            }
+
+            if !compact : HorizontalLayout {
+                spacing: 10px;
+                alignment: start;
+                if Store.homepage != "" : Button {
+                    text: @tr("Project page");
+                    primary: false;
+                    clicked => { Store.open-url(Store.homepage); }
+                }
+            }
+
+            // Side by side they are wider than a small phone.
+            if compact && Store.homepage != "" : Button {
+                text: @tr("Project page");
+                primary: false;
+                clicked => { Store.open-url(Store.homepage); }
+            }
+
+        }
+    }
+}

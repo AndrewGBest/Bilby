@@ -2850,7 +2850,7 @@ fn a_tv_remote_reads_reviews_and_picks_an_older_version() {
     assert_eq!(s.store().get_selected_version(), 1, "an older version was picked from the list");
     assert_ne!(s.store().get_app().version, newest);
     assert!(s.has("Change version"), "and the list of releases closed again");
-    // Left and Right no longer change the version; Left leaves the list for the buttons.
+    // Left and Right do not change the version; Left leaves the list for the buttons.
     s.press(Key::RightArrow);
     assert_eq!(s.store().get_selected_version(), 1);
     s.press(Key::LeftArrow);
@@ -3039,8 +3039,8 @@ fn a_service_with_several_apps_leads_its_results_and_its_page_offers_the_others(
     s.app.open(&s.ui, "github:shy1132/VacuumTube");
     assert_eq!(s.store().get_app_family().row_count(), 1, "the same from another source");
 
-    // A service's own program lists its website and the apps others made, where it
-    // used to be taken for one of those and list neither.
+    // A service's own program lists its website and the apps others made; it is not
+    // taken for one of those itself.
     s.app.open(&s.ui, "flathub:com.discordapp.Discord");
     let discord: Vec<String> = s.store().get_app_family().iter().map(|v| v.name.to_string()).collect();
     assert_eq!(discord, ["Discord website", "Vesktop"]);
