@@ -11,7 +11,7 @@ use std::path::Path;
 use std::process::ExitCode;
 
 const USAGE: &str = "\
-bilby-cli - app store for GitHub Releases, Codeberg and other repositories, filtered to your device
+bilby-cli - an app store that only shows what runs on your device, without the window
 
 USAGE:
     bilby-cli [OPTIONS] <COMMAND>
@@ -36,6 +36,7 @@ OPTIONS:
     --as <platform>        Pretend to be another machine (see --list-platforms)
     --demo                 Use the built-in fictional catalog instead of the network
     --list-platforms       Print the platform names accepted by --as
+    -V, --version          Print the version
 
 ENVIRONMENT:
     GITHUB_TOKEN           Raises GitHub's API limit from 60 to 5,000 requests per hour
@@ -69,6 +70,10 @@ fn main() -> ExitCode {
             }
             "-h" | "--help" => {
                 print!("{USAGE}");
+                return ExitCode::SUCCESS;
+            }
+            "-V" | "--version" => {
+                println!("bilby-cli {}", env!("CARGO_PKG_VERSION"));
                 return ExitCode::SUCCESS;
             }
             _ => i += 1,

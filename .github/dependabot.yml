@@ -1,0 +1,27 @@
+# Dependabot opens pull requests for newer dependencies, once a week, grouped so that
+# one review covers the routine ones.
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels: [dependencies]
+    groups:
+      # Slint's crates are released together and must move together. The testing
+      # backend is pinned to an exact version in crates/app/Cargo.toml.
+      slint:
+        patterns: ["slint", "slint-*", "i-slint-*"]
+      minor-and-patch:
+        update-types: [minor, patch]
+        exclude-patterns: ["slint", "slint-*", "i-slint-*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels: [dependencies]
+    groups:
+      actions:
+        patterns: ["*"]

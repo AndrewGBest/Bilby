@@ -3,7 +3,12 @@
 // Ctrl+K or Ctrl+F jumps to search, Escape goes back, Tab walks through everything.
 import { Theme } from "theme.slint";
 import { AppCard, Section, Store } from "types.slint";
-import { AppIcon, AppTile, Button, Busy, Chip, ChoiceChip, EmptyState, SearchField, DetailsBody, LibraryBody, SettingsBody, SystemBody, Appear, FadeIn, SourceFilter, Toast, TvQuestion, UpdatesBanner, Welcome } from "components.slint";
+import { AppIcon, Button, Busy, Chip, ChoiceChip, EmptyState, SearchField, Appear, FadeIn } from "widgets.slint";
+import { AppTile, SourceFilter, UpdatesBanner, Welcome } from "lists.slint";
+import { DetailsBody } from "details.slint";
+import { LibraryBody, SystemBody } from "library.slint";
+import { SettingsBody } from "settings.slint";
+import { Toast, TvQuestion } from "overlays.slint";
 
 component NavItem inherits Rectangle {
     in property <string> label;

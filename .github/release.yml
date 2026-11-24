@@ -1,0 +1,19 @@
+# How GitHub groups merged pull requests in a release's generated notes. The notes
+# people read are in CHANGELOG.md; this list is the detail underneath.
+changelog:
+  exclude:
+    labels: [skip-changelog]
+    authors: [dependabot]
+  categories:
+    - title: New
+      labels: [enhancement]
+    - title: Fixed
+      labels: [bug]
+    - title: Sources
+      labels: [source]
+    - title: Translations
+      labels: [translation]
+    - title: Documentation
+      labels: [documentation]
+    - title: Everything else
+      labels: ["*"]

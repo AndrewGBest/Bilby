@@ -5,8 +5,21 @@ members = ["crates/core", "crates/cli", "crates/app", "crates/signin"]
 [workspace.package]
 version = "0.1.40"
 edition = "2021"
+# The oldest Rust that builds it: what Slint, the interface toolkit, asks for.
+rust-version = "1.95"
 license = "GPL-3.0-only"
-repository = "https://github.com/AndrewGBest/bilby"
+repository = "https://github.com/AndrewGBest/Bilby"
+# Released as programs from this repository, not as libraries on crates.io.
+publish = false
+
+# The same few extra checks for every crate. `cargo clippy -- -D warnings` in CI makes
+# them errors.
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "warn"
+
+[workspace.lints.clippy]
+# Left-overs from working on something.
+dbg_macro = "warn"
 
 [profile.release]
 lto = "thin"

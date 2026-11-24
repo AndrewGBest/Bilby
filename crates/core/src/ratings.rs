@@ -91,7 +91,7 @@ pub fn parse_reviews(json: &str) -> Result<Vec<Review>> {
                 author: tidy(r.user_display, 40),
                 date: as_number(&r.date_created)
                     .filter(|secs| *secs > 0.0)
-                    .map(|secs| crate::source::aur::date_from_unix(secs as i64))
+                    .map(|secs| crate::model::date_from_unix(secs as i64))
                     .unwrap_or_default(),
                 version: tidy(r.version, 30).trim_start_matches("unknown").to_string(),
             })
@@ -112,14 +112,14 @@ pub fn fetch_reviews(http: &dyn Http, appstream_id: &str) -> Result<Vec<Review>>
         "version": "unknown",
         "limit": REVIEWS_SHOWN,
         // The service refuses a request without a 40-character id for the person asking
-        // (other stores send a hash of the user and machine). Everyone sends the same
+        // (other stores send a hash of the person and machine). Everyone sends the same
         // zeros here, so it identifies nobody.
         "user_hash": ANONYMOUS,
     });
     parse_reviews(&http.post_json(ODRS_FETCH, &body.to_string())?)
 }
 
-/// Sent in place of an id for the user: the same for every copy of the store.
+/// Sent in place of an id for the person: the same for every copy of the store.
 const ANONYMOUS: &str = "0000000000000000000000000000000000000000";
 
 /// How long a downloaded ratings file is used before asking again.

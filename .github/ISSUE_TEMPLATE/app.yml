@@ -1,0 +1,48 @@
+name: Wrong or missing app
+description: An app cannot be found, is offered in the wrong version, or is hidden when it should run.
+labels: [bug, compatibility]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Bilby has no list of approved apps: it reads each source and works out which
+        file fits your device from the file's name. When that goes wrong, the file
+        names are what we need.
+  - type: input
+    id: app
+    attributes:
+      label: The app
+      description: Its page at the source, or its id in Bilby (for example `github:sharkdp/fd`).
+    validations:
+      required: true
+  - type: dropdown
+    id: problem
+    attributes:
+      label: What is wrong
+      options:
+        - It cannot be found by searching
+        - It is shown as not running on my device, and it does
+        - Bilby offers a file that does not run on my device
+        - Bilby picks a worse file than the one I would choose
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: show
+    attributes:
+      label: What Bilby sees
+      description: Paste what `bilby-cli show <id>` prints, if you can. It lists the files it hid and why.
+      render: text
+  - type: textarea
+    id: device
+    attributes:
+      label: Your device
+      description: Paste what `bilby-cli device` prints, or name the system and processor.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should have happened
+      description: For a wrong file, the name of the right one.

@@ -1,0 +1,410 @@
+// The small pieces every page is built from: buttons, chips, switches, the search
+// field, progress and the marks that say something is happening or done.
+
+import { Theme } from "theme.slint";
+import { Store } from "types.slint";
+
+export component AppIcon inherits Rectangle {
+    in property <string> initials;
+    in property <color> tint;
+    in property <image> icon;
+    in property <length> size: 44px;
+    property <bool> has-picture: icon.width > 0;
+    width: size;
+    height: size;
+    border-radius: size * 0.26;
+    clip: true;
+    // Until (or unless) a picture arrives: the app's initials on its own colour.
+    background: has-picture ? Theme.surface-2 : @linear-gradient(135deg, tint.brighter(25%) 0%, tint.darker(35%) 100%);
+    if !has-picture : Text {
+        text: initials;
+        color: white;
+        font-size: size * 0.4;
+        font-weight: 700;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    if has-picture : Image {
+        source: icon;
+        width: 100%;
+        height: 100%;
+        image-fit: cover;
+    }
+}
+
+export component Chip inherits Rectangle {
+    in property <string> text;
+    in property <color> tone: Theme.text-dim;
+    in property <length> font-size: 11px;
+    height: font-size * 2;
+    border-radius: self.height / 2;
+    background: tone.with-alpha(0.14);
+    HorizontalLayout {
+        padding-left: root.font-size * 0.8;
+        padding-right: root.font-size * 0.8;
+        Text {
+            text: root.text;
+            color: tone;
+            font-size: root.font-size;
+            font-weight: 600;
+            vertical-alignment: center;
+        }
+    }
+}
+
+export component ChoiceChip inherits Rectangle {
+    in property <string> text;
+    in property <bool> selected;
+    callback clicked;
+    height: 32px;
+    border-radius: 16px;
+    background: selected ? Theme.accent : ta.has-hover ? Theme.surface-2 : Theme.surface;
+    border-width: selected ? 0px : 1px;
+    border-color: fs.has-focus ? Theme.focus : Theme.stroke;
+    accessible-role: button;
+    accessible-label: text;
+    accessible-action-default => { root.clicked(); }
+    animate background { duration: 100ms; }
+    fs := FocusScope {
+        focus-on-click: false;
+        key-pressed(event) => {
+            if (event.text == Key.Return || event.text == " ") {
+                root.clicked();
+                return accept;
+            }
+            reject
+        }
+        ta := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                Store.play(1);
+                root.clicked();
+            }
+        }
+    }
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 14px;
+        Text {
+            text: root.text;
+            color: selected ? Theme.on-accent : Theme.text;
+            font-size: 13px;
+            font-weight: 600;
+            vertical-alignment: center;
+        }
+    }
+}
+
+export component Button inherits Rectangle {
+    in property <string> text;
+    in property <bool> primary: true;
+    in property <bool> danger: false;
+    in property <bool> enabled: true;
+    in property <length> font-size: 14px;
+    // 0 to 1 while the button's own action is under way: it fills like a progress bar.
+    in property <float> progress: -1;
+    // A picture in place of words, for a button that has none (the favourite star).
+    in property <image> icon;
+    in property <color> icon-color: Theme.text;
+    callback clicked;
+    height: font-size * 2.9;
+    border-radius: 10px;
+    clip: root.progress >= 0;
+    // Pressing gives a little, as a real button does.
+    transform-scale: ta.pressed && root.enabled ? 0.96 : 1;
+    animate transform-scale { duration: Theme.quick; easing: ease-out; }
+    if root.progress >= 0 : Rectangle {
+        x: 0;
+        width: parent.width * clamp(root.progress, 0.03, 1.0);
+        height: parent.height;
+        background: Theme.accent.with-alpha(0.32);
+        animate width { duration: Theme.smooth; easing: ease-out; }
+    }
+    background: !enabled ? Theme.surface-2 : primary ? (ta.pressed ? Theme.accent.darker(15%) : ta.has-hover ? Theme.accent.brighter(8%) : Theme.accent) : (ta.has-hover ? Theme.surface-2 : Theme.surface);
+    border-width: fs.has-focus ? 2px : primary ? 0px : 1px;
+    border-color: fs.has-focus ? Theme.focus : Theme.stroke;
+    accessible-role: button;
+    accessible-label: text;
+    accessible-enabled: enabled;
+    accessible-action-default => {
+        if (root.enabled) {
+            root.clicked();
+        }
+    }
+    animate background { duration: Theme.quick; }
+    fs := FocusScope {
+        enabled: root.enabled;
+        focus-on-click: false;
+        key-pressed(event) => {
+            if (event.text == Key.Return || event.text == " ") {
+                root.clicked();
+                return accept;
+            }
+            reject
+        }
+        ta := TouchArea {
+            enabled: root.enabled;
+            mouse-cursor: pointer;
+            clicked => {
+                Store.play(1);
+                root.clicked();
+            }
+        }
+    }
+    HorizontalLayout {
+        padding-left: root.font-size * 1.4;
+        padding-right: root.font-size * 1.4;
+        Text {
+            text: root.text;
+            color: !root.enabled ? Theme.text-dim : root.primary ? Theme.on-accent : root.danger ? Theme.bad : Theme.text;
+            font-size: root.font-size;
+            font-weight: 600;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+    if root.text == "" && root.icon.width > 0 : Image {
+        source: root.icon;
+        colorize: root.icon-color;
+        width: root.font-size * 1.45;
+        height: root.font-size * 1.45;
+    }
+}
+
+// An activity bar for work of unknown length.
+export component Busy inherits Rectangle {
+    height: 3px;
+    border-radius: 1.5px;
+    background: Theme.surface-2;
+    clip: true;
+    property <float> t: mod(animation-tick() / 1.4s, 1.0);
+    Rectangle {
+        x: parent.width * (t * 1.4 - 0.4);
+        width: parent.width * 0.4;
+        border-radius: 1.5px;
+        background: Theme.accent;
+    }
+}
+
+// How far along a download or an update is. When the amount is not known (Flatpak
+// does not say), a band travels across instead of a bar filling.
+export component ProgressBar inherits Rectangle {
+    in property <float> value;
+    property <bool> unknown: root.value <= 0.01;
+    property <float> t: Theme.reduce-motion ? 0.3 : mod(animation-tick() / 1.3s, 1.0);
+    height: 6px;
+    border-radius: 3px;
+    background: Theme.surface-2;
+    clip: true;
+    accessible-role: progress-indicator;
+    accessible-value: round(root.value * 100) + "%";
+    fill := Rectangle {
+        x: root.unknown ? parent.width * (root.t * 1.4 - 0.4) : 0;
+        width: root.unknown ? parent.width * 0.4 : parent.width * clamp(root.value, 0.02, 1.0);
+        border-radius: 3px;
+        background: Theme.accent;
+        clip: true;
+        animate width { duration: Theme.smooth; easing: ease-out; }
+        // A soft highlight passing over the bar says "still working" between steps.
+        if !root.unknown && !Theme.reduce-motion : Rectangle {
+            x: fill.width * (root.t * 1.5 - 0.25);
+            width: 48px;
+            background: @linear-gradient(90deg, #ffffff00 0%, #ffffff55 50%, #ffffff00 100%);
+        }
+    }
+}
+
+// The moment something finishes: a tick that pops in. A failure gets a plain mark.
+export component DoneMark inherits Rectangle {
+    in property <bool> ok: true;
+    property <bool> ready: false;
+    width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    background: root.ok ? Theme.ok : Theme.bad;
+    transform-scale: root.ready ? 1 : 0.3;
+    opacity: root.ready ? 1 : 0;
+    accessible-role: none;
+    animate transform-scale { duration: Theme.slow; easing: ease-out-back; }
+    animate opacity { duration: Theme.quick; }
+    Timer {
+        interval: 20ms;
+        running: !root.ready;
+        triggered => { root.ready = true; }
+    }
+    Text { text: root.ok ? "✓" : "!"; color: Theme.bg; font-size: 12px; font-weight: 800; horizontal-alignment: center; vertical-alignment: center; }
+}
+
+// A page that eases in when it is shown: it fades up a few pixels, the way screens
+// arrive on a phone. Leaving is immediate, so nothing lingers.
+export component Appear inherits Rectangle {
+    in property <bool> shown;
+    visible: root.shown;
+    inner := Rectangle {
+        y: 12px;
+        width: parent.width;
+        height: parent.height;
+        opacity: 0;
+        @children
+    }
+    states [
+        on when root.shown: {
+            inner.opacity: 1;
+            inner.y: 0px;
+            in {
+                animate inner.opacity, inner.y { duration: Theme.smooth; easing: ease-out; }
+            }
+        }
+    ]
+}
+
+// The same for something that only exists while it is shown.
+export component FadeIn inherits Rectangle {
+    property <bool> ready: false;
+    opacity: root.ready ? 1 : 0;
+    animate opacity { duration: Theme.smooth; easing: ease-out; }
+    Timer {
+        interval: 16ms;
+        running: !root.ready;
+        triggered => { root.ready = true; }
+    }
+}
+
+export component Toggle inherits Rectangle {
+    in property <bool> checked;
+    in property <string> label;
+    callback toggled(bool);
+    width: 46px;
+    height: 26px;
+    border-radius: 13px;
+    background: checked ? Theme.accent : Theme.surface-2;
+    border-width: fs.has-focus ? 2px : 1px;
+    border-color: fs.has-focus ? Theme.focus : Theme.stroke;
+    accessible-role: switch;
+    accessible-label: label;
+    accessible-checkable: true;
+    accessible-checked: checked;
+    accessible-action-default => { root.toggled(!root.checked); }
+    animate background { duration: 120ms; }
+    fs := FocusScope {
+        focus-on-click: false;
+        key-pressed(event) => {
+            if (event.text == Key.Return || event.text == " ") {
+                root.toggled(!root.checked);
+                return accept;
+            }
+            reject
+        }
+        TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                Store.play(3);
+                root.toggled(!root.checked);
+            }
+        }
+    }
+    Rectangle {
+        x: checked ? parent.width - self.width - 3px : 3px;
+        width: 20px;
+        height: 20px;
+        border-radius: 10px;
+        background: checked ? Theme.on-accent : Theme.text-dim;
+        animate x { duration: 120ms; easing: ease-out; }
+    }
+}
+
+export component SearchField inherits Rectangle {
+    in-out property <string> text <=> input.text;
+    in property <string> placeholder: @tr("Search apps");
+    out property <bool> has-focus: input.has-focus;
+    callback accepted(string);
+    callback edited(string);
+    public function grab-focus() {
+        input.focus();
+        input.select-all();
+    }
+    height: 42px;
+    border-radius: self.height / 2;
+    background: Theme.surface;
+    border-width: input.has-focus ? 2px : 1px;
+    border-color: input.has-focus ? Theme.accent : Theme.stroke;
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 8px;
+        spacing: 10px;
+        VerticalLayout {
+            alignment: center;
+            Image {
+                source: @image-url("icons/search.svg");
+                colorize: Theme.text-dim;
+                width: 18px;
+                height: 18px;
+            }
+        }
+        Rectangle {
+            horizontal-stretch: 1;
+            if input.text == "" : Text {
+                width: 100%;
+                height: 100%;
+                text: root.placeholder;
+                color: Theme.text-dim;
+                font-size: 15px;
+                vertical-alignment: center;
+                overflow: elide;
+            }
+            input := TextInput {
+                width: 100%;
+                height: 100%;
+                color: Theme.text;
+                font-size: 15px;
+                single-line: true;
+                vertical-alignment: center;
+                accessible-label: @tr("Search");
+                accepted => { root.accepted(self.text); }
+                edited => { root.edited(self.text); }
+            }
+        }
+        if input.text != "" : Rectangle {
+            width: 28px;
+            accessible-role: button;
+            accessible-label: @tr("Clear search");
+            TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    input.text = "";
+                    root.edited("");
+                    input.focus();
+                }
+            }
+            Text { text: "✕"; color: Theme.text-dim; font-size: 13px; horizontal-alignment: center; vertical-alignment: center; }
+        }
+    }
+}
+
+// A friendly "nothing here" block with an optional action.
+export component EmptyState inherits VerticalLayout {
+    in property <string> title;
+    in property <string> body;
+    in property <string> action;
+    in property <bool> error;
+    callback acted;
+    alignment: center;
+    spacing: 10px;
+    padding: 32px;
+    HorizontalLayout {
+        alignment: center;
+        Image {
+            source: @image-url("icons/empty.svg");
+            colorize: error ? Theme.bad : Theme.text-dim;
+            width: 40px;
+            height: 40px;
+        }
+    }
+    Text { text: title; color: Theme.text; font-size: 17px; font-weight: 700; horizontal-alignment: center; wrap: word-wrap; }
+    Text { text: body; color: Theme.text-dim; font-size: 14px; horizontal-alignment: center; wrap: word-wrap; }
+    if action != "" : HorizontalLayout {
+        alignment: center;
+        padding-top: 6px;
+        Button { text: action; primary: false; clicked => { root.acted(); } }
+    }
+}

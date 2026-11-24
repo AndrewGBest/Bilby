@@ -1,9 +1,15 @@
 [package]
 name = "bilby-core"
-description = "Platform detection, asset compatibility and package sources for Bilby"
+description = "What Bilby knows and decides: the device, the sources, which file fits, and installing it"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
 
 [features]
 default = ["net"]
@@ -18,7 +24,7 @@ sha2 = "0.10"
 # Reading the system's own package databases (pacman sync DBs, apt lists). All pure Rust.
 tar = { version = "0.4", default-features = false }
 flate2 = "1"
-ruzstd = "0.8"
+ruzstd = "0.9.1"
 lz4_flex = { version = "0.11", default-features = false, features = ["std", "frame", "safe-decode"] }
 # Drawing a sign-in code for a phone to scan. Pure Rust, no image code.
 qrcode = { version = "0.14", default-features = false }

@@ -87,7 +87,7 @@ fn downloads_of(releases: &[Release]) -> Option<u64> {
     (!counted.is_empty()).then(|| counted.iter().sum())
 }
 
-/// Add a failed source to what the user is told, once per distinct problem: being
+/// Add a failed source to what the person is told, once per distinct problem: being
 /// offline fails every source the same way, and one line says it.
 fn report(errors: &mut Vec<String>, offline: &mut bool, source: SourceKind, error: &Error) {
     let network = matches!(error, Error::Network(_));
@@ -559,7 +559,7 @@ impl Catalog {
         if releases.is_empty() {
             return (None, Some("This project has not published any releases.".to_string()));
         }
-        // Stable first, then pre-releases; or simply newest first when the user opted in.
+        // Stable first, then pre-releases; or simply newest first when the person opted in.
         let passes: &[Option<bool>] = if self.include_prereleases { &[None] } else { &[Some(false), Some(true)] };
         for want in passes {
             for release in releases.iter().filter(|r| want.is_none_or(|w| r.prerelease == w)) {

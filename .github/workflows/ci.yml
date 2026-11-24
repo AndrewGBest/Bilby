@@ -1,8 +1,12 @@
 name: CI
 
+# Every push to main and every pull request. Actions are pinned to a commit, with the
+# version it stands for beside it; Dependabot keeps both up to date.
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -14,22 +18,30 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
+  # What the interface and the sign-in window need to build on Linux.
+  LINUX_PACKAGES: >-
+    libfontconfig1-dev libxkbcommon-dev libxkbcommon-x11-0 xvfb
+    libwebkit2gtk-4.1-dev libgtk-3-dev libasound2-dev
 
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@v2
-      - run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev libxkbcommon-dev libxkbcommon-x11-0 xvfb libwebkit2gtk-4.1-dev libgtk-3-dev libasound2-dev
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - run: sudo apt-get update && sudo apt-get install -y $LINUX_PACKAGES
       - run: cargo fmt --all -- --check
       # Every text in the interface has been gathered for translating, and what Slint
       # reads matches the translations.
       - run: python3 scripts/i18n.py --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
+      # The documentation builds, and its links lead somewhere.
+      - run: cargo doc --workspace --no-deps --document-private-items
+        env:
+          RUSTDOCFLAGS: -D warnings
 
   test:
     strategy:
@@ -38,24 +50,71 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev libxkbcommon-dev libxkbcommon-x11-0 xvfb libwebkit2gtk-4.1-dev libgtk-3-dev libasound2-dev
+        run: sudo apt-get update && sudo apt-get install -y $LINUX_PACKAGES
       # Unit tests, the local-HTTP network tests, the naming corpus, the CLI tests and
       # the headless UI tests. None of them need the internet. On Linux, tests/binary.rs
       # also runs the real application under xvfb.
       - run: cargo test --workspace
 
+  # The oldest Rust that Cargo.toml promises (`rust-version`) still builds everything.
+  oldest-rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Read rust-version from Cargo.toml
+        id: msrv
+        run: echo "version=$(sed -n 's/^rust-version = "\(.*\)"/\1/p' Cargo.toml)" >> "$GITHUB_OUTPUT"
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ steps.msrv.outputs.version }}
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - run: sudo apt-get update && sudo apt-get install -y $LINUX_PACKAGES
+      - run: cargo check --workspace --all-targets --locked
+
   # The core has no UI dependencies; make sure it keeps compiling for the mobile targets.
   mobile-core:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android, aarch64-apple-ios
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       - run: cargo check -p bilby-core --no-default-features --target aarch64-linux-android
       - run: cargo check -p bilby-core --no-default-features --target aarch64-apple-ios
+
+  # The Android app has code no other system compiles (its entry point above all), so
+  # it is built here too, the same way a release builds it but unsigned.
+  android:
+    runs-on: ubuntu-latest
+    env:
+      # The drawing library underneath comes ready-built against this NDK and no older one.
+      NDK: 30.0.16248370
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          # cargo-apk is installed into ~/.cargo/bin, which this keeps between runs.
+          cache-all-crates: true
+      - name: Android NDK
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$NDK" "platforms;android-34" "build-tools;34.0.0" > /dev/null
+          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/$NDK" >> "$GITHUB_ENV"
+      - run: command -v cargo-apk || cargo install cargo-apk --locked
+      - run: cargo apk build --lib
+        working-directory: crates/app
+
+  # Every dependency's licence can be combined with Bilby's, none has a known security
+  # problem, and all come from crates.io. The rules are in deny.toml.
+  dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: EmbarkStudios/cargo-deny-action@17aeb3c839e42274e2b8adf721c8c65edfdc74dd # v2.1.3

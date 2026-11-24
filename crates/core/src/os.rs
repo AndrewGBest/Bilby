@@ -463,7 +463,7 @@ fn parse_pacman(text: &str) -> Vec<Pending> {
     let parse = |line: &str| {
         let fields: Vec<&str> = line.split_whitespace().collect();
         match fields.as_slice() {
-            // Packages the user told pacman to hold back are not coming.
+            // Packages the person told pacman to hold back are not coming.
             [.., "[ignored]"] => None,
             [name, from, "->", to, ..] => Some(Pending {
                 name: name.to_string(),

@@ -7,8 +7,14 @@
 <p align="center">
   <b>An app store that only shows what runs on your device.</b><br>
   Every kind of app: free and paid, open source and not, games included.<br>
-  For Windows, macOS and Linux, on a desktop or a TV. Android is on the way.<br>
+  For Linux, Windows, macOS and Android, on a desktop, a phone or a TV.<br>
   No Bilby account. No server of ours. No tracking.
+</p>
+
+<p align="center">
+  <a href="https://github.com/AndrewGBest/Bilby/releases/latest"><img src="https://img.shields.io/github/v/release/AndrewGBest/Bilby?label=release" alt="Latest release"></a>
+  <a href="https://github.com/AndrewGBest/Bilby/actions/workflows/ci.yml"><img src="https://github.com/AndrewGBest/Bilby/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licence-GPL--3.0--only-blue" alt="Licence: GPL-3.0-only"></a>
 </p>
 
 <p align="center">
@@ -16,7 +22,8 @@
   <a href="#what-you-can-do">What it does</a> ·
   <a href="#where-apps-come-from">Sources</a> ·
   <a href="#how-ready-is-it">Status</a> ·
-  <a href="docs/DEVELOPMENT.md">Build it</a>
+  <a href="docs/DEVELOPMENT.md">Build it</a> ·
+  <a href="CONTRIBUTING.md">Contribute</a>
 </p>
 
 ![Bilby's Discover page on a desktop](docs/screenshots/desktop-discover.png)
@@ -42,7 +49,7 @@ Store) and developers' own release pages (GitHub, GitLab, Codeberg). The
 | On a desktop | On a phone | On a TV |
 |:---:|:---:|:---:|
 | <img src="docs/screenshots/desktop-details.png" alt="An app's page on a desktop"> | <img src="docs/screenshots/mobile-details.png" width="220" alt="An app's page on a phone"> | <img src="docs/screenshots/tv-home.png" alt="The home screen on a TV"> |
-| Mouse and keyboard | Touch (the layout exists; no Android package yet) | Remote only |
+| Mouse and keyboard | Touch | Remote only |
 
 <sub>The screenshots show the built-in demo catalog. The apps in it are made up.</sub>
 
@@ -56,6 +63,7 @@ One file per system, and each runs as it is:
 | **Linux** (x86_64) | `bilby-…-x86_64.AppImage` | Make it executable (`chmod +x`, or tick "executable" in the file's Properties), then open it |
 | **Windows** (x64) | `bilby-…-x86_64-windows.exe` | Open it. Windows will warn about an unknown publisher: choose *More info*, then *Run anyway* |
 | **macOS** (Apple silicon) | `bilby-…-aarch64-macos.dmg` | Open it and drag Bilby to Applications. The first time, right-click the app and choose *Open* |
+| **Android** phone, tablet or TV (64-bit ARM) | `bilby-…-android-arm64.apk` | Open it and allow your browser or file manager to install apps when Android asks |
 
 On Linux, Bilby adds itself to your app menu the first time it runs.
 
@@ -63,8 +71,12 @@ On Linux, Bilby adds itself to your app menu the first time it runs.
 > The files are not signed by a registered developer yet, which is what the Windows and
 > macOS warnings are about.
 
-There is no Android package yet, and no Flatpak
-([why not](docs/DESIGN.md#appearing-among-the-devices-apps)).
+There is no Flatpak ([why not](docs/DESIGN.md#appearing-among-the-devices-apps)).
+The Android package is new and has only been run in an emulator; see
+[how ready it is](#how-ready-is-it).
+
+Each release lists a `SHA256SUMS` file to check a download against, and
+[SECURITY.md](SECURITY.md) says how to check where a file was built.
 
 ## What you can do
 
@@ -122,15 +134,29 @@ There is no Android package yet, and no Flatpak
   that store's app on the right page and lets it take over. Buying, downloading and
   updating happen there, not in Bilby. If Steam itself is missing, Bilby offers to
   install it.
-- Optionally, sign in to Steam to have the games you already own marked Owned. On
-  every device you choose how: scan a QR code with the Steam app on your phone, or
-  sign in on Steam's own page in a small browser window (Longboard on a TV). Bilby
-  never sees your password and keeps only the list of what you own.
+- Optionally, sign in to Steam or GOG to have the games you already own marked
+  Owned. For Steam you choose how on every device: scan a QR code with the Steam app
+  on your phone, or sign in on Steam's own page in a small browser window (Longboard
+  on a TV). Bilby never sees your password and keeps only the list of what you own.
+- On Linux, Windows programs from winget's catalog can be installed too. They run
+  through Proton, the compatibility layer Steam uses, which Bilby sets up.
+- Websites can be added like apps. On a computer they open in a window of their own,
+  in your default browser when it can do that and otherwise in another browser that
+  can; on a Linux TV they open in
+  [Longboard](https://github.com/AndrewGBest/Longboard), a browser made for remotes.
+
+**Say what you think of it**
+
+- Read ratings and reviews on an app's page, and write a review of your own from a
+  desktop or a TV. Where an app can be reviewed in more than one place, you choose
+  which, or all of them. Some stores only take reviews on their own page; Bilby
+  copies your words and opens that page.
 
 **Keep everything up to date**
 
 - The Library lists what you installed through Bilby and tells you when something
-  newer is out.
+  newer is out. On a desktop it also lists the apps that got onto the device some
+  other way, and can remove them.
 - Update one app or all of them, or skip a version you do not want.
 - On Linux, Bilby can update the system itself too, through pacman, apt, dnf and Flatpak.
 
@@ -141,9 +167,9 @@ There is no Android package yet, and no Flatpak
   tabs along the top. An app's page is a column to move down through: its
   buttons, a row of pictures (OK shows one large), the description (OK opens it, with
   any links to follow), a row of reviews, and its details. Today that means a
-  computer connected to a TV; Android TV comes with the Android package.
-- On a Linux TV, websites can be added like apps and open in
-  [Longboard](https://github.com/AndrewGBest/Longboard), a browser made for remotes.
+  computer connected to a TV, or an Android TV.
+- Typing, the system's password and writing a review all work with the remote, on a
+  keyboard drawn on screen.
 
 ## Where apps come from
 
@@ -153,21 +179,21 @@ Each source only appears on devices it applies to. A Windows user never sees the
 |---|---|---|
 | **GitHub Releases** | Windows, macOS, Linux | Any project, open source or not, that publishes files with its releases |
 | **GitLab** | Windows, macOS, Linux | The same, for projects on GitLab.com |
-| **winget** | Windows | The Windows Package Manager's catalog |
+| **winget** | Windows; Linux through Proton | The Windows Package Manager's catalog. On Linux, the programs whose installers Proton can run |
 | **Homebrew** | macOS | Thousands of Mac apps. Bilby downloads each from its publisher and checks it; Homebrew itself is not needed |
 | **Flathub** | Linux with Flatpak | Its whole catalog, with ratings, reviews and install counts |
 | **Your distribution** | Arch (pacman), Debian and Ubuntu (apt), Fedora (dnf) and openSUSE (zypper) families | Every package your system is already set up to install |
 | **The AUR** | Arch-based systems | Community build recipes |
 | **Snap Store** | Linux with snapd | Its whole catalog |
-| **F-Droid** | Android (when the Android app arrives) | Its catalog of free Android apps |
+| **F-Droid** | Android | Its catalog of free Android apps |
 | **Steam** | Windows, macOS, Linux | Games and apps, free and paid, with their prices. Bilby hands over to the Steam app, which sells, installs and runs them |
 | **Mac App Store** | macOS | Its catalog, free and paid, with prices and ratings. Bilby hands over to the App Store app |
 | **Microsoft Store** | Windows | Its catalog of apps, and the PC games the Xbox app sells, with prices and ratings. Bilby hands over to the Store app |
 | **GOG** | Windows, macOS, Linux | Games sold without copy protection, with prices, ratings and reviews; each device is offered the games made for it. Bilby opens the game's page on gog.com, where it is bought and downloaded |
-| **Google Play** | Android (when the Android app arrives) | An app's own page: rating, installs and price, for a pasted link and for about 75 well-known apps found by name. Google forbids programs from using its search, so Bilby does not search Google Play. Bilby hands over to Google Play |
+| **Google Play** | Android | An app's own page: rating, installs and price, for a pasted link and for about 75 well-known apps found by name. Google forbids programs from using its search, so Bilby does not search Google Play. Bilby hands over to Google Play |
 | **Codeberg** | Windows, macOS, Linux | Projects by link and from the home page. Codeberg is turning away searches at the moment |
 | **Your own sources** | Everywhere | A list of apps on your own server or storage, added by its address ([how to publish one](docs/OWN-SOURCES.md)) |
-| **Web apps** | Windows, macOS, Linux | Websites added like apps: about ninety well-known ones recommended, a thousand more found by name, and any address you type. They open in your own browser, or in Longboard on a Linux TV |
+| **Web apps** | Everywhere | Websites added like apps: about ninety well-known ones recommended, a thousand more found by name, and any address you type. They open in your own browser, or in Longboard on a Linux TV |
 
 ## Your privacy
 
@@ -183,6 +209,8 @@ sources, and what leaves your device is what those requests carry:
 | Have ratings switched on | The ratings service GNOME and KDE use | That *someone* downloaded the full list of ratings, once a day |
 | Open an app that has reviews | The same service | Which app's reviews were asked for. No user id is sent |
 | Sign in to Steam | Steam | That this device signed in, as with any browser or app. Optional. With a QR code, Steam gives Bilby a key to the account, which Bilby uses once to read the list and then discards; in a browser, no key reaches Bilby at all. Either way only the list of what you own is kept, on this device, and Sign out removes it |
+| Write a review | The ratings service GNOME and KDE use, for apps it covers | Your review, the name you chose to sign it with, your language and a random number made on this device, which the service needs to tell reviewers apart. For a store that takes reviews only on its own page, Bilby sends nothing: it opens the page |
+| Sign in to GOG | GOG | That this device signed in. Optional. GOG gives Bilby a key, which is used once to read the list of what you own and then discarded |
 | Sign in to GitHub | GitHub | Which account is asking. Optional; it only raises GitHub's hourly limit, and Bilby asks for no access to the account |
 
 Ratings and reviews can be switched off in Settings, which stops both requests.
@@ -202,7 +230,9 @@ is written and tested but not yet tried on a real machine. Plainly:
 | **Windows, macOS** | Downloads are published and the tests pass on both. Nobody has checked the window by eye yet, so expect rough edges |
 | **winget** (Windows) | Written without a Windows machine to try it on. English-language Windows only |
 | **Homebrew** (macOS) | Searching and choosing the right download work against the real catalog. Installing from it has not been tried on a Mac |
-| **Android** (phone, tablet, TV) | Not installable yet. The core compiles for it and the phone and TV layouts exist |
+| **Android** (phone, tablet, TV) | A package is published. It has been run in an Android 14 emulator, not on a real phone or TV. Installing a downloaded app is not done yet: Bilby downloads the file but does not hand it to Android's installer ([details](docs/ANDROID.md)) |
+| **Windows programs on Linux** | One program from winget has been installed and opened through Proton on Arch. Installers that are `.msi` files or archives are not handled yet |
+| **Writing reviews, signing in to GOG** | Written and tested against stand-ins. Nobody has yet sent a real review or completed a GOG sign-in |
 | **iOS** | Could only ever browse, not install ([why](docs/DESIGN.md#ios)) |
 | **System updates** | Finds updates correctly on Debian. Installing them has not been run on a real system. Not available on openSUSE yet |
 | **Arch** | Written from documentation and tested against stand-ins, not on a real system |
@@ -245,6 +275,20 @@ out-of-date packages, but an app is only as trustworthy as whoever published it.
 | [How Bilby compares](docs/COMPARISON.md) | Next to Komi Store, Obtainium, GNOME Software and others, and what it leaves out on purpose |
 | [Design notes](docs/DESIGN.md) | How it decides what runs on your device, and every trade-off made along the way |
 | [Building and testing](docs/DEVELOPMENT.md) | Run it from source, try it as another device, and work on it |
+| [Contributing](CONTRIBUTING.md) | How to report a problem, fix one, or check a translation |
+| [What changed](CHANGELOG.md) | Each release, newest first |
+| [Security](SECURITY.md) | How to report a problem privately, and how the release files can be checked |
+| [Bilby on Android](docs/ANDROID.md) | What works there and how the package is built |
+| [Your own sources](docs/OWN-SOURCES.md) | Publish a list of apps on your own server |
+
+## Taking part
+
+Bilby is early and has one maintainer, and the most useful thing anyone can do is
+try it on a real device and say what happened. Questions and ideas go in
+[Discussions](https://github.com/AndrewGBest/Bilby/discussions); problems in
+[Issues](https://github.com/AndrewGBest/Bilby/issues/new/choose). To change the code,
+start with [CONTRIBUTING.md](CONTRIBUTING.md). Everyone taking part is expected to
+follow the [code of conduct](CODE_OF_CONDUCT.md).
 
 ## Licence
 

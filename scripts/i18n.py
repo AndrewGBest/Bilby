@@ -39,6 +39,8 @@ PUT_TOGETHER = [
     # The on-screen keyboard's wide keys.
     "space", "delete", "search", "shift", "enter", "done",
 ]
+# Parts of the app whose text nobody is shown: they talk to the system, not the person.
+NOT_SHOWN = {"main.rs", "android.rs", "askpass.rs", "instance.rs", "osk.rs", "sound.rs", "i18n.rs"}
 LITERAL = re.compile(r'"((?:[^"\\]|\\.)*)"')
 
 
@@ -84,16 +86,17 @@ def rust_strings():
     """Text the Rust code puts on screen: literals of two words or more outside tests."""
     found = []
     paths = sorted(glob.glob(os.path.join(ROOT, "crates/core/src/**/*.rs"), recursive=True))
-    paths += [os.path.join(ROOT, "crates/app/src", name) for name in ("lib.rs", "activation.rs")]
+    app = os.path.join(ROOT, "crates/app/src")
+    paths += sorted(os.path.join(app, name) for name in os.listdir(app) if name.endswith(".rs") and name not in NOT_SHOWN)
     for path in paths:
-        if path.endswith(("demo.rs", "i18n.rs")):
+        if path.endswith(("demo.rs", "i18n.rs", "tests.rs")):
             continue
         source = open(path, encoding="utf-8").read()
         tests = source.find("#[cfg(test)]")
         source = source[:tests] if tests > 0 else source
         # A literal may run over several lines with a trailing backslash.
         source = re.sub(r"\\\n\s*", "", source)
-        own = path.endswith(("lib.rs", "os.rs", "categories.rs"))
+        own = os.path.dirname(path) == app or path.endswith(("lib.rs", "os.rs", "categories.rs"))
         for line in source.split("\n"):
             stripped = line.strip()
             if stripped.startswith(("//", "#[", "eprintln!", "println!", "debug_assert", "assert")) or ".expect(" in line:

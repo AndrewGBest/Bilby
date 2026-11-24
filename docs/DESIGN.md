@@ -68,7 +68,7 @@ that idea and takes it further in four directions:
             ┌────────────────────── crates/app (Slint) ───────────────────────┐
             │  desktop.slint        mobile.slint          tv.slint            │
             │        └──────────── global Store (types.slint) ─────────┘      │
-            │              lib.rs: worker threads <-> Store                   │
+            │        App (src/*.rs): worker threads <-> Store                 │
             └───────────────────────────────┬──────────────────────────────────┘
    crates/cli (bilby-cli) ──────────────────┤        crates/signin (sign-in window)
                                             ▼
@@ -502,7 +502,7 @@ program for Windows and a disk image for Apple-silicon Macs, each with the
 command-line tool alongside, named so that Bilby's own classifier picks the right one
 (`the_stores_own_release_files_resolve_on_every_desktop`).
 
-## 6. Installing (`install.rs`)
+## 6. Installing (`install/`)
 
 `plan()` is pure and can be shown before anything is downloaded; `execute()` carries
 it out. Bilby never runs as administrator itself.
@@ -782,21 +782,23 @@ keep their English form.
 
 ## 8. Testing
 
-336 tests, none needing the internet. CI runs them on Linux, Windows and macOS on
-every push, and checks that the core compiles for Android and iOS.
+More than 400 tests, none needing the internet. CI runs them on Linux, Windows and
+macOS on every push, builds the Android app, and checks that the core compiles for
+iOS.
 
 | Suite | Tests | What it exercises |
 |---|---|---|
-| `bilby-core` unit tests | 170 | Detection, classification, compatibility, versions, state, install plans and their execution, every source's parsing, ranking, merging, the home page |
+| `bilby-core` unit tests | 221 | Detection, classification, compatibility, versions, state, install plans and their execution, every source's parsing, ranking, merging, the home page |
 | `core/tests/corpus.rs` | 4 | 169 file names; the cross-system safety property; 20,000 generated names |
-| `core/tests/http_sources.rs` | 25 | The real HTTP client and the sources against a local server: headers, token scoping, rate limits, progress, cancelling, the cache, malformed answers |
+| `core/tests/http_sources.rs` | 28 | The real HTTP client and the sources against a local server: headers, token scoping, rate limits, progress, cancelling, the cache, malformed answers |
 | `cli/tests/cli.rs` | 9 | The `bilby-cli` program end to end, including install, library, updates and `doctor` |
-| `app/tests/ui.rs` | 102 | The real window on Slint's headless backend: presses by accessible label, key presses, all three interfaces |
+| `app/tests/ui/` | 121 | The real window on Slint's headless backend: presses by accessible label, key presses, all three interfaces |
 | `app/tests/offline.rs` | 7 | The same window with a network that goes offline or runs out of allowance on demand, then recovers |
 | `app/tests/pictures.rs` | 1 | App pictures: fetched, decoded, shown, cached, harmless when missing |
 | `app/tests/binary.rs` | 7 | The finished program (threads, event loop, renderer) under a virtual display |
 | `app/tests/contrast.rs` | 1 | WCAG contrast of every text and background pairing, in both themes |
-| App and sign-in unit tests | 10 | Option parsing, release notes, formatting, the sign-in window's rules |
+| `app/tests/languages.rs` | 1 | Every language says everything, and the interface follows the one chosen |
+| App and sign-in unit tests | 18 | Option parsing, release notes, formatting, the sign-in window's rules |
 
 What the tests guarantee, beyond behaviour:
 
@@ -819,7 +821,7 @@ current list of what has been tried on which system.
 | Linux | Released as an AppImage; in use on a Linux TV with a remote | A package in the AUR |
 | Windows | Released as a single program; the full test suite passes there on every push | Signing by a registered developer |
 | macOS | Released as a disk image for Apple silicon; the full test suite passes there on every push | Signing and notarisation |
-| Android phone, tablet and TV | The core compiles for Android on every push; the phone and TV layouts are built and tested | The Android package and the hand-over to Android's installer |
+| Android phone, tablet and TV | Released as one package for 64-bit ARM; run in an emulator ([details](ANDROID.md)) | The hand-over to Android's installer, and trying it on real devices |
 | iOS | The core compiles for iOS on every push | See below |
 
 ### iOS
@@ -877,8 +879,8 @@ no Slint dependency and could be licensed separately if that were ever wanted.
 
 ## 12. Next steps, in order of value
 
-1. The Android package: the build, the hand-over to Android's installer, then the
-   Android TV launcher entry.
+1. On Android: the hand-over to Android's installer, and trying the package on real
+   phones and TVs.
 2. Signed releases for Windows and macOS.
 3. A package of Bilby in the AUR.
 4. Regenerate the bundled starter list at build time, with file names, so Discover
@@ -887,11 +889,10 @@ no Slint dependency and could be licensed separately if that were ever wanted.
    and ask Windows directly which processor it runs on (`IsWow64Process2`), for an
    x64 build of Bilby running on Windows on Arm.
 6. System updates on openSUSE, and moving to a distribution's next release.
-7. Writing reviews, top charts, and Open for packages the system installed.
-8. More sources: self-hosted Forgejo and Gitea, Nix; and the stores of other
-   systems for running their software here (Windows programs through Wine and
-   Proton), which the Microsoft Store's catalog, searchable from any device, is a
-   start on.
+7. Top charts, and Open for packages the system installed.
+8. More sources: self-hosted Forgejo and Gitea, Nix; more of what winget lists for
+   Linux (`.msi` installers and archives); and Android apps on Linux through a
+   translation layer.
 9. Languages: a native speaker's review of each, mirrored layout for Arabic, more
    languages.
 

@@ -428,7 +428,7 @@ impl Source for Flathub {
         let latest = app.releases.first();
         let published = latest
             .and_then(|r| number(&r.timestamp))
-            .map(|secs| crate::source::aur::date_from_unix(secs as i64))
+            .map(|secs| crate::model::date_from_unix(secs as i64))
             .unwrap_or_default();
         // Many releases say nothing about what changed. Then there is no "What's new":
         // repeating the app's description under that heading would be untrue.

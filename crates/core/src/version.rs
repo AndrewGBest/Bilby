@@ -11,7 +11,7 @@ use std::cmp::Ordering;
 struct Parsed {
     numbers: Vec<u64>,
     prerelease: bool,
-    /// Numbers after the core version: `rc.2` -> [2], an Arch `-3` package release -> [3].
+    /// Numbers after the core version: `rc.2` -> `[2]`, an Arch `-3` package release -> `[3]`.
     suffix: Vec<u64>,
 }
 

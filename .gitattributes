@@ -1,0 +1,10 @@
+* text=auto eol=lf
+
+*.png binary
+*.gz binary
+
+# Written by tools, not by hand: left out of language statistics and folded in diffs.
+Cargo.lock linguist-generated
+crates/app/i18n/po/** linguist-generated
+crates/core/tests/fixtures/** linguist-vendored
+crates/core/data/*.txt linguist-vendored

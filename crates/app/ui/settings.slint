@@ -1,0 +1,1036 @@
+// The Settings page, shared by the desktop and phone layouts.
+
+import { Theme } from "theme.slint";
+import { VersionChoice, Store } from "types.slint";
+import { ChoiceChip, Button, Busy, Toggle } from "widgets.slint";
+
+// A chip that can be pressed: category filters, recent searches.
+// One app out of several for the same service, chosen from a list that drops down.
+// Closed, it says which service and which app; open, each app has a line saying what
+// kind of thing it is and whether the service's owner made it.
+// One app in a service's family: its name, what kind of version it is, and whose.
+component FamilyRow inherits Rectangle {
+    in property <VersionChoice> choice;
+    callback clicked;
+    height: 56px;
+    border-radius: 10px;
+    background: ta.has-hover || fs.has-focus ? Theme.surface-2 : Theme.surface;
+    border-width: 1px;
+    border-color: fs.has-focus ? Theme.focus : Theme.stroke;
+    accessible-role: button;
+    accessible-label: choice.name + (choice.official ? "" : @tr(", unofficial"));
+    fs := FocusScope {
+        focus-on-click: false;
+        key-pressed(event) => {
+            if (event.text == Key.Return || event.text == " ") {
+                root.clicked();
+                return accept;
+            }
+            reject
+        }
+    }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 14px;
+        spacing: 12px;
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            spacing: 2px;
+            Text { text: choice.name; color: Theme.text; font-size: 15px; font-weight: 600; overflow: elide; }
+            Text { text: choice.note; color: Theme.text-dim; font-size: 12px; overflow: elide; }
+        }
+        Text {
+            text: choice.official ? @tr("Official") : @tr("Unofficial");
+            color: choice.official ? Theme.accent : Theme.text-dim;
+            font-size: 12px;
+            vertical-alignment: center;
+        }
+    }
+}
+
+// The other ways to use the service an app belongs to, each its own line.
+export component FamilyPanel inherits VerticalLayout {
+    in property <string> service;
+    in property <[VersionChoice]> others;
+    callback chosen(string);
+    spacing: 8px;
+    Text {
+        text: @tr("Other ways to use {}", service);
+        color: Theme.text-dim;
+        font-size: 13px;
+        font-weight: 600;
+    }
+    for other in others : FamilyRow {
+        choice: other;
+        clicked => { root.chosen(other.id); }
+    }
+}
+
+component SettingsCard inherits Rectangle {
+    in property <string> title;
+    border-radius: 12px;
+    background: Theme.surface;
+    border-width: 1px;
+    border-color: Theme.stroke;
+    VerticalLayout {
+        padding: 16px;
+        spacing: 12px;
+        Text { text: root.title; color: Theme.text; font-size: 15px; font-weight: 700; }
+        @children
+    }
+}
+
+// Settings, including what the store detected about this device.
+export component SettingsBody inherits Rectangle {
+    in property <bool> compact;
+    property <bool> token-saved: false;
+    Flickable {
+        VerticalLayout {
+            padding: compact ? 16px : 32px;
+            padding-top: compact ? 8px : 14px;
+            spacing: 14px;
+            alignment: start;
+
+            // What the settings are about, a few at a time: the page was one long list.
+            // In rows that fit the window: three to a row on a phone.
+            VerticalLayout {
+                spacing: 8px;
+                property <[string]> names: [@tr("General"), @tr("Stores"), @tr("Accounts"), @tr("Windows apps"), @tr("Family"), @tr("Updates"), @tr("Storage and about")];
+                property <int> per-row: compact ? 3 : 7;
+                for r in Math.ceil(self.names.length / self.per-row) : HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+                    for i in per-row : ChoiceChip {
+                        property <int> at: r * per-row + i;
+                        // The Windows section only where Windows apps can run.
+                        visible: self.at < names.length && (self.at != 3 || Store.windows-possible);
+                        width: self.visible ? self.preferred-width : 0;
+                        text: names[self.at];
+                        selected: Store.settings-section == self.at;
+                        clicked => { Store.settings-section = self.at; }
+                    }
+                }
+            }
+
+            if Store.settings-section == 3 && Store.windows-possible : SettingsCard {
+                title: @tr("Windows apps");
+                HorizontalLayout {
+                    spacing: 16px;
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 2px;
+                        Text { text: @tr("Offer Windows apps"); color: Theme.text; font-size: 14px; }
+                        Text {
+                            text: @tr("Bilby sets Windows programs up to run here through Proton, each in a folder of its own. Most programs work, not all. The first one needs about 700 MB of downloads.");
+                            color: Theme.text-dim;
+                            font-size: 12px;
+                            wrap: word-wrap;
+                        }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle { label: @tr("Offer Windows apps"); checked: Store.windows-apps; toggled(on) => { Store.set-windows-apps(on); } }
+                    }
+                }
+            }
+
+            if Store.settings-section == 3 && Store.windows-possible : SettingsCard {
+                title: @tr("How Windows apps run");
+                Text { text: @tr("These apply to every Windows app, unless an app below says otherwise."); color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
+                VerticalLayout {
+                    spacing: 6px;
+                    Text { text: @tr("Proton version"); color: Theme.text; font-size: 14px; }
+                    HorizontalLayout {
+                        spacing: 8px;
+                        alignment: start;
+                        ChoiceChip { text: @tr("Standard"); selected: Store.windows-proton == 0; clicked => { Store.set-windows-proton(0); } }
+                        ChoiceChip { text: @tr("GE-Proton"); selected: Store.windows-proton == 1; clicked => { Store.set-windows-proton(1); } }
+                    }
+                    Text { text: @tr("Standard follows Valve's own Proton and is the steady choice. GE-Proton is a community build with newer fixes, which some games need. Either is fetched the first time it is used."); color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
+                }
+                HorizontalLayout {
+                    spacing: 16px;
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 2px;
+                        Text { text: @tr("Show performance figures"); color: Theme.text; font-size: 14px; }
+                        Text {
+                            text: Store.has-mangohud ? @tr("Frames a second and temperatures, drawn over the app by MangoHud.") : @tr("Needs MangoHud, which is not on this device. Install it and this starts working.");
+                            color: Theme.text-dim;
+                            font-size: 12px;
+                            wrap: word-wrap;
+                        }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle { label: @tr("Show performance figures"); checked: Store.windows-overlay; toggled(on) => { Store.set-windows-overlay(on); } }
+                    }
+                }
+                HorizontalLayout {
+                    spacing: 16px;
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 2px;
+                        Text { text: @tr("Use GameMode"); color: Theme.text; font-size: 14px; }
+                        Text {
+                            text: Store.has-gamemode ? @tr("Asks the system for its full speed while a Windows app runs.") : @tr("Needs GameMode, which is not on this device. Install it and this starts working.");
+                            color: Theme.text-dim;
+                            font-size: 12px;
+                            wrap: word-wrap;
+                        }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle { label: @tr("Use GameMode"); checked: Store.windows-gamemode; toggled(on) => { Store.set-windows-gamemode(on); } }
+                    }
+                }
+            }
+
+            if Store.settings-section == 3 && Store.windows-possible : SettingsCard {
+                title: @tr("Your Windows apps");
+                if Store.windows-installed.length == 0 : Text {
+                    text: @tr("Windows apps you install show up here, each with its own choices.");
+                    color: Theme.text-dim;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                }
+                for app in Store.windows-installed : VerticalLayout {
+                    spacing: 6px;
+                    Text { text: app.name; color: Theme.text; font-size: 14px; font-weight: 700; overflow: elide; }
+                    HorizontalLayout {
+                        spacing: 8px;
+                        alignment: start;
+                        Text { text: @tr("Proton version"); color: Theme.text-dim; font-size: 12px; vertical-alignment: center; width: 150px; }
+                        ChoiceChip { text: @tr("Same as the others"); selected: app.proton == 0; clicked => { Store.set-windows-app(app.id, 0, app.overlay); } }
+                        ChoiceChip { text: @tr("Standard"); selected: app.proton == 1; clicked => { Store.set-windows-app(app.id, 1, app.overlay); } }
+                        ChoiceChip { text: @tr("GE-Proton"); selected: app.proton == 2; clicked => { Store.set-windows-app(app.id, 2, app.overlay); } }
+                    }
+                    HorizontalLayout {
+                        spacing: 8px;
+                        alignment: start;
+                        Text { text: @tr("Performance figures"); color: Theme.text-dim; font-size: 12px; vertical-alignment: center; width: 150px; }
+                        ChoiceChip { text: @tr("Same as the others"); selected: app.overlay == 0; clicked => { Store.set-windows-app(app.id, app.proton, 0); } }
+                        ChoiceChip { text: @tr("On"); selected: app.overlay == 1; clicked => { Store.set-windows-app(app.id, app.proton, 1); } }
+                        ChoiceChip { text: @tr("Off"); selected: app.overlay == 2; clicked => { Store.set-windows-app(app.id, app.proton, 2); } }
+                    }
+                    HorizontalLayout {
+                        spacing: 8px;
+                        alignment: start;
+                        Button { text: @tr("Windows settings"); clicked => { Store.open-windows-tool(app.id); } }
+                        Button { text: @tr("Open its folder"); clicked => { Store.open-windows-folder(app.id); } }
+                    }
+                }
+            }
+
+            if Store.settings-section == 0 : SettingsCard {
+                title: @tr("This device  ·  {}", Store.platform-title);
+                Text {
+                    text: @tr("The store only lists apps with a file that can be installed here. This is what it detected.");
+                    color: Theme.text-dim;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                }
+                for fact in Store.facts : HorizontalLayout {
+                    spacing: 12px;
+                    Text { width: compact ? 110px : 170px; text: fact.name; color: Theme.text-dim; font-size: 13px; wrap: word-wrap; }
+                    Text { horizontal-stretch: 1; text: fact.value; color: Theme.text; font-size: 13px; wrap: word-wrap; }
+                }
+                HorizontalLayout {
+                    alignment: start;
+                    Button { text: @tr("System details and updates"); primary: false; clicked => { Store.system-from = 3; Store.page = 4; } }
+                }
+            }
+
+            if Store.settings-section == 0 && (Store.can-register) : SettingsCard {
+                title: @tr("App menu");
+                HorizontalLayout {
+                    spacing: 12px;
+                    Text {
+                        horizontal-stretch: 1;
+                        text: @tr("Bilby adds itself to this device's list of apps the first time it runs, so it can be started like any other app. If you move its file, start it once from the new place.");
+                        color: Theme.text-dim;
+                        font-size: 13px;
+                        wrap: word-wrap;
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle {
+                            label: @tr("Show Bilby in the app menu");
+                            checked: Store.in-menu;
+                            toggled(on) => { Store.set-in-menu(on); }
+                        }
+                    }
+                }
+            }
+
+            if Store.settings-section == 1 : SettingsCard {
+                title: @tr("Where apps come from");
+                Text {
+                    text: @tr("Switch off any place you do not want apps from. It is then left out of searches and the home page; an app from it can still be opened by its link.");
+                    color: Theme.text-dim;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                }
+                for source in Store.sources : HorizontalLayout {
+                    spacing: 12px;
+                    Text { horizontal-stretch: 1; text: source.label; color: Theme.text; font-size: 14px; vertical-alignment: center; overflow: elide; }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle {
+                            label: @tr("Show apps from {}", source.label);
+                            checked: source.on;
+                            toggled(on) => { Store.set-source(source.id, on); }
+                        }
+                    }
+                }
+            }
+
+            if Store.settings-section == 1 : SettingsCard {
+                title: @tr("Your own sources");
+                Text {
+                    text: @tr("Apps can also come from a list on your own server or storage: a small file saying what the apps are and where their files live. Add its address and its apps are searched, shown on the home page and installed like any others. Nobody but its owner vouches for what is on such a list, so add only ones you trust.");
+                    color: Theme.text-dim;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                }
+                for own in Store.own-sources : HorizontalLayout {
+                    spacing: 12px;
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        alignment: center;
+                        spacing: 2px;
+                        Text { text: own.label; color: Theme.text; font-size: 14px; overflow: elide; }
+                        Text { text: own.id; color: Theme.text-dim; font-size: 12px; overflow: elide; }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Button { text: @tr("Remove"); primary: false; accessible-label: @tr("Remove the source {}", own.label); clicked => { Store.remove-own-source(own.id); } }
+                    }
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        height: 36px;
+                        border-radius: 8px;
+                        background: Theme.bg;
+                        border-width: 1px;
+                        border-color: own-input.has-focus ? Theme.focus : Theme.stroke;
+                        own-input := TextInput {
+                            x: 10px;
+                            width: parent.width - 20px;
+                            height: 100%;
+                            color: Theme.text;
+                            font-size: 13px;
+                            single-line: true;
+                            vertical-alignment: center;
+                            accessible-label: @tr("Address of a list of apps");
+                            accepted => {
+                                Store.add-own-source(self.text);
+                                self.text = "";
+                            }
+                        }
+                        if own-input.text == "" : Text { x: 10px; text: "https://your-server/apps.json"; color: Theme.text-dim; font-size: 13px; vertical-alignment: center; }
+                    }
+                    Button {
+                        text: @tr("Add");
+                        accessible-label: @tr("Add this source");
+                        clicked => {
+                            Store.add-own-source(own-input.text);
+                            own-input.text = "";
+                        }
+                    }
+                }
+            }
+
+            if Store.settings-section == 1 : SettingsCard {
+                title: @tr("Recommendations");
+                HorizontalLayout {
+                    spacing: 12px;
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 2px;
+                        Text { text: @tr("Recommend the apps everyone knows"); color: Theme.text; font-size: 14px; }
+                        Text {
+                            text: @tr("Bilby keeps a short list, chosen by people, of the apps and websites nearly everyone looks for: a browser, a video player, the big names. On, the home page starts with them in the version for this device, and they are placed a little higher in a search. Off, you get only what the sources' own figures say.");
+                            color: Theme.text-dim;
+                            font-size: 12px;
+                            wrap: word-wrap;
+                        }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle { label: @tr("Recommend the apps everyone knows"); checked: Store.show-essentials; toggled(on) => { Store.set-essentials(on); } }
+                    }
+                }
+            }
+
+            if Store.settings-section == 1 : SettingsCard {
+                title: @tr("Other devices");
+                HorizontalLayout {
+                    spacing: 12px;
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 2px;
+                        Text { text: @tr("Also show apps that do not run on this device"); color: Theme.text; font-size: 14px; }
+                        Text {
+                            text: @tr("Off, a search finds only what can be installed here. On, it also finds apps made for other devices and systems: marked “Not for this device”, listed last, and not installable here. The home page keeps to what runs here.");
+                            color: Theme.text-dim;
+                            font-size: 12px;
+                            wrap: word-wrap;
+                        }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle { label: @tr("Also show apps that do not run on this device"); checked: Store.show-everything; toggled(on) => { Store.set-show-everything(on); } }
+                    }
+                }
+            }
+
+            if Store.settings-section == 4 : SettingsCard {
+                title: @tr("Family and adult content");
+                Text {
+                    text: @tr("Some games, apps and websites are meant for adults. They are kept apart: in a search they have a section of their own, each one covered until you choose it, and you are asked to confirm you are an adult before one opens.");
+                    color: Theme.text-dim;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                }
+                HorizontalLayout {
+                    spacing: 12px;
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 2px;
+                        Text { text: @tr("Family mode"); color: Theme.text; font-size: 14px; }
+                        Text { text: @tr("Nothing for adults is shown anywhere, not even covered, and none of it can be opened.") + " " + (Store.has-pin ? @tr("Switching it off needs the PIN.") : @tr("Set a PIN below so that it cannot simply be switched off.")); color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle { label: @tr("Family mode"); checked: Store.family-mode; toggled(on) => { Store.set-family-mode(on); } }
+                    }
+                }
+                if !Store.family-mode : HorizontalLayout {
+                    spacing: 12px;
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 2px;
+                        Text { text: @tr("Adult content on the home page"); color: Theme.text; font-size: 14px; }
+                        Text { text: @tr("Off, adult things are only ever found by searching. On, they may also appear on the home page, covered like everywhere else."); color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle { label: @tr("Adult content on the home page"); checked: Store.adult-on-home; toggled(on) => { Store.set-adult-on-home(on); } }
+                    }
+                }
+                if !Store.family-mode : HorizontalLayout {
+                    spacing: 12px;
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 2px;
+                        Text { text: @tr("Show adult content uncovered"); color: Theme.text; font-size: 14px; }
+                        Text { text: @tr("For those who want no cover at all: adult things are shown as they are, among everything else, and open without a question."); color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle { label: @tr("Show adult content uncovered"); checked: Store.adult-uncovered; toggled(on) => { Store.set-adult-uncovered(on); } }
+                    }
+                }
+                HorizontalLayout {
+                    spacing: 12px;
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 2px;
+                        Text { text: Store.has-pin ? @tr("A PIN is set") : @tr("PIN"); color: Theme.text; font-size: 14px; }
+                        Text { text: @tr("Four digits. With a PIN set, it is asked for to change anything in this card and to open adult content, in place of the question about being an adult."); color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Button { text: Store.has-pin ? @tr("Change PIN") : @tr("Set a PIN"); primary: !Store.has-pin; clicked => { Store.set-pin(); } }
+                            if Store.has-pin : Button { text: @tr("Remove PIN"); primary: false; clicked => { Store.remove-pin(); } }
+                        }
+                    }
+                }
+                if Store.has-pin : HorizontalLayout {
+                    spacing: 12px;
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 2px;
+                        Text { text: @tr("Ask for the PIN to install or remove apps"); color: Theme.text; font-size: 14px; }
+                        Text { text: @tr("So that nothing is added to or taken off this device without it."); color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle { label: @tr("Ask for the PIN to install or remove apps"); checked: Store.pin-for-installs; toggled(on) => { Store.set-pin-for-installs(on); } }
+                    }
+                }
+                Text {
+                    text: @tr("Bilby goes by what its sources say: Steam's adult-only marks, an app's own age rating, and its list of well-known adult sites. A site it has never heard of is not recognised, and most sources say nothing about age at all.");
+                    color: Theme.text-dim;
+                    font-size: 12px;
+                    wrap: word-wrap;
+                }
+            }
+
+            if Store.settings-section == 0 : SettingsCard {
+                title: @tr("Layout");
+                Text {
+                    text: @tr("The TV layout has large text and is driven with the arrow keys of a remote or keyboard. To come back from it, open This TV at the top of its screen.");
+                    color: Theme.text-dim;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+                    ChoiceChip { text: @tr("Automatic"); selected: Store.interface-mode == 0; clicked => { Store.set-interface(0); } }
+                    ChoiceChip { text: @tr("Desktop"); selected: Store.interface-mode == 1; clicked => { Store.set-interface(1); } }
+                    ChoiceChip { text: @tr("TV"); selected: Store.interface-mode == 2; clicked => { Store.set-interface(2); } }
+                }
+            }
+
+            if Store.settings-section == 0 : SettingsCard {
+                // In English as well, always: findable by someone who cannot read
+                // the language Bilby is in.
+                title: @tr("Language") == "Language" ? "Language" : @tr("Language") + "  ·  Language";
+                property <int> per-row: compact ? 3 : 5;
+                for r in Math.ceil(Store.languages.length / self.per-row) : HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+                    for choice[i] in Store.languages : ChoiceChip {
+                        visible: Math.floor(i / per-row) == r;
+                        width: self.visible ? self.preferred-width : 0;
+                        text: choice.label;
+                        selected: choice.on;
+                        clicked => { Store.set-language(choice.id); }
+                    }
+                }
+            }
+
+            if Store.settings-section == 0 : SettingsCard {
+                title: @tr("Appearance");
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+                    ChoiceChip { text: @tr("Match system"); selected: Store.theme-mode == 0; clicked => { Store.set-theme(0); } }
+                    ChoiceChip { text: @tr("Light"); selected: Store.theme-mode == 1; clicked => { Store.set-theme(1); } }
+                    ChoiceChip { text: @tr("Dark"); selected: Store.theme-mode == 2; clicked => { Store.set-theme(2); } }
+                }
+                HorizontalLayout {
+                    spacing: 12px;
+                    Text {
+                        horizontal-stretch: 1;
+                        text: @tr("Sounds: a quiet tick or pop as you move about and press things.");
+                        color: Theme.text-dim;
+                        font-size: 13px;
+                        wrap: word-wrap;
+                        vertical-alignment: center;
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle {
+                            label: @tr("Sounds");
+                            checked: Store.sounds;
+                            toggled(on) => { Store.set-sounds(on); }
+                        }
+                    }
+                }
+                HorizontalLayout {
+                    spacing: 12px;
+                    Text {
+                        horizontal-stretch: 1;
+                        text: @tr("Reduce motion: pages and buttons change at once instead of moving.");
+                        color: Theme.text-dim;
+                        font-size: 13px;
+                        wrap: word-wrap;
+                        vertical-alignment: center;
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle {
+                            label: @tr("Reduce motion");
+                            checked: Theme.reduce-motion;
+                            toggled(on) => { Store.set-reduce-motion(on); }
+                        }
+                    }
+                }
+            }
+
+            if Store.settings-section == 5 : SettingsCard {
+                title: @tr("Releases");
+                HorizontalLayout {
+                    spacing: 12px;
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 3px;
+                        Text { text: @tr("Include pre-releases"); color: Theme.text; font-size: 14px; }
+                        Text {
+                            text: @tr("Offer betas and release candidates as soon as they are published. They may be unstable.");
+                            color: Theme.text-dim;
+                            font-size: 12px;
+                            wrap: word-wrap;
+                        }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle {
+                            label: @tr("Include pre-releases");
+                            checked: Store.include-prereleases;
+                            toggled(on) => { Store.set-prereleases(on); }
+                        }
+                    }
+                }
+                HorizontalLayout {
+                    spacing: 12px;
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 3px;
+                        Text { text: @tr("Show ratings and reviews"); color: Theme.text; font-size: 14px; }
+                        Text {
+                            text: @tr("They come from the service the GNOME and KDE app stores use (odrs.gnome.org). Star ratings arrive as one file a day for every app. Written reviews are asked for when you open the page of an app that has them, which tells that service which app it was. Nothing that identifies you is sent.");
+                            color: Theme.text-dim;
+                            font-size: 12px;
+                            wrap: word-wrap;
+                        }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle {
+                            label: @tr("Show ratings and reviews");
+                            checked: Store.show-ratings;
+                            toggled(on) => { Store.set-ratings(on); }
+                        }
+                    }
+                }
+            }
+
+            if Store.settings-section == 5 : SettingsCard {
+                title: @tr("Updates");
+                HorizontalLayout {
+                    spacing: 12px;
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 3px;
+                        Text { text: @tr("Check for updates when the store opens"); color: Theme.text; font-size: 14px; wrap: word-wrap; }
+                        Text {
+                            text: @tr("Uses one request per app in your library. Turn it off if GitHub's allowance is tight; you can still check from the Library page.");
+                            color: Theme.text-dim;
+                            font-size: 12px;
+                            wrap: word-wrap;
+                        }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle {
+                            label: @tr("Check for updates when the store opens");
+                            checked: Store.check-updates-on-start;
+                            toggled(on) => { Store.set-check-on-start(on); }
+                        }
+                    }
+                }
+                HorizontalLayout {
+                    spacing: 12px;
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 3px;
+                        Text { text: @tr("Update apps automatically"); color: Theme.text; font-size: 14px; wrap: word-wrap; }
+                        Text {
+                            text: @tr("Bilby installs updates to your apps as it finds them, when it opens and every few hours while it stays open. Updates that need your password or open an installer still wait for you in the Library.");
+                            color: Theme.text-dim;
+                            font-size: 12px;
+                            wrap: word-wrap;
+                        }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle {
+                            label: @tr("Update apps automatically");
+                            checked: Store.auto-update;
+                            toggled(on) => { Store.set-auto-update(on); }
+                        }
+                    }
+                }
+                if Store.tray-available : HorizontalLayout {
+                    spacing: 12px;
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 3px;
+                        Text { text: @tr("Keep Bilby in the system tray when its window is closed"); color: Theme.text; font-size: 14px; wrap: word-wrap; }
+                        Text {
+                            text: @tr("Bilby goes on looking for updates there. Its tray icon opens the window again or quits Bilby.");
+                            color: Theme.text-dim;
+                            font-size: 12px;
+                            wrap: word-wrap;
+                        }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle {
+                            label: @tr("Keep Bilby in the system tray when its window is closed");
+                            checked: Store.close-to-tray;
+                            toggled(on) => { Store.set-close-to-tray(on); }
+                        }
+                    }
+                }
+            }
+
+            if Store.settings-section == 2 && (Store.steam-available) : SettingsCard {
+                title: @tr("Steam");
+                Text {
+                    text: Store.steam-signed-in ? @tr("Signed in. Bilby knows {} in your Steam library and marks them Owned.", Store.steam-summary) : Store.steam-state == 1 ? @tr("Sign in on Steam's page in the window that opened. Close it to stop.") : Store.steam-state == 2 ? @tr("Sign in on Steam's page in Longboard, then choose to share your library.") : Store.steam-state == 3 ? @tr("Scan this with the Steam app on your phone and approve the sign-in there.") : @tr("Sign in to see which Steam games you already own. Bilby keeps only the list of what you own, on this device. Choose how:");
+                    color: Theme.text-dim;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                }
+                if !Store.steam-signed-in && Store.steam-state == 0 : VerticalLayout {
+                    spacing: 10px;
+                    HorizontalLayout {
+                        spacing: 12px;
+                        VerticalLayout {
+                            alignment: center;
+                            Button { text: @tr("Sign in with a QR code"); min-width: 200px; accessible-label: @tr("Sign in to Steam with a QR code"); clicked => { Store.steam-signin-qr(); } }
+                        }
+                        Text { horizontal-stretch: 1; text: @tr("Scan a code with the Steam app on your phone. Nothing to type. Steam gives Bilby a key to your account, which Bilby uses once to read the list and then throws away."); color: Theme.text-dim; font-size: 12px; wrap: word-wrap; vertical-alignment: center; }
+                    }
+                    HorizontalLayout {
+                        spacing: 12px;
+                        VerticalLayout {
+                            alignment: center;
+                            Button { text: @tr("Sign in in a browser"); primary: false; min-width: 200px; accessible-label: @tr("Sign in to Steam in a browser"); clicked => { Store.steam-signin(); } }
+                        }
+                        Text { horizontal-stretch: 1; text: @tr("Steam's own sign-in page opens in a small window. The browser asks Steam for the list, so no key ever reaches Bilby."); color: Theme.text-dim; font-size: 12px; wrap: word-wrap; vertical-alignment: center; }
+                    }
+                }
+                if Store.steam-state == 3 : HorizontalLayout {
+                    alignment: start;
+                    spacing: 16px;
+                    Rectangle {
+                        width: 216px;
+                        height: 216px;
+                        border-radius: 12px;
+                        background: white;
+                        accessible-role: AccessibleRole.image;
+                        accessible-label: @tr("QR code to scan with the Steam app");
+                        if Store.steam-qr.width > 0 : Image {
+                            width: 200px;
+                            height: 200px;
+                            source: Store.steam-qr;
+                            image-rendering: pixelated;
+                        }
+                        if Store.steam-qr.width == 0 : Busy { }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        spacing: 6px;
+                        Text { text: Store.steam-qr-scanned ? @tr("Scanned. Approve it in the Steam app.") : @tr("Waiting for the Steam app…"); color: Theme.text; font-size: 14px; font-weight: 600; }
+                        Text { text: @tr("The code refreshes by itself."); color: Theme.text-dim; font-size: 12px; }
+                    }
+                }
+                HorizontalLayout {
+                    alignment: start;
+                    spacing: 8px;
+                    if Store.steam-state != 0 : Button { text: @tr("Stop waiting"); primary: false; accessible-label: @tr("Stop waiting for Steam"); clicked => { Store.steam-cancel(); } }
+                    if Store.steam-signed-in && Store.steam-state == 0 : Button { text: @tr("Sign out"); primary: false; accessible-label: @tr("Sign out of Steam"); clicked => { Store.steam-signout(); } }
+                }
+            }
+
+            if Store.settings-section == 2 && (Store.gog-available) : SettingsCard {
+                title: @tr("GOG");
+                Text {
+                    text: Store.gog-signed-in ? @tr("Signed in. Bilby knows {} in your GOG library and marks them Owned.", Store.gog-summary) : Store.gog-state == 1 ? @tr("Sign in on GOG's page in the window that opened. Close it to stop.") : @tr("Sign in to see which GOG games you already own. GOG's own sign-in page opens in a small window; Bilby asks GOG once for the list and keeps only that, on this device.");
+                    color: Theme.text-dim;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                }
+                HorizontalLayout {
+                    alignment: start;
+                    spacing: 8px;
+                    if !Store.gog-signed-in && Store.gog-state == 0 : Button { text: @tr("Sign in to GOG"); clicked => { Store.gog-signin(); } }
+                    if Store.gog-state != 0 : Button { text: @tr("Stop waiting"); primary: false; accessible-label: @tr("Stop waiting for GOG"); clicked => { Store.gog-cancel(); } }
+                    if Store.gog-signed-in && Store.gog-state == 0 : Button { text: @tr("Sign out"); primary: false; accessible-label: @tr("Sign out of GOG"); clicked => { Store.gog-signout(); } }
+                }
+            }
+
+            if Store.settings-section == 2 : SettingsCard {
+                title: @tr("GitHub access");
+                Text {
+                    text: Store.has-token ? @tr("You are signed in. GitHub allows 5,000 requests an hour.") : @tr("Everything works without signing in, but GitHub then allows only 60 requests an hour for your whole network, which a few searches can use up. Signing in raises that to 5,000. Bilby asks for no access to your account.");
+                    color: Theme.text-dim;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                }
+                if !Store.has-token && Store.signin-state == 0 : HorizontalLayout {
+                    alignment: start;
+                    Button { text: @tr("Sign in with GitHub"); clicked => { Store.github-signin(); } }
+                }
+                if Store.signin-state == 1 : Busy { }
+                // The code to type at GitHub, large enough to read across a room.
+                if Store.signin-state == 2 : Rectangle {
+                    border-radius: 12px;
+                    background: Theme.bg;
+                    border-width: 1px;
+                    border-color: Theme.accent.with-alpha(0.5);
+                    height: code-box.preferred-height;
+                    code-box := VerticalLayout {
+                        width: parent.width;
+                        padding: 16px;
+                        spacing: 10px;
+                        Text {
+                            text: @tr("On this or any other device, open github.com/login/device and enter this code:");
+                            color: Theme.text;
+                            font-size: 13px;
+                            wrap: word-wrap;
+                        }
+                        Text {
+                            text: Store.signin-code;
+                            color: Theme.text;
+                            font-size: 30px;
+                            font-weight: 800;
+                            letter-spacing: 3px;
+                            accessible-role: text;
+                            accessible-label: @tr("Sign-in code {}", Store.signin-code);
+                        }
+                        Busy { }
+                        Text { text: @tr("Waiting for you to enter it. This page updates by itself."); color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
+                        HorizontalLayout {
+                            spacing: 8px;
+                            alignment: start;
+                            Button { text: @tr("Open that page"); clicked => { Store.open-url("https://github.com/login/device"); } }
+                            Button { text: @tr("Cancel"); primary: false; accessible-label: @tr("Cancel signing in"); clicked => { Store.github-cancel(); } }
+                        }
+                    }
+                }
+                Text {
+                    text: @tr("Or paste a personal access token (one with no scopes is enough):");
+                    color: Theme.text-dim;
+                    font-size: 12px;
+                    wrap: word-wrap;
+                }
+                if Store.quota-text != "" : Text {
+                    text: Store.quota-text;
+                    color: Theme.text;
+                    font-size: 13px;
+                    font-weight: 600;
+                    wrap: word-wrap;
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        height: 40px;
+                        border-radius: 10px;
+                        background: Theme.bg;
+                        border-width: token.has-focus ? 2px : 1px;
+                        border-color: token.has-focus ? Theme.accent : Theme.stroke;
+                        if token.text == "" : Text {
+                            x: 12px;
+                            text: Store.has-token ? @tr("Paste a new token to replace it") : @tr("Paste a token");
+                            color: Theme.text-dim;
+                            font-size: 13px;
+                            vertical-alignment: center;
+                        }
+                        token := TextInput {
+                            x: 12px;
+                            width: parent.width - 24px;
+                            height: 100%;
+                            color: Theme.text;
+                            font-size: 13px;
+                            single-line: true;
+                            input-type: password;
+                            vertical-alignment: center;
+                            accessible-label: @tr("GitHub token");
+                            edited => { root.token-saved = false; }
+                            accepted => {
+                                Store.save-token(self.text);
+                                self.text = "";
+                                root.token-saved = true;
+                            }
+                        }
+                    }
+                    Button {
+                        text: root.token-saved ? @tr("Saved") : @tr("Save");
+                        primary: false;
+                        enabled: token.text != "";
+                        accessible-label: @tr("Save token");
+                        clicked => {
+                            Store.save-token(token.text);
+                            token.text = "";
+                            root.token-saved = true;
+                        }
+                    }
+                    if Store.has-token : Button {
+                        text: @tr("Sign out");
+                        primary: false;
+                        danger: true;
+                        accessible-label: @tr("Sign out of GitHub");
+                        clicked => {
+                            Store.save-token("");
+                            root.token-saved = false;
+                        }
+                    }
+                }
+            }
+
+            if Store.settings-section == 6 : SettingsCard {
+                title: @tr("Storage");
+                HorizontalLayout {
+                    spacing: 12px;
+                    Text { width: compact ? 110px : 170px; text: @tr("Downloads go to"); color: Theme.text-dim; font-size: 13px; }
+                    Text { horizontal-stretch: 1; text: Store.downloads-dir; color: Theme.text; font-size: 13px; wrap: char-wrap; }
+                }
+                Text {
+                    text: @tr("Installers and other files Bilby downloads are saved here. Apps that run as one file (AppImages) are then moved to the Applications folder in your home folder; packages, Flatpaks and store apps go where your system puts them.");
+                    color: Theme.text-dim;
+                    font-size: 12px;
+                    wrap: word-wrap;
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+                    Button { text: @tr("Change folder"); primary: false; accessible-label: @tr("Change the downloads folder"); clicked => { Store.choose-downloads(); } }
+                    if Store.downloads-custom : Button { text: @tr("Use the usual folder"); primary: false; clicked => { Store.set-downloads(""); } }
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        height: 36px;
+                        border-radius: 8px;
+                        background: Theme.bg;
+                        border-width: 1px;
+                        border-color: folder-input.has-focus ? Theme.focus : Theme.stroke;
+                        folder-input := TextInput {
+                            x: 10px;
+                            width: parent.width - 20px;
+                            height: 100%;
+                            color: Theme.text;
+                            font-size: 13px;
+                            single-line: true;
+                            vertical-alignment: center;
+                            accessible-label: @tr("Downloads folder path");
+                            accepted => {
+                                Store.set-downloads(self.text);
+                                self.text = "";
+                            }
+                        }
+                        if folder-input.text == "" : Text { x: 10px; text: @tr("Or type a folder's full path and press Enter"); color: Theme.text-dim; font-size: 13px; vertical-alignment: center; }
+                    }
+                }
+                HorizontalLayout {
+                    spacing: 12px;
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 2px;
+                        Text { text: @tr("Ask where to save each download"); color: Theme.text; font-size: 14px; }
+                        Text { text: @tr("A folder chooser opens before each file is fetched. Backing out of it cancels the download."); color: Theme.text-dim; font-size: 12px; wrap: word-wrap; }
+                    }
+                    VerticalLayout {
+                        alignment: center;
+                        Toggle { label: @tr("Ask where to save each download"); checked: Store.ask-where; toggled(on) => { Store.set-ask-where(on); } }
+                    }
+                }
+                // Side by side where there is room, stacked on a phone.
+                if !compact : HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+                    Button { text: @tr("Open folder"); primary: false; accessible-label: @tr("Open downloads folder"); clicked => { Store.open-downloads(); } }
+                    Button { text: @tr("Clear cached catalog data"); primary: false; clicked => { Store.clear-cache(); } }
+                    if Store.recent.length > 0 : Button { text: @tr("Clear search history"); primary: false; clicked => { Store.clear-recent(); } }
+                }
+                if compact : VerticalLayout {
+                    spacing: 8px;
+                    Button { text: @tr("Open folder"); primary: false; accessible-label: @tr("Open downloads folder"); clicked => { Store.open-downloads(); } }
+                    Button { text: @tr("Clear cached catalog data"); primary: false; clicked => { Store.clear-cache(); } }
+                    if Store.recent.length > 0 : Button { text: @tr("Clear search history"); primary: false; clicked => { Store.clear-recent(); } }
+                }
+            }
+
+            if Store.settings-section == 1 && (Store.prefer-applies) : SettingsCard {
+                title: @tr("Preferred kind of app");
+                Text {
+                    text: @tr("Many apps come more than one way. Choose which Bilby offers first when there is a choice. Automatic picks what suits this system: its own packages on most, Flatpak on a read-only system such as Fedora Kinoite. You can always pick another on an app's page.");
+                    color: Theme.text-dim;
+                    font-size: 12px;
+                    wrap: word-wrap;
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+                    ChoiceChip { text: @tr("Automatic"); selected: Store.prefer-kind == 0; clicked => { Store.set-prefer-kind(0); } }
+                    ChoiceChip { text: @tr("Flatpak"); selected: Store.prefer-kind == 1; clicked => { Store.set-prefer-kind(1); } }
+                    ChoiceChip { text: @tr("AppImage"); selected: Store.prefer-kind == 2; clicked => { Store.set-prefer-kind(2); } }
+                    ChoiceChip { text: @tr("System packages"); selected: Store.prefer-kind == 3; clicked => { Store.set-prefer-kind(3); } }
+                }
+            }
+
+            if Store.settings-section == 0 : SettingsCard {
+                title: @tr("Country for prices");
+                property <int> per-row: compact ? 3 : 6;
+                Text { text: @tr("Stores are asked for this country's prices, in its own money."); color: Theme.text-dim; font-size: 13px; wrap: word-wrap; }
+                for r in Math.ceil(Store.countries.length / self.per-row) : HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+                    // Each row holds its own few: a long list is not made once per row.
+                    for i in per-row : ChoiceChip {
+                        property <int> at: r * per-row + i;
+                        visible: self.at < Store.countries.length;
+                        width: self.visible ? self.preferred-width : 0;
+                        text: Store.countries[self.at].label;
+                        selected: Store.countries[self.at].on;
+                        clicked => { Store.set-country(Store.countries[self.at].id); }
+                    }
+                }
+            }
+
+            if Store.settings-section == 6 : SettingsCard {
+                title: @tr("About");
+                if Store.store-update != "" : HorizontalLayout {
+                    spacing: 12px;
+                    VerticalLayout {
+                        alignment: center;
+                        horizontal-stretch: 1;
+                        Text {
+                            text: @tr("Bilby {0} is available. You have {1}.", Store.store-update, Store.app-version);
+                            color: Theme.accent;
+                            font-size: 14px;
+                            font-weight: 600;
+                            wrap: word-wrap;
+                        }
+                    }
+                    Button {
+                        text: @tr("View update");
+                        accessible-label: @tr("View the store's update");
+                        clicked => { Store.view-store-update(); }
+                    }
+                }
+                if Store.store-update == "" : HorizontalLayout {
+                    alignment: start;
+                    Button { text: @tr("Check for a newer Bilby"); primary: false; clicked => { Store.check-store-update(); } }
+                }
+                Text {
+                    text: @tr("Bilby {}. Everything runs on this device: there is no account and no server of ours. The store talks directly to the places apps come from, and keeps your library and settings in a file on this device.", Store.app-version);
+                    color: Theme.text-dim;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                }
+                Text {
+                    text: @tr("Apps come from the sources listed above and are not reviewed by Bilby. Install software you trust. Made with Slint.");
+                    color: Theme.text-dim;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                }
+                if Store.demo : Text {
+                    text: @tr("Demo mode: the catalog is fictional and nothing is fetched from the network.");
+                    color: Theme.warn;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                }
+            }
+        }
+    }
+}
