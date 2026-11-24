@@ -17,13 +17,7 @@ targets = [
 # users upstream (wry, tao) can replace.
 unmaintained = "workspace"
 # An entry here needs a reason.
-ignore = [
-  # glib 0.18: `VariantStrIter` is unsound. It is only made by
-  # `Variant::array_iter_str`, which nothing in Bilby or in the GTK 3 crates it
-  # is built with calls (checked 2026-11-24). glib 0.18 is the last for GTK 3, so
-  # this stays until wry and tao move to GTK 4.
-  { id = "RUSTSEC-2024-0429", reason = "the unsound iterator is not used; no fixed glib exists for GTK 3" },
-]
+ignore = []
 
 [licenses]
 # Licences that may be combined with Bilby's own (GPL-3.0-only). A dependency under
