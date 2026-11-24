@@ -1,0 +1,65 @@
+name: Something is broken
+description: Bilby did the wrong thing, crashed, or showed something that is not true.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time. One problem per report, please.
+        If an app is missing or Bilby offers the wrong file for it, use the
+        "Wrong or missing app" form instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what Bilby did instead.
+      placeholder: |
+        1. Opened the page for ...
+        2. Pressed Install
+        3. Expected ..., but ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Bilby version
+      description: Shown at the bottom of Settings, or by `bilby --version`.
+      placeholder: 0.1.40
+    validations:
+      required: true
+  - type: dropdown
+    id: system
+    attributes:
+      label: System
+      options:
+        - Linux
+        - Windows
+        - macOS
+        - Android phone or tablet
+        - Android TV
+    validations:
+      required: true
+  - type: dropdown
+    id: layout
+    attributes:
+      label: Layout
+      options:
+        - Desktop
+        - TV
+        - Phone
+        - Command line (bilby-cli)
+    validations:
+      required: true
+  - type: textarea
+    id: device
+    attributes:
+      label: Device details
+      description: >
+        On a computer, paste what `bilby-cli device` prints. Otherwise the system's
+        name and version (for example "Fedora Kinoite 44" or "Android 14 on a Shield TV").
+      render: text
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else
+      description: Screenshots, the message Bilby showed, or what a terminal printed.

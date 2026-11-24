@@ -75,13 +75,17 @@ cargo test --workspace
 The tests need no internet. Network tests start their own local server, and interface
 tests drive the real window without a display. On Linux, a handful more run the
 finished program under `xvfb-run` and are skipped if it is not installed. CI runs
-everything on Linux, Windows and macOS. More in [Testing](DESIGN.md#8-testing).
+everything on Linux, Windows and macOS, and builds the Android app. More in [Testing](DESIGN.md#8-testing).
 
-Before committing:
+Before committing, run what CI runs:
 
 ```sh
 cargo fmt --all && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace
+python3 scripts/i18n.py --check
 ```
+
+[CONTRIBUTING.md](../CONTRIBUTING.md) says how changes are reviewed and how the code
+is written.
 
 ## Drive it with a script
 
@@ -104,22 +108,67 @@ an app's page has been opened once and its logo cached.
 
 ## Release it
 
-Releases are built by the `Release` workflow. Start it from the Actions page with a
-version such as `v0.2.0`; it builds each system's files, creates the tag and publishes
-the release. Bump `version` in `Cargo.toml` first, and wait for CI to pass.
+Releases are built by the `Release` workflow.
+
+1. Move the "Unreleased" lines of [CHANGELOG.md](../CHANGELOG.md) under a heading for
+   the new version, with today's date. That section becomes the release's notes.
+2. Change `version` in `Cargo.toml`, run `cargo update --workspace --offline` so
+   `Cargo.lock` follows, and commit both.
+3. Push, and wait for CI to pass.
+4. Start the workflow from the Actions page (or `gh workflow run release.yml -f
+   version=v0.2.0`). It checks that the version matches `Cargo.toml`, builds each
+   system's files, creates the tag and publishes the release with a `SHA256SUMS` file
+   and a signed record of where the files were built.
+
+Published releases and their tags cannot be changed afterwards. A release that went
+wrong is followed by a new one.
 
 ## Where the code is
 
 ```
-crates/core   bilby-core  platform detection, file classification, compatibility,
-                          sources, search ranking, installing, library state,
-                          system updates
-crates/cli    bilby-cli   command-line front end
-crates/app    bilby       Slint app: ui/desktop.slint, ui/mobile.slint, ui/tv.slint
-packaging/                the icon, the Linux menu entry and AppImage script, the macOS bundle
-docs/DESIGN.md            the design, its trade-offs, and what is still open
-docs/COMPARISON.md        Bilby next to other stores, feature by feature
+crates/core     bilby-core    everything Bilby knows and decides, with no interface
+  src/platform.rs               what this device is
+  src/asset.rs, compat.rs       what a file is, and whether it runs here
+  src/source/                   one file per place apps come from
+  src/catalog.rs                search, browse and details across the sources
+  src/merge.rs, rank.rs         one app from several sources; search order
+  src/install.rs, needs.rs      planning an install and carrying it out
+  src/winrun.rs                 Windows programs on Linux
+  src/os.rs                     the operating system's own updates
+  src/state.rs                  settings and the library, one file on disk
+  src/demo.rs                   the made-up catalog behind --demo and the tests
+  data/                         the lists the store carries (see data/SOURCES.md)
+crates/app      bilby         the window
+  ui/types.slint                `Store`: everything the layouts show and can ask for
+  ui/desktop.slint, mobile.slint, tv.slint    the three layouts
+  ui/widgets.slint, lists.slint, details.slint, library.slint, settings.slint,
+  ui/overlays.slint             what the desktop and phone layouts share
+  src/lib.rs                    `App`, the controller, and its state
+  src/wiring.rs                 connects each callback of `Store` to a method of `App`
+  src/search.rs, details.rs, installing.rs, library.rs, updates.rs, settings.rs, ...
+                                what `App` does, one file per part of the store
+  i18n/                         the translations (see CONTRIBUTING.md)
+  tests/                        the interface tests
+crates/cli      bilby-cli     the same store from a terminal
+crates/signin   bilby-signin  the small browser window for signing in to a store
+packaging/                    icons, the Linux menu entry and AppImage script, the macOS bundle
+scripts/i18n.py               gathers the interface's text for translating
 ```
+
+To add a source, start from a small one such as `crates/core/src/source/snap.rs`. To
+add something the interface can do: declare the property or callback in
+`ui/types.slint`, use it in the layouts, connect it in `src/wiring.rs`, and write the
+method in the module it belongs to.
+
+More to read:
+
+| | |
+|---|---|
+| [DESIGN.md](DESIGN.md) | The design, its trade-offs, and what is still open |
+| [COMPARISON.md](COMPARISON.md) | Bilby next to other stores, feature by feature |
+| [ANDROID.md](ANDROID.md) | Building and running the Android package |
+| [LONGBOARD.md](LONGBOARD.md) | What Bilby asks of the Longboard browser on a TV |
+| [OWN-SOURCES.md](OWN-SOURCES.md) | The format of a list of apps on your own server |
 
 ## Where Bilby keeps things
 

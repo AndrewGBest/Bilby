@@ -1,0 +1,50 @@
+# What `cargo deny check` holds the dependencies to. CI runs it on every push.
+# https://embarkstudios.github.io/cargo-deny/
+
+[graph]
+# The systems Bilby is built for; dependencies of other systems are not looked at.
+targets = [
+  "x86_64-unknown-linux-gnu",
+  "x86_64-pc-windows-msvc",
+  "aarch64-apple-darwin",
+  "aarch64-linux-android",
+]
+
+[advisories]
+# Known security problems in a dependency fail the check. An entry here needs a reason.
+ignore = []
+
+[licenses]
+# Licences that may be combined with Bilby's own (GPL-3.0-only). A dependency under
+# anything else fails the check until someone has read its licence and added it.
+allow = [
+  "GPL-3.0-only",
+  "MIT",
+  "MIT-0",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "0BSD",
+  "ISC",
+  "Zlib",
+  "BSL-1.0",
+  "MPL-2.0",
+  "Unicode-3.0",
+  "Unlicense",
+  "CC0-1.0",
+  "CDLA-Permissive-2.0",
+]
+confidence-threshold = 0.9
+
+[bans]
+# Several versions of one crate make the program bigger, not wrong.
+multiple-versions = "allow"
+wildcards = "deny"
+# Bilby's own crates depend on each other by path.
+allow-wildcard-paths = true
+
+[sources]
+# Everything comes from crates.io.
+unknown-registry = "deny"
+unknown-git = "deny"

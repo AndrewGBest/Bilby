@@ -50,7 +50,7 @@ Status: **Yes** = in Bilby; **New** = added in the change that added this docume
 | GitHub Releases | Komi, Obtainium | Yes |
 | Codeberg | Komi, Obtainium | **New** (search, open by link, device matching) |
 | Self-hosted Forgejo/Gitea, added by URL | Komi | Not yet. The Codeberg code already speaks the Forgejo API; what is missing is letting the user add a host |
-| GitLab, F-Droid repositories, SourceHut, others | Obtainium | Not yet |
+| GitLab, F-Droid repositories, SourceHut, others | Obtainium | GitLab and F-Droid: yes. SourceHut: not yet |
 | Private repositories with per-host tokens | Komi, Obtainium | Partly: one GitHub token |
 | System package managers | UniGetUI, GNOME Software, Discover | Yes for pacman, apt, Flatpak (Flathub), Snap, winget and Homebrew casks; dnf and zypper not yet |
 | AUR | none read | Yes |
@@ -93,7 +93,7 @@ Status: **Yes** = in Bilby; **New** = added in the change that added this docume
 | Signature, certificate or attestation checks | Komi, Obtainium, AppImageUpdate, Zapstore | Not yet |
 | Shows what will happen before doing it | not described elsewhere | Yes |
 | AppImage in the app menu | Gear Lever, AppImageLauncher, AM | **New**; the replaced version's file is deleted on update |
-| Silent install on Android (Shizuku, root) | Komi; Obtainium and Zapstore in the background | Not yet: Bilby has no Android package yet at all |
+| Silent install on Android (Shizuku, root) | Komi; Obtainium and Zapstore in the background | Not yet: Bilby's Android package does not hand files to Android's installer yet |
 | Pause and resume downloads | Komi | Not yet (downloads can be cancelled) |
 | Download mirrors | Komi | **By design** for now: a mirror is a third party serving the files |
 | Proxy | Komi (settings screen) | From the `HTTPS_PROXY` / `ALL_PROXY` environment variables, which the HTTP library reads; untested behind a real proxy, and there is no settings screen |
@@ -106,8 +106,8 @@ Status: **Yes** = in Bilby; **New** = added in the change that added this docume
 | Check for updates, update one or all | most | Yes |
 | Skip a version / ignore updates | Komi, Obtainium, UniGetUI | **New**: skip the waiting version. Ignoring an app for good is not there yet |
 | Pre-release channel | Komi, Obtainium | Yes, as one setting (Komi also has it per app) |
-| Checks in the background with notifications | Komi, Obtainium, UniGetUI, Gear Lever, GNOME Software | Not yet: Bilby checks when it is opened. This is the largest remaining gap |
-| Updates installed without asking | Komi, Obtainium, UniGetUI, Zapstore | Not yet; when added it will be opt-in |
+| Checks in the background with notifications | Komi, Obtainium, UniGetUI, Gear Lever, GNOME Software | Yes: Bilby can wait in the system tray, check on its own and say what is waiting |
+| Updates installed without asking | Komi, Obtainium, UniGetUI, Zapstore | Yes, when switched on in Settings; what needs the person is left for them |
 | The store updates itself | not described | Finds its own update; applying it is still a manual install |
 
 ### Library
@@ -118,24 +118,22 @@ Status: **Yes** = in Bilby; **New** = added in the change that added this docume
 | Starred repositories from an account | Komi | **By design**: needs sign-in |
 | Export and import | Komi, Obtainium, UniGetUI | **New**, from `bilby-cli`; not yet a button in the app, and not Obtainium's format |
 | Adopt apps that are already installed | Komi | Partly: packages installed by pacman or apt are recognised |
-| Recently viewed, categories | Komi, Obtainium | Not yet |
+| Recently viewed, categories | Komi, Obtainium | Categories: yes. Recently viewed: not yet |
 
 ### Everything else
 
 | Feature | Who has it | Bilby |
 |---|---|---|
-| Sign-in | Komi (optional) | **By design**: no accounts |
+| Sign-in | Komi (optional) | **By design**: no Bilby account. Signing in to GitHub, Steam or GOG is optional and stays between the device and that service |
 | Light and dark themes | Komi (plus AMOLED, dynamic colour, skins) | Yes (light, dark, follow the system) |
-| Translated interface | Komi (14 languages), Obtainium | Not yet: English only |
+| Translated interface | Komi (14 languages), Obtainium | Yes: twelve languages, not yet checked by native speakers |
 | Keyboard, remote and screen-reader use | not documented elsewhere | Keyboard and remote: yes, tested. Screen readers: every control has a tested label, but no real screen reader has been tried |
-| Android, Windows, macOS, Linux apps you can download today | Komi | **Not yet: Bilby has no published release.** Linux is the only system it has been seen running on |
+| Android, Windows, macOS, Linux apps you can download today | Komi | Yes, for all four. Linux is the system it has been used on most; see the README for what has been tried where |
 
 ## What to do next, in order
 
-1. **Publish releases** for Linux, Windows and macOS. Every row above is academic until
-   people can install it.
-2. **Background update checks with a notification** (desktop first).
-3. **Self-hosted Forgejo/Gitea hosts** and a second token.
-4. **An Android package**, then installing APKs.
-5. **Export/import in the app**, reading Obtainium's export format.
-6. **Translations.**
+1. **Installing APKs on Android**, through Android's own installer.
+2. **Self-hosted Forgejo/Gitea hosts** and a second token.
+3. **Reading Obtainium's export format** when importing a library.
+4. **Pause and resume** for downloads.
+5. **A native speaker's review** of each translation.

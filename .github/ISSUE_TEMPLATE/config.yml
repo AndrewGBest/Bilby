@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ask a question
+    url: https://github.com/AndrewGBest/Bilby/discussions/categories/q-a
+    about: How to do something with Bilby, or whether something is meant to work.
+  - name: Suggest an idea
+    url: https://github.com/AndrewGBest/Bilby/discussions/categories/ideas
+    about: An idea that is not yet a concrete request. Talk it over first.
+  - name: Report a security problem
+    url: https://github.com/AndrewGBest/Bilby/security/advisories/new
+    about: Privately, so that it can be fixed before it is public. See SECURITY.md.
