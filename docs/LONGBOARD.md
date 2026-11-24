@@ -13,7 +13,7 @@ the first, which comes to the front.
 
 Bilby recognises Longboard however it was installed (an AppImage, an unpacked folder,
 its Flatpak, or on the `PATH`) and installs it first when it is missing
-(`install.rs`, `ensure_longboard` in the app).
+(`install/browser.rs`, `ensure_longboard` in the app).
 
 ## Signing in to Steam
 
@@ -53,5 +53,5 @@ state file, and deletes the hand-back file.
 ## What has been tried
 
 Both halves are tested against stand-ins: Bilby's with an invented Longboard
-(`crates/app/tests/ui.rs`), Longboard's with an invented Steam. Nobody has yet
+(`crates/app/tests/ui/`), Longboard's with an invented Steam. Nobody has yet
 completed a real Steam sign-in through the pair.

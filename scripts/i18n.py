@@ -89,7 +89,7 @@ def rust_strings():
     app = os.path.join(ROOT, "crates/app/src")
     paths += sorted(os.path.join(app, name) for name in os.listdir(app) if name.endswith(".rs") and name not in NOT_SHOWN)
     for path in paths:
-        if path.endswith(("demo.rs", "i18n.rs")):
+        if path.endswith(("demo.rs", "i18n.rs", "tests.rs")):
             continue
         source = open(path, encoding="utf-8").read()
         tests = source.find("#[cfg(test)]")

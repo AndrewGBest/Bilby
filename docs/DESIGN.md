@@ -502,7 +502,7 @@ program for Windows and a disk image for Apple-silicon Macs, each with the
 command-line tool alongside, named so that Bilby's own classifier picks the right one
 (`the_stores_own_release_files_resolve_on_every_desktop`).
 
-## 6. Installing (`install.rs`)
+## 6. Installing (`install/`)
 
 `plan()` is pure and can be shown before anything is downloaded; `execute()` carries
 it out. Bilby never runs as administrator itself.
@@ -792,7 +792,7 @@ iOS.
 | `core/tests/corpus.rs` | 4 | 169 file names; the cross-system safety property; 20,000 generated names |
 | `core/tests/http_sources.rs` | 28 | The real HTTP client and the sources against a local server: headers, token scoping, rate limits, progress, cancelling, the cache, malformed answers |
 | `cli/tests/cli.rs` | 9 | The `bilby-cli` program end to end, including install, library, updates and `doctor` |
-| `app/tests/ui.rs` | 121 | The real window on Slint's headless backend: presses by accessible label, key presses, all three interfaces |
+| `app/tests/ui/` | 121 | The real window on Slint's headless backend: presses by accessible label, key presses, all three interfaces |
 | `app/tests/offline.rs` | 7 | The same window with a network that goes offline or runs out of allowance on demand, then recovers |
 | `app/tests/pictures.rs` | 1 | App pictures: fetched, decoded, shown, cached, harmless when missing |
 | `app/tests/binary.rs` | 7 | The finished program (threads, event loop, renderer) under a virtual display |

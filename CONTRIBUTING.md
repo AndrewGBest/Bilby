@@ -140,10 +140,10 @@ script.
 
 - Every test runs without the internet. Network code is tested against a local
   server (`crates/core/tests/http_sources.rs`); the interface is tested by pressing
-  its real buttons on a headless window (`crates/app/tests/ui.rs`).
+  its real buttons on a headless window (`crates/app/tests/ui/`).
 - A fix for a wrongly chosen file adds the file's name to
   `crates/core/tests/corpus.rs`.
-- A change to the interface adds or extends a test in `crates/app/tests/ui.rs` that
+- A change to the interface adds or extends a test in `crates/app/tests/ui/` that
   finds controls by their accessible label, the way a screen reader would.
 - CI runs the tests on Linux, Windows and macOS, and builds the Android app. Mark a
   test that depends on one system with `#[cfg(target_os = "...")]`.

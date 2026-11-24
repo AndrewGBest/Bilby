@@ -132,7 +132,7 @@ crates/core     bilby-core    everything Bilby knows and decides, with no interf
   src/source/                   one file per place apps come from
   src/catalog.rs                search, browse and details across the sources
   src/merge.rs, rank.rs         one app from several sources; search order
-  src/install.rs, needs.rs      planning an install and carrying it out
+  src/install/, needs.rs        planning an install and carrying it out
   src/winrun.rs                 Windows programs on Linux
   src/os.rs                     the operating system's own updates
   src/state.rs                  settings and the library, one file on disk

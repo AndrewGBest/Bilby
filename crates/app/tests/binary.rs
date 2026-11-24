@@ -96,7 +96,7 @@ fn desktop_open_and_install_with_real_threads() {
     }
     // Start on an app page (loaded on a worker), then install the second option, the
     // AppImage, through the same callback its button calls. (Real clicks on real buttons
-    // are covered by tests/ui.rs; this test is about the threads.)
+    // are covered by tests/ui/; this test is about the threads.)
     let run = run(
         RETURNING,
         &[
