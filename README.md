@@ -1,11 +1,10 @@
 <p align="center">
-  <img src="crates/app/ui/icons/logo.svg" width="104" alt="Bilby logo: a shopping bag with a bilby's long ears and face">
+  <img src="docs/social-preview.png" width="880" alt="Bilby: an app store that only shows what runs on your device. The logo, a shopping bag with a bilby's long ears and face, beside the Discover page.">
 </p>
 
 <h1 align="center">Bilby</h1>
 
 <p align="center">
-  <b>An app store that only shows what runs on your device.</b><br>
   Every kind of app: free and paid, open source and not, games included.<br>
   For Linux, Windows, macOS and Android, on a desktop, a phone or a TV.<br>
   No Bilby account. No server of ours. No tracking.
