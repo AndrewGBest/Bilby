@@ -22,7 +22,7 @@ path = "src/main.rs"
 [dependencies]
 bilby-core = { path = "../core" }
 slint = { version = "1.19", default-features = false, features = ["std", "compat-1-2", "backend-winit", "renderer-software", "renderer-femtovg"] }
-png = "0.17"
+png = "0.18"
 # Translations are kept as JSON; the system says which language it is set to.
 serde_json = "1"
 sys-locale = "0.3"
