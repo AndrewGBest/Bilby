@@ -1,0 +1,23 @@
+<!-- The picture at the top of the README and the repository's social preview.
+     After changing it: rsvg-convert docs/social-preview.svg -o docs/social-preview.png
+     and upload the PNG again under Settings, Social preview. -->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1280 640" width="1280" height="640">
+<defs>
+<linearGradient id="g0" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8aa6ff"/><stop offset="1" stop-color="#b28cff"/></linearGradient>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0d1019"/><stop offset="1" stop-color="#171a2e"/></linearGradient>
+<radialGradient id="glow" cx="0.78" cy="0.55" r="0.6"><stop offset="0" stop-color="#8f8cff" stop-opacity="0.28"/><stop offset="1" stop-color="#8f8cff" stop-opacity="0"/></radialGradient>
+<clipPath id="r"><rect x="0" y="0" width="1280" height="800" rx="22"/></clipPath>
+</defs>
+<rect width="1280" height="640" fill="url(#bg)"/>
+<rect width="1280" height="640" fill="url(#glow)"/>
+<g transform="translate(600 110) scale(0.62)">
+<rect x="-2" y="-2" width="1284" height="804" rx="24" fill="#2b3050"/>
+<image xlink:href="screenshots/desktop-discover.png" width="1280" height="800" clip-path="url(#r)"/>
+</g>
+<g transform="translate(80 132) scale(0.42)">
+<rect width="256" height="256" rx="58" fill="url(#g0)"/><ellipse cx="96" cy="74" rx="17" ry="52" transform="rotate(-12 96 74)" fill="#fff"/><ellipse cx="160" cy="74" rx="17" ry="52" transform="rotate(12 160 74)" fill="#fff"/><ellipse cx="97" cy="78" rx="7.1" ry="34.3" transform="rotate(-12 97 78)" fill="#c9b6ff"/><ellipse cx="159" cy="78" rx="7.1" ry="34.3" transform="rotate(12 159 78)" fill="#c9b6ff"/><path d="M58 104 H198 L210 204 Q211 220 194 220 H62 Q45 220 46 204 Z" fill="#fff"/><circle cx="104" cy="150" r="8" fill="#2a2d55"/><circle cx="152" cy="150" r="8" fill="#2a2d55"/><path d="M117 172 h22 l-11 12 z" fill="#2a2d55"/>
+</g>
+<text x="208" y="214" font-family="Noto Sans" font-weight="700" font-size="84" fill="#ffffff">Bilby</text>
+<text font-family="Noto Sans" font-weight="600" font-size="38" fill="#e8eaf6"><tspan x="80" y="322">An app store that only</tspan><tspan x="80" y="372">shows what runs on</tspan><tspan x="80" y="422">your device.</tspan></text>
+<text font-family="Noto Sans" font-size="23" fill="#9aa3c7"><tspan x="80" y="486">Linux · Windows · macOS · Android</tspan><tspan x="80" y="520">Desktop, phone or TV</tspan><tspan x="80" y="554">No account, no server, no tracking</tspan></text>
+</svg>
