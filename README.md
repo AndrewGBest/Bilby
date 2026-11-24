@@ -1,8 +1,10 @@
 <p align="center">
-  <img src="docs/social-preview.png" width="880" alt="Bilby: an app store that only shows what runs on your device. The logo, a shopping bag with a bilby's long ears and face, beside the Discover page.">
+  <img src="docs/social-preview.png" width="880" alt="Banner: Bilby, an app store that only shows what runs on your device, beside its Discover page">
 </p>
 
-<h1 align="center">Bilby</h1>
+<h1 align="center">
+  <img src="docs/logo.png" width="40" alt="Bilby logo: a shopping bag with a bilby's long ears and face"> Bilby
+</h1>
 
 <p align="center">
   Every kind of app: free and paid, open source and not, games included.<br>

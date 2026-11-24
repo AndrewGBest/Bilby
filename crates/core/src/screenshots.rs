@@ -255,6 +255,22 @@ mod tests {
         );
     }
 
+    /// Bilby is a project on GitHub too, so its own README decides what Bilby shows
+    /// for itself. A wide banner once stood where the logo was and would have been
+    /// taken as the icon.
+    #[test]
+    fn bilbys_own_readme_gives_its_logo_and_keeps_the_banner_out() {
+        let readme = include_str!("../../../README.md");
+        let id = AppId::new(SourceKind::GitHub, "AndrewGBest/Bilby");
+        assert_eq!(
+            logo_from_readme(readme, &id).as_deref(),
+            Some("https://raw.githubusercontent.com/AndrewGBest/Bilby/HEAD/docs/logo.png")
+        );
+        let pictures = from_readme(readme, &id);
+        assert!(!pictures.is_empty());
+        assert!(pictures.iter().all(|url| !url.contains("social-preview") && !url.contains("logo")), "{pictures:?}");
+    }
+
     #[test]
     fn a_logo_is_an_early_image_that_says_so_or_is_small() {
         let id = AppId::new(SourceKind::GitHub, "owner/app");
