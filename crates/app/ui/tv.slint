@@ -153,7 +153,16 @@ component TvTab inherits Rectangle {
 }
 
 // A setting that is on or off. OK switches it.
+// Where the highlighted setting is in its list, which the list reads to move itself.
+global TvSeen {
+    in-out property <length> y;
+    in-out property <length> height;
+}
+
 component TvSetting inherits Rectangle {
+    // The highlighted row says where it is, and again if rows above it come or go.
+    changed focused => { if (self.focused) { TvSeen.y = self.y; TvSeen.height = self.height; } }
+    changed y => { if (self.focused) { TvSeen.y = self.y; TvSeen.height = self.height; } }
     in property <string> label;
     in property <bool> on;
     // What to show on the right instead of On or Off.
@@ -483,8 +492,6 @@ export component TvShell inherits Rectangle {
     changed on-settings => { root.set-nav = false; }
     property <int> set-last: root.auto-row;
     changed set-last => { root.sys-row = min(root.sys-row, root.set-last); }
-    // Rows below the eighth push the list up, so the focused one is always on screen.
-    property <length> set-shift: max(0, root.sys-row - 7) * 34 * root.u;
     property <bool> sys-can-update: Store.system-state == 3;
     // Buttons on that page: Update (when there is one), Check again (where updates are
     // handled), and always last, the way out of the TV layout.
@@ -1558,7 +1565,11 @@ export component TvShell inherits Rectangle {
                 clip: true;
                 VerticalLayout {
                     x: 4 * u;
-                    y: -root.set-shift;
+                    // Moved so that the highlighted row is in the middle of what is shown,
+                    // stopping at the list's two ends. It goes by where the row really
+                    // is: counting rows left the headings out, and the last section
+                    // ended up below the screen.
+                    y: -max(0px, min(TvSeen.y + TvSeen.height / 2 - parent.height / 2, self.min-height - parent.height));
                     width: parent.width - 8 * u;
                     height: self.preferred-height;
                     spacing: 7 * u;

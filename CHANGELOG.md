@@ -6,6 +6,9 @@ any release may change how something works.
 
 ## Unreleased
 
+- On a TV, the Updates section at the end of Settings can be seen. The list stopped
+  short of it before, leaving it below the screen.
+
 ## 0.1.41 (2026-11-25)
 
 - **Apps that Bilby did not install can be updated from Bilby.** Under "Also installed
