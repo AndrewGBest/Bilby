@@ -5,6 +5,7 @@ use super::appimage::unpacked_folder;
 use super::browser::find_app_browser;
 use super::dirs::Dirs;
 use crate::error::{Error, Result};
+use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 
 /// Where an app's icon on the desktop is kept.
@@ -291,7 +292,14 @@ pub fn register_self(dirs: &Dirs, program: &Path, icon: &[u8]) -> Result<bool> {
     // Beside the menu folder, where desktops look for icons; named in full in the entry
     // so no icon cache has to notice it first.
     let icons = dirs.menu.parent().unwrap_or(&dirs.menu).join("icons").join("hicolor").join("512x512").join("apps");
-    let icon_path = icons.join("bilby.png");
+    // The file is named after the picture in it. A launcher remembers a picture by its
+    // file's name, so a new logo written over the old file kept showing the old logo
+    // (seen on Plasma Bigscreen). A new name also changes the entry, which the desktop
+    // does notice. [Not tried on a Bigscreen itself.]
+    let mark: String = Sha256::digest(icon).iter().take(4).map(|b| format!("{b:02x}")).collect();
+    let icon_path = icons.join(format!("bilby-{mark}.png"));
+    // The plain name stays as well: notifications ask for the icon called "bilby".
+    let named = icons.join("bilby.png");
     let entry = format!(
         "[Desktop Entry]\nType=Application\nName=Bilby\nGenericName=App Store\n\
          Comment=Apps from GitHub Releases, Codeberg and other repositories that run on this device\n\
@@ -302,10 +310,19 @@ pub fn register_self(dirs: &Dirs, program: &Path, icon: &[u8]) -> Result<bool> {
     );
     let path = self_entry_path(dirs);
     let mut changed = false;
-    if std::fs::read(&icon_path).ok().as_deref() != Some(icon) {
-        std::fs::create_dir_all(&icons)?;
-        std::fs::write(&icon_path, icon)?;
-        changed = true;
+    for file in [&icon_path, &named] {
+        if std::fs::read(file).ok().as_deref() != Some(icon) {
+            std::fs::create_dir_all(&icons)?;
+            std::fs::write(file, icon)?;
+            changed = true;
+        }
+    }
+    // Earlier logos are not left behind.
+    for old in std::fs::read_dir(&icons).into_iter().flatten().flatten().map(|file| file.path()) {
+        let name = old.file_name().and_then(|n| n.to_str()).unwrap_or_default();
+        if name.starts_with("bilby-") && name.ends_with(".png") && old != icon_path {
+            let _ = std::fs::remove_file(old);
+        }
     }
     if std::fs::read_to_string(&path).ok().as_deref() != Some(entry.as_str()) {
         std::fs::create_dir_all(&dirs.menu)?;
