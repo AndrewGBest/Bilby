@@ -173,8 +173,8 @@ msgid "Apps come from the sources listed above and are not reviewed by Bilby. In
 msgstr "アプリは上記の提供元から届き、Bilby による審査は行われていません。信頼できるソフトウェアをインストールしてください。Slint で作られています。"
 
 msgctxt "LibraryBody"
-msgid "Apps on this device that Bilby did not install. Open one to start it, see its page or remove it."
-msgstr "このデバイスにある、Bilby がインストールしたものではないアプリです。開くと、起動、ページの表示、削除ができます。"
+msgid "Apps on this device that Bilby did not install. Open one to start it, update it or remove it."
+msgstr "このデバイスにある、Bilby がインストールしたものではないアプリです。開くと、起動、アップデート、削除ができます。"
 
 msgctxt "LibraryBody"
 msgid "Apps you install from the store show up here, and the store can tell you when they have a new release."
@@ -2063,6 +2063,10 @@ msgctxt "AppRow"
 msgid "Update available"
 msgstr "アップデートがあります"
 
+msgctxt "DetailsBody"
+msgid "Update available"
+msgstr "アップデートがあります"
+
 msgctxt "TvShell"
 msgid "Update available"
 msgstr "アップデートがあります"
@@ -2074,6 +2078,14 @@ msgstr "アップデートがあります"
 msgctxt "DetailsBody"
 msgid "Update available  ·  you have {0}, latest is {1}"
 msgstr "アップデートがあります  ·  現在 {0}、最新は {1}"
+
+msgctxt "DetailsBody"
+msgid "Update available  ·  {}"
+msgstr "アップデートがあります  ·  {}"
+
+msgctxt "TvShell"
+msgid "Update available  ·  {}"
+msgstr "アップデートがあります  ·  {}"
 
 msgctxt "TvShell"
 msgid "Update available: you have {}"

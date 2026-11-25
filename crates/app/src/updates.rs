@@ -203,6 +203,10 @@ impl App {
     /// install the best option, without leaving the Library page.
     pub fn update_app(self: &Arc<Self>, ui: &AppWindow, id: &str) {
         let store = ui.global::<Store>();
+        // Not the store's own: the tool that installed it is asked to update it.
+        if let Some(waiting) = self.outside_update(id) {
+            return self.update_outside(ui, id, waiting);
+        }
         if store.get_install_state() == 1
             || !store.get_updating_id().is_empty()
             || self.installing.lock().unwrap().is_some()

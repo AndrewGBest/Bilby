@@ -113,7 +113,6 @@
  "Apps": "التطبيقات",
  "Apps can also come from a list on your own server or storage: a small file saying what the apps are and where their files live. Add its address and its apps are searched, shown on the home page and installed like any others. Nobody but its owner vouches for what is on such a list, so add only ones you trust.": "يمكن أن تأتي التطبيقات أيضًا من قائمة على خادمك أو مساحة تخزينك: ملف صغير يذكر التطبيقات ومكان ملفاتها. أضف عنوانها وستظهر تطبيقاتها في البحث وفي الصفحة الرئيسية وتُثبَّت مثل غيرها. لا أحد يضمن محتوى هذه القائمة سوى صاحبها، فأضف فقط ما تثق به.",
  "Apps come from the sources listed above and are not reviewed by Bilby. Install software you trust. Made with Slint.": "تأتي التطبيقات من المصادر المذكورة أعلاه ولا يراجعها Bilby. ثبّت البرامج التي تثق بها. صُنع باستخدام Slint.",
- "Apps on this device that Bilby did not install. Open one to start it, see its page or remove it.": "تطبيقات على هذا الجهاز لم يثبّتها Bilby. افتح أحدها لتشغيله أو عرض صفحته أو إزالته.",
  "Apps you install from the store show up here, and the store can tell you when they have a new release.": "التطبيقات التي تثبّتها من المتجر تظهر هنا، ويمكن للمتجر إخبارك عند توفر إصدار جديد لها.",
  "Apps you install from the store show up here, and the store can tell you when they have a new release. Favourites are kept here too.": "التطبيقات التي تثبّتها من المتجر تظهر هنا، ويمكن للمتجر إخبارك عند توفر إصدار جديد لها. المفضلة محفوظة هنا أيضًا.",
  "Apps you install with Bilby show up here, and so do your favourites.": "التطبيقات التي تثبّتها باستخدام Bilby تظهر هنا، وكذلك مفضلتك.",
@@ -1353,5 +1352,17 @@
  "•  Apps come from many places: package managers, other stores and developers' own release pages. Bilby does not review them, so only install software you trust.": "•  تأتي التطبيقات من أماكن كثيرة: مديري الحزم، ومتاجر أخرى، وصفحات الإصدارات الخاصة بالمطورين. لا يراجعها Bilby، فثبّت فقط البرامج التي تثق بها.",
  "•  There is no account and no server of ours. Your library and settings stay in a file on this device.": "•  لا حساب ولا خادم تابع لنا. تبقى مكتبتك وإعداداتك في ملف على هذا الجهاز.",
  "★  In favourites": "★  في المفضلة",
- "☆  Favourite": "☆  مفضلة"
+ "☆  Favourite": "☆  مفضلة",
+ "Apps on this device that Bilby did not install. Open one to start it, update it or remove it.": "تطبيقات على هذا الجهاز لم يثبّتها Bilby. افتح أحدها لتشغيله أو تحديثه أو إزالته.",
+ "Update available  ·  {}": "يتوفر تحديث  ·  {}",
+ "Its menu entry does not say how to start it.": "مدخله في القائمة لا يذكر كيفية تشغيله.",
+ "The system is being updated. Try again when that has finished.": "يجري تحديث النظام الآن. حاول مرة أخرى بعد انتهائه.",
+ "Update everything": "تحديث الكل",
+ "Update the whole system?": "هل تريد تحديث النظام كله؟",
+ "Updating {}…": "جارٍ تحديث {}…",
+ "{} could not be updated. The system's details show what the updater said.": "تعذّر تحديث {}. تعرض تفاصيل النظام ما قاله برنامج التحديث.",
+ "{} is updated together with everything else {} looks after, so that all of it keeps working together.": "يُحدَّث {} مع كل ما يديره {}، حتى يستمر الجميع في العمل معًا.",
+ "{} updated": "تم تحديث {}",
+ "{} updates everything together, not one package alone.": "{} يحدّث كل شيء معًا، لا حزمة واحدة بمفردها.",
+ "{} was not updated. {}": "لم يُحدَّث {}. {}"
 }

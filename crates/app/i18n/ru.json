@@ -113,7 +113,6 @@
  "Apps": "Приложения",
  "Apps can also come from a list on your own server or storage: a small file saying what the apps are and where their files live. Add its address and its apps are searched, shown on the home page and installed like any others. Nobody but its owner vouches for what is on such a list, so add only ones you trust.": "Приложения можно брать и из списка на вашем собственном сервере или хранилище: это небольшой файл, где сказано, какие есть приложения и где лежат их файлы. Добавьте его адрес — и приложения из него будут находиться в поиске, показываться на главной и устанавливаться, как любые другие. За содержимое такого списка отвечает только его владелец, поэтому добавляйте только те, которым доверяете.",
  "Apps come from the sources listed above and are not reviewed by Bilby. Install software you trust. Made with Slint.": "Приложения берутся из перечисленных выше источников, Bilby их не проверяет. Устанавливайте только то, чему доверяете. Сделано на Slint.",
- "Apps on this device that Bilby did not install. Open one to start it, see its page or remove it.": "Приложения на этом устройстве, которые установил не Bilby. Откройте любое, чтобы запустить его, посмотреть страницу или удалить.",
  "Apps you install from the store show up here, and the store can tell you when they have a new release.": "Здесь появляются приложения, установленные из магазина, а магазин сообщает, когда у них выходит новая версия.",
  "Apps you install from the store show up here, and the store can tell you when they have a new release. Favourites are kept here too.": "Здесь появляются приложения, установленные из магазина, а магазин сообщает, когда у них выходит новая версия. Избранное тоже хранится здесь.",
  "Apps you install with Bilby show up here, and so do your favourites.": "Здесь появляются приложения, установленные через Bilby, и ваше избранное.",
@@ -1323,5 +1322,17 @@
  "•  Apps come from many places: package managers, other stores and developers' own release pages. Bilby does not review them, so only install software you trust.": "•  Приложения берутся из разных мест: менеджеров пакетов, других магазинов и страниц выпусков самих разработчиков. Bilby их не проверяет, поэтому устанавливайте только то, чему доверяете.",
  "•  There is no account and no server of ours. Your library and settings stay in a file on this device.": "•  Нет ни аккаунта, ни нашего сервера. Библиотека и настройки хранятся в файле на этом устройстве.",
  "★  In favourites": "★  В избранном",
- "☆  Favourite": "☆  В избранное"
+ "☆  Favourite": "☆  В избранное",
+ "Apps on this device that Bilby did not install. Open one to start it, update it or remove it.": "Приложения на этом устройстве, которые установил не Bilby. Откройте любое, чтобы запустить, обновить или удалить его.",
+ "Update available  ·  {}": "Доступно обновление  ·  {}",
+ "Its menu entry does not say how to start it.": "В его пункте меню не сказано, как его запустить.",
+ "The system is being updated. Try again when that has finished.": "Система сейчас обновляется. Повторите попытку, когда обновление закончится.",
+ "Update everything": "Обновить всё",
+ "Update the whole system?": "Обновить всю систему?",
+ "Updating {}…": "Обновление {}…",
+ "{} could not be updated. The system's details show what the updater said.": "Не удалось обновить {}. В сведениях о системе показано, что сообщил установщик обновлений.",
+ "{} is updated together with everything else {} looks after, so that all of it keeps working together.": "{} обновляется вместе со всем остальным, чем управляет {}, чтобы всё продолжало работать согласованно.",
+ "{} updated": "{}: обновлено",
+ "{} updates everything together, not one package alone.": "{} обновляет всё вместе, а не один пакет отдельно.",
+ "{} was not updated. {}": "{}: не обновлено. {}"
 }

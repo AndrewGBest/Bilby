@@ -23,6 +23,9 @@ pub(crate) enum Guarded {
     /// Not a guard: updates that need the person are waiting, and the question is
     /// whether to finish them now.
     FinishUpdates,
+    /// Not a guard: one app's update comes only with all of the system's, and the
+    /// question is whether to install them all now.
+    UpdateSystem,
 }
 
 impl App {
@@ -122,6 +125,14 @@ impl App {
             }
             return;
         }
+        if matches!(*self.pending.lock().unwrap(), Some(Guarded::UpdateSystem)) {
+            *self.pending.lock().unwrap() = None;
+            self.close_gate(ui);
+            if yes {
+                self.update_system(ui);
+            }
+            return;
+        }
         if matches!(*self.pending.lock().unwrap(), Some(Guarded::RestartBilby)) {
             *self.pending.lock().unwrap() = None;
             self.close_gate(ui);
@@ -205,7 +216,7 @@ impl App {
                 self.remove_from_library(ui, &id);
             }
             Guarded::Setting(change) => self.apply_setting(ui, change),
-            Guarded::Restart | Guarded::RestartBilby | Guarded::FinishUpdates => {}
+            Guarded::Restart | Guarded::RestartBilby | Guarded::FinishUpdates | Guarded::UpdateSystem => {}
         }
     }
 }

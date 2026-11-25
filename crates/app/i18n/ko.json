@@ -113,7 +113,6 @@
  "Apps": "앱",
  "Apps can also come from a list on your own server or storage: a small file saying what the apps are and where their files live. Add its address and its apps are searched, shown on the home page and installed like any others. Nobody but its owner vouches for what is on such a list, so add only ones you trust.": "내 서버나 저장소에 있는 목록에서도 앱을 가져올 수 있습니다. 목록은 어떤 앱이 있고 파일이 어디에 있는지 알려 주는 작은 파일입니다. 주소를 추가하면 그 앱들도 다른 앱처럼 검색되고, 홈 화면에 표시되고, 설치됩니다. 이런 목록의 내용은 목록 주인 외에는 아무도 보증하지 않으므로, 믿을 수 있는 목록만 추가하세요.",
  "Apps come from the sources listed above and are not reviewed by Bilby. Install software you trust. Made with Slint.": "앱은 위에 나열된 소스에서 제공되며 Bilby가 검토하지 않습니다. 믿을 수 있는 소프트웨어만 설치하세요. Slint로 만들었습니다.",
- "Apps on this device that Bilby did not install. Open one to start it, see its page or remove it.": "이 기기에 있지만 Bilby가 설치하지 않은 앱입니다. 열어서 실행하거나 페이지를 보거나 제거할 수 있습니다.",
  "Apps you install from the store show up here, and the store can tell you when they have a new release.": "스토어에서 설치한 앱이 여기에 표시되며, 새 릴리스가 나오면 스토어가 알려 줍니다.",
  "Apps you install from the store show up here, and the store can tell you when they have a new release. Favourites are kept here too.": "스토어에서 설치한 앱이 여기에 표시되며, 새 릴리스가 나오면 스토어가 알려 줍니다. 즐겨찾기도 여기에 보관됩니다.",
  "Apps you install with Bilby show up here, and so do your favourites.": "Bilby로 설치한 앱과 즐겨찾기가 여기에 표시됩니다.",
@@ -1303,5 +1302,17 @@
  "•  Apps come from many places: package managers, other stores and developers' own release pages. Bilby does not review them, so only install software you trust.": "•  앱은 패키지 관리자, 다른 스토어, 개발자의 릴리스 페이지 등 여러 곳에서 제공됩니다. Bilby는 앱을 검토하지 않으므로 믿을 수 있는 소프트웨어만 설치하세요.",
  "•  There is no account and no server of ours. Your library and settings stay in a file on this device.": "•  계정도 없고 저희 서버도 없습니다. 라이브러리와 설정은 이 기기의 파일에 보관됩니다.",
  "★  In favourites": "★  즐겨찾기에 있음",
- "☆  Favourite": "☆  즐겨찾기"
+ "☆  Favourite": "☆  즐겨찾기",
+ "Apps on this device that Bilby did not install. Open one to start it, update it or remove it.": "이 기기에 있지만 Bilby가 설치하지 않은 앱입니다. 하나를 열어 실행하거나 업데이트하거나 제거할 수 있습니다.",
+ "Update available  ·  {}": "업데이트 있음  ·  {}",
+ "Its menu entry does not say how to start it.": "메뉴 항목에 실행 방법이 나와 있지 않습니다.",
+ "The system is being updated. Try again when that has finished.": "시스템을 업데이트하는 중입니다. 끝난 뒤에 다시 시도하세요.",
+ "Update everything": "모두 업데이트",
+ "Update the whole system?": "시스템 전체를 업데이트할까요?",
+ "Updating {}…": "{} 업데이트 중…",
+ "{} could not be updated. The system's details show what the updater said.": "{}을(를) 업데이트하지 못했습니다. 시스템 세부 정보에서 업데이트 도구의 출력을 볼 수 있습니다.",
+ "{} is updated together with everything else {} looks after, so that all of it keeps working together.": "{}은(는) {}이(가) 관리하는 나머지 모든 것과 함께 업데이트됩니다. 전체가 계속 함께 잘 작동하도록 하기 위해서입니다.",
+ "{} updated": "{} 업데이트됨",
+ "{} updates everything together, not one package alone.": "{}은(는) 패키지 하나만이 아니라 모든 것을 함께 업데이트합니다.",
+ "{} was not updated. {}": "{}이(가) 업데이트되지 않았습니다. {}"
 }

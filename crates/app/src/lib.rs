@@ -50,6 +50,7 @@ mod gate;
 mod installing;
 mod keyboard;
 mod library;
+mod outside;
 mod reviews;
 mod settings;
 mod updates;
@@ -86,6 +87,9 @@ use wiring::translate_remote_keys;
 struct Elsewhere {
     apps: Vec<(String, String)>,
     packages: HashSet<String>,
+    /// The app-menu entry of each app the system's package manager installed, by its
+    /// id in small letters: the file that says how to start it.
+    entries: HashMap<String, PathBuf>,
 }
 
 /// What the last look for updates found, per app. Ids are matched without regard to

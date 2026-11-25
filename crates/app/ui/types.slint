@@ -293,6 +293,10 @@ export global Store {
     in property <bool> in-library;
     // On the device, not installed by the store, and the store can take it off.
     in property <bool> can-uninstall;
+    // On the device, not installed by the store, and the tool that looks after it has
+    // an update waiting for it. `outside-change` is "1.2 → 1.3", as much as is known.
+    in property <bool> outside-update;
+    in property <string> outside-change;
 
     // --- install ----------------------------------------------------------------
     // 0 idle, 1 working, 2 done, 3 failed

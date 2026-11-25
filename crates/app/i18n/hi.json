@@ -113,7 +113,6 @@
  "Apps": "ऐप",
  "Apps can also come from a list on your own server or storage: a small file saying what the apps are and where their files live. Add its address and its apps are searched, shown on the home page and installed like any others. Nobody but its owner vouches for what is on such a list, so add only ones you trust.": "ऐप आपके अपने सर्वर या स्टोरेज पर रखी सूची से भी आ सकते हैं: एक छोटी फ़ाइल जो बताती है कि ऐप कौन-से हैं और उनकी फ़ाइलें कहाँ हैं। उसका पता जोड़ें, तो उसके ऐप बाकी ऐप की तरह खोजे जाते हैं, होम पेज पर दिखते हैं और इंस्टॉल होते हैं। ऐसी सूची में जो है उसकी ज़िम्मेदारी सिर्फ़ उसके मालिक की है, इसलिए वही सूचियाँ जोड़ें जिन पर आपको भरोसा हो।",
  "Apps come from the sources listed above and are not reviewed by Bilby. Install software you trust. Made with Slint.": "ऐप ऊपर दिए गए स्रोतों से आते हैं और Bilby उनकी जाँच नहीं करता। वही सॉफ़्टवेयर इंस्टॉल करें जिस पर आपको भरोसा हो। Slint से बना।",
- "Apps on this device that Bilby did not install. Open one to start it, see its page or remove it.": "इस डिवाइस के वे ऐप जिन्हें Bilby ने इंस्टॉल नहीं किया। किसी को खोलकर उसे शुरू करें, उसका पेज देखें या हटाएँ।",
  "Apps you install from the store show up here, and the store can tell you when they have a new release.": "स्टोर से इंस्टॉल किए गए ऐप यहाँ दिखते हैं, और नया रिलीज़ आने पर स्टोर आपको बता सकता है।",
  "Apps you install from the store show up here, and the store can tell you when they have a new release. Favourites are kept here too.": "स्टोर से इंस्टॉल किए गए ऐप यहाँ दिखते हैं, और नया रिलीज़ आने पर स्टोर आपको बता सकता है। पसंदीदा भी यहीं रहते हैं।",
  "Apps you install with Bilby show up here, and so do your favourites.": "Bilby से इंस्टॉल किए गए ऐप यहाँ दिखते हैं, और आपके पसंदीदा भी।",
@@ -1313,5 +1312,17 @@
  "•  Apps come from many places: package managers, other stores and developers' own release pages. Bilby does not review them, so only install software you trust.": "•  ऐप कई जगहों से आते हैं: पैकेज मैनेजर, दूसरे स्टोर और डेवलपर के अपने रिलीज़ पेज। Bilby उनकी जाँच नहीं करता, इसलिए वही सॉफ़्टवेयर इंस्टॉल करें जिस पर आपको भरोसा हो।",
  "•  There is no account and no server of ours. Your library and settings stay in a file on this device.": "•  न कोई खाता है, न हमारा कोई सर्वर। आपकी लाइब्रेरी और सेटिंग्स इसी डिवाइस पर एक फ़ाइल में रहती हैं।",
  "★  In favourites": "★  पसंदीदा में",
- "☆  Favourite": "☆  पसंदीदा"
+ "☆  Favourite": "☆  पसंदीदा",
+ "Apps on this device that Bilby did not install. Open one to start it, update it or remove it.": "इस डिवाइस के वे ऐप जिन्हें Bilby ने इंस्टॉल नहीं किया। किसी को शुरू करने, अपडेट करने या हटाने के लिए उसे खोलें।",
+ "Update available  ·  {}": "अपडेट उपलब्ध है  ·  {}",
+ "Its menu entry does not say how to start it.": "इसकी मेन्यू प्रविष्टि यह नहीं बताती कि इसे कैसे शुरू किया जाए।",
+ "The system is being updated. Try again when that has finished.": "सिस्टम अपडेट हो रहा है। उसके पूरा होने पर फिर कोशिश करें।",
+ "Update everything": "सब कुछ अपडेट करें",
+ "Update the whole system?": "पूरा सिस्टम अपडेट करें?",
+ "Updating {}…": "{} अपडेट हो रहा है…",
+ "{} could not be updated. The system's details show what the updater said.": "{} अपडेट नहीं हो सका। सिस्टम के विवरण में दिखता है कि अपडेटर ने क्या कहा।",
+ "{} is updated together with everything else {} looks after, so that all of it keeps working together.": "{} उन सभी चीज़ों के साथ अपडेट होता है जिन्हें {} संभालता है, ताकि सब कुछ साथ मिलकर काम करता रहे।",
+ "{} updated": "{} अपडेट हो गया",
+ "{} updates everything together, not one package alone.": "{} सब कुछ एक साथ अपडेट करता है, अकेला एक पैकेज नहीं।",
+ "{} was not updated. {}": "{} अपडेट नहीं हुआ। {}"
 }

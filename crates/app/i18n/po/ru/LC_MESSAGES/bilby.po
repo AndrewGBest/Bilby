@@ -173,8 +173,8 @@ msgid "Apps come from the sources listed above and are not reviewed by Bilby. In
 msgstr "Приложения берутся из перечисленных выше источников, Bilby их не проверяет. Устанавливайте только то, чему доверяете. Сделано на Slint."
 
 msgctxt "LibraryBody"
-msgid "Apps on this device that Bilby did not install. Open one to start it, see its page or remove it."
-msgstr "Приложения на этом устройстве, которые установил не Bilby. Откройте любое, чтобы запустить его, посмотреть страницу или удалить."
+msgid "Apps on this device that Bilby did not install. Open one to start it, update it or remove it."
+msgstr "Приложения на этом устройстве, которые установил не Bilby. Откройте любое, чтобы запустить, обновить или удалить его."
 
 msgctxt "LibraryBody"
 msgid "Apps you install from the store show up here, and the store can tell you when they have a new release."
@@ -2069,6 +2069,10 @@ msgctxt "AppRow"
 msgid "Update available"
 msgstr "Есть обновление"
 
+msgctxt "DetailsBody"
+msgid "Update available"
+msgstr "Есть обновление"
+
 msgctxt "TvShell"
 msgid "Update available"
 msgstr "Есть обновление"
@@ -2080,6 +2084,14 @@ msgstr "Есть обновление"
 msgctxt "DetailsBody"
 msgid "Update available  ·  you have {0}, latest is {1}"
 msgstr "Есть обновление  ·  у вас {0}, новейшая — {1}"
+
+msgctxt "DetailsBody"
+msgid "Update available  ·  {}"
+msgstr "Доступно обновление  ·  {}"
+
+msgctxt "TvShell"
+msgid "Update available  ·  {}"
+msgstr "Доступно обновление  ·  {}"
 
 msgctxt "TvShell"
 msgid "Update available: you have {}"

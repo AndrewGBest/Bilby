@@ -35,6 +35,11 @@ impl App {
     /// stopped, and the file that suits this device starts downloading as soon as it is
     /// known. Packages that are installed with a command just get their page.
     pub fn quick_install(self: &Arc<Self>, ui: &AppWindow, id: &str) {
+        // On the device already, from somewhere else, with an update waiting: that
+        // update is what the button on its row means.
+        if self.outside_update(id).is_some() {
+            return self.update_app(ui, id);
+        }
         *self.install_when_loaded.lock().unwrap() = Some(id.to_string());
         self.open(ui, id);
     }
@@ -87,6 +92,7 @@ impl App {
         store.set_can_open(self.launchable(id).is_some());
         store.set_in_library(self.state.lock().unwrap().installed(id).is_some());
         store.set_can_uninstall(false);
+        store.set_outside_update(false);
         store.set_details_open(true);
         store.set_details_error(SharedString::new());
         store.set_unavailable(SharedString::new());
@@ -132,6 +138,7 @@ impl App {
         // Known before anything is fetched for a Flatpak or a Steam game; for a
         // system package, once its page has loaded.
         store.set_can_uninstall(self.can_uninstall(&self.state(), &store));
+        self.show_outside_update(&store);
         self.show_app_sources(ui);
         let Some(app_id) = AppId::parse(id) else {
             store.set_details_loading(false);
@@ -335,6 +342,7 @@ impl App {
             store.set_installed_version(details.summary.installed_version.clone().unwrap_or_default().into());
         }
         store.set_can_uninstall(self.can_uninstall(&self.state(), &store));
+        self.show_outside_update(&store);
         // Start on the release the catalog picked (the newest stable one that fits).
         let picked = details.release.as_ref().map(|r| r.version.clone());
         let selected = details.versions.iter().position(|r| Some(&r.version) == picked.as_ref());

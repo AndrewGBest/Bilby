@@ -90,11 +90,11 @@ fn apps_can_be_updated_automatically_and_what_needs_the_person_waits() {
     assert_eq!(s.store().get_updates_count(), 1, "Kestrel still waits in the Library");
     assert_eq!(s.store().get_updating_id(), "");
     assert_eq!(s.store().get_install_state(), 0);
-    // What it had to leave is offered: Kestrel, and the system's six, which want a
+    // What it had to leave is offered: Kestrel, and the system's seven, which want a
     // password. Later is later: it is not asked again while the window stays open.
     assert_eq!((s.store().get_gate(), s.store().get_gate_title().as_str()), (1, "Updates are waiting for you"));
     assert!(
-        s.store().get_gate_text().starts_with("7 updates waiting for you to finish"),
+        s.store().get_gate_text().starts_with("8 updates waiting for you to finish"),
         "{}",
         s.store().get_gate_text()
     );
@@ -112,7 +112,7 @@ fn apps_can_be_updated_automatically_and_what_needs_the_person_waits() {
     s.app.check_everything(&s.ui);
     let said = s.notified.lock().unwrap().clone();
     assert_eq!(said.len(), 1, "{said:?}");
-    assert!(said[0].starts_with("7 updates waiting for you to finish"));
+    assert!(said[0].starts_with("8 updates waiting for you to finish"));
     assert_eq!(s.store().get_gate(), 0, "nothing is asked of a window nobody sees");
     // Opened again, it is asked; "Finish now" does the rest, system and all.
     s.app.window_opened(&s.ui);

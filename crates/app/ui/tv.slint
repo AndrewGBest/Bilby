@@ -496,8 +496,10 @@ export component TvShell inherits Rectangle {
     changed sys-last => { root.sys-act = min(root.sys-act, root.sys-last); }
     property <bool> busy: Store.install-state == 1;
     property <bool> is-update: Store.installed-version != "" && Store.installed-version != "installed" && Store.app.version != "" && Store.installed-version != Store.app.version;
-    property <bool> open-instead: Store.can-open && !is-update && !busy;
-    property <string> main-action: busy ? @tr("Cancel") : Store.queued ? @tr("Queued") : open-instead ? @tr("Open") : is-update ? @tr("Update") : Store.options.length == 0 ? "" : Store.installed-version != "" && !Store.is-website ? @tr("Install again") : Store.options[0].verb;
+    // An update is waiting with the tool that installed it, not with the store.
+    property <bool> outside: Store.outside-update && !busy && !Store.queued;
+    property <bool> open-instead: Store.can-open && !is-update && !outside && !busy;
+    property <string> main-action: busy ? @tr("Cancel") : Store.queued ? @tr("Queued") : outside ? @tr("Update") : open-instead ? @tr("Open") : is-update ? @tr("Update") : Store.options.length == 0 ? "" : Store.installed-version != "" && !Store.is-website ? @tr("Install again") : Store.options[0].verb;
     // The buttons on an app's page, left to right: the main one, Favourite, Other files
     // (when there are any) and Remove (when the app is in the library).
     // Other versions of the service and other sources of the app come first in the
@@ -675,6 +677,8 @@ export component TvShell inherits Rectangle {
             Store.cancel-install();
         } else if (Store.queued) {
             Store.install(0);
+        } else if (root.outside) {
+            Store.update-app(Store.app.id);
         } else if (root.open-instead) {
             Store.launch();
         } else if (Store.options.length > 0) {
@@ -2010,7 +2014,7 @@ export component TvShell inherits Rectangle {
                     if Store.release-age != "" : TvStat { u: root.u; value: Store.release-age; caption: @tr("last updated"); }
                 }
                 Text {
-                    text: root.remove-armed ? @tr("Press OK again to remove {} from this TV", Store.app.name) : Store.details-loading ? @tr("Checking what works on this TV…") : Store.details-error != "" ? @tr("{}  Press OK to try again.", Store.details-error) : Store.unavailable != "" ? Store.unavailable : Store.install-state == 1 ? @tr("Downloading…  {}%", round(Store.install-progress * 100)) : Store.install-state >= 2 ? Store.install-message : root.is-update ? @tr("Update available: you have {}", Store.installed-version) : Store.installed-version == "installed" ? @tr("Installed") : Store.installed-version != "" ? @tr("Installed  ·  {}", Store.installed-version) : Store.is-website ? @tr("Opens in Longboard, driven with your remote") : Store.options.length > 0 && Store.options[0].verified ? @tr("Bilby checks the download is the genuine file") : "";
+                    text: root.remove-armed ? @tr("Press OK again to remove {} from this TV", Store.app.name) : Store.details-loading ? @tr("Checking what works on this TV…") : Store.details-error != "" ? @tr("{}  Press OK to try again.", Store.details-error) : Store.unavailable != "" ? Store.unavailable : Store.install-state == 1 ? @tr("Downloading…  {}%", round(Store.install-progress * 100)) : Store.install-state >= 2 ? Store.install-message : root.outside ? (Store.outside-change != "" ? @tr("Update available  ·  {}", Store.outside-change) : @tr("Update available")) : root.is-update ? @tr("Update available: you have {}", Store.installed-version) : Store.installed-version == "installed" ? @tr("Installed") : Store.installed-version != "" ? @tr("Installed  ·  {}", Store.installed-version) : Store.is-website ? @tr("Opens in Longboard, driven with your remote") : Store.options.length > 0 && Store.options[0].verified ? @tr("Bilby checks the download is the genuine file") : "";
                     color: Store.details-error != "" || Store.install-state == 3 ? Theme.bad : Store.unavailable != "" || root.remove-armed ? Theme.warn : Store.install-state == 1 ? Theme.accent : Theme.ok;
                     font-size: 12 * u;
                     font-weight: 700;

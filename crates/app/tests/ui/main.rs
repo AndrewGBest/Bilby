@@ -29,6 +29,7 @@ mod flatpak;
 mod fuse;
 mod layouts;
 mod library;
+mod outside;
 mod reviews;
 mod search;
 mod settings;

@@ -173,8 +173,8 @@ msgid "Apps come from the sources listed above and are not reviewed by Bilby. In
 msgstr "ऐप ऊपर दिए गए स्रोतों से आते हैं और Bilby उनकी जाँच नहीं करता। वही सॉफ़्टवेयर इंस्टॉल करें जिस पर आपको भरोसा हो। Slint से बना।"
 
 msgctxt "LibraryBody"
-msgid "Apps on this device that Bilby did not install. Open one to start it, see its page or remove it."
-msgstr "इस डिवाइस के वे ऐप जिन्हें Bilby ने इंस्टॉल नहीं किया। किसी को खोलकर उसे शुरू करें, उसका पेज देखें या हटाएँ।"
+msgid "Apps on this device that Bilby did not install. Open one to start it, update it or remove it."
+msgstr "इस डिवाइस के वे ऐप जिन्हें Bilby ने इंस्टॉल नहीं किया। किसी को शुरू करने, अपडेट करने या हटाने के लिए उसे खोलें।"
 
 msgctxt "LibraryBody"
 msgid "Apps you install from the store show up here, and the store can tell you when they have a new release."
@@ -2066,6 +2066,10 @@ msgctxt "AppRow"
 msgid "Update available"
 msgstr "अपडेट उपलब्ध"
 
+msgctxt "DetailsBody"
+msgid "Update available"
+msgstr "अपडेट उपलब्ध"
+
 msgctxt "TvShell"
 msgid "Update available"
 msgstr "अपडेट उपलब्ध"
@@ -2077,6 +2081,14 @@ msgstr "अपडेट उपलब्ध"
 msgctxt "DetailsBody"
 msgid "Update available  ·  you have {0}, latest is {1}"
 msgstr "अपडेट उपलब्ध  ·  आपके पास {0} है, नया {1} है"
+
+msgctxt "DetailsBody"
+msgid "Update available  ·  {}"
+msgstr "अपडेट उपलब्ध है  ·  {}"
+
+msgctxt "TvShell"
+msgid "Update available  ·  {}"
+msgstr "अपडेट उपलब्ध है  ·  {}"
 
 msgctxt "TvShell"
 msgid "Update available: you have {}"

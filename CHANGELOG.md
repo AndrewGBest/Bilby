@@ -6,6 +6,11 @@ any release may change how something works.
 
 ## Unreleased
 
+- **Apps that Bilby did not install can be updated from Bilby.** Under "Also installed
+  here", an app with an update waiting says so and has an Update button, and so does
+  its page. Flatpak, apt and dnf update that one app. pacman updates everything
+  together, so there Bilby asks whether to update the whole system.
+- Apps the system's package manager installed can be opened from their page.
 - The release files come with a `SHA256SUMS` file and a signed record of where they
   were built.
 - `bilby --version` and `bilby-cli --version`.

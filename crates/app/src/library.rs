@@ -35,15 +35,19 @@ impl App {
                 );
                 // What the system's package manager installed and shows in the app menu.
                 let catalog = app.catalog();
-                for (id, name) in catalog.installed_programs() {
+                let mut entries = std::collections::HashMap::new();
+                for (id, name, entry) in catalog.installed_programs() {
                     let id = id.to_string();
                     if !apps.iter().any(|(known, _)| known.eq_ignore_ascii_case(&id)) {
+                        if let Some(entry) = entry {
+                            entries.insert(id.to_ascii_lowercase(), entry);
+                        }
                         apps.push((id, name));
                     }
                 }
                 let packages = catalog.installed_packages().iter().map(|name| plain(name)).collect();
                 app.give_web_apps_their_own_windows();
-                Elsewhere { apps, packages }
+                Elsewhere { apps, packages, entries }
             },
             |app, ui, found| {
                 *app.elsewhere.write().unwrap() = found;
@@ -116,6 +120,12 @@ impl App {
             let os = self.platform.read().unwrap().os;
             let libraries = self.steam_libraries.clone().unwrap_or_else(|| steam::default_libraries(os));
             return steam::is_installed(&libraries, number).then(|| steam::run_link(number)).flatten();
+        }
+        // What the system's package manager installed is started as its menu entry says.
+        if state.installed(id).is_none() {
+            if let Some(entry) = self.outside_entry(id) {
+                return Some(entry);
+            }
         }
         let app = state.installed(id).filter(|a| a.store_managed)?;
         let path = PathBuf::from(app.path.as_deref()?);
@@ -208,6 +218,8 @@ impl App {
         } else if id.starts_with("steam:") {
             // A link, handed to the system, which passes it to Steam.
             (self.opener)(&path)
+        } else if self.outside_entry(&id).is_some_and(|entry| entry == path) {
+            self.launch_outside(&path)
         } else {
             // A program is watched for a moment as it starts, away from the interface:
             // one that closes straight away says why.

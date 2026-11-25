@@ -18,7 +18,7 @@
 //!
 //! Installing is left to the package manager: the store shows the command.
 
-use super::Source;
+use super::{OnDevice, Source};
 use crate::asset::{AssetInfo, Format, TargetArch, TargetOs};
 use crate::error::{Error, Result};
 use crate::model::{date_from_unix, valid_key, AppId, AppSummary, Asset, Release, SourceKind};
@@ -176,7 +176,9 @@ impl Backend {
     /// The installed packages that are apps a person would open: the ones that put an
     /// entry in the system's app menu. Each comes with the name its entry gives it.
     /// `menu` is where those entries are (`/usr/share/applications`).
-    fn installed_apps(&self, menu: &Path) -> Vec<(String, String)> {
+    /// Each also comes with the menu entry it was read from, the file that says how the
+    /// app is started (`None` on a made-up machine, which has no such files).
+    fn installed_entries(&self, menu: &Path) -> Vec<(String, String, Option<PathBuf>)> {
         // Which package each menu entry belongs to, by the entry's file name.
         let mut owners: Vec<(String, String)> = Vec::new();
         let entry_in = |line: &str| -> Option<String> {
@@ -185,7 +187,7 @@ impl Backend {
         };
         match self {
             Backend::Fixed { installed, .. } => {
-                return installed.iter().map(|(name, _)| (name.clone(), name.clone())).collect();
+                return installed.iter().map(|(name, _)| (name.clone(), name.clone(), None)).collect();
             }
             // Each installed package has a folder with the list of its files.
             Backend::Pacman { local_dir, .. } => {
@@ -235,18 +237,19 @@ impl Backend {
             }
         }
         owners.sort();
-        let mut apps: Vec<(String, String)> = Vec::new();
+        let mut apps: Vec<(String, String, Option<PathBuf>)> = Vec::new();
         for (file, package) in owners {
             // One line per package: its first entry that is meant to be seen.
-            if apps.iter().any(|(known, _)| *known == package) {
+            if apps.iter().any(|(known, _, _)| *known == package) {
                 continue;
             }
-            let Ok(text) = std::fs::read_to_string(menu.join(&file)) else { continue };
+            let entry = menu.join(&file);
+            let Ok(text) = std::fs::read_to_string(&entry) else { continue };
             if let Some(name) = menu_entry_name(&text) {
-                apps.push((package, name));
+                apps.push((package, name, Some(entry)));
             }
         }
-        apps.sort_by_key(|(_, name)| name.to_lowercase());
+        apps.sort_by_key(|(_, name, _)| name.to_lowercase());
         apps
     }
 
@@ -365,6 +368,64 @@ pub fn menu_entry_name(text: &str) -> Option<String> {
     let name =
         name.filter(|name| !name.is_empty() && name.chars().count() <= 80 && !name.chars().any(char::is_control))?;
     (kind.as_deref() == Some("Application")).then_some(name)
+}
+
+/// How an app-menu entry says its app is started: the program and what it is given.
+/// The places where the menu would put a file or an address to open (`%f`, `%U`)
+/// are left out, as they are when an app is started with nothing to open.
+pub fn menu_entry_command(text: &str) -> Option<(String, Vec<String>)> {
+    let mut in_main = false;
+    let mut exec = None;
+    for line in text.lines() {
+        let line = line.trim();
+        if line.starts_with('[') {
+            in_main = line == "[Desktop Entry]"; // a file format's heading (not shown)
+            continue;
+        }
+        if let Some((key, value)) = line.split_once('=').filter(|_| in_main) {
+            if key.trim() == "Exec" {
+                exec = Some(value.trim().to_string());
+            }
+        }
+    }
+    // Words are split at spaces; double quotes keep a word with spaces in it whole,
+    // and a backslash inside them takes the next character as it is.
+    let mut words: Vec<String> = Vec::new();
+    let (mut word, mut started, mut quoted) = (String::new(), false, false);
+    let exec = exec?;
+    let mut chars = exec.chars();
+    while let Some(c) = chars.next() {
+        match c {
+            '"' => {
+                quoted = !quoted;
+                started = true;
+            }
+            '\\' if quoted => word.extend(chars.next()),
+            ' ' | '\t' if !quoted => {
+                if std::mem::take(&mut started) {
+                    words.push(std::mem::take(&mut word));
+                }
+            }
+            // "%%" is a percent sign; "%" and a letter is a place for something the
+            // menu fills in, and nothing goes there.
+            '%' => {
+                if chars.next() == Some('%') {
+                    word.push('%');
+                    started = true;
+                }
+            }
+            c => {
+                word.push(c);
+                started = true;
+            }
+        }
+    }
+    if started {
+        words.push(word);
+    }
+    let mut words = words.into_iter();
+    let program = words.next().filter(|program| !program.is_empty())?;
+    Some((program, words.collect()))
 }
 
 /// What rpm says is installed: name -> version-release.
@@ -766,15 +827,12 @@ impl Source for SystemRepos {
         self.backend.installed().into_keys().collect()
     }
 
-    fn installed_apps(&self) -> Vec<(String, String, bool)> {
+    fn installed_apps(&self) -> Vec<OnDevice> {
         let offered: std::collections::HashSet<String> = self.packages().iter().map(|p| p.name.clone()).collect();
         self.backend
-            .installed_apps(Path::new("/usr/share/applications"))
+            .installed_entries(Path::new("/usr/share/applications"))
             .into_iter()
-            .map(|(package, name)| {
-                let known = offered.contains(&package);
-                (package, name, known)
-            })
+            .map(|(key, name, entry)| OnDevice { offered: offered.contains(&key), key, name, entry })
             .collect()
     }
 
@@ -1258,6 +1316,24 @@ mod tests {
         assert!(!missing.available_on(&Platform::preset("linux-x64-debian").unwrap()));
     }
 
+    #[test]
+    fn a_menu_entry_says_how_its_app_is_started() {
+        let entry =
+            |exec: &str| format!("[Desktop Entry]\nName=Paint\nExec={exec}\n\n[Desktop Action new]\nExec=other\n");
+        let started = |exec: &str| menu_entry_command(&entry(exec));
+        assert_eq!(
+            started("/usr/bin/vlc --started-from-file %U"),
+            Some(("/usr/bin/vlc".into(), vec!["--started-from-file".into()]))
+        );
+        assert_eq!(
+            started(r#"env GDK=x11 "/opt/My App/run" --title "100%%" %f"#),
+            Some(("env".into(), vec!["GDK=x11".into(), "/opt/My App/run".into(), "--title".into(), "100%".into()]))
+        );
+        assert_eq!(started(r#"sh -c "echo \"hi\"""#), Some(("sh".into(), vec!["-c".into(), "echo \"hi\"".into()])));
+        assert_eq!(started(""), None);
+        assert_eq!(menu_entry_command("[Desktop Entry]\nName=Paint\n"), None, "nothing to start");
+    }
+
     // dpkg's file names have a colon in them, which Windows does not allow in one.
     #[test]
     #[cfg(unix)]
@@ -1289,8 +1365,11 @@ mod tests {
         std::fs::write(menu.join("designer.desktop"), "[Desktop Entry]\nName=Qt Designer\nType=Application\n").unwrap();
 
         let pacman = Backend::Pacman { sync_dir: dir.join("sync"), conf: dir.join("pacman.conf"), local_dir: local };
+        let apps = |backend: &Backend| -> Vec<(String, String)> {
+            backend.installed_entries(&menu).into_iter().map(|(package, name, _)| (package, name)).collect()
+        };
         assert_eq!(
-            pacman.installed_apps(&menu),
+            apps(&pacman),
             [("qt6-tools".to_string(), "Qt Designer".to_string()), ("vlc".to_string(), "VLC media player".to_string())],
             "what the menu shows, one line a package; nothing hidden or for a terminal"
         );
@@ -1301,7 +1380,9 @@ mod tests {
         std::fs::write(info.join("vlc:amd64.list"), "/usr/bin/vlc\n/usr/share/applications/vlc.desktop\n").unwrap();
         std::fs::write(info.join("libc6:amd64.list"), "/usr/lib/libc.so.6\n").unwrap();
         let apt = Backend::Apt { lists_dir: dir.join("lists"), status: dir.join("dpkg").join("status") };
-        assert_eq!(apt.installed_apps(&menu), [("vlc".to_string(), "VLC media player".to_string())]);
+        assert_eq!(apps(&apt), [("vlc".to_string(), "VLC media player".to_string())]);
+        // Each comes with the entry that says how it is started.
+        assert_eq!(apt.installed_entries(&menu)[0].2, Some(menu.join("vlc.desktop")));
         let _ = std::fs::remove_dir_all(&dir);
     }
 }
