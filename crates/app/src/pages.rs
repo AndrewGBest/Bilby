@@ -122,6 +122,7 @@ impl App {
         store.set_can_open(self.launchable(store.get_app().id.as_str()).is_some());
         store.set_in_library(state.installed(store.get_app().id.as_str()).is_some());
         store.set_can_uninstall(self.can_uninstall(&state, &store));
+        self.show_outside_update(&store);
         store.set_queued(self.is_queued(store.get_app().id.as_str()));
         let checked = self.last_checked.load(Ordering::SeqCst);
         store.set_last_checked(l(match now.saturating_sub(checked) {
@@ -237,14 +238,9 @@ impl App {
         if !device.is_empty() {
             tv_library.push(section(&store.get_device_name(), device));
         }
-        if !waiting.is_empty() {
-            tv_library.push(section("Updates available", waiting));
-        }
-        if !current.is_empty() {
-            tv_library.push(section("Installed with Bilby", current));
-        }
-        // Everything else on the device, however it got there.
-        let others: Vec<AppCard> = self
+        // Everything else on the device, however it got there. What has an update
+        // waiting with the tool that installed it comes first, and says so.
+        let mut others: Vec<AppCard> = self
             .elsewhere
             .read()
             .unwrap()
@@ -263,8 +259,26 @@ impl App {
                 ..Default::default()
             })
             .collect();
+        for card in &mut others {
+            if let Some(waiting) = self.outside_update(card.id.as_str()) {
+                card.has_update = true;
+                card.summary = crate::outside::change_of(&waiting).into();
+            }
+        }
+        others.sort_by_key(|card| !card.has_update);
         // The desktop's and the phone's library list them too, under the store's own.
         store.set_also_installed(ModelRc::new(VecModel::from(others.clone())));
+        // On a TV an update is an update, whoever installed the app.
+        let (others_waiting, others): (Vec<AppCard>, Vec<AppCard>) =
+            others.into_iter().partition(|card| card.has_update);
+        let mut waiting = waiting;
+        waiting.extend(others_waiting);
+        if !waiting.is_empty() {
+            tv_library.push(section("Updates available", waiting));
+        }
+        if !current.is_empty() {
+            tv_library.push(section("Installed with Bilby", current));
+        }
         if !others.is_empty() {
             tv_library.push(section("Also installed here", others));
         }

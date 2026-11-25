@@ -113,7 +113,6 @@
  "Apps": "App",
  "Apps can also come from a list on your own server or storage: a small file saying what the apps are and where their files live. Add its address and its apps are searched, shown on the home page and installed like any others. Nobody but its owner vouches for what is on such a list, so add only ones you trust.": "Le app possono arrivare anche da un elenco sul tuo server o spazio di archiviazione: un piccolo file che dice quali sono le app e dove si trovano i loro file. Aggiungi il suo indirizzo e le sue app vengono cercate, mostrate nella pagina iniziale e installate come tutte le altre. Solo il proprietario garantisce per ciò che c'è in un elenco del genere, quindi aggiungi solo quelli di cui ti fidi.",
  "Apps come from the sources listed above and are not reviewed by Bilby. Install software you trust. Made with Slint.": "Le app provengono dalle sorgenti elencate sopra e non sono verificate da Bilby. Installa solo software di cui ti fidi. Realizzato con Slint.",
- "Apps on this device that Bilby did not install. Open one to start it, see its page or remove it.": "App su questo dispositivo che Bilby non ha installato. Aprine una per avviarla, vedere la sua pagina o rimuoverla.",
  "Apps you install from the store show up here, and the store can tell you when they have a new release.": "Le app che installi dallo store compaiono qui, e lo store può avvisarti quando esce una nuova versione.",
  "Apps you install from the store show up here, and the store can tell you when they have a new release. Favourites are kept here too.": "Le app che installi dallo store compaiono qui, e lo store può avvisarti quando esce una nuova versione. Qui trovi anche i preferiti.",
  "Apps you install with Bilby show up here, and so do your favourites.": "Le app che installi con Bilby compaiono qui, insieme ai tuoi preferiti.",
@@ -1313,5 +1312,17 @@
  "•  Apps come from many places: package managers, other stores and developers' own release pages. Bilby does not review them, so only install software you trust.": "•  Le app provengono da molti luoghi: gestori di pacchetti, altri store e le pagine di rilascio degli sviluppatori. Bilby non le verifica, quindi installa solo software di cui ti fidi.",
  "•  There is no account and no server of ours. Your library and settings stay in a file on this device.": "•  Non c'è nessun account e nessun nostro server. La libreria e le impostazioni restano in un file su questo dispositivo.",
  "★  In favourites": "★  Nei preferiti",
- "☆  Favourite": "☆  Preferito"
+ "☆  Favourite": "☆  Preferito",
+ "Apps on this device that Bilby did not install. Open one to start it, update it or remove it.": "App su questo dispositivo che Bilby non ha installato. Aprine una per avviarla, aggiornarla o rimuoverla.",
+ "Update available  ·  {}": "Aggiornamento disponibile  ·  {}",
+ "Its menu entry does not say how to start it.": "La sua voce di menu non dice come avviarla.",
+ "The system is being updated. Try again when that has finished.": "Il sistema è in fase di aggiornamento. Riprova quando avrà finito.",
+ "Update everything": "Aggiorna tutto",
+ "Update the whole system?": "Aggiornare l’intero sistema?",
+ "Updating {}…": "Aggiornamento di {}…",
+ "{} could not be updated. The system's details show what the updater said.": "Non è stato possibile aggiornare {}. I dettagli del sistema mostrano cosa ha detto lo strumento di aggiornamento.",
+ "{} is updated together with everything else {} looks after, so that all of it keeps working together.": "{} viene aggiornata insieme a tutto il resto gestito da {}, così che tutto continui a funzionare insieme.",
+ "{} updated": "{} aggiornata",
+ "{} updates everything together, not one package alone.": "{} aggiorna tutto insieme, non un singolo pacchetto.",
+ "{} was not updated. {}": "{} non è stata aggiornata. {}"
 }

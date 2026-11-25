@@ -10,13 +10,13 @@ fn the_system_s_updates_are_in_the_library_and_on_their_own_page() {
     assert_eq!((s.store().get_system_state(), s.store().get_system_headline().as_str()), (0, "Not checked yet"));
 
     s.app.check_system(&s.ui, false);
-    assert_eq!((s.store().get_system_state(), s.store().get_system_headline().as_str()), (3, "6 updates available"));
+    assert_eq!((s.store().get_system_state(), s.store().get_system_headline().as_str()), (3, "7 updates available"));
     let first = s.store().get_system_updates().row_data(0).unwrap();
     assert_eq!((first.name.as_str(), first.change.as_str()), ("linux", "6.11.5.arch1-1 → 6.11.6.arch1-1"));
 
     // The library leads with the system, even with no apps in it yet.
     s.store().set_page(2);
-    assert!(s.has("Update system") && s.has("6 updates available"));
+    assert!(s.has("Update system") && s.has("7 updates available"));
     s.click("System details");
     assert_eq!(s.store().get_page(), 4);
     assert!(s.has("linux: 6.11.5.arch1-1 → 6.11.6.arch1-1"), "what is waiting is listed");

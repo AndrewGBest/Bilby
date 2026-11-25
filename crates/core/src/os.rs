@@ -14,6 +14,9 @@
 //! | dnf | `dnf check-update` | `dnf -y upgrade --refresh` |
 //! | Flatpak | `flatpak remote-ls --updates` | `flatpak update -y` |
 //! | Windows, macOS | not checked | opens the system's own update page |
+//!
+//! One app can be updated by itself ([`update_one`]) where that leaves the system
+//! sound: Flatpak, apt and dnf. pacman's packages are only updated all together.
 
 use crate::error::{Error, Result};
 use crate::model::human_size;
@@ -803,6 +806,9 @@ pub fn update_commands(report: &Report) -> Vec<(Manager, &'static str, Vec<&'sta
     report.managers.iter().map(command).collect()
 }
 
+const NO_PASSWORD_PROMPT: &str =
+    "Updating the system needs a way to ask for your password (pkexec, from polkit), which is not installed.";
+
 /// Install every waiting update. `line` receives what the tools print. Stops at the
 /// first tool that fails.
 pub fn update(host: &dyn Host, report: &Report, line: &mut dyn FnMut(&str)) -> Result<()> {
@@ -819,10 +825,7 @@ pub fn update_waiting(host: &dyn Host, report: &Report, pending: &[Pending], lin
     let wanted = |manager: &Manager| pending.is_empty() || pending.iter().any(|p| p.manager == *manager);
     for (manager, program, args) in update_commands(report).into_iter().filter(|(manager, _, _)| wanted(manager)) {
         if program == "pkexec" && !host.has("pkexec") {
-            return Err(Error::Unsupported(
-                "Updating the system needs a way to ask for your password (pkexec, from polkit), which is not installed."
-                    .to_string(),
-            ));
+            return Err(Error::Unsupported(NO_PASSWORD_PROMPT.to_string()));
         }
         // A new release of a whole-image system is moved to, not upgraded within.
         let release = pending.iter().filter(|p| p.manager == manager).find_map(|p| p.release.as_deref());
@@ -831,23 +834,83 @@ pub fn update_waiting(host: &dyn Host, report: &Report, pending: &[Pending], lin
             None => args,
         };
         line(&format!("Updating through {}…", manager.label()));
-        match host.stream(program, &args, line)? {
-            0 => {}
-            // pkexec's own codes: the prompt was closed, or permission was refused.
-            126 | 127 if program == "pkexec" => {
-                return Err(Error::Unsupported(
-                    "Nothing was changed: the password prompt was closed or refused.".to_string(),
-                ))
-            }
-            code => {
-                return Err(Error::Unsupported(format!(
-                    "{} stopped with an error (code {code}). The details show what it said.",
-                    manager.label()
-                )))
-            }
-        }
+        run_updater(host, manager, program, &args, line)?;
     }
     Ok(())
+}
+
+/// Run one updater to its end, and put what went wrong in words.
+fn run_updater(
+    host: &dyn Host,
+    manager: Manager,
+    program: &str,
+    args: &[&str],
+    line: &mut dyn FnMut(&str),
+) -> Result<()> {
+    match host.stream(program, args, line)? {
+        0 => Ok(()),
+        // pkexec's own codes: the prompt was closed, or permission was refused.
+        126 | 127 if program == "pkexec" => {
+            Err(Error::Unsupported("Nothing was changed: the password prompt was closed or refused.".to_string()))
+        }
+        code => Err(Error::Unsupported(format!(
+            "{} stopped with an error (code {code}). The details show what it said.",
+            manager.label()
+        ))),
+    }
+}
+
+/// The command that brings one waiting update in and nothing else, where the tool can
+/// do that and leave the system sound. `None` where it cannot: pacman's packages are
+/// built against each other as they stand that day, so one brought forward alone can
+/// stop working (or stop others), and a system that is one image has no parts to
+/// update. Those are updated with everything else.
+///
+/// [The apt and dnf commands have not been run on a real machine.]
+pub fn update_one_command(pending: &Pending) -> Option<(&'static str, Vec<&str>)> {
+    let name = pending.name.as_str();
+    // The name goes to the tool as one word of its own; one that could be read as an
+    // option, or is not a name at all, is not passed on.
+    let plain = !name.is_empty()
+        && !name.starts_with('-')
+        && name.chars().all(|c| c.is_ascii_alphanumeric() || "+-._:".contains(c));
+    if !plain || pending.release.is_some() {
+        return None;
+    }
+    match pending.manager {
+        Manager::Flatpak => Some(("flatpak", vec!["update", "-y", "--noninteractive", name])),
+        Manager::Apt => Some((
+            "pkexec",
+            vec![
+                "env",
+                "DEBIAN_FRONTEND=noninteractive",
+                "apt-get",
+                "-y",
+                "-o",
+                "Dpkg::Options::=--force-confold",
+                "install",
+                "--only-upgrade",
+                name,
+            ],
+        )),
+        Manager::Dnf => Some(("pkexec", vec!["dnf", "-y", "upgrade", name])),
+        Manager::Pacman | Manager::RpmOstree => None,
+    }
+}
+
+/// Install one waiting update by itself. `line` receives what the tool prints.
+pub fn update_one(host: &dyn Host, pending: &Pending, line: &mut dyn FnMut(&str)) -> Result<()> {
+    let Some((program, args)) = update_one_command(pending) else {
+        return Err(Error::Unsupported(format!(
+            "{} updates everything together, not one package alone.",
+            pending.manager.label()
+        )));
+    };
+    if program == "pkexec" && !host.has("pkexec") {
+        return Err(Error::Unsupported(NO_PASSWORD_PROMPT.to_string()));
+    }
+    line(&format!("Updating through {}…", pending.manager.label()));
+    run_updater(host, pending.manager, program, &args, line)
 }
 
 /// How far an update has got, worked out from what the tools print as they go.
@@ -942,13 +1005,14 @@ pub fn refresh_lists(host: &dyn Host, report: &Report, line: &mut dyn FnMut(&str
 }
 
 /// A made-up machine for the demo and for previews of other devices: it has the shape of
-/// `platform` and a few updates waiting, which "installing" clears.
+/// `platform` and a few updates waiting, which "installing" clears. One of them is for
+/// harbor, an app the demo catalog has as installed by the system's packages.
 pub fn demo_host(platform: &Platform) -> FakeHost {
     use crate::platform::LinuxFamily;
     let mut host = FakeHost {
         install_lines: vec![
             "Fetching the newest packages…".to_string(),
-            "Installing 5 updates…".to_string(),
+            "Installing updates…".to_string(),
             "Done. (Nothing was changed: this is the demo.)".to_string(),
         ],
         ..FakeHost::default()
@@ -1003,7 +1067,7 @@ pub fn demo_host(platform: &Platform) -> FakeHost {
                 "checkupdates",
                 0,
                 "linux 6.11.5.arch1-1 -> 6.11.6.arch1-1\nmesa 1:24.2.5-1 -> 1:24.2.6-1\nfirefox 131.0.3-1 -> 132.0-1\n\
-                 systemd 256.7-1 -> 256.8-1\nopenssl 3.3.2-1 -> 3.4.0-1\n",
+                 systemd 256.7-1 -> 256.8-1\nopenssl 3.3.2-1 -> 3.4.0-1\nharbor 5.2.0-1 -> 5.3.1-1\n",
             )
             .then("checkupdates", 2, ""),
         Some(LinuxFamily::Fedora) => host
@@ -1025,6 +1089,7 @@ pub fn demo_host(platform: &Platform) -> FakeHost {
                  Inst firefox [131.0.3] (132.0 Ubuntu:24.04/noble-updates [amd64])\n\
                  Inst systemd [255.4-1ubuntu8.4] (255.4-1ubuntu8.5 Ubuntu:24.04/noble-updates [amd64])\n\
                  Inst openssl [3.0.13-0ubuntu3.4] (3.0.13-0ubuntu3.5 Ubuntu:24.04/noble-security [amd64])\n\
+                 Inst harbor [5.0.3+ds1-2ubuntu1] (5.3.1+ds1-1 Ubuntu:24.04/noble-updates [amd64])\n\
                  Conf openssl (3.0.13-0ubuntu3.5 Ubuntu:24.04/noble-security [amd64])\n",
             )
             .then("apt-get -s -o Debug::NoLocking=true upgrade", 0, "Reading package lists...\n"),
@@ -1134,14 +1199,14 @@ mod tests {
 
     #[test]
     fn updates_are_found_installed_and_then_gone() {
-        for (preset, command) in [
-            ("linux-x64-arch", "pkexec pacman -Syu --noconfirm"),
-            ("linux-x64-fedora", "pkexec dnf -y upgrade --refresh"),
+        for (preset, command, waiting) in [
+            ("linux-x64-arch", "pkexec pacman -Syu --noconfirm", 7),
+            ("linux-x64-fedora", "pkexec dnf -y upgrade --refresh", 6),
         ] {
             let host = demo_host(&platform(preset));
             let report = describe(&host, &platform(preset));
             let before = check(&host, &report);
-            assert_eq!(before.pending.len(), 6, "{preset}: five packages and one Flatpak app");
+            assert_eq!(before.pending.len(), waiting, "{preset}: its packages and one Flatpak app");
             assert!(before.problems.is_empty() && !before.restart_needed);
 
             let mut said = Vec::new();
@@ -1150,6 +1215,51 @@ mod tests {
             assert!(said.iter().any(|l| l.starts_with("Updating through")));
             assert_eq!(check(&host, &report).pending, [], "{preset}: nothing is waiting afterwards");
         }
+    }
+
+    #[test]
+    fn one_update_is_installed_by_itself_where_the_tool_can_do_that_safely() {
+        let waiting = |name: &str, manager| Pending {
+            name: name.to_string(),
+            from: "1".to_string(),
+            to: "2".to_string(),
+            manager,
+            release: None,
+        };
+        let host = FakeHost::default().program("pkexec");
+        let mut said = Vec::new();
+        update_one(&host, &waiting("org.example.Paint", Manager::Flatpak), &mut |l| said.push(l.to_string())).unwrap();
+        update_one(&host, &waiting("vlc", Manager::Apt), &mut |_| {}).unwrap();
+        update_one(&host, &waiting("vlc", Manager::Dnf), &mut |_| {}).unwrap();
+        assert_eq!(
+            *host.streamed.lock().unwrap(),
+            [
+                "flatpak update -y --noninteractive org.example.Paint",
+                "pkexec env DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::=--force-confold install --only-upgrade vlc",
+                "pkexec dnf -y upgrade vlc",
+            ]
+        );
+        assert_eq!(said, ["Updating through Flatpak…"]);
+
+        // pacman's packages move together, and an image has no parts: not one alone.
+        let host = FakeHost::default().program("pkexec");
+        for manager in [Manager::Pacman, Manager::RpmOstree] {
+            assert_eq!(update_one_command(&waiting("vlc", manager)), None);
+            assert!(update_one(&host, &waiting("vlc", manager), &mut |_| {}).is_err());
+        }
+        // Nor a name that the tool could read as something else.
+        for name in ["--help", "a b", "", "x;y"] {
+            assert_eq!(update_one_command(&waiting(name, Manager::Flatpak)), None, "{name:?}");
+        }
+        assert!(host.streamed.lock().unwrap().is_empty(), "nothing was run");
+
+        // No way to ask for the password: said, and nothing run. A closed prompt likewise.
+        let bare = FakeHost::default();
+        let error = update_one(&bare, &waiting("vlc", Manager::Apt), &mut |_| {}).unwrap_err().to_string();
+        assert!(error.contains("pkexec"), "{error}");
+        let closed = FakeHost { install_code: 126, ..FakeHost::default() }.program("pkexec");
+        let error = update_one(&closed, &waiting("vlc", Manager::Apt), &mut |_| {}).unwrap_err().to_string();
+        assert!(error.contains("password prompt was closed"), "{error}");
     }
 
     #[test]

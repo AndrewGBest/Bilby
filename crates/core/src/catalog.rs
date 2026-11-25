@@ -373,21 +373,21 @@ impl Catalog {
     }
 
     /// The apps on this system that its package manager installed, with the names the
-    /// app menu shows them under. One that the system's repositories do not list is
-    /// taken to be from the AUR where that is a source here, and left out otherwise:
-    /// there would be no page to show for it.
-    pub fn installed_programs(&self) -> Vec<(AppId, String)> {
+    /// app menu shows them under and the menu entry that starts them. One that the
+    /// system's repositories do not list is taken to be from the AUR where that is a
+    /// source here, and left out otherwise: there would be no page to show for it.
+    pub fn installed_programs(&self) -> Vec<(AppId, String, Option<std::path::PathBuf>)> {
         let has_aur = self.sources.iter().any(|s| s.kind() == SourceKind::Aur && self.uses(s.as_ref()));
         let mut found = Vec::new();
         for source in self.sources.iter().filter(|s| self.uses(s.as_ref())) {
-            for (key, name, offered) in source.installed_apps() {
+            for crate::source::OnDevice { key, name, offered, entry } in source.installed_apps() {
                 let kind = match (offered, has_aur) {
                     (true, _) => source.kind(),
                     (false, true) => SourceKind::Aur,
                     (false, false) => continue,
                 };
                 if crate::model::valid_key(kind, &key) {
-                    found.push((AppId::new(kind, key), name));
+                    found.push((AppId::new(kind, key), name, entry));
                 }
             }
         }

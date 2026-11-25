@@ -173,8 +173,8 @@ msgid "Apps come from the sources listed above and are not reviewed by Bilby. In
 msgstr "应用来自上面列出的来源，未经 Bilby 审核。请只安装你信任的软件。使用 Slint 制作。"
 
 msgctxt "LibraryBody"
-msgid "Apps on this device that Bilby did not install. Open one to start it, see its page or remove it."
-msgstr "此设备上并非由 Bilby 安装的应用。打开其中一个即可启动、查看其页面或将其移除。"
+msgid "Apps on this device that Bilby did not install. Open one to start it, update it or remove it."
+msgstr "此设备上不是由 Bilby 安装的应用。打开其中一个即可启动、更新或移除它。"
 
 msgctxt "LibraryBody"
 msgid "Apps you install from the store show up here, and the store can tell you when they have a new release."
@@ -2063,6 +2063,10 @@ msgctxt "AppRow"
 msgid "Update available"
 msgstr "有可用更新"
 
+msgctxt "DetailsBody"
+msgid "Update available"
+msgstr "有可用更新"
+
 msgctxt "TvShell"
 msgid "Update available"
 msgstr "有可用更新"
@@ -2074,6 +2078,14 @@ msgstr "有可用更新"
 msgctxt "DetailsBody"
 msgid "Update available  ·  you have {0}, latest is {1}"
 msgstr "有可用更新  ·  当前版本 {0}，最新版本 {1}"
+
+msgctxt "DetailsBody"
+msgid "Update available  ·  {}"
+msgstr "有可用更新  ·  {}"
+
+msgctxt "TvShell"
+msgid "Update available  ·  {}"
+msgstr "有可用更新  ·  {}"
 
 msgctxt "TvShell"
 msgid "Update available: you have {}"

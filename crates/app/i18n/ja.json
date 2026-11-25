@@ -113,7 +113,6 @@
  "Apps": "アプリ",
  "Apps can also come from a list on your own server or storage: a small file saying what the apps are and where their files live. Add its address and its apps are searched, shown on the home page and installed like any others. Nobody but its owner vouches for what is on such a list, so add only ones you trust.": "アプリは、自分のサーバーやストレージにある一覧からも入手できます。一覧とは、どんなアプリがあり、ファイルがどこにあるかを記した小さなファイルです。そのアドレスを追加すると、一覧のアプリも検索やホームに表示され、ほかのアプリと同じようにインストールできます。こうした一覧の内容を保証するのは持ち主だけです。信頼できるものだけを追加してください。",
  "Apps come from the sources listed above and are not reviewed by Bilby. Install software you trust. Made with Slint.": "アプリは上記の提供元から届き、Bilby による審査は行われていません。信頼できるソフトウェアをインストールしてください。Slint で作られています。",
- "Apps on this device that Bilby did not install. Open one to start it, see its page or remove it.": "このデバイスにある、Bilby がインストールしたものではないアプリです。開くと、起動、ページの表示、削除ができます。",
  "Apps you install from the store show up here, and the store can tell you when they have a new release.": "ストアからインストールしたアプリはここに表示され、新しいリリースが出るとストアがお知らせします。",
  "Apps you install from the store show up here, and the store can tell you when they have a new release. Favourites are kept here too.": "ストアからインストールしたアプリはここに表示され、新しいリリースが出るとストアがお知らせします。お気に入りもここに保存されます。",
  "Apps you install with Bilby show up here, and so do your favourites.": "Bilby でインストールしたアプリとお気に入りがここに表示されます。",
@@ -1303,5 +1302,17 @@
  "•  Apps come from many places: package managers, other stores and developers' own release pages. Bilby does not review them, so only install software you trust.": "•  アプリは、パッケージマネージャー、ほかのストア、開発者自身のリリースページなど、さまざまな場所から届きます。Bilby は審査を行わないため、信頼できるソフトウェアだけをインストールしてください。",
  "•  There is no account and no server of ours. Your library and settings stay in a file on this device.": "•  アカウントも、私たちのサーバーもありません。ライブラリと設定はこのデバイス上のファイルに保存されます。",
  "★  In favourites": "★  お気に入りに登録済み",
- "☆  Favourite": "☆  お気に入り"
+ "☆  Favourite": "☆  お気に入り",
+ "Apps on this device that Bilby did not install. Open one to start it, update it or remove it.": "このデバイスにある、Bilby がインストールしたものではないアプリです。開くと、起動、アップデート、削除ができます。",
+ "Update available  ·  {}": "アップデートがあります  ·  {}",
+ "Its menu entry does not say how to start it.": "メニュー項目に起動方法が書かれていません。",
+ "The system is being updated. Try again when that has finished.": "システムをアップデート中です。終わってからもう一度お試しください。",
+ "Update everything": "すべてアップデート",
+ "Update the whole system?": "システム全体をアップデートしますか？",
+ "Updating {}…": "{} をアップデート中…",
+ "{} could not be updated. The system's details show what the updater said.": "{} をアップデートできませんでした。システムの詳細でアップデーターの出力を確認できます。",
+ "{} is updated together with everything else {} looks after, so that all of it keeps working together.": "{} は、{} が管理するほかのすべてと一緒にアップデートされます。全体が正しく連携して動き続けるようにするためです。",
+ "{} updated": "{} をアップデートしました",
+ "{} updates everything together, not one package alone.": "{} はすべてをまとめてアップデートします。パッケージ 1 つだけをアップデートすることはできません。",
+ "{} was not updated. {}": "{} はアップデートされませんでした。{}"
 }

@@ -24,6 +24,19 @@ use crate::error::Result;
 use crate::model::{AppSummary, Release, SourceKind};
 use crate::platform::Platform;
 
+/// An app found on the device, as the source that looks after it knows it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OnDevice {
+    pub key: String,
+    /// The name the app menu shows it under.
+    pub name: String,
+    /// False for one the source no longer lists, which came from somewhere else (on
+    /// Arch, the AUR).
+    pub offered: bool,
+    /// The app-menu entry that says how it is started, where there is one.
+    pub entry: Option<std::path::PathBuf>,
+}
+
 pub trait Source: Send + Sync {
     fn kind(&self) -> SourceKind;
 
@@ -33,10 +46,9 @@ pub trait Source: Send + Sync {
         Vec::new()
     }
 
-    /// The installed things of this source that are apps a person opens, as (key,
-    /// name, offered): `offered` is false for one the source no longer lists, which
-    /// came from somewhere else (on Arch, the AUR). Empty for sources that cannot tell.
-    fn installed_apps(&self) -> Vec<(String, String, bool)> {
+    /// The installed things of this source that are apps a person opens. Empty for
+    /// sources that cannot tell.
+    fn installed_apps(&self) -> Vec<OnDevice> {
         Vec::new()
     }
 

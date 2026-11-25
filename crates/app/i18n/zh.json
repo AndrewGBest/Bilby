@@ -113,7 +113,6 @@
  "Apps": "应用",
  "Apps can also come from a list on your own server or storage: a small file saying what the apps are and where their files live. Add its address and its apps are searched, shown on the home page and installed like any others. Nobody but its owner vouches for what is on such a list, so add only ones you trust.": "应用也可以来自你自己服务器或存储上的列表：一个说明有哪些应用、文件放在哪里的小文件。添加它的地址后，其中的应用就能被搜索、显示在首页，并像其他应用一样安装。这类列表上的内容只有其所有者为之担保，所以请只添加你信任的列表。",
  "Apps come from the sources listed above and are not reviewed by Bilby. Install software you trust. Made with Slint.": "应用来自上面列出的来源，未经 Bilby 审核。请只安装你信任的软件。使用 Slint 制作。",
- "Apps on this device that Bilby did not install. Open one to start it, see its page or remove it.": "此设备上并非由 Bilby 安装的应用。打开其中一个即可启动、查看其页面或将其移除。",
  "Apps you install from the store show up here, and the store can tell you when they have a new release.": "你从商店安装的应用会显示在这里，有新版本时商店会通知你。",
  "Apps you install from the store show up here, and the store can tell you when they have a new release. Favourites are kept here too.": "你从商店安装的应用会显示在这里，有新版本时商店会通知你。收藏也保存在这里。",
  "Apps you install with Bilby show up here, and so do your favourites.": "你用 Bilby 安装的应用会显示在这里，你的收藏也在这里。",
@@ -1303,5 +1302,17 @@
  "•  Apps come from many places: package managers, other stores and developers' own release pages. Bilby does not review them, so only install software you trust.": "•  应用来自许多地方：软件包管理器、其他商店和开发者自己的发布页面。Bilby 不审核它们，所以请只安装你信任的软件。",
  "•  There is no account and no server of ours. Your library and settings stay in a file on this device.": "•  没有账户，也没有我们的服务器。你的应用库和设置保存在此设备的一个文件中。",
  "★  In favourites": "★  已收藏",
- "☆  Favourite": "☆  收藏"
+ "☆  Favourite": "☆  收藏",
+ "Apps on this device that Bilby did not install. Open one to start it, update it or remove it.": "此设备上不是由 Bilby 安装的应用。打开其中一个即可启动、更新或移除它。",
+ "Update available  ·  {}": "有可用更新  ·  {}",
+ "Its menu entry does not say how to start it.": "它的菜单项没有说明如何启动它。",
+ "The system is being updated. Try again when that has finished.": "系统正在更新。请在更新完成后重试。",
+ "Update everything": "全部更新",
+ "Update the whole system?": "更新整个系统？",
+ "Updating {}…": "正在更新 {}…",
+ "{} could not be updated. The system's details show what the updater said.": "{} 无法更新。系统详情中显示了更新程序的输出。",
+ "{} is updated together with everything else {} looks after, so that all of it keeps working together.": "{} 会与 {} 管理的其他所有内容一起更新，这样它们才能继续协同工作。",
+ "{} updated": "{} 已更新",
+ "{} updates everything together, not one package alone.": "{} 会一并更新所有内容，而不是单独更新某一个软件包。",
+ "{} was not updated. {}": "{} 未更新。{}"
 }

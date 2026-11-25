@@ -583,11 +583,15 @@ export component DetailsBody inherits Rectangle {
     // "installed" alone means the system has it but did not say which version.
     property <string> uninstall-armed: "";
     property <bool> is-update: Store.installed-version != "" && Store.installed-version != "installed" && Store.app.version != "" && Store.installed-version != Store.app.version;
-    property <bool> open-instead: Store.can-open && !is-update && !(mine && busy);
-    property <string> action: mine && busy ? @tr("Cancel") : Store.queued ? @tr("Queued") : open-instead ? @tr("Open") : is-update ? @tr("Update") : Store.installed-version != "" && best.verb == @tr("Install") ? @tr("Reinstall") : best.verb;
+    // An update is waiting with the tool that installed it, not with the store.
+    property <bool> outside: Store.outside-update && !(mine && busy) && !Store.queued;
+    property <bool> open-instead: Store.can-open && !is-update && !outside && !(mine && busy);
+    property <string> action: mine && busy ? @tr("Cancel") : Store.queued ? @tr("Queued") : outside ? @tr("Update") : open-instead ? @tr("Open") : is-update ? @tr("Update") : Store.installed-version != "" && best.verb == @tr("Install") ? @tr("Reinstall") : best.verb;
     function act() {
         if (mine && busy) {
             Store.cancel-install();
+        } else if (outside) {
+            Store.update-app(Store.app.id);
         } else if (open-instead) {
             Store.launch();
         } else {
@@ -631,7 +635,7 @@ export component DetailsBody inherits Rectangle {
                             progress: root.mine && root.busy ? Store.install-progress : -1;
                             primary: !(root.mine && root.busy);
                             enabled: !root.busy || root.mine;
-                            accessible-label: (root.mine && root.busy ? @tr("Cancel") : root.open-instead ? @tr("Open") : root.best.verb) + " " + (root.open-instead ? Store.app.name : root.best.label);
+                            accessible-label: (root.mine && root.busy ? @tr("Cancel") : root.outside ? @tr("Update") : root.open-instead ? @tr("Open") : root.best.verb) + " " + (root.open-instead || root.outside ? Store.app.name : root.best.label);
                             clicked => { root.act(); }
                         }
                     }
@@ -646,7 +650,7 @@ export component DetailsBody inherits Rectangle {
                     progress: root.mine && root.busy ? Store.install-progress : -1;
                     primary: !(root.mine && root.busy);
                     enabled: !root.busy || root.mine;
-                    accessible-label: (root.mine && root.busy ? @tr("Cancel") : root.open-instead ? @tr("Open") : root.best.verb) + " " + (root.open-instead ? Store.app.name : root.best.label);
+                    accessible-label: (root.mine && root.busy ? @tr("Cancel") : root.outside ? @tr("Update") : root.open-instead ? @tr("Open") : root.best.verb) + " " + (root.open-instead || root.outside ? Store.app.name : root.best.label);
                     clicked => { root.act(); }
                 }
                 Button {
@@ -904,7 +908,7 @@ export component DetailsBody inherits Rectangle {
 
             if root.has-option && root.best.note != "" : Text { text: root.best.note; color: Theme.warn; font-size: 12px; wrap: word-wrap; }
 
-            if Store.installed-version != "" : Rectangle {
+            if Store.installed-version != "" || Store.outside-update : Rectangle {
                 height: max(40px, banner.preferred-height + 20px);
                 border-radius: 10px;
                 background: Theme.accent.with-alpha(0.12);
@@ -913,7 +917,7 @@ export component DetailsBody inherits Rectangle {
                     width: parent.width - 28px;
                     height: parent.height;
                     wrap: word-wrap;
-                    text: Store.installed-version == "installed" ? @tr("Installed") : Store.installed-version == Store.app.version || Store.app.version == "" ? @tr("Installed  ·  {}", Store.installed-version) : @tr("Update available  ·  you have {0}, latest is {1}", Store.installed-version, Store.app.version);
+                    text: Store.outside-update ? (Store.outside-change != "" ? @tr("Update available  ·  {}", Store.outside-change) : @tr("Update available")) : Store.installed-version == "installed" ? @tr("Installed") : Store.installed-version == Store.app.version || Store.app.version == "" ? @tr("Installed  ·  {}", Store.installed-version) : @tr("Update available  ·  you have {0}, latest is {1}", Store.installed-version, Store.app.version);
                     color: Theme.accent;
                     font-size: 13px;
                     font-weight: 600;

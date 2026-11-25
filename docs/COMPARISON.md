@@ -117,7 +117,7 @@ Status: **Yes** = in Bilby; **New** = added in the change that added this docume
 | Favourites kept on the device | Komi | **New** |
 | Starred repositories from an account | Komi | **By design**: needs sign-in |
 | Export and import | Komi, Obtainium, UniGetUI | **New**, from `bilby-cli`; not yet a button in the app, and not Obtainium's format |
-| Adopt apps that are already installed | Komi | Partly: packages installed by pacman or apt are recognised |
+| Adopt apps that are already installed | Komi | Partly: Flatpaks, Steam games and the system's packages are listed, and can be opened, updated and removed. Snaps and loose AppImages are not found yet |
 | Recently viewed, categories | Komi, Obtainium | Categories: yes. Recently viewed: not yet |
 
 ### Everything else
