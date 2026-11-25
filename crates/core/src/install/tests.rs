@@ -242,11 +242,26 @@ mod planning_and_installing {
         assert!(entry.contains("\nName=Bilby\n"));
         assert!(entry.contains("\nExec=\"/home/someone/My Apps/bilby-v0.1.3-x86_64.AppImage\"\n"), "{entry}");
         // Joined piece by piece, as the code does, so the separators agree on every system.
-        let icon = ["icons", "hicolor", "512x512", "apps", "bilby.png"]
+        let icons = ["icons", "hicolor", "512x512", "apps"]
             .iter()
             .fold(dirs.menu.parent().unwrap().to_path_buf(), |path, part| path.join(part));
-        assert!(entry.contains(&format!("\nIcon={}\n", icon.display())));
+        let icon_named_in = |entry: &str| -> PathBuf {
+            PathBuf::from(entry.lines().find_map(|line| line.strip_prefix("Icon=")).unwrap())
+        };
+        let icon = icon_named_in(&entry);
+        assert_eq!(icon.parent(), Some(icons.as_path()), "{entry}");
         assert_eq!(std::fs::read(&icon).unwrap(), b"png");
+        assert_eq!(std::fs::read(icons.join("bilby.png")).unwrap(), b"png", "found by name too, for notifications");
+
+        // A new logo goes in a file with a new name, because a launcher that has shown
+        // the old file goes on showing what it remembers of it. The old file is removed.
+        assert!(register_self(&dirs, program, b"new logo").unwrap());
+        let newer = icon_named_in(&std::fs::read_to_string(self_entry_path(&dirs)).unwrap());
+        assert_ne!(newer, icon);
+        assert_eq!(std::fs::read(&newer).unwrap(), b"new logo");
+        assert_eq!(std::fs::read(icons.join("bilby.png")).unwrap(), b"new logo");
+        assert!(!icon.exists(), "the earlier logo is not left behind");
+        assert!(register_self(&dirs, program, b"png").unwrap());
 
         // Starting again changes nothing; starting from somewhere else updates it.
         assert!(!register_self(&dirs, program, b"png").unwrap());

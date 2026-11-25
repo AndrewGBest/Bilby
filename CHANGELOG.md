@@ -11,6 +11,8 @@ any release may change how something works.
   its page. Flatpak, apt and dnf update that one app. pacman updates everything
   together, so there Bilby asks whether to update the whole system.
 - Apps the system's package manager installed can be opened from their page.
+- After Bilby's logo changes, the app menu and a TV launcher show the new one. They
+  kept the old picture before, because it was written over the same file.
 - The release files come with a `SHA256SUMS` file and a signed record of where they
   were built.
 - `bilby --version` and `bilby-cli --version`.
