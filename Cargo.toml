@@ -3,7 +3,7 @@ resolver = "2"
 members = ["crates/core", "crates/cli", "crates/app", "crates/signin"]
 
 [workspace.package]
-version = "0.1.40"
+version = "0.1.41"
 edition = "2021"
 # The oldest Rust that builds it: what Slint, the interface toolkit, asks for.
 rust-version = "1.95"
