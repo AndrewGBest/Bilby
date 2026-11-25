@@ -6,6 +6,8 @@ any release may change how something works.
 
 ## Unreleased
 
+## 0.1.42 (2026-11-25)
+
 - On a TV, the Updates section at the end of Settings can be seen. The list stopped
   short of it before, leaving it below the screen.
 
