@@ -6,6 +6,8 @@ any release may change how something works.
 
 ## Unreleased
 
+## 0.1.43 (2026-11-27)
+
 - **A search for an app also lists others of its kind.** Looking for Chrome shows
   Chromium, Ungoogled Chromium, Brave, Vivaldi, Edge and Opera straight after it.
   Thirty kinds of app are covered, from browsers and video players to password
