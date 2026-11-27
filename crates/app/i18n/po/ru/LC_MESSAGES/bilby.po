@@ -444,6 +444,10 @@ msgctxt "TvShell"
 msgid "Clear the PIN"
 msgstr "Стереть PIN"
 
+msgctxt "PictureOverlay"
+msgid "Close"
+msgstr "Закрыть"
+
 msgctxt "DetailsBody"
 msgid "Comes from {}"
 msgstr "Источник: {}"
@@ -487,6 +491,10 @@ msgstr "Скопировать и открыть"
 msgctxt "CommandBox"
 msgid "Copy command"
 msgstr "Копировать команду"
+
+msgctxt "DetailsBody"
+msgid "Copy the log"
+msgstr "Скопировать журнал"
 
 msgctxt "DetailsBody"
 msgid "Couldn't load this app"
@@ -716,6 +724,10 @@ msgctxt "OptionCard"
 msgid "Hide steps"
 msgstr "Скрыть шаги"
 
+msgctxt "DetailsBody"
+msgid "Hide the install log"
+msgstr "Скрыть журнал установки"
+
 msgctxt "SystemBody"
 msgid "Hide what the updater said"
 msgstr "Скрыть вывод программы обновления"
@@ -774,6 +786,14 @@ msgstr "Установить"
 msgctxt "TvShell"
 msgid "Install again"
 msgstr "Установить снова"
+
+msgctxt "DetailsBody"
+msgid "Install log"
+msgstr "Журнал установки"
+
+msgctxt "TvShell"
+msgid "Install log"
+msgstr "Журнал установки"
 
 msgctxt "AppRow"
 msgid "Install {} now"
@@ -961,6 +981,10 @@ msgstr "Нужен GameMode, которого нет на этом устрой�
 msgctxt "SettingsBody"
 msgid "Needs MangoHud, which is not on this device. Install it and this starts working."
 msgstr "Нужен MangoHud, которого нет на этом устройстве. Установите его, и это заработает."
+
+msgctxt "PictureOverlay"
+msgid "Next picture"
+msgstr "Следующее изображение"
 
 msgctxt "GateOverlay"
 msgid "No"
@@ -1174,6 +1198,10 @@ msgctxt "TvShell"
 msgid "Picture {0} of {1}"
 msgstr "Изображение {0} из {1}"
 
+msgctxt "PictureOverlay"
+msgid "Picture {0} of {1}, large"
+msgstr "Изображение {0} из {1}, крупно"
+
 msgctxt "TvShell"
 msgid "Picture {0} of {1}, large"
 msgstr "Изображение {0} из {1}, крупно"
@@ -1217,6 +1245,10 @@ msgstr "Нажмите OK, чтобы выбрать следующий язык
 msgctxt "TvShell"
 msgid "Press OK to type"
 msgstr "Нажмите OK, чтобы ввести текст"
+
+msgctxt "PictureOverlay"
+msgid "Previous picture"
+msgstr "Предыдущее изображение"
 
 msgctxt "DetailsBody"
 msgid "Price"
@@ -1645,6 +1677,10 @@ msgstr "Показывать показатели производительно
 msgctxt "SettingsBody"
 msgid "Show ratings and reviews"
 msgstr "Показывать оценки и отзывы"
+
+msgctxt "DetailsBody"
+msgid "Show the install log"
+msgstr "Показать журнал установки"
 
 msgctxt "UpdatesBanner"
 msgid "Show updates"
@@ -2404,6 +2440,10 @@ msgstr "что нового"
 msgctxt "TvShell"
 msgid "{0} from {1}"
 msgstr "{0} ({1})"
+
+msgctxt "PictureOverlay"
+msgid "{0} of {1}"
+msgstr "{0} из {1}"
 
 msgctxt "TvShell"
 msgid "{0} of {1}"

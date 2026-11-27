@@ -8,6 +8,14 @@ any release may change how something works.
 
 - The words on an app's tile stay sharp with the pointer over it. The tile grew
   slightly when hovered, which smeared its text.
+- **An install's log can be read on the app's page.** After an install, and most
+  usefully after one that failed, "Show the install log" under the result opens what
+  was fetched, which commands ran and everything they printed, with a way to copy
+  it. It stays folded away until asked for. On a TV it is at the end of the app's
+  About panel. The log of each app's last install is kept on the device only.
+- **Pictures on an app's page open large** on a computer and a phone: press one to see
+  it at the size of the window, with arrows (or the arrow keys) for the others and
+  Escape to put it away. The TV could already do this.
 
 ## 0.1.43 (2026-11-27)
 

@@ -1,6 +1,7 @@
 //! Starting other programs: an installed app, the system's installer, a terminal, the
 //! browser. Also the notifications and folder dialogs asked of the desktop.
 
+use super::journal;
 use crate::error::{Error, Result};
 use std::path::{Path, PathBuf};
 
@@ -176,6 +177,9 @@ pub fn find_terminal() -> Option<(PathBuf, &'static str)> {
     })
 }
 
+/// How much of what a program prints is kept for the person to read afterwards.
+const KEPT_OF_OUTPUT: usize = 64 * 1024;
+
 /// Run a program and wait for it, giving up (and stopping it) when `keep_going` says
 /// so. `name` is what to call it when it fails.
 pub fn run_program(
@@ -199,9 +203,9 @@ pub(super) fn run_watched(
     use std::process::{Command, Stdio};
     use std::sync::atomic::{AtomicU64, Ordering};
     let mut command = Command::new(program);
-    let stdout = if read.is_some() { Stdio::piped() } else { Stdio::null() };
-    command.args(args).stdin(Stdio::null()).stdout(stdout).stderr(Stdio::piped());
-    // Thousandths done, plus one; nothing while it has not said.
+    command.args(args).stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped());
+    journal::note(format!("Running {} {}", program.display(), args.join(" "))); // (not shown)
+                                                                                // Thousandths done, plus one; nothing while it has not said.
     let done = std::sync::Arc::new(AtomicU64::new(0));
     #[cfg(windows)]
     {
@@ -212,16 +216,30 @@ pub(super) fn run_watched(
     let mut child = command
         .spawn()
         .map_err(|e| Error::Unsupported(format!("{name} could not be started ({e}). Is it installed?")))?;
-    if let (Some(read), Some(mut out)) = (read, child.stdout.take()) {
-        let done = done.clone();
+    // Both of the things it writes to are read as it goes: a program that is not
+    // listened to stops when it has said enough to fill the pipe.
+    let printed = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+    let mut readers = Vec::new();
+    if let Some(mut out) = child.stdout.take() {
+        let (done, printed) = (done.clone(), printed.clone());
         // It redraws one line over and over: what ends a line is either kind of return.
-        std::thread::spawn(move || {
+        readers.push(std::thread::spawn(move || {
             let (mut line, mut buffer) = (Vec::new(), [0u8; 4096]);
             while let Ok(count @ 1..) = std::io::Read::read(&mut out, &mut buffer) {
                 for byte in &buffer[..count] {
                     if matches!(byte, b'\r' | b'\n') {
-                        if let Some(so_far) = read(&String::from_utf8_lossy(&line)) {
+                        let text = String::from_utf8_lossy(&line).to_string();
+                        if let Some(so_far) = read.and_then(|read| read(&text)) {
                             done.store(so_far + 1, Ordering::Relaxed);
+                        }
+                        // A line that is drawn over is how far it has got, not
+                        // something it said: only finished lines are kept.
+                        if *byte == b'\n' {
+                            let mut printed = printed.lock().unwrap();
+                            if printed.len() < KEPT_OF_OUTPUT {
+                                printed.push_str(&text);
+                                printed.push('\n');
+                            }
                         }
                         line.clear();
                     } else if line.len() < 4096 {
@@ -229,23 +247,48 @@ pub(super) fn run_watched(
                     }
                 }
             }
-        });
+        }));
     }
+    let errors = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+    if let Some(mut err) = child.stderr.take() {
+        let errors = errors.clone();
+        readers.push(std::thread::spawn(move || {
+            let mut buffer = [0u8; 4096];
+            while let Ok(count @ 1..) = std::io::Read::read(&mut err, &mut buffer) {
+                let mut errors = errors.lock().unwrap();
+                if errors.len() < KEPT_OF_OUTPUT {
+                    errors.push_str(&String::from_utf8_lossy(&buffer[..count]));
+                }
+            }
+        }));
+    }
+    // Once it has ended: everything it said, for whoever asks to see it.
+    let mut finished = |how: String| -> String {
+        for reader in readers.drain(..) {
+            let _ = reader.join();
+        }
+        let said = errors.lock().unwrap().clone();
+        journal::note_said("It printed", &printed.lock().unwrap()); // (not shown)
+        journal::note_said("It reported", &said); // (not shown)
+        journal::note(how);
+        said
+    };
     loop {
         match child.try_wait()? {
-            Some(status) if status.success() => return Ok(()),
+            Some(status) if status.success() => {
+                finished("It finished without an error".to_string()); // (not shown)
+                return Ok(());
+            }
             // The password prompt's own codes: it was closed, or permission was refused.
             Some(status) if matches!(status.code(), Some(126 | 127)) && program.ends_with("pkexec") => {
+                finished(format!("It ended with {status}")); // (not shown)
                 return Err(Error::Unsupported(
                     "Nothing was installed: the password prompt was closed or refused.".to_string(),
                 ));
             }
-            Some(_) => {
-                let mut said = String::new();
-                if let Some(mut stderr) = child.stderr.take() {
-                    let _ = std::io::Read::read_to_string(&mut stderr, &mut said);
-                }
-                // The program's own last line is the most useful thing to show.
+            Some(status) => {
+                let said = finished(format!("It ended with {status}")); // (not shown)
+                                                                        // The program's own last line is the most useful thing to show.
                 let why =
                     said.lines().rev().find(|l| !l.trim().is_empty()).unwrap_or("it gave no reason").trim().to_string();
                 return Err(Error::Unsupported(format!("{name} could not do it: {why}")));
@@ -258,6 +301,7 @@ pub(super) fn run_watched(
                 if !going {
                     let _ = child.kill();
                     let _ = child.wait();
+                    finished("It was stopped before it had finished".to_string()); // (not shown)
                     return Err(Error::Cancelled);
                 }
                 std::thread::sleep(std::time::Duration::from_millis(100));
@@ -278,9 +322,14 @@ pub(super) fn run_program_said(
     use std::process::{Command, Stdio};
     let mut command = Command::new(program);
     command.args(args).stdin(Stdio::null()).stdout(std::fs::File::create(log)?).stderr(Stdio::piped());
+    journal::note(format!("Running {} {}", program.display(), args.join(" "))); // (not shown)
     let finish = |result: Result<()>| {
         let said = std::fs::read_to_string(log).unwrap_or_default();
         let _ = std::fs::remove_file(log);
+        journal::note_said("It printed", &said); // (not shown)
+        if let Err(e) = &result {
+            journal::note(format!("It did not finish: {e}")); // (not shown)
+        }
         result.map(|()| said)
     };
     let mut child = match command.spawn() {

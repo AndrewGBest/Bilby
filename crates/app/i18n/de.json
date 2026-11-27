@@ -1350,5 +1350,12 @@
  "Link your phone and computer: files, notifications and more.": "Telefon und Computer verbinden: Dateien, Benachrichtigungen und mehr.",
  "Run another operating system in a window.": "Ein anderes Betriebssystem in einem Fenster ausführen.",
  "Run another operating system in a window, on a Mac.": "Ein anderes Betriebssystem in einem Fenster ausführen, auf einem Mac.",
- "Take a screenshot and draw on it.": "Einen Screenshot aufnehmen und darauf zeichnen."
+ "Take a screenshot and draw on it.": "Einen Screenshot aufnehmen und darauf zeichnen.",
+ "Close": "Schließen",
+ "Previous picture": "Vorheriges Bild",
+ "Next picture": "Nächstes Bild",
+ "Show the install log": "Installationsprotokoll anzeigen",
+ "Hide the install log": "Installationsprotokoll ausblenden",
+ "Copy the log": "Protokoll kopieren",
+ "Install log": "Installationsprotokoll"
 }

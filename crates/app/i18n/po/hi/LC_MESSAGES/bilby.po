@@ -444,6 +444,10 @@ msgctxt "TvShell"
 msgid "Clear the PIN"
 msgstr "PIN हटाएँ"
 
+msgctxt "PictureOverlay"
+msgid "Close"
+msgstr "बंद करें"
+
 msgctxt "DetailsBody"
 msgid "Comes from {}"
 msgstr "स्रोत: {}"
@@ -487,6 +491,10 @@ msgstr "कॉपी करें और खोलें"
 msgctxt "CommandBox"
 msgid "Copy command"
 msgstr "कमांड कॉपी करें"
+
+msgctxt "DetailsBody"
+msgid "Copy the log"
+msgstr "लॉग कॉपी करें"
 
 msgctxt "DetailsBody"
 msgid "Couldn't load this app"
@@ -716,6 +724,10 @@ msgctxt "OptionCard"
 msgid "Hide steps"
 msgstr "चरण छिपाएँ"
 
+msgctxt "DetailsBody"
+msgid "Hide the install log"
+msgstr "इंस्टॉल का लॉग छिपाएँ"
+
 msgctxt "SystemBody"
 msgid "Hide what the updater said"
 msgstr "अपडेटर का संदेश छिपाएँ"
@@ -773,6 +785,14 @@ msgstr "इंस्टॉल करें"
 msgctxt "TvShell"
 msgid "Install again"
 msgstr "फिर से इंस्टॉल करें"
+
+msgctxt "DetailsBody"
+msgid "Install log"
+msgstr "इंस्टॉल का लॉग"
+
+msgctxt "TvShell"
+msgid "Install log"
+msgstr "इंस्टॉल का लॉग"
 
 msgctxt "AppRow"
 msgid "Install {} now"
@@ -959,6 +979,10 @@ msgstr "इसके लिए GameMode चाहिए, जो इस डिव
 msgctxt "SettingsBody"
 msgid "Needs MangoHud, which is not on this device. Install it and this starts working."
 msgstr "इसके लिए MangoHud चाहिए, जो इस डिवाइस पर नहीं है। उसे इंस्टॉल करें और यह काम करने लगेगा।"
+
+msgctxt "PictureOverlay"
+msgid "Next picture"
+msgstr "अगला चित्र"
 
 msgctxt "GateOverlay"
 msgid "No"
@@ -1172,6 +1196,10 @@ msgctxt "TvShell"
 msgid "Picture {0} of {1}"
 msgstr "चित्र {1} में से {0}"
 
+msgctxt "PictureOverlay"
+msgid "Picture {0} of {1}, large"
+msgstr "चित्र {1} में से {0}, बड़ा"
+
 msgctxt "TvShell"
 msgid "Picture {0} of {1}, large"
 msgstr "चित्र {1} में से {0}, बड़ा"
@@ -1215,6 +1243,10 @@ msgstr "अगली भाषा के लिए OK दबाएँ"
 msgctxt "TvShell"
 msgid "Press OK to type"
 msgstr "लिखने के लिए OK दबाएँ"
+
+msgctxt "PictureOverlay"
+msgid "Previous picture"
+msgstr "पिछला चित्र"
 
 msgctxt "DetailsBody"
 msgid "Price"
@@ -1643,6 +1675,10 @@ msgstr "प्रदर्शन के आँकड़े दिखाएँ"
 msgctxt "SettingsBody"
 msgid "Show ratings and reviews"
 msgstr "रेटिंग और समीक्षाएँ दिखाएँ"
+
+msgctxt "DetailsBody"
+msgid "Show the install log"
+msgstr "इंस्टॉल का लॉग दिखाएँ"
 
 msgctxt "UpdatesBanner"
 msgid "Show updates"
@@ -2401,6 +2437,10 @@ msgstr "नया क्या है"
 msgctxt "TvShell"
 msgid "{0} from {1}"
 msgstr "{1} से {0}"
+
+msgctxt "PictureOverlay"
+msgid "{0} of {1}"
+msgstr "{1} में से {0}"
 
 msgctxt "TvShell"
 msgid "{0} of {1}"

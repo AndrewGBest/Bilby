@@ -152,3 +152,84 @@ export component GateOverlay inherits Rectangle {
         }
     }
 }
+
+// A round button with a picture on it, over the large picture.
+component RoundButton inherits Rectangle {
+    in property <image> icon;
+    in property <string> label;
+    callback clicked;
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    background: ta.has-hover ? #ffffff40 : #ffffff22;
+    animate background { duration: Theme.quick; }
+    accessible-role: button;
+    accessible-label: root.label;
+    accessible-action-default => { root.clicked(); }
+    Image {
+        width: 20px;
+        height: 20px;
+        source: root.icon;
+        colorize: white;
+    }
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+// One of an app's pictures, as large as the window allows. Pressing beside it, the
+// cross, Escape or Back puts it away; the arrows, on screen or on the keyboard, go to
+// the picture before and after. The keys are read by the layout underneath, which
+// keeps the keyboard throughout.
+export component PictureOverlay inherits Rectangle {
+    property <int> last: Store.screenshots.length - 1;
+    function step(by: int) {
+        Store.picture = max(0, min(root.last, Store.picture + by));
+    }
+    background: #000000d8;
+    // A press beside the picture closes it; one on the picture does nothing.
+    TouchArea { clicked => { Store.picture = -1; } }
+    // On a narrow screen the picture has the whole width; the arrows lie over its edges.
+    property <length> side: root.width < 600px ? 8px : 72px;
+    Image {
+        x: root.side;
+        y: 56px;
+        width: parent.width - 2 * root.side;
+        height: parent.height - 112px;
+        source: Store.screenshots[Store.picture];
+        image-fit: contain;
+        accessible-role: AccessibleRole.image;
+        accessible-label: @tr("Picture {0} of {1}, large", Store.picture + 1, Store.screenshots.length);
+    }
+    Text {
+        y: parent.height - 40px;
+        width: parent.width;
+        text: @tr("{0} of {1}", Store.picture + 1, Store.screenshots.length);
+        color: white;
+        font-size: 13px;
+        font-weight: 700;
+        horizontal-alignment: center;
+    }
+    RoundButton {
+        x: parent.width - self.width - 14px;
+        y: 10px;
+        icon: @image-url("icons/close.svg");
+        label: @tr("Close");
+        clicked => { Store.picture = -1; }
+    }
+    if Store.picture > 0 : RoundButton {
+        x: 14px;
+        y: (parent.height - self.height) / 2;
+        icon: @image-url("icons/back.svg");
+        label: @tr("Previous picture");
+        clicked => { root.step(-1); }
+    }
+    if Store.picture < root.last : RoundButton {
+        x: parent.width - self.width - 14px;
+        y: (parent.height - self.height) / 2;
+        icon: @image-url("icons/forward.svg");
+        label: @tr("Next picture");
+        clicked => { root.step(1); }
+    }
+}

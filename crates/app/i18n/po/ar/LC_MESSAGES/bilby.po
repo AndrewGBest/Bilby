@@ -444,6 +444,10 @@ msgctxt "TvShell"
 msgid "Clear the PIN"
 msgstr "مسح رمز PIN"
 
+msgctxt "PictureOverlay"
+msgid "Close"
+msgstr "إغلاق"
+
 msgctxt "DetailsBody"
 msgid "Comes from {}"
 msgstr "المصدر: {}"
@@ -487,6 +491,10 @@ msgstr "نسخ وفتح"
 msgctxt "CommandBox"
 msgid "Copy command"
 msgstr "نسخ الأمر"
+
+msgctxt "DetailsBody"
+msgid "Copy the log"
+msgstr "نسخ السجل"
 
 msgctxt "DetailsBody"
 msgid "Couldn't load this app"
@@ -716,6 +724,10 @@ msgctxt "OptionCard"
 msgid "Hide steps"
 msgstr "إخفاء الخطوات"
 
+msgctxt "DetailsBody"
+msgid "Hide the install log"
+msgstr "إخفاء سجل التثبيت"
+
 msgctxt "SystemBody"
 msgid "Hide what the updater said"
 msgstr "إخفاء ما قاله المحدِّث"
@@ -777,6 +789,14 @@ msgstr "تثبيت"
 msgctxt "TvShell"
 msgid "Install again"
 msgstr "إعادة التثبيت"
+
+msgctxt "DetailsBody"
+msgid "Install log"
+msgstr "سجل التثبيت"
+
+msgctxt "TvShell"
+msgid "Install log"
+msgstr "سجل التثبيت"
 
 msgctxt "AppRow"
 msgid "Install {} now"
@@ -967,6 +987,10 @@ msgstr "يحتاج إلى GameMode، وهو غير موجود على هذا ال
 msgctxt "SettingsBody"
 msgid "Needs MangoHud, which is not on this device. Install it and this starts working."
 msgstr "يحتاج إلى MangoHud، وهو غير موجود على هذا الجهاز. ثبّته وسيبدأ هذا بالعمل."
+
+msgctxt "PictureOverlay"
+msgid "Next picture"
+msgstr "الصورة التالية"
 
 msgctxt "GateOverlay"
 msgid "No"
@@ -1180,6 +1204,10 @@ msgctxt "TvShell"
 msgid "Picture {0} of {1}"
 msgstr "الصورة {0} من {1}"
 
+msgctxt "PictureOverlay"
+msgid "Picture {0} of {1}, large"
+msgstr "الصورة {0} من {1}، مكبّرة"
+
 msgctxt "TvShell"
 msgid "Picture {0} of {1}, large"
 msgstr "الصورة {0} من {1}، مكبّرة"
@@ -1223,6 +1251,10 @@ msgstr "اضغط OK للغة التالية"
 msgctxt "TvShell"
 msgid "Press OK to type"
 msgstr "اضغط OK للكتابة"
+
+msgctxt "PictureOverlay"
+msgid "Previous picture"
+msgstr "الصورة السابقة"
 
 msgctxt "DetailsBody"
 msgid "Price"
@@ -1651,6 +1683,10 @@ msgstr "إظهار أرقام الأداء"
 msgctxt "SettingsBody"
 msgid "Show ratings and reviews"
 msgstr "إظهار التقييمات والمراجعات"
+
+msgctxt "DetailsBody"
+msgid "Show the install log"
+msgstr "إظهار سجل التثبيت"
 
 msgctxt "UpdatesBanner"
 msgid "Show updates"
@@ -2412,6 +2448,10 @@ msgstr "ما الجديد"
 
 msgctxt "TvShell"
 msgid "{0} from {1}"
+msgstr "{0} من {1}"
+
+msgctxt "PictureOverlay"
+msgid "{0} of {1}"
 msgstr "{0} من {1}"
 
 msgctxt "TvShell"

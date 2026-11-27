@@ -3,7 +3,7 @@ import { Shell, Store, AppCard, Section, OptionRow, HiddenRow, Fact, LibraryRow,
 import { DesktopShell } from "desktop.slint";
 import { MobileShell } from "mobile.slint";
 import { TvShell } from "tv.slint";
-import { GateOverlay } from "overlays.slint";
+import { GateOverlay, PictureOverlay } from "overlays.slint";
 
 export { Store, Shell, Theme, AppCard, Section, OptionRow, HiddenRow, Fact, LibraryRow, ReviewRow, SourceChoice, TvChoice, OskKey }
 
@@ -60,6 +60,13 @@ export component AppWindow inherits Window {
         inset-bottom: root.safe-area-insets.bottom;
     }
     if effective == Shell.tv : TvShell { }
+    // One of the open app's pictures, large (the TV draws its own).
+    if effective != Shell.tv && Store.details-open && Store.picture >= 0 && Store.picture < Store.screenshots.length : PictureOverlay {
+        x: 0;
+        y: 0;
+        width: parent.width;
+        height: parent.height;
+    }
     // A question that stands in front of everything (the TV draws its own).
     if effective != Shell.tv && Store.gate != 0 : GateOverlay {
         x: 0;

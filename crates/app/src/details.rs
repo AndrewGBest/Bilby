@@ -102,6 +102,7 @@ impl App {
         store.set_about(SharedString::new());
         show_links(&store);
         store.set_screenshots(ModelRc::default());
+        store.set_picture(-1);
         store.set_reviews(ModelRc::default());
         self.show_review_places(ui, Vec::new());
         store.set_release_date(SharedString::new());
@@ -135,6 +136,9 @@ impl App {
         // Library cards carry "old → new" as their version; the page shows the release's.
         card.version = SharedString::new();
         store.set_app(at_the_top(card));
+        // What its last install did, folded away until asked for.
+        store.set_log_open(false);
+        self.show_install_log(ui);
         // Known before anything is fetched for a Flatpak or a Steam game; for a
         // system package, once its page has loaded.
         store.set_can_uninstall(self.can_uninstall(&self.state(), &store));

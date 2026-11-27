@@ -444,6 +444,10 @@ msgctxt "TvShell"
 msgid "Clear the PIN"
 msgstr "PIN を消去"
 
+msgctxt "PictureOverlay"
+msgid "Close"
+msgstr "閉じる"
+
 msgctxt "DetailsBody"
 msgid "Comes from {}"
 msgstr "提供元：{}"
@@ -487,6 +491,10 @@ msgstr "コピーして開く"
 msgctxt "CommandBox"
 msgid "Copy command"
 msgstr "コマンドをコピー"
+
+msgctxt "DetailsBody"
+msgid "Copy the log"
+msgstr "ログをコピー"
 
 msgctxt "DetailsBody"
 msgid "Couldn't load this app"
@@ -716,6 +724,10 @@ msgctxt "OptionCard"
 msgid "Hide steps"
 msgstr "手順を隠す"
 
+msgctxt "DetailsBody"
+msgid "Hide the install log"
+msgstr "インストールログを隠す"
+
 msgctxt "SystemBody"
 msgid "Hide what the updater said"
 msgstr "アップデーターの出力を隠す"
@@ -772,6 +784,14 @@ msgstr "インストール"
 msgctxt "TvShell"
 msgid "Install again"
 msgstr "再インストール"
+
+msgctxt "DetailsBody"
+msgid "Install log"
+msgstr "インストールログ"
+
+msgctxt "TvShell"
+msgid "Install log"
+msgstr "インストールログ"
 
 msgctxt "AppRow"
 msgid "Install {} now"
@@ -957,6 +977,10 @@ msgstr "GameMode が必要ですが、このデバイスにはありません。
 msgctxt "SettingsBody"
 msgid "Needs MangoHud, which is not on this device. Install it and this starts working."
 msgstr "MangoHud が必要ですが、このデバイスにはありません。インストールすると使えるようになります。"
+
+msgctxt "PictureOverlay"
+msgid "Next picture"
+msgstr "次の画像"
 
 msgctxt "GateOverlay"
 msgid "No"
@@ -1170,6 +1194,10 @@ msgctxt "TvShell"
 msgid "Picture {0} of {1}"
 msgstr "画像 {0} / {1}"
 
+msgctxt "PictureOverlay"
+msgid "Picture {0} of {1}, large"
+msgstr "画像 {0} / {1}、拡大表示"
+
 msgctxt "TvShell"
 msgid "Picture {0} of {1}, large"
 msgstr "画像 {0} / {1}、拡大表示"
@@ -1213,6 +1241,10 @@ msgstr "OK を押すと次の言語に切り替わります"
 msgctxt "TvShell"
 msgid "Press OK to type"
 msgstr "OK を押して入力"
+
+msgctxt "PictureOverlay"
+msgid "Previous picture"
+msgstr "前の画像"
 
 msgctxt "DetailsBody"
 msgid "Price"
@@ -1641,6 +1673,10 @@ msgstr "パフォーマンス表示を出す"
 msgctxt "SettingsBody"
 msgid "Show ratings and reviews"
 msgstr "評価とレビューを表示"
+
+msgctxt "DetailsBody"
+msgid "Show the install log"
+msgstr "インストールログを表示"
 
 msgctxt "UpdatesBanner"
 msgid "Show updates"
@@ -2398,6 +2434,10 @@ msgstr "新着情報"
 msgctxt "TvShell"
 msgid "{0} from {1}"
 msgstr "{0}（{1} より）"
+
+msgctxt "PictureOverlay"
+msgid "{0} of {1}"
+msgstr "{0} / {1}"
 
 msgctxt "TvShell"
 msgid "{0} of {1}"

@@ -444,6 +444,10 @@ msgctxt "TvShell"
 msgid "Clear the PIN"
 msgstr "Limpar o PIN"
 
+msgctxt "PictureOverlay"
+msgid "Close"
+msgstr "Fechar"
+
 msgctxt "DetailsBody"
 msgid "Comes from {}"
 msgstr "Vem de {}"
@@ -487,6 +491,10 @@ msgstr "Copiar e abrir"
 msgctxt "CommandBox"
 msgid "Copy command"
 msgstr "Copiar comando"
+
+msgctxt "DetailsBody"
+msgid "Copy the log"
+msgstr "Copiar o registo"
 
 msgctxt "DetailsBody"
 msgid "Couldn't load this app"
@@ -716,6 +724,10 @@ msgctxt "OptionCard"
 msgid "Hide steps"
 msgstr "Ocultar etapas"
 
+msgctxt "DetailsBody"
+msgid "Hide the install log"
+msgstr "Ocultar o registo da instalação"
+
 msgctxt "SystemBody"
 msgid "Hide what the updater said"
 msgstr "Ocultar o que o atualizador disse"
@@ -773,6 +785,14 @@ msgstr "Instalar"
 msgctxt "TvShell"
 msgid "Install again"
 msgstr "Instalar de novo"
+
+msgctxt "DetailsBody"
+msgid "Install log"
+msgstr "Registo da instalação"
+
+msgctxt "TvShell"
+msgid "Install log"
+msgstr "Registo da instalação"
 
 msgctxt "AppRow"
 msgid "Install {} now"
@@ -959,6 +979,10 @@ msgstr "Precisa do GameMode, que não está neste dispositivo. Instale-o e isto 
 msgctxt "SettingsBody"
 msgid "Needs MangoHud, which is not on this device. Install it and this starts working."
 msgstr "Precisa do MangoHud, que não está neste dispositivo. Instale-o e isto passa a funcionar."
+
+msgctxt "PictureOverlay"
+msgid "Next picture"
+msgstr "Imagem seguinte"
 
 msgctxt "GateOverlay"
 msgid "No"
@@ -1172,6 +1196,10 @@ msgctxt "TvShell"
 msgid "Picture {0} of {1}"
 msgstr "Imagem {0} de {1}"
 
+msgctxt "PictureOverlay"
+msgid "Picture {0} of {1}, large"
+msgstr "Imagem {0} de {1}, ampliada"
+
 msgctxt "TvShell"
 msgid "Picture {0} of {1}, large"
 msgstr "Imagem {0} de {1}, ampliada"
@@ -1215,6 +1243,10 @@ msgstr "Pressione OK para o próximo idioma"
 msgctxt "TvShell"
 msgid "Press OK to type"
 msgstr "Prima OK para escrever"
+
+msgctxt "PictureOverlay"
+msgid "Previous picture"
+msgstr "Imagem anterior"
 
 msgctxt "DetailsBody"
 msgid "Price"
@@ -1643,6 +1675,10 @@ msgstr "Mostrar dados de desempenho"
 msgctxt "SettingsBody"
 msgid "Show ratings and reviews"
 msgstr "Mostrar notas e avaliações"
+
+msgctxt "DetailsBody"
+msgid "Show the install log"
+msgstr "Mostrar o registo da instalação"
 
 msgctxt "UpdatesBanner"
 msgid "Show updates"
@@ -2400,6 +2436,10 @@ msgstr "as novidades"
 
 msgctxt "TvShell"
 msgid "{0} from {1}"
+msgstr "{0} de {1}"
+
+msgctxt "PictureOverlay"
+msgid "{0} of {1}"
 msgstr "{0} de {1}"
 
 msgctxt "TvShell"
