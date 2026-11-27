@@ -36,7 +36,7 @@ image = { version = "0.25", default-features = false, features = ["png", "jpeg"]
 slint = { version = "1.19", default-features = false, features = ["unstable-winit-030", "system-tray"] }
 # The quiet sounds that go with moving about. Playback only: the sounds are made in
 # code, so no decoders are needed.
-rodio = { version = "0.21", default-features = false, features = ["playback"] }
+rodio = { version = "0.23", default-features = false, features = ["playback"] }
 
 # Asking a Wayland window system for leave to bring another program's window to the
 # front, with the serial of the press that asked for it (see src/activation.rs). The
