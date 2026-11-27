@@ -76,7 +76,6 @@ pub(crate) fn find_card(store: &Store, id: &str) -> Option<AppCard> {
     let in_sections = store.get_sections().iter().flat_map(|s| s.apps.iter().collect::<Vec<_>>()).find(|c| c.id == id);
     in_sections
         .or_else(|| store.get_results().iter().find(|c| c.id == id))
-        .or_else(|| store.get_suggestions().iter().find(|c| c.id == id))
         .or_else(|| store.get_library().iter().map(|r| r.card).find(|c| c.id == id))
         .or_else(|| store.get_favourites().iter().find(|c| c.id == id))
 }

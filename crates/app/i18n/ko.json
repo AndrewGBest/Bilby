@@ -315,8 +315,6 @@
  "Favourites": "즐겨찾기",
  "Feature packed AUR helper.": "기능이 풍부한 AUR 도우미.",
  "Featured": "추천",
- "Featured apps": "추천 앱",
- "Featured apps matching “{}”  ·  press Enter to search GitHub too": "“{}”와(과) 일치하는 추천 앱  ·  Enter를 누르면 GitHub에서도 검색합니다",
  "Fedora Linux 42": "Fedora Linux 42",
  "Fedora Linux {}": "Fedora Linux {}",
  "Fedora {} {}": "Fedora {} {}",
@@ -1314,5 +1312,13 @@
  "{} is updated together with everything else {} looks after, so that all of it keeps working together.": "{}은(는) {}이(가) 관리하는 나머지 모든 것과 함께 업데이트됩니다. 전체가 계속 함께 잘 작동하도록 하기 위해서입니다.",
  "{} updated": "{} 업데이트됨",
  "{} updates everything together, not one package alone.": "{}은(는) 패키지 하나만이 아니라 모든 것을 함께 업데이트합니다.",
- "{} was not updated. {}": "{}이(가) 업데이트되지 않았습니다. {}"
+ "{} was not updated. {}": "{}이(가) 업데이트되지 않았습니다. {}",
+ "The open-source browser that Chrome is built from.": "Chrome의 기반이 되는 오픈 소스 브라우저.",
+ "Chromium with Google's services taken out.": "Google 서비스를 뺀 Chromium.",
+ "Firefox set up for privacy from the start.": "처음부터 개인정보 보호에 맞춰 설정된 Firefox.",
+ "A calmer, rearranged browser built on Firefox.": "Firefox 기반의 더 차분하고 새롭게 배치된 브라우저.",
+ "A browser built on Firefox that you can rearrange to taste.": "Firefox 기반으로, 취향대로 배치를 바꿀 수 있는 브라우저.",
+ "A browser built on Firefox that collects nothing about you.": "Firefox 기반으로, 사용자에 대해 아무것도 수집하지 않는 브라우저.",
+ "Tor Browser's privacy protections, without the Tor network.": "Tor 네트워크 없이 쓰는 Tor Browser의 개인정보 보호 기능.",
+ "Browse through the Tor network, so sites cannot tell who you are.": "Tor 네트워크를 통해 탐색하여 사이트가 내가 누구인지 알 수 없게 합니다."
 }

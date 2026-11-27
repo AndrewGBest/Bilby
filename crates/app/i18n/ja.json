@@ -315,8 +315,6 @@
  "Favourites": "お気に入り",
  "Feature packed AUR helper.": "多機能な AUR ヘルパー。",
  "Featured": "おすすめ",
- "Featured apps": "おすすめのアプリ",
- "Featured apps matching “{}”  ·  press Enter to search GitHub too": "「{}」に一致するおすすめのアプリ  ·  Enter キーで GitHub も検索",
  "Fedora Linux 42": "Fedora Linux 42",
  "Fedora Linux {}": "Fedora Linux {}",
  "Fedora {} {}": "Fedora {} {}",
@@ -1314,5 +1312,13 @@
  "{} is updated together with everything else {} looks after, so that all of it keeps working together.": "{} は、{} が管理するほかのすべてと一緒にアップデートされます。全体が正しく連携して動き続けるようにするためです。",
  "{} updated": "{} をアップデートしました",
  "{} updates everything together, not one package alone.": "{} はすべてをまとめてアップデートします。パッケージ 1 つだけをアップデートすることはできません。",
- "{} was not updated. {}": "{} はアップデートされませんでした。{}"
+ "{} was not updated. {}": "{} はアップデートされませんでした。{}",
+ "The open-source browser that Chrome is built from.": "Chrome の元になっているオープンソースのブラウザ。",
+ "Chromium with Google's services taken out.": "Google のサービスを取り除いた Chromium。",
+ "Firefox set up for privacy from the start.": "最初からプライバシー重視に設定された Firefox。",
+ "A calmer, rearranged browser built on Firefox.": "Firefox をもとにした、落ち着いた新しい配置のブラウザ。",
+ "A browser built on Firefox that you can rearrange to taste.": "Firefox をもとにした、好みに合わせて配置を変えられるブラウザ。",
+ "A browser built on Firefox that collects nothing about you.": "Firefox をもとにした、あなたの情報を何も集めないブラウザ。",
+ "Tor Browser's privacy protections, without the Tor network.": "Tor Browser のプライバシー保護を、Tor ネットワークなしで。",
+ "Browse through the Tor network, so sites cannot tell who you are.": "Tor ネットワークを通して閲覧し、サイトにあなたが誰か分からないようにします。"
 }

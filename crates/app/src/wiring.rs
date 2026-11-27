@@ -328,7 +328,6 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
             true => store.on_osk_tap(press),
         }
     }
-    on!(on_typing, |app, ui, text| { app.typing(ui, &text) });
     on!(on_open, |app, ui, id| { app.open(ui, &id) });
     on!(on_close_details, |app, ui| { app.close_details(ui) });
     on!(on_retry_details, |app, ui| {

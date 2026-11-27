@@ -1,0 +1,29 @@
+{
+  "_comment": "Apps of the same kind that someone looking for one of them would also want to be shown: looking for Chrome, a person may well prefer Chromium, Brave or Ungoogled Chromium, and no source says these belong together. A search that names one member lists the others straight after it. Keep it short: groups nearly everyone would agree on, members that are widely used. A member with only a name is taken from essentials.json (its summary and ids); any other has its own summary and the ids it goes by at each source, best first. 'words' are other things a person types for it. Every id given here was checked to exist at its source on 2026-11-27.",
+  "groups": [
+    {
+      "name": "Browsers built on Chromium",
+      "members": [
+        { "name": "Google Chrome", "words": ["chrome"] },
+        { "name": "Chromium", "summary": "The open-source browser that Chrome is built from.", "ids": ["flathub:org.chromium.Chromium", "pacman:chromium", "winget:Hibbiki.Chromium"] },
+        { "name": "Ungoogled Chromium", "words": ["ungoogled chrome", "ungoogled"], "summary": "Chromium with Google's services taken out.", "ids": ["flathub:io.github.ungoogled_software.ungoogled_chromium", "aur:ungoogled-chromium-bin", "winget:eloston.ungoogled-chromium", "brew:ungoogled-chromium"] },
+        { "name": "Brave", "words": ["brave browser"] },
+        { "name": "Vivaldi" },
+        { "name": "Microsoft Edge", "words": ["edge"] },
+        { "name": "Opera" }
+      ]
+    },
+    {
+      "name": "Browsers built on Firefox",
+      "members": [
+        { "name": "Firefox", "words": ["mozilla firefox"] },
+        { "name": "LibreWolf", "summary": "Firefox set up for privacy from the start.", "ids": ["flathub:io.gitlab.librewolf-community", "winget:LibreWolf.LibreWolf", "brew:librewolf"] },
+        { "name": "Zen Browser", "words": ["zen"], "summary": "A calmer, rearranged browser built on Firefox.", "ids": ["flathub:app.zen_browser.zen", "aur:zen-browser-bin", "winget:Zen-Team.Zen-Browser", "brew:zen"] },
+        { "name": "Floorp", "summary": "A browser built on Firefox that you can rearrange to taste.", "ids": ["flathub:one.ablaze.floorp", "aur:floorp-bin", "winget:Ablaze.Floorp", "brew:floorp"] },
+        { "name": "Waterfox", "summary": "A browser built on Firefox that collects nothing about you.", "ids": ["flathub:net.waterfox.waterfox", "winget:Waterfox.Waterfox", "brew:waterfox"] },
+        { "name": "Mullvad Browser", "words": ["mullvad"], "summary": "Tor Browser's privacy protections, without the Tor network.", "ids": ["flathub:net.mullvad.MullvadBrowser", "winget:MullvadVPN.MullvadBrowser", "brew:mullvad-browser"] },
+        { "name": "Tor Browser", "words": ["tor"], "summary": "Browse through the Tor network, so sites cannot tell who you are.", "ids": ["flathub:org.torproject.torbrowser-launcher", "winget:TorProject.TorBrowser", "brew:tor-browser"] }
+      ]
+    }
+  ]
+}

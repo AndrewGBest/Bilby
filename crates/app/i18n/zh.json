@@ -315,8 +315,6 @@
  "Favourites": "收藏",
  "Feature packed AUR helper.": "功能丰富的 AUR 助手。",
  "Featured": "精选",
- "Featured apps": "精选应用",
- "Featured apps matching “{}”  ·  press Enter to search GitHub too": "与“{}”匹配的精选应用  ·  按 Enter 同时搜索 GitHub",
  "Fedora Linux 42": "Fedora Linux 42",
  "Fedora Linux {}": "Fedora Linux {}",
  "Fedora {} {}": "Fedora {} {}",
@@ -1314,5 +1312,13 @@
  "{} is updated together with everything else {} looks after, so that all of it keeps working together.": "{} 会与 {} 管理的其他所有内容一起更新，这样它们才能继续协同工作。",
  "{} updated": "{} 已更新",
  "{} updates everything together, not one package alone.": "{} 会一并更新所有内容，而不是单独更新某一个软件包。",
- "{} was not updated. {}": "{} 未更新。{}"
+ "{} was not updated. {}": "{} 未更新。{}",
+ "The open-source browser that Chrome is built from.": "Chrome 所基于的开源浏览器。",
+ "Chromium with Google's services taken out.": "去掉了 Google 服务的 Chromium。",
+ "Firefox set up for privacy from the start.": "从一开始就为隐私而设置的 Firefox。",
+ "A calmer, rearranged browser built on Firefox.": "基于 Firefox 的更清爽、重新布局的浏览器。",
+ "A browser built on Firefox that you can rearrange to taste.": "基于 Firefox、可随意调整布局的浏览器。",
+ "A browser built on Firefox that collects nothing about you.": "基于 Firefox、不收集任何个人信息的浏览器。",
+ "Tor Browser's privacy protections, without the Tor network.": "Tor 浏览器的隐私保护，但不使用 Tor 网络。",
+ "Browse through the Tor network, so sites cannot tell who you are.": "通过 Tor 网络浏览，让网站无法知道你是谁。"
 }

@@ -644,14 +644,6 @@ msgctxt "Spotlight"
 msgid "Featured"
 msgstr "مميّزة"
 
-msgctxt "MobileShell"
-msgid "Featured apps"
-msgstr "تطبيقات مميّزة"
-
-msgctxt "DesktopShell"
-msgid "Featured apps matching “{}”  ·  press Enter to search GitHub too"
-msgstr "تطبيقات مميّزة تطابق “{}”  ·  اضغط Enter للبحث في GitHub أيضًا"
-
 msgctxt "DetailsBody"
 msgid "Files that won't work on this device"
 msgstr "ملفات لن تعمل على هذا الجهاز"

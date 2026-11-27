@@ -62,7 +62,7 @@ Status: **Yes** = in Bilby; **New** = added in the change that added this docume
 | Featured apps by category | GNOME Software, Discover; Komi (topics) | Yes, from a list shipped with the app |
 | Trending / hot / most popular feeds, daily explore feed, top charts | Komi | **By design**, for now. Komi serves these from its own backend. Doing it client-side costs one GitHub request per candidate to check for usable files, which the anonymous limit (60 an hour) cannot carry. Worth revisiting for users with a token |
 | Only apps with something installable are listed | Komi | Yes, and matched to the device, not just "has an installer" |
-| Search with suggestions and history | Komi (history) | Yes |
+| Search with history | Komi | Yes |
 | Filters by language and sort order | Komi | Not yet |
 | Paste a link to open a project | Komi (clipboard detection) | Yes (pasted into search; the clipboard is not read unasked) |
 | Hide projects you have seen or do not want | Komi | Not yet |

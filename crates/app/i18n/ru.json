@@ -315,8 +315,6 @@
  "Favourites": "Избранное",
  "Feature packed AUR helper.": "Многофункциональный помощник AUR.",
  "Featured": "Рекомендуемое",
- "Featured apps": "Рекомендуемые приложения",
- "Featured apps matching “{}”  ·  press Enter to search GitHub too": "Рекомендуемые по запросу «{}»  ·  нажмите Enter, чтобы искать и на GitHub",
  "Fedora Linux 42": "Fedora Linux 42",
  "Fedora Linux {}": "Fedora Linux {}",
  "Fedora {} {}": "Fedora {} {}",
@@ -1334,5 +1332,13 @@
  "{} is updated together with everything else {} looks after, so that all of it keeps working together.": "{} обновляется вместе со всем остальным, чем управляет {}, чтобы всё продолжало работать согласованно.",
  "{} updated": "{}: обновлено",
  "{} updates everything together, not one package alone.": "{} обновляет всё вместе, а не один пакет отдельно.",
- "{} was not updated. {}": "{}: не обновлено. {}"
+ "{} was not updated. {}": "{}: не обновлено. {}",
+ "The open-source browser that Chrome is built from.": "Браузер с открытым исходным кодом, на основе которого сделан Chrome.",
+ "Chromium with Google's services taken out.": "Chromium без сервисов Google.",
+ "Firefox set up for privacy from the start.": "Firefox, с самого начала настроенный на приватность.",
+ "A calmer, rearranged browser built on Firefox.": "Более спокойный, перестроенный браузер на основе Firefox.",
+ "A browser built on Firefox that you can rearrange to taste.": "Браузер на основе Firefox, который можно перестроить на свой вкус.",
+ "A browser built on Firefox that collects nothing about you.": "Браузер на основе Firefox, который ничего о вас не собирает.",
+ "Tor Browser's privacy protections, without the Tor network.": "Защита приватности Tor Browser, без сети Tor.",
+ "Browse through the Tor network, so sites cannot tell who you are.": "Просмотр через сеть Tor, чтобы сайты не могли узнать, кто вы."
 }

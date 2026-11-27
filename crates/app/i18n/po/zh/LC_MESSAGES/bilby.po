@@ -644,14 +644,6 @@ msgctxt "Spotlight"
 msgid "Featured"
 msgstr "精选"
 
-msgctxt "MobileShell"
-msgid "Featured apps"
-msgstr "精选应用"
-
-msgctxt "DesktopShell"
-msgid "Featured apps matching “{}”  ·  press Enter to search GitHub too"
-msgstr "与“{}”匹配的精选应用  ·  按 Enter 同时搜索 GitHub"
-
 msgctxt "DetailsBody"
 msgid "Files that won't work on this device"
 msgstr "无法在此设备上使用的文件"

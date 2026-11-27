@@ -334,7 +334,6 @@ export component DesktopShell inherits Rectangle {
                         text <=> Store.query;
                         placeholder: @tr("Search, or paste a project link   (Ctrl+K)");
                         accepted(text) => { Store.search(text); }
-                        edited(text) => { Store.typing(text); }
                     }
                     Rectangle { horizontal-stretch: 1; }
                 }
@@ -447,7 +446,7 @@ export component DesktopShell inherits Rectangle {
                                         vertical-alignment: center;
                                     }
                                 }
-                                if !Store.searched && !Store.searching && Store.suggestions.length == 0 : VerticalLayout {
+                                if !Store.searched && !Store.searching : VerticalLayout {
                                     spacing: 14px;
                                     Text {
                                         text: @tr("Type a name and press Enter, or paste a link to a project. Only apps that work on this device are listed.");
@@ -474,16 +473,6 @@ export component DesktopShell inherits Rectangle {
                                             }
                                         }
                                     }
-                                }
-                                if Store.suggestions.length > 0 && !Store.searching : VerticalLayout {
-                                    spacing: 10px;
-                                    Text {
-                                        text: @tr("Featured apps matching “{}”  ·  press Enter to search GitHub too", Store.query);
-                                        color: Theme.text-dim;
-                                        font-size: 12px;
-                                        font-weight: 700;
-                                    }
-                                    CardGrid { apps: Store.suggestions; }
                                 }
                                 CardGrid { apps: Store.results; }
                                 if Store.searched && !Store.searching && Store.results.length == 0 && Store.search-error == "" : EmptyState {

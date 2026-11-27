@@ -644,14 +644,6 @@ msgctxt "Spotlight"
 msgid "Featured"
 msgstr "चुनिंदा"
 
-msgctxt "MobileShell"
-msgid "Featured apps"
-msgstr "चुनिंदा ऐप"
-
-msgctxt "DesktopShell"
-msgid "Featured apps matching “{}”  ·  press Enter to search GitHub too"
-msgstr "“{}” से मिलते चुनिंदा ऐप  ·  GitHub पर भी खोजने के लिए Enter दबाएँ"
-
 msgctxt "DetailsBody"
 msgid "Files that won't work on this device"
 msgstr "फ़ाइलें जो इस डिवाइस पर नहीं चलेंगी"

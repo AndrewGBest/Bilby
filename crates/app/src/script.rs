@@ -118,7 +118,6 @@ pub(crate) fn describe(ui: &AppWindow) -> String {
         format!("install_state={}", store.get_install_state()),
         format!("install_message={}", store.get_install_message()),
         format!("results={}", store.get_results().row_count()),
-        format!("suggestions={}", store.get_suggestions().row_count()),
         format!("searching={}", store.get_searching()),
         format!("library={}", store.get_library().row_count()),
         format!("updates={}", store.get_updates_count()),

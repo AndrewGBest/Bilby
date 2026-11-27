@@ -644,14 +644,6 @@ msgctxt "Spotlight"
 msgid "Featured"
 msgstr "추천"
 
-msgctxt "MobileShell"
-msgid "Featured apps"
-msgstr "추천 앱"
-
-msgctxt "DesktopShell"
-msgid "Featured apps matching “{}”  ·  press Enter to search GitHub too"
-msgstr "“{}”와(과) 일치하는 추천 앱  ·  Enter를 누르면 GitHub에서도 검색합니다"
-
 msgctxt "DetailsBody"
 msgid "Files that won't work on this device"
 msgstr "이 기기에서 작동하지 않는 파일"

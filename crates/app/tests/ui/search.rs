@@ -1,4 +1,4 @@
-//! Searching, suggestions and what several sources make of one app.
+//! Searching and what several sources make of one app.
 
 use super::*;
 
@@ -44,32 +44,28 @@ fn pasting_a_link_opens_the_app_and_searches_are_remembered() {
 }
 
 #[test]
-fn typing_suggests_featured_apps_without_searching() {
+fn nothing_is_looked_for_or_shown_until_enter() {
     let s = start("linux-x64-debian", Shell::Desktop);
-    s.app.typing(&s.ui, "lum");
-    assert_eq!(s.store().get_page(), 1, "typing brings up the search page");
-    let names: Vec<String> = s.store().get_suggestions().iter().map(|a| a.name.to_string()).collect();
-    assert_eq!(names, ["Lumen"]);
+    // "/" moves to the search field; letters go into it and that is all.
+    s.press("/");
+    s.press("l");
+    s.press("u");
+    s.press("m");
+    assert_eq!(s.store().get_query(), "lum");
+    assert_eq!(s.store().get_page(), 0, "the page being looked at stays");
+    assert_eq!(s.store().get_results().row_count(), 0);
     assert!(!s.store().get_searched() && !s.store().get_searching(), "nothing was sent anywhere");
     assert!(s.saved().recent_searches.is_empty(), "keystrokes are not history");
-    assert!(s.has("Lumen"));
 
-    // A suggestion opens like any other tile.
-    s.click("Lumen");
-    assert_eq!(s.store().get_app().id, "github:lumen-labs/lumen");
-    s.click("Back");
-
-    // Enter runs the real search and replaces the suggestions.
-    s.app.search(&s.ui, "lum");
-    assert_eq!(s.store().get_suggestions().row_count(), 0);
+    // Enter searches.
+    s.press(Key::Return);
+    assert_eq!(s.store().get_page(), 1);
     assert_eq!(s.store().get_results().row_data(0).unwrap().id, "github:lumen-labs/lumen");
 
-    // Typing again clears the old results so the two never mix.
-    s.app.typing(&s.ui, "tide");
-    assert_eq!(s.store().get_results().row_count(), 0);
-    assert_eq!(s.store().get_suggestions().row_data(0).unwrap().name, "Tidewave");
-    s.app.typing(&s.ui, "");
-    assert_eq!(s.store().get_suggestions().row_count(), 0);
+    // Typing something else leaves those results alone until Enter is pressed again.
+    s.press("/");
+    s.press("x");
+    assert!(s.store().get_results().row_count() > 0 && s.store().get_searched());
 }
 
 #[test]
@@ -193,8 +189,6 @@ fn slash_and_ctrl_k_start_a_search_from_the_keyboard() {
     s.press("l");
     s.press("u");
     assert_eq!(s.store().get_query(), "lu");
-    assert_eq!(s.store().get_page(), 1, "typing brings up suggestions");
-    assert_eq!(s.store().get_suggestions().row_data(0).unwrap().name, "Lumen");
     // Enter searches.
     s.press(Key::Return);
     assert!(s.store().get_searched());

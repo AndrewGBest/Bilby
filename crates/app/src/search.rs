@@ -1,4 +1,4 @@
-//! Searching, suggestions while typing, and browsing a category.
+//! Searching and browsing a category.
 
 use crate::text::{l, plural};
 use crate::{i18n, App, AppWindow, Store};
@@ -9,24 +9,6 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 impl App {
-    /// While typing: instant matches from the bundled catalog. No network, no history.
-    pub fn typing(&self, ui: &AppWindow, text: &str) {
-        let store = ui.global::<Store>();
-        let suggestions = self.catalog().suggest(text, 6);
-        if !suggestions.is_empty() && !store.get_details_open() {
-            store.set_page(1);
-        }
-        // Old results belong to the previous query; typing starts a new one.
-        if store.get_searched() {
-            store.set_searched(false);
-            store.set_search_note(SharedString::new());
-            store.set_search_error(SharedString::new());
-            *self.results.lock().unwrap() = (String::new(), Vec::new());
-            store.set_results(ModelRc::default());
-        }
-        store.set_suggestions(self.cards(&suggestions));
-    }
-
     /// Out of a search and back to Home: the box is emptied and the results put away,
     /// so Home shows the store again and not what was last looked for.
     /// Browse one category in full. `name` is its title as shown, or nothing to go
@@ -85,7 +67,6 @@ impl App {
         store.set_searched(false);
         store.set_search_note(SharedString::new());
         store.set_search_error(SharedString::new());
-        store.set_suggestions(ModelRc::default());
         store.set_results(ModelRc::default());
         self.close_details(ui);
         store.set_page(0);
@@ -139,8 +120,6 @@ impl App {
         let store = ui.global::<Store>();
         store.set_searching(false);
         store.set_searched(true);
-        // The real results replace the as-you-type suggestions.
-        store.set_suggestions(ModelRc::default());
         let mut note = if outcome.apps.is_empty() {
             String::new()
         } else {

@@ -644,14 +644,6 @@ msgctxt "Spotlight"
 msgid "Featured"
 msgstr "À la une"
 
-msgctxt "MobileShell"
-msgid "Featured apps"
-msgstr "Applications à la une"
-
-msgctxt "DesktopShell"
-msgid "Featured apps matching “{}”  ·  press Enter to search GitHub too"
-msgstr "Applications à la une pour « {} »  ·  appuyez sur Entrée pour chercher aussi sur GitHub"
-
 msgctxt "DetailsBody"
 msgid "Files that won't work on this device"
 msgstr "Fichiers qui ne fonctionnent pas sur cet appareil"

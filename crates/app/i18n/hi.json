@@ -315,8 +315,6 @@
  "Favourites": "पसंदीदा",
  "Feature packed AUR helper.": "ढेरों सुविधाओं वाला AUR हेल्पर।",
  "Featured": "चुनिंदा",
- "Featured apps": "चुनिंदा ऐप",
- "Featured apps matching “{}”  ·  press Enter to search GitHub too": "“{}” से मिलते चुनिंदा ऐप  ·  GitHub पर भी खोजने के लिए Enter दबाएँ",
  "Fedora Linux 42": "Fedora Linux 42",
  "Fedora Linux {}": "Fedora Linux {}",
  "Fedora {} {}": "Fedora {} {}",
@@ -1324,5 +1322,13 @@
  "{} is updated together with everything else {} looks after, so that all of it keeps working together.": "{} उन सभी चीज़ों के साथ अपडेट होता है जिन्हें {} संभालता है, ताकि सब कुछ साथ मिलकर काम करता रहे।",
  "{} updated": "{} अपडेट हो गया",
  "{} updates everything together, not one package alone.": "{} सब कुछ एक साथ अपडेट करता है, अकेला एक पैकेज नहीं।",
- "{} was not updated. {}": "{} अपडेट नहीं हुआ। {}"
+ "{} was not updated. {}": "{} अपडेट नहीं हुआ। {}",
+ "The open-source browser that Chrome is built from.": "वह ओपन-सोर्स ब्राउज़र जिससे Chrome बना है।",
+ "Chromium with Google's services taken out.": "Google की सेवाओं के बिना Chromium।",
+ "Firefox set up for privacy from the start.": "शुरू से ही निजता के लिए तैयार किया गया Firefox।",
+ "A calmer, rearranged browser built on Firefox.": "Firefox पर बना, ज़्यादा शांत और नए ढंग से सजा ब्राउज़र।",
+ "A browser built on Firefox that you can rearrange to taste.": "Firefox पर बना ब्राउज़र, जिसे आप अपनी पसंद से सजा सकते हैं।",
+ "A browser built on Firefox that collects nothing about you.": "Firefox पर बना ब्राउज़र, जो आपके बारे में कुछ नहीं जुटाता।",
+ "Tor Browser's privacy protections, without the Tor network.": "Tor Browser की निजता सुरक्षा, Tor नेटवर्क के बिना।",
+ "Browse through the Tor network, so sites cannot tell who you are.": "Tor नेटवर्क के ज़रिए ब्राउज़ करें, ताकि साइटें न जान सकें कि आप कौन हैं।"
 }

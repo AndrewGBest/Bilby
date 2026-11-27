@@ -315,8 +315,6 @@
  "Favourites": "Favoritos",
  "Feature packed AUR helper.": "Asistente del AUR repleto de funciones.",
  "Featured": "Destacados",
- "Featured apps": "Apps destacadas",
- "Featured apps matching “{}”  ·  press Enter to search GitHub too": "Apps destacadas que coinciden con “{}”  ·  pulsa Enter para buscar también en GitHub",
  "Fedora Linux 42": "Fedora Linux 42",
  "Fedora Linux {}": "Fedora Linux {}",
  "Fedora {} {}": "Fedora {} {}",
@@ -1324,5 +1322,13 @@
  "{} is updated together with everything else {} looks after, so that all of it keeps working together.": "{} se actualiza junto con todo lo demás que gestiona {}, para que todo siga funcionando en conjunto.",
  "{} updated": "{} actualizada",
  "{} updates everything together, not one package alone.": "{} lo actualiza todo a la vez, no un paquete suelto.",
- "{} was not updated. {}": "{} no se actualizó. {}"
+ "{} was not updated. {}": "{} no se actualizó. {}",
+ "The open-source browser that Chrome is built from.": "El navegador de código abierto en el que se basa Chrome.",
+ "Chromium with Google's services taken out.": "Chromium sin los servicios de Google.",
+ "Firefox set up for privacy from the start.": "Firefox preparado para la privacidad desde el principio.",
+ "A calmer, rearranged browser built on Firefox.": "Un navegador más tranquilo y reorganizado, basado en Firefox.",
+ "A browser built on Firefox that you can rearrange to taste.": "Un navegador basado en Firefox que puedes reorganizar a tu gusto.",
+ "A browser built on Firefox that collects nothing about you.": "Un navegador basado en Firefox que no recoge nada sobre ti.",
+ "Tor Browser's privacy protections, without the Tor network.": "Las protecciones de privacidad de Tor Browser, sin la red Tor.",
+ "Browse through the Tor network, so sites cannot tell who you are.": "Navega a través de la red Tor, para que los sitios no sepan quién eres."
 }

@@ -235,7 +235,7 @@ fn run_wide() -> Run {
 }
 
 #[test]
-fn typing_in_the_search_field_suggests_apps() {
+fn typing_in_the_search_field_does_nothing_until_enter() {
     if !have_xvfb() {
         return;
     }
@@ -252,7 +252,7 @@ fn typing_in_the_search_field_suggests_apps() {
             "click:500,38 text:lum wait",
         ],
     );
-    assert_eq!(run.get("page"), "1");
-    assert_eq!(run.get("suggestions"), "1");
+    assert_eq!(run.get("page"), "0");
+    assert_eq!(run.get("results"), "0");
     assert_eq!(run.get("searching"), "false");
 }
