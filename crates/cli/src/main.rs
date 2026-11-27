@@ -462,8 +462,8 @@ fn classify(catalog: &Catalog, name: &str) {
     }
 }
 
-/// Follow each recipe against the real website, and say what it found. Nothing is
-/// downloaded or installed. Fails when any recipe, or any file of one, is not found.
+/// Follow each recipe against the real website, and say what it found, asking for
+/// each file to see that it is there. Nothing is downloaded or installed. Fails when any recipe, or any file of one, is not found.
 fn recipe_check(catalog: &Catalog, files: &[String]) -> Result<(), String> {
     // Asked afresh every time: an answer remembered from before a recipe was mended
     // would say it still fails.
@@ -484,8 +484,9 @@ fn recipe_check(catalog: &Catalog, files: &[String]) -> Result<(), String> {
                 failed += 1;
             }
             Ok(found) => {
-                let mark = if found.missing.is_empty() { "✓" } else { "✗" };
-                println!("{mark} {} {}", recipe.name, found.version);
+                // Said after everything was looked at, under one mark for the recipe.
+                let mut said = Vec::new();
+                let mut wrong = found.missing.len();
                 for one in &found.files {
                     let what = match bilby_core::asset::classify(&one.name) {
                         Some(info) => format!("{}, {:?}, {:?}", info.format.label(), info.os, info.arch),
@@ -494,19 +495,25 @@ fn recipe_check(catalog: &Catalog, files: &[String]) -> Result<(), String> {
                     let here = bilby_core::asset::classify(&one.name)
                         .map(|info| format!("{:?}", bilby_core::compat::evaluate(&info, &catalog.platform).level))
                         .unwrap_or_else(|| "-".to_string());
-                    println!("    {}  ({what}; on this device: {here})", one.name);
-                    println!("      {}", one.url);
+                    said.push(format!("    {}  ({what}; on this device: {here})", one.name));
+                    said.push(format!("      {}", one.url));
                     if let Some(sum) = &one.sha256 {
-                        println!("      sha256 {sum}");
+                        said.push(format!("      sha256 {sum}"));
                     }
-                    if bilby_core::asset::classify(&one.name).is_none() {
-                        failed += 1;
+                    wrong += usize::from(bilby_core::asset::classify(&one.name).is_none());
+                    // Is the file really there? The address is asked for and the
+                    // answer dropped unread, so nothing is downloaded.
+                    if let Err(e) = bilby_core::http::Http::lands_at(&http, &one.url) {
+                        said.push(format!("      ✗ the file does not answer: {e}"));
+                        wrong += 1;
                     }
                 }
                 for missing in &found.missing {
-                    println!("    not found: {missing}");
+                    said.push(format!("    not found: {missing}"));
                 }
-                failed += usize::from(!found.missing.is_empty());
+                println!("{} {} {}", if wrong == 0 { "✓" } else { "✗" }, recipe.name, found.version);
+                println!("{}", said.join("\n"));
+                failed += usize::from(wrong > 0);
             }
         }
     }

@@ -10,9 +10,14 @@ any release may change how something works.
 
 - **Apps that are only on their maker's website can be installed and updated.** A
   recipe says where the maker publishes the app and how to read its current version,
-  and Bilby follows it. The first ones cover Signal for Android from signal.org,
-  Cursor, Zoom, Discord, Google Chrome, Vivaldi, Mullvad VPN, Proton Mail and Proton
-  Pass. Such an app's page says which website it comes from.
+  and Bilby follows it. The first thirty-eight cover, on Android, WhatsApp, Signal,
+  Zoom, VLC, Kodi, Tor Browser, Vivaldi and Mullvad VPN from their makers' own
+  websites, and on Linux, Visual Studio Code, Cursor, Sublime Text, the JetBrains
+  IDEs, Slack, Discord, Zoom, Telegram, Google Chrome, Microsoft Edge, Opera, Vivaldi,
+  Tor Browser, Dropbox, Docker Desktop, Postman, Zotero, LM Studio, Beeper, Mullvad
+  VPN, Proton Mail and Proton Pass. Such an app's page says which website it comes
+  from. Where the maker offers only an archive to unpack, Bilby saves it to Downloads
+  as it does for any archive.
 - Recipes are shared. Anyone can write one and send it to
   [bilby-recipes](https://github.com/AndrewGBest/bilby-recipes); Bilby fetches the
   list from there, so a new or mended recipe arrives without a new version of Bilby.

@@ -195,3 +195,26 @@ fn a_folder_of_recipes_is_read_and_a_bad_file_is_named() {
     assert!(bad[0].1.contains("tide.json"), "{}", bad[0].1);
     let _ = std::fs::remove_dir_all(&folder);
 }
+
+#[test]
+fn a_page_that_lists_every_release_gives_the_newest() {
+    let listing = r#"<a href="kelp-9.2.deb">9.2</a> <a href="kelp-10.0.deb">10.0</a> <a href="kelp-9.10.deb">9.10</a>"#;
+    let mut web = tide_web();
+    web.pages.insert("https://tide.example/files/", listing);
+    let with = |pick: &str| -> String {
+        let text = TIDE.replacen(
+            r#"{ "page": "https://tide.example/download", "find": "Version ([0-9.]+) is out" }"#,
+            &format!(r#"{{ "page": "https://tide.example/files/", "find": "kelp-([0-9.]+)\\.deb"{pick} }}"#),
+            1,
+        );
+        let recipe: Recipe = serde_json::from_str(&text).unwrap();
+        assert_eq!(recipe.problem(), None);
+        recipe.look(&web, &recipe.version, None, false).unwrap()
+    };
+    assert_eq!(with(""), "9.2");
+    assert_eq!(with(r#", "pick": "last""#), "9.10");
+    // By what the versions mean, not by where they stand or how they spell.
+    assert_eq!(with(r#", "pick": "newest""#), "10.0");
+    let odd = TIDE.replacen(r#""find": "Version ([0-9.]+) is out""#, r#""find": "(x)", "pick": "best""#, 1);
+    assert!(serde_json::from_str::<Recipe>(&odd).unwrap().problem().unwrap().contains("pick"));
+}

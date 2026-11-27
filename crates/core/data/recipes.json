@@ -2,6 +2,67 @@
   "format": 1,
   "recipes": [
     {
+      "author": "Automattic",
+      "files": [
+        {
+          "url": {
+            "redirect": "https://api.beeper.com/desktop/download/linux/x64/stable/com.automattic.beeper.desktop"
+          }
+        }
+      ],
+      "format": 1,
+      "homepage": "https://www.beeper.com/download",
+      "hosts": [
+        "beeper.com"
+      ],
+      "id": "beeper",
+      "name": "Beeper",
+      "summary": "One inbox for WhatsApp, Telegram, Signal, Messenger and other chat networks.",
+      "version": {
+        "find": "Beeper-([0-9.]+)-x86_64",
+        "redirect": "https://api.beeper.com/desktop/download/linux/x64/stable/com.automattic.beeper.desktop"
+      }
+    },
+    {
+      "author": "JetBrains",
+      "files": [
+        {
+          "name": "clion-{version}-linux-x86_64.tar.gz",
+          "sha256": {
+            "find": "^([0-9a-f]{64})",
+            "page": "https://download.jetbrains.com/cpp/CLion-{version}.tar.gz.sha256"
+          },
+          "url": {
+            "at": "CL.0.downloads.linux.link",
+            "json": "https://data.services.jetbrains.com/products/releases?code=CL&latest=true&type=release"
+          }
+        },
+        {
+          "name": "clion-{version}-linux-aarch64.tar.gz",
+          "sha256": {
+            "find": "^([0-9a-f]{64})",
+            "page": "https://download.jetbrains.com/cpp/CLion-{version}-aarch64.tar.gz.sha256"
+          },
+          "url": {
+            "at": "CL.0.downloads.linuxARM64.link",
+            "json": "https://data.services.jetbrains.com/products/releases?code=CL&latest=true&type=release"
+          }
+        }
+      ],
+      "format": 1,
+      "homepage": "https://www.jetbrains.com/clion/",
+      "hosts": [
+        "jetbrains.com"
+      ],
+      "id": "clion",
+      "name": "CLion",
+      "summary": "An IDE for C and C++.",
+      "version": {
+        "at": "CL.0.version",
+        "json": "https://data.services.jetbrains.com/products/releases?code=CL&latest=true&type=release"
+      }
+    },
+    {
       "author": "Anysphere",
       "files": [
         {
@@ -56,6 +117,45 @@
       }
     },
     {
+      "author": "JetBrains",
+      "files": [
+        {
+          "name": "datagrip-{version}-linux-x86_64.tar.gz",
+          "sha256": {
+            "find": "^([0-9a-f]{64})",
+            "page": "https://download.jetbrains.com/datagrip/datagrip-{version}.tar.gz.sha256"
+          },
+          "url": {
+            "at": "DG.0.downloads.linux.link",
+            "json": "https://data.services.jetbrains.com/products/releases?code=DG&latest=true&type=release"
+          }
+        },
+        {
+          "name": "datagrip-{version}-linux-aarch64.tar.gz",
+          "sha256": {
+            "find": "^([0-9a-f]{64})",
+            "page": "https://download.jetbrains.com/datagrip/datagrip-{version}-aarch64.tar.gz.sha256"
+          },
+          "url": {
+            "at": "DG.0.downloads.linuxARM64.link",
+            "json": "https://data.services.jetbrains.com/products/releases?code=DG&latest=true&type=release"
+          }
+        }
+      ],
+      "format": 1,
+      "homepage": "https://www.jetbrains.com/datagrip/",
+      "hosts": [
+        "jetbrains.com"
+      ],
+      "id": "datagrip",
+      "name": "DataGrip",
+      "summary": "A tool for working with databases and SQL.",
+      "version": {
+        "at": "DG.0.version",
+        "json": "https://data.services.jetbrains.com/products/releases?code=DG&latest=true&type=release"
+      }
+    },
+    {
       "author": "Discord",
       "files": [
         {
@@ -86,6 +186,90 @@
       }
     },
     {
+      "author": "Docker",
+      "files": [
+        {
+          "name": "docker-desktop-{version}-amd64.deb",
+          "url": {
+            "find": "<link>(https://[^<]+\\.deb)</link>",
+            "page": "https://desktop.docker.com/linux/main/amd64/appcast.xml"
+          }
+        }
+      ],
+      "format": 1,
+      "homepage": "https://www.docker.com/products/docker-desktop/",
+      "hosts": [
+        "docker.com"
+      ],
+      "id": "docker-desktop",
+      "name": "Docker Desktop",
+      "summary": "Build and run containers, with a window to manage them.",
+      "version": {
+        "find": "Version ([0-9.]+) \\(",
+        "page": "https://desktop.docker.com/linux/main/amd64/appcast.xml"
+      }
+    },
+    {
+      "author": "Dropbox",
+      "files": [
+        {
+          "url": "https://linux.dropbox.com/packages/ubuntu/dropbox_{version}_amd64.deb"
+        }
+      ],
+      "format": 1,
+      "homepage": "https://www.dropbox.com/install-linux",
+      "hosts": [
+        "dropbox.com"
+      ],
+      "id": "dropbox",
+      "name": "Dropbox",
+      "summary": "Keep a folder in step with your Dropbox storage.",
+      "version": {
+        "find": "dropbox_([0-9.]+)_amd64\\.deb",
+        "page": "https://linux.dropbox.com/packages/ubuntu/",
+        "pick": "newest"
+      }
+    },
+    {
+      "author": "JetBrains",
+      "files": [
+        {
+          "name": "goland-{version}-linux-x86_64.tar.gz",
+          "sha256": {
+            "find": "^([0-9a-f]{64})",
+            "page": "https://download.jetbrains.com/go/goland-{version}.tar.gz.sha256"
+          },
+          "url": {
+            "at": "GO.0.downloads.linux.link",
+            "json": "https://data.services.jetbrains.com/products/releases?code=GO&latest=true&type=release"
+          }
+        },
+        {
+          "name": "goland-{version}-linux-aarch64.tar.gz",
+          "sha256": {
+            "find": "^([0-9a-f]{64})",
+            "page": "https://download.jetbrains.com/go/goland-{version}-aarch64.tar.gz.sha256"
+          },
+          "url": {
+            "at": "GO.0.downloads.linuxARM64.link",
+            "json": "https://data.services.jetbrains.com/products/releases?code=GO&latest=true&type=release"
+          }
+        }
+      ],
+      "format": 1,
+      "homepage": "https://www.jetbrains.com/goland/",
+      "hosts": [
+        "jetbrains.com"
+      ],
+      "id": "goland",
+      "name": "GoLand",
+      "summary": "An IDE for Go.",
+      "version": {
+        "at": "GO.0.version",
+        "json": "https://data.services.jetbrains.com/products/releases?code=GO&latest=true&type=release"
+      }
+    },
+    {
       "author": "Google",
       "files": [
         {
@@ -110,6 +294,123 @@
       "version": {
         "at": "versions.0.version",
         "json": "https://versionhistory.googleapis.com/v1/chrome/platforms/linux/channels/stable/versions?pageSize=1"
+      }
+    },
+    {
+      "author": "JetBrains",
+      "files": [
+        {
+          "name": "intellij-idea-{version}-linux-x86_64.tar.gz",
+          "sha256": {
+            "find": "^([0-9a-f]{64})",
+            "page": "https://download.jetbrains.com/idea/idea-{version}.tar.gz.sha256"
+          },
+          "url": {
+            "at": "IIU.0.downloads.linux.link",
+            "json": "https://data.services.jetbrains.com/products/releases?code=IIU&latest=true&type=release"
+          }
+        },
+        {
+          "name": "intellij-idea-{version}-linux-aarch64.tar.gz",
+          "sha256": {
+            "find": "^([0-9a-f]{64})",
+            "page": "https://download.jetbrains.com/idea/idea-{version}-aarch64.tar.gz.sha256"
+          },
+          "url": {
+            "at": "IIU.0.downloads.linuxARM64.link",
+            "json": "https://data.services.jetbrains.com/products/releases?code=IIU&latest=true&type=release"
+          }
+        }
+      ],
+      "format": 1,
+      "homepage": "https://www.jetbrains.com/idea/",
+      "hosts": [
+        "jetbrains.com"
+      ],
+      "id": "intellij-idea",
+      "name": "IntelliJ IDEA",
+      "summary": "An IDE for Java and Kotlin.",
+      "version": {
+        "at": "IIU.0.version",
+        "json": "https://data.services.jetbrains.com/products/releases?code=IIU&latest=true&type=release"
+      }
+    },
+    {
+      "author": "Kodi Foundation",
+      "files": [
+        {
+          "url": {
+            "find": "href=\"(kodi-{version}-[A-Za-z]+-arm64-v8a\\.apk)\"",
+            "page": "https://mirrors.kodi.tv/releases/android/arm64-v8a/"
+          }
+        },
+        {
+          "url": {
+            "find": "href=\"(kodi-{version}-[A-Za-z]+-armeabi-v7a\\.apk)\"",
+            "page": "https://mirrors.kodi.tv/releases/android/arm/"
+          }
+        }
+      ],
+      "format": 1,
+      "homepage": "https://kodi.tv/download/android/",
+      "hosts": [
+        "kodi.tv"
+      ],
+      "id": "kodi-android",
+      "license": "GPL-2.0-or-later",
+      "name": "Kodi",
+      "summary": "A media centre for your own films, series, music and photos, made for a TV and a remote.",
+      "version": {
+        "find": "kodi-([0-9.]+)-[A-Za-z]+-arm64-v8a\\.apk",
+        "page": "https://mirrors.kodi.tv/releases/android/arm64-v8a/",
+        "pick": "newest"
+      }
+    },
+    {
+      "author": "Element Labs",
+      "files": [
+        {
+          "name": "LM-Studio-{version}-x86_64.AppImage",
+          "url": {
+            "redirect": "https://lmstudio.ai/download/latest/linux/x64"
+          }
+        }
+      ],
+      "format": 1,
+      "homepage": "https://lmstudio.ai/",
+      "hosts": [
+        "lmstudio.ai"
+      ],
+      "id": "lm-studio",
+      "name": "LM Studio",
+      "summary": "Run large language models on your own computer.",
+      "version": {
+        "find": "LM-Studio-([0-9.-]+)-x64",
+        "redirect": "https://lmstudio.ai/download/latest/linux/x64"
+      }
+    },
+    {
+      "author": "Microsoft",
+      "files": [
+        {
+          "url": "https://packages.microsoft.com/repos/edge/pool/main/m/microsoft-edge-stable/microsoft-edge-stable_{version}-1_amd64.deb"
+        },
+        {
+          "url": "https://packages.microsoft.com/yumrepos/edge/Packages/m/microsoft-edge-stable-{version}-1.x86_64.rpm"
+        }
+      ],
+      "format": 1,
+      "homepage": "https://www.microsoft.com/edge",
+      "hosts": [
+        "microsoft.com"
+      ],
+      "id": "microsoft-edge",
+      "name": "Microsoft Edge",
+      "summary": "Microsoft's web browser.",
+      "version": {
+        "find": "microsoft-edge-stable_([0-9.]+)-1_amd64\\.deb",
+        "page": "https://packages.microsoft.com/repos/edge/pool/main/m/microsoft-edge-stable/",
+        "pick": "newest"
       }
     },
     {
@@ -163,6 +464,95 @@
       "version": {
         "find": "MullvadVPN-([0-9.]+)_amd64",
         "redirect": "https://mullvad.net/download/app/deb/latest"
+      }
+    },
+    {
+      "author": "Opera",
+      "files": [
+        {
+          "url": "https://get.opera.com/pub/opera/desktop/{version}/linux/opera-stable_{version}_amd64.deb"
+        },
+        {
+          "url": "https://get.opera.com/pub/opera/desktop/{version}/linux/opera-stable_{version}_amd64.rpm"
+        }
+      ],
+      "format": 1,
+      "homepage": "https://www.opera.com/download",
+      "hosts": [
+        "opera.com"
+      ],
+      "id": "opera",
+      "name": "Opera",
+      "summary": "A web browser with a sidebar for messengers and a built-in VPN.",
+      "version": {
+        "find": "href=\"([0-9.]+)/\"",
+        "page": "https://get.opera.com/pub/opera/desktop/",
+        "pick": "newest"
+      }
+    },
+    {
+      "author": "JetBrains",
+      "files": [
+        {
+          "name": "phpstorm-{version}-linux-x86_64.tar.gz",
+          "sha256": {
+            "find": "^([0-9a-f]{64})",
+            "page": "https://download.jetbrains.com/webide/PhpStorm-{version}.tar.gz.sha256"
+          },
+          "url": {
+            "at": "PS.0.downloads.linux.link",
+            "json": "https://data.services.jetbrains.com/products/releases?code=PS&latest=true&type=release"
+          }
+        },
+        {
+          "name": "phpstorm-{version}-linux-aarch64.tar.gz",
+          "sha256": {
+            "find": "^([0-9a-f]{64})",
+            "page": "https://download.jetbrains.com/webide/PhpStorm-{version}-aarch64.tar.gz.sha256"
+          },
+          "url": {
+            "at": "PS.0.downloads.linuxARM64.link",
+            "json": "https://data.services.jetbrains.com/products/releases?code=PS&latest=true&type=release"
+          }
+        }
+      ],
+      "format": 1,
+      "homepage": "https://www.jetbrains.com/phpstorm/",
+      "hosts": [
+        "jetbrains.com"
+      ],
+      "id": "phpstorm",
+      "name": "PhpStorm",
+      "summary": "An IDE for PHP.",
+      "version": {
+        "at": "PS.0.version",
+        "json": "https://data.services.jetbrains.com/products/releases?code=PS&latest=true&type=release"
+      }
+    },
+    {
+      "author": "Postman",
+      "files": [
+        {
+          "name": "postman-{version}-linux-x86_64.tar.gz",
+          "url": "https://dl.pstmn.io/download/version/{version}/linux64"
+        },
+        {
+          "name": "postman-{version}-linux-aarch64.tar.gz",
+          "url": "https://dl.pstmn.io/download/version/{version}/linux_arm64"
+        }
+      ],
+      "format": 1,
+      "homepage": "https://www.postman.com/downloads/",
+      "hosts": [
+        "postman.com",
+        "pstmn.io"
+      ],
+      "id": "postman",
+      "name": "Postman",
+      "summary": "Build, test and document APIs.",
+      "version": {
+        "at": "changelog.0.name",
+        "json": "https://dl.pstmn.io/changelog?channel=stable&platform=linux64"
       }
     },
     {
@@ -228,6 +618,123 @@
       }
     },
     {
+      "author": "JetBrains",
+      "files": [
+        {
+          "name": "pycharm-{version}-linux-x86_64.tar.gz",
+          "sha256": {
+            "find": "^([0-9a-f]{64})",
+            "page": "https://download.jetbrains.com/python/pycharm-{version}.tar.gz.sha256"
+          },
+          "url": {
+            "at": "PCP.0.downloads.linux.link",
+            "json": "https://data.services.jetbrains.com/products/releases?code=PCP&latest=true&type=release"
+          }
+        },
+        {
+          "name": "pycharm-{version}-linux-aarch64.tar.gz",
+          "sha256": {
+            "find": "^([0-9a-f]{64})",
+            "page": "https://download.jetbrains.com/python/pycharm-{version}-aarch64.tar.gz.sha256"
+          },
+          "url": {
+            "at": "PCP.0.downloads.linuxARM64.link",
+            "json": "https://data.services.jetbrains.com/products/releases?code=PCP&latest=true&type=release"
+          }
+        }
+      ],
+      "format": 1,
+      "homepage": "https://www.jetbrains.com/pycharm/",
+      "hosts": [
+        "jetbrains.com"
+      ],
+      "id": "pycharm",
+      "name": "PyCharm",
+      "summary": "An IDE for Python.",
+      "version": {
+        "at": "PCP.0.version",
+        "json": "https://data.services.jetbrains.com/products/releases?code=PCP&latest=true&type=release"
+      }
+    },
+    {
+      "author": "JetBrains",
+      "files": [
+        {
+          "name": "rider-{version}-linux-x86_64.tar.gz",
+          "sha256": {
+            "find": "^([0-9a-f]{64})",
+            "page": "https://download.jetbrains.com/rider/JetBrains.Rider-{version}.tar.gz.sha256"
+          },
+          "url": {
+            "at": "RD.0.downloads.linux.link",
+            "json": "https://data.services.jetbrains.com/products/releases?code=RD&latest=true&type=release"
+          }
+        },
+        {
+          "name": "rider-{version}-linux-aarch64.tar.gz",
+          "sha256": {
+            "find": "^([0-9a-f]{64})",
+            "page": "https://download.jetbrains.com/rider/JetBrains.Rider-{version}-aarch64.tar.gz.sha256"
+          },
+          "url": {
+            "at": "RD.0.downloads.linuxARM64.link",
+            "json": "https://data.services.jetbrains.com/products/releases?code=RD&latest=true&type=release"
+          }
+        }
+      ],
+      "format": 1,
+      "homepage": "https://www.jetbrains.com/rider/",
+      "hosts": [
+        "jetbrains.com"
+      ],
+      "id": "rider",
+      "name": "Rider",
+      "summary": "An IDE for .NET and game development.",
+      "version": {
+        "at": "RD.0.version",
+        "json": "https://data.services.jetbrains.com/products/releases?code=RD&latest=true&type=release"
+      }
+    },
+    {
+      "author": "JetBrains",
+      "files": [
+        {
+          "name": "rustrover-{version}-linux-x86_64.tar.gz",
+          "sha256": {
+            "find": "^([0-9a-f]{64})",
+            "page": "https://download.jetbrains.com/rustrover/RustRover-{version}.tar.gz.sha256"
+          },
+          "url": {
+            "at": "RR.0.downloads.linux.link",
+            "json": "https://data.services.jetbrains.com/products/releases?code=RR&latest=true&type=release"
+          }
+        },
+        {
+          "name": "rustrover-{version}-linux-aarch64.tar.gz",
+          "sha256": {
+            "find": "^([0-9a-f]{64})",
+            "page": "https://download.jetbrains.com/rustrover/RustRover-{version}-aarch64.tar.gz.sha256"
+          },
+          "url": {
+            "at": "RR.0.downloads.linuxARM64.link",
+            "json": "https://data.services.jetbrains.com/products/releases?code=RR&latest=true&type=release"
+          }
+        }
+      ],
+      "format": 1,
+      "homepage": "https://www.jetbrains.com/rustrover/",
+      "hosts": [
+        "jetbrains.com"
+      ],
+      "id": "rustrover",
+      "name": "RustRover",
+      "summary": "An IDE for Rust.",
+      "version": {
+        "at": "RR.0.version",
+        "json": "https://data.services.jetbrains.com/products/releases?code=RR&latest=true&type=release"
+      }
+    },
+    {
       "author": "Signal Messenger",
       "files": [
         {
@@ -254,6 +761,240 @@
       "version": {
         "at": "versionName",
         "json": "https://updates.signal.org/android/latest.json"
+      }
+    },
+    {
+      "author": "Slack Technologies",
+      "files": [
+        {
+          "url": {
+            "at": "download_url",
+            "json": "https://slack.com/api/desktop.latestRelease?arch=x64&variant=deb"
+          }
+        },
+        {
+          "url": {
+            "at": "download_url",
+            "json": "https://slack.com/api/desktop.latestRelease?arch=x64&variant=rpm"
+          }
+        }
+      ],
+      "format": 1,
+      "homepage": "https://slack.com/downloads/linux",
+      "hosts": [
+        "slack.com",
+        "slack-edge.com"
+      ],
+      "id": "slack",
+      "name": "Slack",
+      "summary": "Chat for teams, in channels and direct messages.",
+      "version": {
+        "at": "version",
+        "json": "https://slack.com/api/desktop.latestRelease?arch=x64&variant=deb"
+      }
+    },
+    {
+      "author": "Sublime HQ",
+      "files": [
+        {
+          "url": "https://download.sublimetext.com/sublime-text_build-{version}_amd64.deb"
+        },
+        {
+          "url": "https://download.sublimetext.com/sublime-text-{version}-1.x86_64.rpm"
+        },
+        {
+          "name": "sublime-text-{version}-linux-x86_64.tar.xz",
+          "url": "https://download.sublimetext.com/sublime_text_build_{version}_x64.tar.xz"
+        },
+        {
+          "url": "https://download.sublimetext.com/sublime-text_build-{version}_arm64.deb"
+        },
+        {
+          "name": "sublime-text-{version}-linux-aarch64.tar.xz",
+          "url": "https://download.sublimetext.com/sublime_text_build_{version}_arm64.tar.xz"
+        }
+      ],
+      "format": 1,
+      "homepage": "https://www.sublimetext.com/",
+      "hosts": [
+        "sublimetext.com"
+      ],
+      "id": "sublime-text",
+      "name": "Sublime Text",
+      "summary": "A fast text and code editor.",
+      "version": {
+        "at": "latest_version",
+        "json": "https://www.sublimetext.com/updates/4/stable_update_check"
+      }
+    },
+    {
+      "author": "Telegram",
+      "files": [
+        {
+          "name": "telegram-{version}-linux-x86_64.tar.xz",
+          "url": {
+            "redirect": "https://telegram.org/dl/desktop/linux"
+          }
+        }
+      ],
+      "format": 1,
+      "homepage": "https://desktop.telegram.org/",
+      "hosts": [
+        "telegram.org"
+      ],
+      "id": "telegram-desktop",
+      "license": "GPL-3.0-or-later",
+      "name": "Telegram",
+      "summary": "Messages, groups and channels, synced across devices.",
+      "version": {
+        "find": "-([0-9.]+)\\.tar\\.xz",
+        "redirect": "https://telegram.org/dl/desktop/linux"
+      }
+    },
+    {
+      "author": "The Tor Project",
+      "files": [
+        {
+          "url": {
+            "at": "binary",
+            "json": "https://aus1.torproject.org/torbrowser/update_3/release/download-android-aarch64.json"
+          }
+        },
+        {
+          "url": {
+            "at": "binary",
+            "json": "https://aus1.torproject.org/torbrowser/update_3/release/download-android-armv7.json"
+          }
+        },
+        {
+          "url": {
+            "at": "binary",
+            "json": "https://aus1.torproject.org/torbrowser/update_3/release/download-android-x86_64.json"
+          }
+        }
+      ],
+      "format": 1,
+      "homepage": "https://www.torproject.org/download/",
+      "hosts": [
+        "torproject.org"
+      ],
+      "id": "tor-browser-android",
+      "license": "MPL-2.0",
+      "name": "Tor Browser",
+      "summary": "A web browser that sends everything through the Tor network. The version from the Tor Project's own website.",
+      "version": {
+        "at": "version",
+        "json": "https://aus1.torproject.org/torbrowser/update_3/release/download-android-aarch64.json"
+      }
+    },
+    {
+      "author": "The Tor Project",
+      "files": [
+        {
+          "url": {
+            "at": "binary",
+            "json": "https://aus1.torproject.org/torbrowser/update_3/release/download-linux-x86_64.json"
+          }
+        },
+        {
+          "url": {
+            "at": "binary",
+            "json": "https://aus1.torproject.org/torbrowser/update_3/release/download-linux-aarch64.json"
+          }
+        }
+      ],
+      "format": 1,
+      "homepage": "https://www.torproject.org/download/",
+      "hosts": [
+        "torproject.org"
+      ],
+      "id": "tor-browser",
+      "license": "MPL-2.0",
+      "name": "Tor Browser",
+      "summary": "A web browser that sends everything through the Tor network, for privacy.",
+      "version": {
+        "at": "version",
+        "json": "https://aus1.torproject.org/torbrowser/update_3/release/download-linux-x86_64.json"
+      }
+    },
+    {
+      "author": "Microsoft",
+      "files": [
+        {
+          "sha256": {
+            "at": "sha256hash",
+            "json": "https://update.code.visualstudio.com/api/update/linux-deb-x64/stable/latest"
+          },
+          "url": {
+            "at": "url",
+            "json": "https://update.code.visualstudio.com/api/update/linux-deb-x64/stable/latest"
+          }
+        },
+        {
+          "sha256": {
+            "at": "sha256hash",
+            "json": "https://update.code.visualstudio.com/api/update/linux-rpm-x64/stable/latest"
+          },
+          "url": {
+            "at": "url",
+            "json": "https://update.code.visualstudio.com/api/update/linux-rpm-x64/stable/latest"
+          }
+        },
+        {
+          "name": "code-{version}-linux-x86_64.tar.gz",
+          "sha256": {
+            "at": "sha256hash",
+            "json": "https://update.code.visualstudio.com/api/update/linux-x64/stable/latest"
+          },
+          "url": {
+            "at": "url",
+            "json": "https://update.code.visualstudio.com/api/update/linux-x64/stable/latest"
+          }
+        },
+        {
+          "sha256": {
+            "at": "sha256hash",
+            "json": "https://update.code.visualstudio.com/api/update/linux-deb-arm64/stable/latest"
+          },
+          "url": {
+            "at": "url",
+            "json": "https://update.code.visualstudio.com/api/update/linux-deb-arm64/stable/latest"
+          }
+        },
+        {
+          "sha256": {
+            "at": "sha256hash",
+            "json": "https://update.code.visualstudio.com/api/update/linux-rpm-arm64/stable/latest"
+          },
+          "url": {
+            "at": "url",
+            "json": "https://update.code.visualstudio.com/api/update/linux-rpm-arm64/stable/latest"
+          }
+        },
+        {
+          "name": "code-{version}-linux-aarch64.tar.gz",
+          "sha256": {
+            "at": "sha256hash",
+            "json": "https://update.code.visualstudio.com/api/update/linux-arm64/stable/latest"
+          },
+          "url": {
+            "at": "url",
+            "json": "https://update.code.visualstudio.com/api/update/linux-arm64/stable/latest"
+          }
+        }
+      ],
+      "format": 1,
+      "homepage": "https://code.visualstudio.com/",
+      "hosts": [
+        "visualstudio.com",
+        "microsoft.com"
+      ],
+      "id": "visual-studio-code",
+      "name": "Visual Studio Code",
+      "summary": "Microsoft's code editor, as the packages Microsoft itself publishes.",
+      "version": {
+        "at": "productVersion",
+        "json": "https://update.code.visualstudio.com/api/update/linux-x64/stable/latest"
       }
     },
     {
@@ -314,6 +1055,119 @@
       }
     },
     {
+      "author": "VideoLAN",
+      "files": [
+        {
+          "url": "https://get.videolan.org/vlc-android/{version}/VLC-Android-{version}-arm64-v8a.apk"
+        },
+        {
+          "url": "https://get.videolan.org/vlc-android/{version}/VLC-Android-{version}-armeabi-v7a.apk"
+        },
+        {
+          "url": "https://get.videolan.org/vlc-android/{version}/VLC-Android-{version}-x86_64.apk"
+        }
+      ],
+      "format": 1,
+      "homepage": "https://www.videolan.org/vlc/download-android.html",
+      "hosts": [
+        "videolan.org"
+      ],
+      "id": "vlc-android",
+      "license": "GPL-2.0-or-later",
+      "name": "VLC",
+      "summary": "Plays almost any video or music file, and streams. The version from VideoLAN's own website.",
+      "version": {
+        "find": "href=\"([0-9.]+)/\"",
+        "page": "https://get.videolan.org/vlc-android/",
+        "pick": "newest"
+      }
+    },
+    {
+      "author": "JetBrains",
+      "files": [
+        {
+          "name": "webstorm-{version}-linux-x86_64.tar.gz",
+          "sha256": {
+            "find": "^([0-9a-f]{64})",
+            "page": "https://download.jetbrains.com/webstorm/WebStorm-{version}.tar.gz.sha256"
+          },
+          "url": {
+            "at": "WS.0.downloads.linux.link",
+            "json": "https://data.services.jetbrains.com/products/releases?code=WS&latest=true&type=release"
+          }
+        },
+        {
+          "name": "webstorm-{version}-linux-aarch64.tar.gz",
+          "sha256": {
+            "find": "^([0-9a-f]{64})",
+            "page": "https://download.jetbrains.com/webstorm/WebStorm-{version}-aarch64.tar.gz.sha256"
+          },
+          "url": {
+            "at": "WS.0.downloads.linuxARM64.link",
+            "json": "https://data.services.jetbrains.com/products/releases?code=WS&latest=true&type=release"
+          }
+        }
+      ],
+      "format": 1,
+      "homepage": "https://www.jetbrains.com/webstorm/",
+      "hosts": [
+        "jetbrains.com"
+      ],
+      "id": "webstorm",
+      "name": "WebStorm",
+      "summary": "An IDE for JavaScript and TypeScript.",
+      "version": {
+        "at": "WS.0.version",
+        "json": "https://data.services.jetbrains.com/products/releases?code=WS&latest=true&type=release"
+      }
+    },
+    {
+      "author": "WhatsApp",
+      "files": [
+        {
+          "name": "WhatsApp-{version}.apk",
+          "url": {
+            "find": "href=\"(https://scontent\\.whatsapp\\.net/[^\"]+\\.apk[^\"]*)\"",
+            "page": "https://www.whatsapp.com/android"
+          }
+        }
+      ],
+      "format": 1,
+      "homepage": "https://www.whatsapp.com/android",
+      "hosts": [
+        "whatsapp.com",
+        "whatsapp.net"
+      ],
+      "id": "whatsapp-android",
+      "name": "WhatsApp",
+      "summary": "Messages and calls. The version from WhatsApp's own website, for phones without Google Play.",
+      "version": {
+        "find": "Version ([0-9.]+)",
+        "page": "https://www.whatsapp.com/android"
+      }
+    },
+    {
+      "author": "Zoom Communications",
+      "files": [
+        {
+          "name": "zoom-{version}.apk",
+          "url": "https://zoom.us/client/latest/zoom.apk"
+        }
+      ],
+      "format": 1,
+      "homepage": "https://zoom.us/download",
+      "hosts": [
+        "zoom.us"
+      ],
+      "id": "zoom-android",
+      "name": "Zoom",
+      "summary": "Video meetings, calls and chat. The version from Zoom's own website.",
+      "version": {
+        "find": "/prod/([0-9.]+)/",
+        "redirect": "https://zoom.us/client/latest/zoom.apk"
+      }
+    },
+    {
       "author": "Zoom Communications",
       "files": [
         {
@@ -336,6 +1190,34 @@
       "version": {
         "find": "/prod/([0-9.]+)/",
         "redirect": "https://zoom.us/client/latest/zoom_amd64.deb"
+      }
+    },
+    {
+      "author": "Corporation for Digital Scholarship",
+      "files": [
+        {
+          "url": {
+            "redirect": "https://www.zotero.org/download/client/dl?channel=release&platform=linux-x86_64"
+          }
+        },
+        {
+          "url": {
+            "redirect": "https://www.zotero.org/download/client/dl?channel=release&platform=linux-arm64"
+          }
+        }
+      ],
+      "format": 1,
+      "homepage": "https://www.zotero.org/download/",
+      "hosts": [
+        "zotero.org"
+      ],
+      "id": "zotero",
+      "license": "AGPL-3.0-only",
+      "name": "Zotero",
+      "summary": "Collect, organise and cite research sources.",
+      "version": {
+        "find": "Zotero-([0-9.]+)_linux",
+        "redirect": "https://www.zotero.org/download/client/dl?channel=release&platform=linux-x86_64"
       }
     }
   ]

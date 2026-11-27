@@ -95,6 +95,11 @@ pub struct Lookup {
     /// A regular expression whose first group is the value.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub find: Option<String>,
+    /// Which match to take when the pattern is found more than once: `first` (as when
+    /// nothing is said), `last`, or `newest`, the one that is the highest version.
+    /// For a page that lists every release, such as a folder of downloads.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pick: Option<String>,
     /// The way to the value: names and list positions joined by dots, `files.0.url`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub at: Option<String>,
@@ -122,7 +127,7 @@ pub struct FoundFile {
 pub fn host_of(url: &str) -> Option<String> {
     let rest = url.strip_prefix("https://")?;
     let host = rest.split(['/', '?', '#']).next().unwrap_or("");
-    let plain = url.len() <= 600 && url.chars().all(|c| c.is_ascii_graphic());
+    let plain = url.len() <= 2000 && url.chars().all(|c| c.is_ascii_graphic());
     let named = host.contains('.')
         && host.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '.')
         && !host.is_empty();
@@ -264,6 +269,12 @@ impl Recipe {
         if !self.allows(&with_version(address, Some("1"))) {
             return Some(format!("{what} reads {address}, which is not an https address at one of its hosts"));
         }
+        if !matches!(lookup.pick.as_deref(), None | Some("first" | "last" | "newest")) {
+            return Some(format!("the \"pick\" of {what} must be \"first\", \"last\" or \"newest\""));
+        }
+        if lookup.pick.is_some() && lookup.find.is_none() {
+            return Some(format!("{what} has a \"pick\" and no \"find\" to pick among"));
+        }
         if lookup.json.is_some() {
             if lookup.at.as_deref().is_none_or(str::is_empty) || lookup.find.is_some() {
                 return Some(format!("{what} reads JSON, so it needs \"at\" and no \"find\""));
@@ -355,7 +366,18 @@ impl Recipe {
         let picked = |text: &str| -> std::result::Result<String, String> {
             let pattern = lookup.find.as_deref().ok_or("no pattern")?;
             let pattern = pattern_of(&with_version(pattern, version.map(regex::escape).as_deref()))?;
-            let found = pattern.captures(text).and_then(|found| found.get(1)).map(|group| group.as_str().trim());
+            let mut matches =
+                pattern.captures_iter(text).filter_map(|found| found.get(1)).map(|group| group.as_str().trim());
+            let found = match lookup.pick.as_deref() {
+                Some("last") => matches.last(),
+                // What cannot be read as a version loses to what can.
+                Some("newest") => matches.reduce(|best, one| match crate::version::compare(one, best) {
+                    Some(std::cmp::Ordering::Greater) => one,
+                    None if crate::version::compare(best, best).is_none() => one,
+                    _ => best,
+                }),
+                _ => matches.next(),
+            };
             found
                 .filter(|value| !value.is_empty())
                 .map(str::to_string)
@@ -388,7 +410,7 @@ impl Recipe {
         } else {
             picked(&http.get(&address).map_err(|e| e.to_string())?)?
         };
-        if value.is_empty() || value.len() > 600 {
+        if value.is_empty() || value.len() > 2000 {
             return Err(format!("what was found at {} is empty or far too long", short(&address)));
         }
         Ok(if is_address { whole(&address, &value) } else { value })

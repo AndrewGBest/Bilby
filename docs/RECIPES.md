@@ -87,6 +87,10 @@ Looking something up:
 
 - `"page"` with `"find"`: a regular expression, and the value is its first group in
   brackets. A link found this way is made whole against the page it was found on.
+  Where the pattern is found more than once the first counts, unless `"pick"` says
+  `"last"` or `"newest"`. `"newest"` takes the highest version, which is what a page
+  listing every release needs:
+  `{ "page": "https://tide.example/files/", "find": "tide-([0-9.]+)\\.deb", "pick": "newest" }`.
 - `"redirect"`: the value is the address it leads to. With `"find"`, the value is
   what the pattern picks out of that address, which is how a version is read from
   `…/releases/2026.5/app-2026.5.deb`.
