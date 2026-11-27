@@ -6,6 +6,8 @@ any release may change how something works.
 
 ## Unreleased
 
+## 0.1.44 (2026-11-27)
+
 - **Apps that are only on their maker's website can be installed and updated.** A
   recipe says where the maker publishes the app and how to read its current version,
   and Bilby follows it. The first ones cover Signal for Android from signal.org,
