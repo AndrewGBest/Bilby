@@ -119,11 +119,9 @@ fn offline_browsing_still_works_and_lookups_explain_themselves() {
     let s = start(WELCOMED);
     s.go(OFFLINE);
 
-    // Discover and suggestions come from the bundled catalog: no network needed.
+    // Discover comes from the bundled catalog: no network needed.
     s.app.refresh(&s.ui);
     assert!(s.store().get_sections().row_count() >= 3);
-    s.app.typing(&s.ui, "lum");
-    assert_eq!(s.store().get_suggestions().row_count(), 1);
 
     // An app page says what is wrong, in words, and offers a retry.
     s.app.open(&s.ui, "github:lumen-labs/lumen");

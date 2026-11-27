@@ -470,42 +470,6 @@ impl Catalog {
         apps
     }
 
-    /// Featured apps matching what has been typed so far. Instant and free: it only looks
-    /// at the bundled index, so it can run on every keystroke.
-    pub fn suggest(&self, query: &str, limit: usize) -> Vec<AppSummary> {
-        let words: Vec<String> = query.split_whitespace().map(str::to_lowercase).collect();
-        if words.iter().map(String::len).sum::<usize>() < 2 {
-            return Vec::new();
-        }
-        let mut scored: Vec<(u8, AppSummary)> = Vec::new();
-        for app in self.featured().into_iter().flat_map(|s| s.apps) {
-            if scored.iter().any(|(_, seen)| seen.id == app.id) {
-                continue;
-            }
-            // Match on word starts ("ed" finds "editor", not "media" or "self-hosted"):
-            // substring matches feel random when only two letters have been typed.
-            let name = app.name.to_lowercase();
-            let rest =
-                format!("{} {} {}", app.author, app.summary, app.category.clone().unwrap_or_default()).to_lowercase();
-            let starts =
-                |text: &str, w: &str| text.split(|c: char| !c.is_alphanumeric()).any(|word| word.starts_with(w));
-            if !words.iter().all(|w| starts(&name, w) || starts(&rest, w)) {
-                continue;
-            }
-            // The app's own name first, then matches in its description.
-            let rank = if name.starts_with(&words[0]) {
-                0
-            } else if words.iter().any(|w| starts(&name, w)) {
-                1
-            } else {
-                2
-            };
-            scored.push((rank, app));
-        }
-        scored.sort_by_key(|(rank, _)| *rank);
-        scored.into_iter().take(limit).map(|(_, app)| app).collect()
-    }
-
     /// Sort a release's files into "works here" (best first) and "hidden, because ...".
     pub fn resolve_release(&self, release: &Release) -> ResolvedRelease {
         let mut options = Vec::new();
@@ -881,6 +845,32 @@ impl Catalog {
             }
             apps = first.into_iter().chain(rest).collect();
         }
+        // An app of a kind named outright ("chrome"): the others of its kind that are
+        // kept on record follow it, because their names would not have brought them
+        // up (Chromium, Brave). Part of recommending what everyone knows, so it goes
+        // with that setting.
+        if let Some((group, at)) = crate::alike::named(crate::alike::groups(), query).filter(|_| self.essentials) {
+            let sources = self.active_sources();
+            let named = &group.members[at];
+            let mut others = Vec::new();
+            for member in group.members.iter().enumerate().filter(|(i, _)| *i != at).map(|(_, member)| member) {
+                // What a source said about it is kept, where one found it.
+                let found = apps.iter().position(|app| member.is(&app.id)).map(|i| apps.remove(i));
+                others.extend(found.or_else(|| member.here(&sources, &self.platform)));
+            }
+            // The one that was named leads them. No source may have found it, when
+            // it was named by another word ("excel" for LibreOffice): it is put in.
+            let after = match apps.iter().position(|app| named.is(&app.id)) {
+                Some(found) => found + 1,
+                None => {
+                    let known = named.here(&sources, &self.platform);
+                    let put_in = known.is_some() as usize;
+                    apps.splice(0..0, known);
+                    put_in
+                }
+            };
+            apps.splice(after..after, others);
+        }
         // What does not run here comes after everything that does.
         apps.sort_by_key(|app| app.install_label.as_deref() == Some(NOT_HERE));
         outcome.apps = apps;
@@ -939,6 +929,28 @@ mod tests {
         // Switched off in Settings, it is not asked either way.
         windows.disabled = vec![SourceKind::Flathub];
         assert!(windows.search("quillpad").apps.iter().all(|app| app.id.source != SourceKind::Flathub));
+    }
+
+    #[test]
+    fn a_search_for_an_app_lists_the_others_of_its_kind() {
+        // "chrome" names Google Chrome. Chromium and Brave have no "chrome" in their
+        // names, so only the list kept by hand brings them up.
+        let mut catalog = demo("linux-x64-debian");
+        // The demo leaves recommendations out; this is one.
+        catalog.essentials = true;
+        let names: Vec<String> = catalog.search("chrome").apps.into_iter().map(|app| app.name).collect();
+        let place = |name: &str| names.iter().position(|n| n == name);
+        assert!(place("Chromium").is_some() && place("Ungoogled Chromium").is_some(), "{names:?}");
+        assert!(place("Chromium") < place("Brave"), "in the list's order: {names:?}");
+        assert_eq!(names.iter().filter(|n| *n == "Brave").count(), 1);
+        // Named by another word, which no source would match: it leads all the same.
+        let office: Vec<String> = catalog.search("excel").apps.into_iter().take(2).map(|app| app.name).collect();
+        assert_eq!(office, ["LibreOffice", "ONLYOFFICE"]);
+        // A word that names none of them brings none of them.
+        assert!(catalog.search("monitor").apps.iter().all(|app| app.name != "Brave"));
+        // It is a recommendation, and goes when those are switched off.
+        catalog.essentials = false;
+        assert!(catalog.search("chrome").apps.iter().all(|app| app.name != "Chromium"));
     }
 
     #[test]
@@ -1059,30 +1071,6 @@ mod tests {
         // Switched off: only what the sources and the starter list say.
         catalog.essentials = false;
         assert!(!catalog.featured().iter().any(|r| r.title == "Essentials" || r.title == "Web browsers"));
-    }
-
-    #[test]
-    fn suggestions_come_from_the_index_and_respect_the_device() {
-        let names =
-            |preset: &str, q: &str| -> Vec<String> { demo(preset).suggest(q, 5).into_iter().map(|a| a.name).collect() };
-        assert_eq!(names("linux-x64-debian", "lu"), ["Lumen", "Amazon Luna"], "apps first, then web apps");
-        assert_eq!(names("linux-x64-debian", "LUMEN"), ["Lumen"], "case does not matter");
-        assert_eq!(names("linux-x64-debian", "editor"), ["Lumen"], "summaries are searched too");
-        assert_eq!(names("linux-x64-debian", "media"), ["Tidewave", "Marquee", "Couchplay"], "and categories");
-        assert_eq!(names("linux-x64-debian", "music player"), ["Tidewave"], "every word must match");
-        assert_eq!(names("linux-x64-debian", "ed"), ["Lumen"], "words match from their start: editor, not media");
-        assert_eq!(names("android-arm64", "launcher"), ["Fern Launcher"], "any word of the name counts");
-        assert!(names("linux-x64-debian", "l").is_empty(), "one letter is too little");
-        assert!(names("linux-x64-debian", "").is_empty());
-        // Device filtering applies: a Windows-only app is not suggested on Linux.
-        assert!(names("linux-x64-debian", "winspect").is_empty());
-        assert_eq!(names("windows-x64", "winspect"), ["Winspect"]);
-        // Name matches come before summary matches.
-        assert_eq!(names("android-arm64", "re")[0], "Relay");
-        // On a TV the same app sits in two rows; it is suggested once.
-        assert_eq!(names("android-tv", "tide"), ["Tidewave"]);
-        assert_eq!(demo("linux-x64-debian").suggest("a", 2).len(), 0);
-        assert!(demo("linux-x64-debian").suggest("an", 2).len() <= 2, "the limit holds");
     }
 
     #[test]

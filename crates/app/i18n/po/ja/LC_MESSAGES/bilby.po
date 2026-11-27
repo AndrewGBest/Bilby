@@ -644,14 +644,6 @@ msgctxt "Spotlight"
 msgid "Featured"
 msgstr "おすすめ"
 
-msgctxt "MobileShell"
-msgid "Featured apps"
-msgstr "おすすめのアプリ"
-
-msgctxt "DesktopShell"
-msgid "Featured apps matching “{}”  ·  press Enter to search GitHub too"
-msgstr "「{}」に一致するおすすめのアプリ  ·  Enter キーで GitHub も検索"
-
 msgctxt "DetailsBody"
 msgid "Files that won't work on this device"
 msgstr "このデバイスで使えないファイル"

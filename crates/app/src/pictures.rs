@@ -212,7 +212,6 @@ impl App {
         // own logo is looked for. A page of search results is not.
         let few: HashSet<String> = shown.iter().cloned().collect();
         shown.extend(store.get_results().iter().map(|c| c.id.to_string()));
-        shown.extend(store.get_suggestions().iter().map(|c| c.id.to_string()));
 
         // For each app: its own logo (an address the source gave, or one found earlier
         // and kept on disk), and its owner's picture to fall back on.
@@ -361,7 +360,6 @@ impl App {
             }
         }
         repaint(store.get_results());
-        repaint(store.get_suggestions());
         let library = store.get_library();
         for row in 0..library.row_count() {
             let Some(mut entry) = library.row_data(row) else { continue };

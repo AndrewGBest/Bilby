@@ -17,6 +17,7 @@
 //! * [`version`]  – is this release newer than the installed one?
 //! * [`demo`]     – fictional offline catalog for demos and tests
 
+pub mod alike;
 pub mod appstream;
 pub mod asset;
 pub mod catalog;

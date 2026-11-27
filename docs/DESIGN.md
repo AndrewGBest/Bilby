@@ -38,7 +38,6 @@ Bilby takes the patterns people already know from the stores they use:
 | A library that checks its sources for updates | Obtainium, F-Droid | Library page, badge, check at start-up |
 | "Update" and "Update all" that simply do it | Play Store, F-Droid | One-press updates from the Library, queued one at a time |
 | Choosing an older version | F-Droid, Obtainium | Version picker on every app's page |
-| Suggestions while typing | Most stores | Instant matches from the bundled catalog, with no network |
 | Paste a project's link to add it | Obtainium | The search box accepts links and `owner/repo` |
 | One prominent button, details below | Flathub, GNOME Software, Play Store | The best file first, the rest one press away |
 | Say what a package can be trusted for | F-Droid's anti-features | First-run notice, checksum line, AUR notice |
@@ -297,7 +296,7 @@ per project. So:
   Settings shows it ("42 of 60 GitHub requests left; refills in 23 minutes").
 - **A search checks a bounded number of projects** (8 without signing in, 20 with), in
   parallel, and reports how many matched but had nothing for this device. Typing
-  costs nothing: suggestions come from the bundled lists.
+  costs nothing: nothing is looked for until Enter is pressed.
 - **Answers are cached on disk** for 30 minutes, and a kept copy is served when
   offline or when the allowance runs out.
 - **Signing in lifts the limit to 5,000 an hour.** See

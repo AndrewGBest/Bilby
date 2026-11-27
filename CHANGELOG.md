@@ -6,6 +6,15 @@ any release may change how something works.
 
 ## Unreleased
 
+- **A search for an app also lists others of its kind.** Looking for Chrome shows
+  Chromium, Ungoogled Chromium, Brave, Vivaldi, Edge and Opera straight after it.
+  Thirty kinds of app are covered, from browsers and video players to password
+  managers, game launchers and code editors. Names of things Bilby does not have work
+  too: "photoshop" leads to GIMP and Krita, "excel" to LibreOffice, "airdrop" to
+  LocalSend. It goes with "Recommend the apps everyone knows" in Settings.
+- Nothing is looked for or shown while you type in the search box, only when you
+  press Enter. The suggestions that appeared with each letter are gone.
+
 ## 0.1.42 (2026-11-25)
 
 - On a TV, the Updates section at the end of Settings can be seen. The list stopped

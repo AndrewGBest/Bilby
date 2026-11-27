@@ -209,8 +209,6 @@ export global Store {
     in property <[SourceChoice]> result-sources;
     in property <string> source-filter;
     in property <[string]> recent;
-    // Featured apps matching what is being typed. Instant, no network.
-    in property <[AppCard]> suggestions;
 
     // --- details ----------------------------------------------------------------
     in-out property <bool> details-open;
@@ -453,7 +451,6 @@ export global Store {
     in property <bool> toast-is-error;
 
     callback search(string);
-    callback typing(string);
     // Out of a search and back to Home: the box emptied, the results put away.
     callback leave-search();
     // The languages Bilby comes in, "System" first; `on` marks the one chosen.

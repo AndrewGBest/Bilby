@@ -132,7 +132,7 @@ def data_strings():
             for value in node:
                 walk(value, keys)
 
-    for name, keys in (("essentials", {"summary"}), ("web", {"summary"}), ("index", {"summary", "description"}), ("related", {"label", "note", "summary"})):
+    for name, keys in (("essentials", {"summary"}), ("web", {"summary"}), ("index", {"summary", "description"}), ("related", {"label", "note", "summary"}), ("alike", {"summary"})):
         data = json.load(open(os.path.join(ROOT, "crates/core/data", name + ".json"), encoding="utf-8"))
         data.pop("_comment", None) if isinstance(data, dict) else None
         walk(data, keys)
