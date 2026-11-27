@@ -318,6 +318,9 @@ export global Store {
     // what the system's package manager put in the app menu.
     in property <[AppCard]> also-installed;
     in property <int> updates-count;
+    // Every app with an update waiting, whoever installed it: the library's own and
+    // those the system's tools look after. A TV shows them in one row.
+    in property <int> updates-waiting;
     in property <bool> checking-updates;
     in property <string> last-checked;
     // The library app being updated in place right now, "" when none.
@@ -507,6 +510,8 @@ export global Store {
     callback check-updates();
     callback update-app(string);
     callback update-all();
+    // The library's own updates and, after them, what the system's tools have waiting.
+    callback update-everything();
     callback remove-from-library(string);
     callback skip-update(string);
     callback toggle-favourite();

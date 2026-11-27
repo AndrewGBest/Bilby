@@ -345,6 +345,7 @@ pub fn build(options: &Options) -> Result<(AppWindow, Arc<App>), Box<dyn std::er
     on!(on_check_updates, |app, ui| { app.check_updates(ui, true) });
     on!(on_update_app, |app, ui, id| { app.update_app(ui, &id) });
     on!(on_update_all, |app, ui| { app.update_all(ui) });
+    on!(on_update_everything, |app, ui| { app.update_everything(ui) });
     on!(on_remove_from_library, |app, ui, id| { app.remove_from_library(ui, &id) });
     on!(on_skip_update, |app, ui, id| { app.skip_update(ui, &id) });
     on!(on_toggle_favourite, |app, ui| { app.toggle_favourite(ui) });

@@ -57,6 +57,17 @@ impl App {
         self.start_updates(ui, false);
     }
 
+    /// Every update there is, whoever installed the app: the library's own, then what
+    /// the system's tools have waiting. Asked for by the person, so a password or an
+    /// installer may appear.
+    pub fn update_everything(self: &Arc<Self>, ui: &AppWindow) {
+        self.update_all(ui);
+        let system = self.system_check.lock().unwrap().as_ref().is_some_and(|c| !c.pending.is_empty());
+        if system {
+            self.update_system(ui);
+        }
+    }
+
     /// With "update apps automatically" on: install what the last check found, with
     /// nobody asked. Updates that need the person stay waiting in the Library.
     pub(crate) fn update_unattended(self: &Arc<Self>, ui: &AppWindow) {

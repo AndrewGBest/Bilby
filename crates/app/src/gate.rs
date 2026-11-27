@@ -115,11 +115,7 @@ impl App {
             self.close_gate(ui);
             if yes {
                 // Asked for by the person now: passwords and installers may appear.
-                self.update_all(ui);
-                let system = self.system_check.lock().unwrap().as_ref().is_some_and(|c| !c.pending.is_empty());
-                if system {
-                    self.update_system(ui);
-                }
+                self.update_everything(ui);
             } else {
                 self.toast(ui, "They wait in your Library until you are ready.", false);
             }

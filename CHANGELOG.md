@@ -6,6 +6,11 @@ any release may change how something works.
 
 ## Unreleased
 
+- On a TV, "Update all" in the Library is there whenever more than one update is
+  waiting, whoever installed the apps. It was only there for apps installed with
+  Bilby, so it went missing when the updates were Flatpak's or the system's. It
+  updates Bilby's own apps and then everything the system's tools have waiting.
+
 ## 0.1.44 (2026-11-27)
 
 - **Apps that are only on their maker's website can be installed and updated.** A

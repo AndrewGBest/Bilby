@@ -273,6 +273,7 @@ impl App {
             others.into_iter().partition(|card| card.has_update);
         let mut waiting = waiting;
         waiting.extend(others_waiting);
+        store.set_updates_waiting(waiting.len() as i32);
         if !waiting.is_empty() {
             tv_library.push(section("Updates available", waiting));
         }

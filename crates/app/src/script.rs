@@ -121,6 +121,7 @@ pub(crate) fn describe(ui: &AppWindow) -> String {
         format!("searching={}", store.get_searching()),
         format!("library={}", store.get_library().row_count()),
         format!("updates={}", store.get_updates_count()),
+        format!("updates_waiting={}", store.get_updates_waiting()),
         format!("checking_updates={}", store.get_checking_updates()),
         format!("updating={}", store.get_updating_id()),
         format!("store_update={}", store.get_store_update()),
