@@ -6,6 +6,9 @@ any release may change how something works.
 
 ## Unreleased
 
+- The words on an app's tile stay sharp with the pointer over it. The tile grew
+  slightly when hovered, which smeared its text.
+
 ## 0.1.43 (2026-11-27)
 
 - **A search for an app also lists others of its kind.** Looking for Chrome shows

@@ -16,7 +16,9 @@ export component AppTile inherits Rectangle {
     accessible-label: app.name;
     accessible-description: app.summary;
     accessible-action-default => { root.clicked(); }
-    transform-scale: ta.pressed ? 0.985 : ta.has-hover ? 1.012 : 1;
+    // Under the pointer the tile changes colour and edge, not size: drawn a little
+    // larger, its words were stretched and came out smeared for as long as it was hovered.
+    transform-scale: ta.pressed ? 0.985 : 1;
     animate background, border-color { duration: Theme.quick; }
     animate transform-scale { duration: Theme.quick; easing: ease-out; }
     fs := FocusScope {
