@@ -362,3 +362,43 @@ fn apps_that_do_not_run_here_can_be_shown_and_are_marked_not_installable() {
     s.app.search(&s.ui, "monitor");
     assert_eq!(s.store().get_results().row_count(), usual);
 }
+
+#[test]
+fn a_picture_on_an_apps_page_opens_large_and_is_put_away_again() {
+    for shell in [Shell::Desktop, Shell::Mobile] {
+        let s = start("linux-x64-debian", shell);
+        s.app.open(&s.ui, "flathub:io.quillpad.Quillpad");
+        assert_eq!(s.store().get_screenshots().row_count(), 2);
+        assert_eq!(s.store().get_picture(), -1, "nothing is large until a picture is pressed");
+        assert!(!s.has("Picture 1 of 2, large"));
+
+        s.activate("Picture 1 of 2");
+        assert_eq!(s.store().get_picture(), 0);
+        assert!(s.has("Picture 1 of 2, large"));
+        // The arrows go to the next picture and back, and stop at both ends.
+        assert!(!s.has("Previous picture"));
+        s.activate("Next picture");
+        assert!(s.has("Picture 2 of 2, large") && !s.has("Next picture"));
+        s.press(Key::RightArrow);
+        assert_eq!(s.store().get_picture(), 1, "there is no third");
+        s.press(Key::LeftArrow);
+        assert_eq!(s.store().get_picture(), 0);
+
+        // Escape puts the picture away and leaves the app's page open.
+        s.press(Key::Escape);
+        assert_eq!(s.store().get_picture(), -1);
+        assert!(s.store().get_details_open());
+        // And then Escape is the page's again.
+        s.press(Key::Escape);
+        assert!(!s.store().get_details_open());
+
+        // The cross closes it too, and another app's page starts with nothing large.
+        s.app.open(&s.ui, "flathub:io.quillpad.Quillpad");
+        s.activate("Picture 2 of 2");
+        s.activate("Close");
+        assert_eq!(s.store().get_picture(), -1);
+        s.activate("Picture 2 of 2");
+        s.app.open(&s.ui, "github:lumen-labs/lumen");
+        assert_eq!(s.store().get_picture(), -1);
+    }
+}

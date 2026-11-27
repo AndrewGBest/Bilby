@@ -242,6 +242,9 @@ export global Store {
     in property <string> about;
     // Pictures of the app found in its README.
     in property <[image]> screenshots;
+    // The picture of the open app that is being looked at large, counted from 0, or
+    // -1 for none. On a computer or phone; the TV keeps its own.
+    in-out property <int> picture: -1;
     // Written reviews, for apps a ratings service knows. Empty for every other app.
     in property <[ReviewRow]> reviews;
     // Where a review of the open app can be left. Empty when nowhere takes one.

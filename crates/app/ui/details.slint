@@ -899,8 +899,14 @@ export component DetailsBody inherits Rectangle {
                             width: parent.width;
                             height: parent.height;
                             image-fit: cover;
-                            accessible-role: image;
-                            accessible-label: @tr("Picture {0} of {1}", i + 1, Store.app.name);
+                        }
+                        // Pressing a picture opens it large.
+                        accessible-role: button;
+                        accessible-label: @tr("Picture {0} of {1}", i + 1, Store.screenshots.length);
+                        accessible-action-default => { Store.picture = i; }
+                        TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { Store.picture = i; }
                         }
                     }
                 }

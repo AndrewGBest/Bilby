@@ -1340,5 +1340,8 @@
  "Link your phone and computer: files, notifications and more.": "スマートフォンとコンピューターをつなぎます：ファイル、通知など。",
  "Run another operating system in a window.": "別のオペレーティングシステムをウィンドウ内で動かします。",
  "Run another operating system in a window, on a Mac.": "Mac で、別のオペレーティングシステムをウィンドウ内で動かします。",
- "Take a screenshot and draw on it.": "スクリーンショットを撮って、その上に書き込めます。"
+ "Take a screenshot and draw on it.": "スクリーンショットを撮って、その上に書き込めます。",
+ "Close": "閉じる",
+ "Previous picture": "前の画像",
+ "Next picture": "次の画像"
 }

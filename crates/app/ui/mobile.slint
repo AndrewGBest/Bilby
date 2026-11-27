@@ -71,6 +71,17 @@ export component MobileShell inherits Rectangle {
     // Android's Back button and Escape leave the details page.
     keys := FocusScope {
         capture-key-pressed(event) => {
+            // A picture opened large has the keys while it is up.
+            if (Store.picture >= 0 && Store.details-open) {
+                if (event.text == Key.Escape || event.text == Key.Back) {
+                    Store.picture = -1;
+                } else if (event.text == Key.LeftArrow) {
+                    Store.picture = max(0, Store.picture - 1);
+                } else if (event.text == Key.RightArrow || event.text == " ") {
+                    Store.picture = min(Store.screenshots.length - 1, Store.picture + 1);
+                }
+                return accept;
+            }
             if ((event.text == Key.Escape || event.text == Key.Back) && Store.details-open) {
                 Store.close-details();
                 return accept;

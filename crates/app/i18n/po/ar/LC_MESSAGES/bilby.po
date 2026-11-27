@@ -444,6 +444,10 @@ msgctxt "TvShell"
 msgid "Clear the PIN"
 msgstr "مسح رمز PIN"
 
+msgctxt "PictureOverlay"
+msgid "Close"
+msgstr "إغلاق"
+
 msgctxt "DetailsBody"
 msgid "Comes from {}"
 msgstr "المصدر: {}"
@@ -968,6 +972,10 @@ msgctxt "SettingsBody"
 msgid "Needs MangoHud, which is not on this device. Install it and this starts working."
 msgstr "يحتاج إلى MangoHud، وهو غير موجود على هذا الجهاز. ثبّته وسيبدأ هذا بالعمل."
 
+msgctxt "PictureOverlay"
+msgid "Next picture"
+msgstr "الصورة التالية"
+
 msgctxt "GateOverlay"
 msgid "No"
 msgstr "لا"
@@ -1180,6 +1188,10 @@ msgctxt "TvShell"
 msgid "Picture {0} of {1}"
 msgstr "الصورة {0} من {1}"
 
+msgctxt "PictureOverlay"
+msgid "Picture {0} of {1}, large"
+msgstr "الصورة {0} من {1}، مكبّرة"
+
 msgctxt "TvShell"
 msgid "Picture {0} of {1}, large"
 msgstr "الصورة {0} من {1}، مكبّرة"
@@ -1223,6 +1235,10 @@ msgstr "اضغط OK للغة التالية"
 msgctxt "TvShell"
 msgid "Press OK to type"
 msgstr "اضغط OK للكتابة"
+
+msgctxt "PictureOverlay"
+msgid "Previous picture"
+msgstr "الصورة السابقة"
 
 msgctxt "DetailsBody"
 msgid "Price"
@@ -2412,6 +2428,10 @@ msgstr "ما الجديد"
 
 msgctxt "TvShell"
 msgid "{0} from {1}"
+msgstr "{0} من {1}"
+
+msgctxt "PictureOverlay"
+msgid "{0} of {1}"
 msgstr "{0} من {1}"
 
 msgctxt "TvShell"

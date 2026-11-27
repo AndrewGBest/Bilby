@@ -102,6 +102,7 @@ impl App {
         store.set_about(SharedString::new());
         show_links(&store);
         store.set_screenshots(ModelRc::default());
+        store.set_picture(-1);
         store.set_reviews(ModelRc::default());
         self.show_review_places(ui, Vec::new());
         store.set_release_date(SharedString::new());

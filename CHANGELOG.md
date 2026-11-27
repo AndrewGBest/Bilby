@@ -6,6 +6,10 @@ any release may change how something works.
 
 ## Unreleased
 
+- **Pictures on an app's page open large** on a computer and a phone: press one to see
+  it at the size of the window, with arrows (or the arrow keys) for the others and
+  Escape to put it away. The TV could already do this.
+
 ## 0.1.43 (2026-11-27)
 
 - **A search for an app also lists others of its kind.** Looking for Chrome shows
