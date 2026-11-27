@@ -193,6 +193,7 @@ Each source only appears on devices it applies to. A Windows user never sees the
 | **GOG** | Windows, macOS, Linux | Games sold without copy protection, with prices, ratings and reviews; each device is offered the games made for it. Bilby opens the game's page on gog.com, where it is bought and downloaded |
 | **Google Play** | Android | An app's own page: rating, installs and price, for a pasted link and for about 75 well-known apps found by name. Google forbids programs from using its search, so Bilby does not search Google Play. Bilby hands over to Google Play |
 | **Codeberg** | Windows, macOS, Linux | Projects by link and from the home page. Codeberg is turning away searches at the moment |
+| **Makers' websites** | Everywhere | Apps that are on no store, fetched from where their maker publishes them by following a shared recipe ([how recipes work, and how to write one](docs/RECIPES.md)) |
 | **Your own sources** | Everywhere | A list of apps on your own server or storage, added by its address ([how to publish one](docs/OWN-SOURCES.md)) |
 | **Web apps** | Everywhere | Websites added like apps: about ninety well-known ones recommended, a thousand more found by name, and any address you type. They open in your own browser, or in Longboard on a Linux TV |
 
@@ -281,6 +282,7 @@ out-of-date packages, but an app is only as trustworthy as whoever published it.
 | [Security](SECURITY.md) | How to report a problem privately, and how the release files can be checked |
 | [Bilby on Android](docs/ANDROID.md) | What works there and how the package is built |
 | [Your own sources](docs/OWN-SOURCES.md) | Publish a list of apps on your own server |
+| [Recipes](docs/RECIPES.md) | Get an app from its maker's website, and share how |
 
 ## Taking part
 

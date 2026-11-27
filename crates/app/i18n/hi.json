@@ -1350,5 +1350,8 @@
  "Link your phone and computer: files, notifications and more.": "अपने फ़ोन और कंप्यूटर को जोड़ें: फ़ाइलें, सूचनाएँ और बहुत कुछ।",
  "Run another operating system in a window.": "एक विंडो में दूसरा ऑपरेटिंग सिस्टम चलाएँ।",
  "Run another operating system in a window, on a Mac.": "Mac पर, एक विंडो में दूसरा ऑपरेटिंग सिस्टम चलाएँ।",
- "Take a screenshot and draw on it.": "स्क्रीनशॉट लें और उस पर चित्र बनाएँ।"
+ "Take a screenshot and draw on it.": "स्क्रीनशॉट लें और उस पर चित्र बनाएँ।",
+ "Makers' websites": "निर्माताओं की वेबसाइटें",
+ "There is no recipe for “{}” any more.": "“{}” के लिए अब कोई रेसिपी नहीं है।",
+ "{} could not be found on its maker's website, which may have changed. Its recipe needs mending.": "{} निर्माता की वेबसाइट पर नहीं मिला। हो सकता है वेबसाइट बदल गई हो। इसकी रेसिपी को ठीक करना होगा।"
 }

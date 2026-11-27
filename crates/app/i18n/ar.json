@@ -1390,5 +1390,8 @@
  "Link your phone and computer: files, notifications and more.": "اربط هاتفك بحاسوبك: الملفات والإشعارات وغيرها.",
  "Run another operating system in a window.": "شغّل نظام تشغيل آخر في نافذة.",
  "Run another operating system in a window, on a Mac.": "شغّل نظام تشغيل آخر في نافذة، على Mac.",
- "Take a screenshot and draw on it.": "التقط لقطة شاشة وارسم عليها."
+ "Take a screenshot and draw on it.": "التقط لقطة شاشة وارسم عليها.",
+ "Makers' websites": "مواقع المطوّرين",
+ "There is no recipe for “{}” any more.": "لم تعد هناك وصفة لـ «{}».",
+ "{} could not be found on its maker's website, which may have changed. Its recipe needs mending.": "تعذّر العثور على {} في موقع مطوّره، وربما تغيّر الموقع. وصفته تحتاج إلى إصلاح."
 }

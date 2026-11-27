@@ -192,7 +192,8 @@ fn liked(app: &AppSummary) -> f32 {
         | SourceKind::Winget
         | SourceKind::Snap
         | SourceKind::FDroid
-        | SourceKind::Own => return UNKNOWN_POPULARITY,
+        | SourceKind::Own
+        | SourceKind::Recipe => return UNKNOWN_POPULARITY,
     };
     match app.popularity {
         // Logarithmic: the step from 10 to 100 matters as much as from 1,000 to 10,000.

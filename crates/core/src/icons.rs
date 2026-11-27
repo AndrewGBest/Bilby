@@ -42,7 +42,8 @@ pub fn icon_key(id: &AppId) -> Option<String> {
         | SourceKind::MicrosoftStore
         | SourceKind::Gog
         | SourceKind::GooglePlay
-        | SourceKind::Own => None,
+        | SourceKind::Own
+        | SourceKind::Recipe => None,
     }
 }
 

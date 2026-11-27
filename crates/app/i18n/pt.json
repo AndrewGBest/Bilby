@@ -1350,5 +1350,8 @@
  "Link your phone and computer: files, notifications and more.": "Ligue o telemóvel e o computador: ficheiros, notificações e mais.",
  "Run another operating system in a window.": "Execute outro sistema operativo numa janela.",
  "Run another operating system in a window, on a Mac.": "Execute outro sistema operativo numa janela, num Mac.",
- "Take a screenshot and draw on it.": "Faça uma captura de ecrã e desenhe sobre ela."
+ "Take a screenshot and draw on it.": "Faça uma captura de ecrã e desenhe sobre ela.",
+ "Makers' websites": "Sites dos criadores",
+ "There is no recipe for “{}” any more.": "Já não existe receita para “{}”.",
+ "{} could not be found on its maker's website, which may have changed. Its recipe needs mending.": "Não foi possível encontrar {} no site do seu criador, que pode ter mudado. A receita precisa de ser corrigida."
 }

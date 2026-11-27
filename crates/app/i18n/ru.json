@@ -1360,5 +1360,8 @@
  "Link your phone and computer: files, notifications and more.": "Свяжите телефон и компьютер: файлы, уведомления и не только.",
  "Run another operating system in a window.": "Запускайте другую операционную систему в окне.",
  "Run another operating system in a window, on a Mac.": "Запускайте другую операционную систему в окне, на Mac.",
- "Take a screenshot and draw on it.": "Сделайте снимок экрана и рисуйте на нём."
+ "Take a screenshot and draw on it.": "Сделайте снимок экрана и рисуйте на нём.",
+ "Makers' websites": "Сайты разработчиков",
+ "There is no recipe for “{}” any more.": "Рецепта для «{}» больше нет.",
+ "{} could not be found on its maker's website, which may have changed. Its recipe needs mending.": "Не удалось найти {} на сайте разработчика. Возможно, сайт изменился. Рецепт нужно исправить."
 }

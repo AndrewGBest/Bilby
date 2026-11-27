@@ -1057,3 +1057,21 @@ fn a_google_play_page_is_read_and_google_play_is_never_searched() {
     assert!(matches!(source.summary("../secrets"), Err(Error::NotFound(_))));
     assert!(matches!(source.summary("com.example.nothing"), Err(Error::NotFound(_))));
 }
+
+#[test]
+fn where_a_latest_link_leads_is_found_without_fetching_the_file() {
+    // The first hop is relative, as a site's own is; the second is written out in
+    // full and leads to another server, as one to a CDN does.
+    let cdn = Server::start(vec![("/files/tide-3.2.1.deb", Reply::json("the file"))]);
+    let whole = cdn.url("/files/tide-3.2.1.deb");
+    let server = Server::start(vec![
+        ("/latest", Reply::status(302).with("Location", "/en/latest")),
+        ("/en/latest", Reply::status(302).with("Location", &whole)),
+        ("/loop", Reply::status(302).with("Location", "/loop")),
+    ]);
+    let http = NetHttp::with_options(None, "http://unused.invalid", false);
+    assert_eq!(http.lands_at(&server.url("/latest")).unwrap(), whole);
+    assert_eq!(http.lands_at(&whole).unwrap(), whole, "an address that does not redirect leads to itself");
+    assert!(matches!(http.lands_at(&server.url("/gone")), Err(Error::NotFound(_))));
+    assert!(http.lands_at(&server.url("/loop")).is_err(), "a loop is given up on");
+}

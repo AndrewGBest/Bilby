@@ -1340,5 +1340,8 @@
  "Link your phone and computer: files, notifications and more.": "连接手机和电脑：文件、通知等等。",
  "Run another operating system in a window.": "在窗口中运行另一个操作系统。",
  "Run another operating system in a window, on a Mac.": "在 Mac 上的窗口中运行另一个操作系统。",
- "Take a screenshot and draw on it.": "截取屏幕并在上面标注。"
+ "Take a screenshot and draw on it.": "截取屏幕并在上面标注。",
+ "Makers' websites": "开发者网站",
+ "There is no recipe for “{}” any more.": "已没有“{}”的配方。",
+ "{} could not be found on its maker's website, which may have changed. Its recipe needs mending.": "在开发者网站上找不到 {}，网站可能已更改。其配方需要修正。"
 }

@@ -13,6 +13,7 @@ pub mod homebrew;
 pub mod msstore;
 pub mod own;
 pub mod play;
+pub mod recipes;
 pub mod snap;
 pub mod steam;
 pub mod system;

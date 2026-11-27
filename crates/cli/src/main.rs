@@ -29,8 +29,15 @@ COMMANDS:
     classify <file name>   Explain how a release file name is interpreted
     doctor                 Check that the sources answer and that every featured app
                            really has something for this machine
+    recipe check <file>... Follow recipes against the real websites and say what was found
+    recipe share <file>    Check a recipe and print the address that sends it to the shared list
+    recipe index <folder> [file]
+                           Put a folder of recipes together as the one list Bilby fetches
 
     <id> is github:owner/repo or aur:package; a repository URL works too
+
+    A recipe says how to get an app from its maker's website (docs/RECIPES.md). One
+    in the recipes folder of Bilby's settings folder is used on this device.
 
 OPTIONS:
     --as <platform>        Pretend to be another machine (see --list-platforms)
@@ -124,6 +131,9 @@ fn main() -> ExitCode {
             library(&catalog, &state_path, true);
             Ok(())
         }
+        Some("recipe") if args.len() >= 3 && args[1] == "check" => recipe_check(&catalog, &args[2..]),
+        Some("recipe") if args.len() == 3 && args[1] == "share" => recipe_share(&catalog, &args[2]),
+        Some("recipe") if (3..=4).contains(&args.len()) && args[1] == "index" => recipe_index(&args[2], args.get(3)),
         Some("classify") if args.len() == 2 => {
             classify(&catalog, &args[1]);
             Ok(())
@@ -450,4 +460,96 @@ fn classify(catalog: &Catalog, name: &str) {
             );
         }
     }
+}
+
+/// Follow each recipe against the real website, and say what it found. Nothing is
+/// downloaded or installed. Fails when any recipe, or any file of one, is not found.
+fn recipe_check(catalog: &Catalog, files: &[String]) -> Result<(), String> {
+    // Asked afresh every time: an answer remembered from before a recipe was mended
+    // would say it still fails.
+    let http = bilby_core::http::NetHttp::new(None);
+    let mut failed = 0;
+    for file in files {
+        let recipe = match bilby_core::recipe::read_file(Path::new(file)) {
+            Ok(recipe) => recipe,
+            Err(why) => {
+                println!("✗ {file}: {why}");
+                failed += 1;
+                continue;
+            }
+        };
+        match recipe.run(&http) {
+            Err(e) => {
+                println!("✗ {} ({file}): {e}", recipe.name);
+                failed += 1;
+            }
+            Ok(found) => {
+                let mark = if found.missing.is_empty() { "✓" } else { "✗" };
+                println!("{mark} {} {}", recipe.name, found.version);
+                for one in &found.files {
+                    let what = match bilby_core::asset::classify(&one.name) {
+                        Some(info) => format!("{}, {:?}, {:?}", info.format.label(), info.os, info.arch),
+                        None => "not a file Bilby installs".to_string(),
+                    };
+                    let here = bilby_core::asset::classify(&one.name)
+                        .map(|info| format!("{:?}", bilby_core::compat::evaluate(&info, &catalog.platform).level))
+                        .unwrap_or_else(|| "-".to_string());
+                    println!("    {}  ({what}; on this device: {here})", one.name);
+                    println!("      {}", one.url);
+                    if let Some(sum) = &one.sha256 {
+                        println!("      sha256 {sum}");
+                    }
+                    if bilby_core::asset::classify(&one.name).is_none() {
+                        failed += 1;
+                    }
+                }
+                for missing in &found.missing {
+                    println!("    not found: {missing}");
+                }
+                failed += usize::from(!found.missing.is_empty());
+            }
+        }
+    }
+    match failed {
+        0 => Ok(()),
+        n => Err(format!("{n} of the recipes need mending")),
+    }
+}
+
+/// Write every recipe in a folder as the one list that is published. A folder with a
+/// broken recipe in it makes no list, so that a mistake is noticed where it was made.
+fn recipe_index(folder: &str, to: Option<&String>) -> Result<(), String> {
+    let (recipes, bad) = bilby_core::recipe::read_folder(Path::new(folder));
+    if let Some((path, why)) = bad.first() {
+        return Err(format!("{}: {why}", path.display()));
+    }
+    if recipes.is_empty() {
+        return Err(format!("there are no recipes in {folder}"));
+    }
+    let text = bilby_core::recipe::as_shelf(&recipes);
+    match to {
+        Some(file) => {
+            std::fs::write(file, text).map_err(|e| format!("cannot write {file}: {e}"))?;
+            println!("Wrote {} recipes to {file}", recipes.len());
+        }
+        None => print!("{text}"),
+    }
+    Ok(())
+}
+
+/// Check a recipe, then print the address of the page on GitHub that proposes it for
+/// the shared list, with the file already filled in. Nothing is sent from here: the
+/// person opens the address and sends it under their own GitHub account.
+fn recipe_share(catalog: &Catalog, file: &str) -> Result<(), String> {
+    recipe_check(catalog, std::slice::from_ref(&file.to_string()))?;
+    let recipe = bilby_core::recipe::read_file(Path::new(file))?;
+    let text = std::fs::read_to_string(file).map_err(|e| e.to_string())?;
+    println!();
+    println!("It works. To share it, open this address and press \"Propose new file\":");
+    println!(
+        "https://github.com/AndrewGBest/bilby-recipes/new/main/recipes?filename={}.json&value={}",
+        recipe.id,
+        bilby_core::http::url_encode(&text)
+    );
+    Ok(())
 }

@@ -1,0 +1,342 @@
+{
+  "format": 1,
+  "recipes": [
+    {
+      "author": "Anysphere",
+      "files": [
+        {
+          "url": {
+            "at": "downloadUrl",
+            "json": "https://www.cursor.com/api/download?platform=linux-x64&releaseTrack=stable"
+          }
+        },
+        {
+          "url": {
+            "at": "debUrl",
+            "json": "https://www.cursor.com/api/download?platform=linux-x64&releaseTrack=stable"
+          }
+        },
+        {
+          "url": {
+            "at": "rpmUrl",
+            "json": "https://www.cursor.com/api/download?platform=linux-x64&releaseTrack=stable"
+          }
+        },
+        {
+          "url": {
+            "at": "downloadUrl",
+            "json": "https://www.cursor.com/api/download?platform=linux-arm64&releaseTrack=stable"
+          }
+        },
+        {
+          "url": {
+            "at": "debUrl",
+            "json": "https://www.cursor.com/api/download?platform=linux-arm64&releaseTrack=stable"
+          }
+        },
+        {
+          "url": {
+            "at": "rpmUrl",
+            "json": "https://www.cursor.com/api/download?platform=linux-arm64&releaseTrack=stable"
+          }
+        }
+      ],
+      "format": 1,
+      "homepage": "https://www.cursor.com/",
+      "hosts": [
+        "cursor.com"
+      ],
+      "icon": "https://www.cursor.com/marketing-static/icon-192x192-light.png",
+      "id": "cursor",
+      "name": "Cursor",
+      "summary": "A code editor built around an AI assistant.",
+      "version": {
+        "at": "version",
+        "json": "https://www.cursor.com/api/download?platform=linux-x64&releaseTrack=stable"
+      }
+    },
+    {
+      "author": "Discord",
+      "files": [
+        {
+          "name": "discord-{version}-amd64.deb",
+          "url": {
+            "redirect": "https://discord.com/api/download?platform=linux&format=deb"
+          }
+        },
+        {
+          "name": "discord-{version}-linux-x86_64.tar.gz",
+          "url": {
+            "redirect": "https://discord.com/api/download?platform=linux&format=tar.gz"
+          }
+        }
+      ],
+      "format": 1,
+      "homepage": "https://discord.com/download",
+      "hosts": [
+        "discord.com",
+        "discordapp.net"
+      ],
+      "id": "discord",
+      "name": "Discord",
+      "summary": "Voice, video and text chat for communities and friends.",
+      "version": {
+        "find": "/linux/x64/([0-9.]+)/",
+        "redirect": "https://discord.com/api/download?platform=linux&format=deb"
+      }
+    },
+    {
+      "author": "Google",
+      "files": [
+        {
+          "name": "google-chrome-stable_{version}_amd64.deb",
+          "url": "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"
+        },
+        {
+          "name": "google-chrome-stable-{version}.x86_64.rpm",
+          "url": "https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.rpm"
+        }
+      ],
+      "format": 1,
+      "homepage": "https://www.google.com/chrome/",
+      "hosts": [
+        "google.com",
+        "versionhistory.googleapis.com"
+      ],
+      "icon": "https://www.google.com/chrome/static/images/favicons/favicon-96x96.png",
+      "id": "google-chrome",
+      "name": "Google Chrome",
+      "summary": "Google's web browser, as the package Google itself publishes.",
+      "version": {
+        "at": "versions.0.version",
+        "json": "https://versionhistory.googleapis.com/v1/chrome/platforms/linux/channels/stable/versions?pageSize=1"
+      }
+    },
+    {
+      "author": "Mullvad VPN",
+      "files": [
+        {
+          "url": {
+            "redirect": "https://mullvad.net/download/app/apk/latest"
+          }
+        }
+      ],
+      "format": 1,
+      "homepage": "https://mullvad.net/download/vpn/android",
+      "hosts": [
+        "mullvad.net"
+      ],
+      "icon": "https://mullvad.net/apple-touch-icon.png",
+      "id": "mullvad-vpn-android",
+      "license": "GPL-3.0-or-later",
+      "name": "Mullvad VPN",
+      "summary": "A VPN that asks for no email address or name. The version from Mullvad's own website.",
+      "version": {
+        "find": "MullvadVPN-([0-9.]+)\\.apk",
+        "redirect": "https://mullvad.net/download/app/apk/latest"
+      }
+    },
+    {
+      "author": "Mullvad VPN",
+      "files": [
+        {
+          "url": {
+            "redirect": "https://mullvad.net/download/app/deb/latest"
+          }
+        },
+        {
+          "url": {
+            "redirect": "https://mullvad.net/download/app/rpm/latest"
+          }
+        }
+      ],
+      "format": 1,
+      "homepage": "https://mullvad.net/download/vpn/linux",
+      "hosts": [
+        "mullvad.net"
+      ],
+      "icon": "https://mullvad.net/apple-touch-icon.png",
+      "id": "mullvad-vpn",
+      "license": "GPL-3.0-or-later",
+      "name": "Mullvad VPN",
+      "summary": "A VPN that asks for no email address or name.",
+      "version": {
+        "find": "MullvadVPN-([0-9.]+)_amd64",
+        "redirect": "https://mullvad.net/download/app/deb/latest"
+      }
+    },
+    {
+      "author": "Proton",
+      "files": [
+        {
+          "name": "proton-mail-{version}-amd64.deb",
+          "url": {
+            "at": "Releases.0.File.0.Url",
+            "json": "https://proton.me/download/mail/linux/version.json"
+          }
+        },
+        {
+          "name": "proton-mail-{version}.x86_64.rpm",
+          "url": {
+            "at": "Releases.0.File.1.Url",
+            "json": "https://proton.me/download/mail/linux/version.json"
+          }
+        }
+      ],
+      "format": 1,
+      "homepage": "https://proton.me/mail/download",
+      "hosts": [
+        "proton.me"
+      ],
+      "id": "proton-mail",
+      "license": "GPL-3.0-only",
+      "name": "Proton Mail",
+      "summary": "Encrypted mail and calendar from Proton, as a desktop app.",
+      "version": {
+        "at": "Releases.0.Version",
+        "json": "https://proton.me/download/mail/linux/version.json"
+      }
+    },
+    {
+      "author": "Proton",
+      "files": [
+        {
+          "url": {
+            "at": "Releases.0.File.0.Url",
+            "json": "https://proton.me/download/PassDesktop/linux/x64/version.json"
+          }
+        },
+        {
+          "url": {
+            "at": "Releases.0.File.1.Url",
+            "json": "https://proton.me/download/PassDesktop/linux/x64/version.json"
+          }
+        }
+      ],
+      "format": 1,
+      "homepage": "https://proton.me/pass/download",
+      "hosts": [
+        "proton.me"
+      ],
+      "id": "proton-pass",
+      "license": "GPL-3.0-only",
+      "name": "Proton Pass",
+      "summary": "A password manager from Proton, with email aliases.",
+      "version": {
+        "at": "Releases.0.Version",
+        "json": "https://proton.me/download/PassDesktop/linux/x64/version.json"
+      }
+    },
+    {
+      "author": "Signal Messenger",
+      "files": [
+        {
+          "sha256": {
+            "at": "sha256sum",
+            "json": "https://updates.signal.org/android/latest.json"
+          },
+          "url": {
+            "at": "url",
+            "json": "https://updates.signal.org/android/latest.json"
+          }
+        }
+      ],
+      "format": 1,
+      "homepage": "https://signal.org/android/apk/",
+      "hosts": [
+        "signal.org"
+      ],
+      "icon": "https://signal.org/assets/images/favicon/apple-touch-icon.png",
+      "id": "signal-android",
+      "license": "AGPL-3.0-only",
+      "name": "Signal",
+      "summary": "Private messages and calls. The version from Signal's own website, which updates without Google Play.",
+      "version": {
+        "at": "versionName",
+        "json": "https://updates.signal.org/android/latest.json"
+      }
+    },
+    {
+      "author": "Vivaldi Technologies",
+      "files": [
+        {
+          "url": "https://downloads.vivaldi.com/stable/Vivaldi.{version}_arm64-v8a.apk"
+        },
+        {
+          "url": "https://downloads.vivaldi.com/stable/Vivaldi.{version}_armeabi-v7a.apk"
+        },
+        {
+          "url": "https://downloads.vivaldi.com/stable/Vivaldi.{version}_x86-64.apk"
+        }
+      ],
+      "format": 1,
+      "homepage": "https://vivaldi.com/download/",
+      "hosts": [
+        "vivaldi.com"
+      ],
+      "icon": "https://vivaldi.com/wp-content/uploads/cropped-favicon-192x192.png",
+      "id": "vivaldi-android",
+      "name": "Vivaldi",
+      "summary": "A web browser with a great many settings and a built-in ad blocker. The version from Vivaldi's own website.",
+      "version": {
+        "find": "Vivaldi\\.([0-9.]+)_arm64-v8a\\.apk",
+        "page": "https://vivaldi.com/download/"
+      }
+    },
+    {
+      "author": "Vivaldi Technologies",
+      "files": [
+        {
+          "url": "https://downloads.vivaldi.com/stable/vivaldi-stable_{version}-1_amd64.deb"
+        },
+        {
+          "url": "https://downloads.vivaldi.com/stable/vivaldi-stable_{version}-1_arm64.deb"
+        },
+        {
+          "url": "https://downloads.vivaldi.com/stable/vivaldi-stable-{version}-1.x86_64.rpm"
+        },
+        {
+          "url": "https://downloads.vivaldi.com/stable/vivaldi-stable-{version}-1.aarch64.rpm"
+        }
+      ],
+      "format": 1,
+      "homepage": "https://vivaldi.com/download/",
+      "hosts": [
+        "vivaldi.com"
+      ],
+      "icon": "https://vivaldi.com/wp-content/uploads/cropped-favicon-192x192.png",
+      "id": "vivaldi",
+      "name": "Vivaldi",
+      "summary": "A web browser with a great many settings, tab stacking, and mail and a calendar built in.",
+      "version": {
+        "find": "vivaldi-stable_([0-9.]+)-1_amd64\\.deb",
+        "page": "https://vivaldi.com/download/"
+      }
+    },
+    {
+      "author": "Zoom Communications",
+      "files": [
+        {
+          "name": "zoom-{version}-amd64.deb",
+          "url": "https://zoom.us/client/latest/zoom_amd64.deb"
+        },
+        {
+          "name": "zoom-{version}-x86_64.rpm",
+          "url": "https://zoom.us/client/latest/zoom_x86_64.rpm"
+        }
+      ],
+      "format": 1,
+      "homepage": "https://zoom.us/download",
+      "hosts": [
+        "zoom.us"
+      ],
+      "id": "zoom",
+      "name": "Zoom",
+      "summary": "Video meetings, calls and chat.",
+      "version": {
+        "find": "/prod/([0-9.]+)/",
+        "redirect": "https://zoom.us/client/latest/zoom_amd64.deb"
+      }
+    }
+  ]
+}

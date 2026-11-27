@@ -38,6 +38,12 @@ pub trait Http: Send + Sync {
         Ok((self.get(url)?, url.to_string()))
     }
 
+    /// Where an address leads once its redirects are followed, without fetching what
+    /// is there. For finding out what a "latest" link currently points at.
+    fn lands_at(&self, url: &str) -> Result<String> {
+        Err(Error::Unsupported(format!("cannot follow {url}")))
+    }
+
     /// Stream a file to `dest`, reporting `(bytes so far, total if known)`. The callback
     /// returns `false` to cancel; the partial file is removed and `Error::Cancelled` returned.
     /// Returns the SHA-256 of what was written, as lowercase hex.
@@ -100,6 +106,8 @@ pub fn hex(bytes: &[u8]) -> String {
 #[cfg(feature = "net")]
 pub struct NetHttp {
     agent: ureq::Agent,
+    /// The same, but it stops at a redirect and shows it instead of following.
+    stopping: ureq::Agent,
     github_token: Option<String>,
     /// Requests to URLs starting with this get GitHub's headers and the token.
     github_api: String,
@@ -118,14 +126,17 @@ impl NetHttp {
     /// For tests and unusual setups: a different API host (GitHub Enterprise, a local
     /// test server) and whether to honour the proxy environment variables.
     pub fn with_options(github_token: Option<String>, github_api: &str, proxy_from_env: bool) -> NetHttp {
-        let agent = ureq::AgentBuilder::new()
-            .timeout_connect(Duration::from_secs(15))
-            .timeout_read(Duration::from_secs(30))
-            .try_proxy_from_env(proxy_from_env)
-            .user_agent(concat!("bilby/", env!("CARGO_PKG_VERSION")))
-            .build();
+        let builder = || {
+            ureq::AgentBuilder::new()
+                .timeout_connect(Duration::from_secs(15))
+                .timeout_read(Duration::from_secs(30))
+                .try_proxy_from_env(proxy_from_env)
+                .user_agent(concat!("bilby/", env!("CARGO_PKG_VERSION")))
+        };
+        let agent = builder().build();
         NetHttp {
             agent,
+            stopping: builder().redirects(0).build(),
             github_token: github_token.filter(|t| !t.trim().is_empty()),
             github_api: format!("{}/", github_api.trim_end_matches('/')),
             quota: std::sync::Mutex::new(None),
@@ -223,6 +234,38 @@ impl Http for NetHttp {
         let answer = self.call(url)?;
         let landed = answer.get_url().to_string();
         Ok((answer.into_string().map_err(|e| Error::Network(e.to_string()))?, landed))
+    }
+
+    fn lands_at(&self, url: &str) -> Result<String> {
+        let mut here = url.to_string();
+        // Each answer is asked for and dropped unread: only where it points matters.
+        for _ in 0..8 {
+            let answer = match self.stopping.get(&here).call() {
+                Ok(answer) => answer,
+                Err(ureq::Error::Status(404, _)) => {
+                    return Err(Error::NotFound(format!("Nothing was found at {here}")))
+                }
+                Err(ureq::Error::Status(code, _)) => return Err(Error::Status { code, url: here }),
+                Err(e) => return Err(Error::Network(describe_transport_error(&here, &e))),
+            };
+            let next = match answer.header("location") {
+                Some(next) if (300..400).contains(&answer.status()) => next.to_string(),
+                _ => return Ok(here),
+            };
+            // A redirect may be written relative to the address that gave it.
+            here = if next.contains("://") {
+                next
+            } else {
+                let origin_end = here.find("://").map(|at| at + 3).unwrap_or(0);
+                let path = here[origin_end..].find('/').map(|at| origin_end + at).unwrap_or(here.len());
+                match next.strip_prefix("//") {
+                    Some(rest) => format!("https://{rest}"),
+                    None if next.starts_with('/') => format!("{}{next}", &here[..path]),
+                    None => return Err(Error::Parse(format!("{here} redirects to something that is not an address"))), // (not shown)
+                }
+            };
+        }
+        Err(Error::Network(format!("{url} redirects too many times"))) // (not shown)
     }
 
     fn post_json(&self, url: &str, body: &str) -> Result<String> {
@@ -371,6 +414,10 @@ impl<H: Http> Http for CachedHttp<H> {
         self.inner.get_landed(url)
     }
 
+    fn lands_at(&self, url: &str) -> Result<String> {
+        self.cached(&format!("lands at\n{url}"), || self.inner.lands_at(url))
+    }
+
     fn post_json(&self, url: &str, body: &str) -> Result<String> {
         self.cached(&format!("{url}\n{body}"), || self.inner.post_json(url, body))
     }
@@ -430,6 +477,9 @@ impl<H: Http + ?Sized> Http for std::sync::Arc<H> {
     }
     fn get_landed(&self, url: &str) -> Result<(String, String)> {
         (**self).get_landed(url)
+    }
+    fn lands_at(&self, url: &str) -> Result<String> {
+        (**self).lands_at(url)
     }
     fn download(&self, url: &str, dest: &Path, progress: &mut dyn FnMut(u64, Option<u64>) -> bool) -> Result<String> {
         (**self).download(url, dest, progress)
