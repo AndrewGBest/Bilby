@@ -1,28 +1,274 @@
 {
-  "_comment": "Apps of the same kind that someone looking for one of them would also want to be shown: looking for Chrome, a person may well prefer Chromium, Brave or Ungoogled Chromium, and no source says these belong together. A search that names one member lists the others straight after it. Keep it short: groups nearly everyone would agree on, members that are widely used. A member with only a name is taken from essentials.json (its summary and ids); any other has its own summary and the ids it goes by at each source, best first. 'words' are other things a person types for it. Every id given here was checked to exist at its source on 2026-11-27.",
+  "_comment": "Apps of the same kind that someone looking for one of them would also want to be shown: looking for Chrome, a person may well prefer Chromium, Brave or Ungoogled Chromium, and no source says these belong together. A search that names one member lists the others straight after it. Keep it short: groups nearly everyone would agree on, of apps one can be used in place of another (not services with different things to watch or listen to), members that are widely used. A member with only a name is taken from essentials.json (its summary and ids); any other has its own summary and the ids it goes by at each source, best first. 'words' are other things a person types for it. Every id given here was checked to exist at its source on 2026-11-27.",
   "groups": [
     {
       "name": "Browsers built on Chromium",
       "members": [
-        { "name": "Google Chrome", "words": ["chrome"] },
-        { "name": "Chromium", "summary": "The open-source browser that Chrome is built from.", "ids": ["flathub:org.chromium.Chromium", "pacman:chromium", "winget:Hibbiki.Chromium"] },
-        { "name": "Ungoogled Chromium", "words": ["ungoogled chrome", "ungoogled"], "summary": "Chromium with Google's services taken out.", "ids": ["flathub:io.github.ungoogled_software.ungoogled_chromium", "aur:ungoogled-chromium-bin", "winget:eloston.ungoogled-chromium", "brew:ungoogled-chromium"] },
-        { "name": "Brave", "words": ["brave browser"] },
-        { "name": "Vivaldi" },
-        { "name": "Microsoft Edge", "words": ["edge"] },
-        { "name": "Opera" }
+        {"name": "Google Chrome", "words": ["chrome"]},
+        {"name": "Chromium", "summary": "The open-source browser that Chrome is built from.", "ids": ["flathub:org.chromium.Chromium", "pacman:chromium", "winget:Hibbiki.Chromium"]},
+        {"name": "Ungoogled Chromium", "words": ["ungoogled chrome", "ungoogled"], "summary": "Chromium with Google's services taken out.", "ids": ["flathub:io.github.ungoogled_software.ungoogled_chromium", "aur:ungoogled-chromium-bin", "winget:eloston.ungoogled-chromium", "brew:ungoogled-chromium"]},
+        {"name": "Brave", "words": ["brave browser"]},
+        {"name": "Vivaldi"},
+        {"name": "Microsoft Edge", "words": ["edge"]},
+        {"name": "Opera"}
       ]
     },
     {
       "name": "Browsers built on Firefox",
       "members": [
-        { "name": "Firefox", "words": ["mozilla firefox"] },
-        { "name": "LibreWolf", "summary": "Firefox set up for privacy from the start.", "ids": ["flathub:io.gitlab.librewolf-community", "winget:LibreWolf.LibreWolf", "brew:librewolf"] },
-        { "name": "Zen Browser", "words": ["zen"], "summary": "A calmer, rearranged browser built on Firefox.", "ids": ["flathub:app.zen_browser.zen", "aur:zen-browser-bin", "winget:Zen-Team.Zen-Browser", "brew:zen"] },
-        { "name": "Floorp", "summary": "A browser built on Firefox that you can rearrange to taste.", "ids": ["flathub:one.ablaze.floorp", "aur:floorp-bin", "winget:Ablaze.Floorp", "brew:floorp"] },
-        { "name": "Waterfox", "summary": "A browser built on Firefox that collects nothing about you.", "ids": ["flathub:net.waterfox.waterfox", "winget:Waterfox.Waterfox", "brew:waterfox"] },
-        { "name": "Mullvad Browser", "words": ["mullvad"], "summary": "Tor Browser's privacy protections, without the Tor network.", "ids": ["flathub:net.mullvad.MullvadBrowser", "winget:MullvadVPN.MullvadBrowser", "brew:mullvad-browser"] },
-        { "name": "Tor Browser", "words": ["tor"], "summary": "Browse through the Tor network, so sites cannot tell who you are.", "ids": ["flathub:org.torproject.torbrowser-launcher", "winget:TorProject.TorBrowser", "brew:tor-browser"] }
+        {"name": "Firefox", "words": ["mozilla firefox"]},
+        {"name": "LibreWolf", "summary": "Firefox set up for privacy from the start.", "ids": ["flathub:io.gitlab.librewolf-community", "winget:LibreWolf.LibreWolf", "brew:librewolf"]},
+        {"name": "Zen Browser", "words": ["zen"], "summary": "A calmer, rearranged browser built on Firefox.", "ids": ["flathub:app.zen_browser.zen", "aur:zen-browser-bin", "winget:Zen-Team.Zen-Browser", "brew:zen"]},
+        {"name": "Floorp", "summary": "A browser built on Firefox that you can rearrange to taste.", "ids": ["flathub:one.ablaze.floorp", "aur:floorp-bin", "winget:Ablaze.Floorp", "brew:floorp"]},
+        {"name": "Waterfox", "summary": "A browser built on Firefox that collects nothing about you.", "ids": ["flathub:net.waterfox.waterfox", "winget:Waterfox.Waterfox", "brew:waterfox"]},
+        {"name": "Mullvad Browser", "summary": "Tor Browser's privacy protections, without the Tor network.", "ids": ["flathub:net.mullvad.MullvadBrowser", "winget:MullvadVPN.MullvadBrowser", "brew:mullvad-browser"]},
+        {"name": "Tor Browser", "words": ["tor"], "summary": "Browse through the Tor network, so sites cannot tell who you are.", "ids": ["flathub:org.torproject.torbrowser-launcher", "winget:TorProject.TorBrowser", "brew:tor-browser"]}
+      ]
+    },
+    {
+      "name": "Video players",
+      "members": [
+        {"name": "VLC", "words": ["vlc media player", "video player", "media player"]},
+        {"name": "mpv"},
+        {"name": "IINA"},
+        {"name": "MPC-HC", "words": ["mpc", "media player classic"], "summary": "A light video player for Windows.", "ids": ["winget:clsid2.mpc-hc"]}
+      ]
+    },
+    {
+      "name": "Media centres",
+      "members": [
+        {"name": "Kodi", "words": ["xbmc", "media center", "media centre"]},
+        {"name": "Plex"},
+        {"name": "Jellyfin"},
+        {"name": "Stremio"}
+      ]
+    },
+    {
+      "name": "Messengers",
+      "members": [
+        {"name": "WhatsApp"},
+        {"name": "Signal"},
+        {"name": "Telegram"},
+        {"name": "Element", "words": ["matrix"]},
+        {"name": "Viber"}
+      ]
+    },
+    {
+      "name": "Meetings and work chat",
+      "members": [
+        {"name": "Zoom"},
+        {"name": "Microsoft Teams", "words": ["teams", "ms teams"]},
+        {"name": "Slack"},
+        {"name": "Jitsi Meet", "words": ["jitsi"], "summary": "Video meetings that need no account.", "ids": ["flathub:org.jitsi.jitsi-meet"]}
+      ]
+    },
+    {
+      "name": "Mail",
+      "members": [
+        {"name": "Thunderbird", "words": ["mail", "email", "e-mail"]},
+        {"name": "Gmail"},
+        {"name": "Outlook"},
+        {"name": "Proton Mail", "words": ["protonmail"]}
+      ]
+    },
+    {
+      "name": "Game stores and launchers",
+      "members": [
+        {"name": "Steam"},
+        {"name": "Epic Games", "words": ["epic", "epic games launcher", "epic games store"]},
+        {"name": "Heroic Games Launcher", "words": ["heroic"]},
+        {"name": "GOG Galaxy", "words": ["gog"]},
+        {"name": "EA app", "words": ["origin"]},
+        {"name": "Ubisoft Connect", "words": ["ubisoft", "uplay"]},
+        {"name": "Battle.net", "words": ["blizzard"]},
+        {"name": "itch.io", "words": ["itch"]},
+        {"name": "Lutris"},
+        {"name": "Bottles"}
+      ]
+    },
+    {
+      "name": "Minecraft launchers",
+      "members": [
+        {"name": "Minecraft", "words": ["minecraft launcher"]},
+        {"name": "Prism Launcher", "words": ["prism", "prismlauncher"]}
+      ]
+    },
+    {
+      "name": "Console emulators",
+      "members": [
+        {"name": "RetroArch", "words": ["emulator", "emulators"]},
+        {"name": "Dolphin", "words": ["dolphin emulator"]},
+        {"name": "PCSX2"},
+        {"name": "PPSSPP"},
+        {"name": "DuckStation"}
+      ]
+    },
+    {
+      "name": "Cloud gaming and game streaming",
+      "members": [
+        {"name": "Xbox Cloud Gaming", "words": ["xcloud", "xbox"]},
+        {"name": "GeForce NOW", "words": ["geforce"]},
+        {"name": "Amazon Luna", "words": ["luna"]},
+        {"name": "Moonlight"},
+        {"name": "Sunshine", "summary": "Stream games from this computer to your other devices.", "ids": ["flathub:dev.lizardbyte.app.Sunshine"]}
+      ]
+    },
+    {
+      "name": "Office suites",
+      "members": [
+        {"name": "LibreOffice", "words": ["office", "microsoft office", "ms office", "word", "excel", "powerpoint", "openoffice"]},
+        {"name": "ONLYOFFICE"}
+      ]
+    },
+    {
+      "name": "Code editors",
+      "members": [
+        {"name": "Visual Studio Code", "words": ["vscode", "vs code", "code"]},
+        {"name": "VSCodium", "summary": "Visual Studio Code without Microsoft's tracking.", "ids": ["flathub:com.vscodium.codium", "winget:VSCodium.VSCodium", "brew:vscodium"]},
+        {"name": "Sublime Text", "words": ["sublime"]},
+        {"name": "Zed", "summary": "A fast code editor.", "ids": ["flathub:dev.zed.Zed", "winget:ZedIndustries.Zed", "brew:zed"]},
+        {"name": "Notepad++", "words": ["notepad", "notepad plus plus"]}
+      ]
+    },
+    {
+      "name": "Notes",
+      "members": [
+        {"name": "Obsidian", "words": ["notes"]},
+        {"name": "Notion"},
+        {"name": "Logseq", "summary": "Notes kept as an outline, in files on your own device.", "ids": ["flathub:com.logseq.Logseq", "winget:Logseq.Logseq", "brew:logseq"]},
+        {"name": "Joplin", "summary": "Notes and to-do lists that sync between your devices.", "ids": ["flathub:net.cozic.joplin_desktop", "winget:Joplin.Joplin", "brew:joplin"]}
+      ]
+    },
+    {
+      "name": "Image editors and drawing",
+      "members": [
+        {"name": "GIMP", "words": ["photoshop", "adobe photoshop", "image editor"]},
+        {"name": "Krita"},
+        {"name": "Paint.NET", "words": ["paint", "paintdotnet"]},
+        {"name": "Inkscape", "words": ["illustrator", "adobe illustrator"]},
+        {"name": "darktable", "words": ["lightroom", "adobe lightroom"]}
+      ]
+    },
+    {
+      "name": "Design",
+      "members": [
+        {"name": "Figma"},
+        {"name": "Canva"}
+      ]
+    },
+    {
+      "name": "Video editors",
+      "members": [
+        {"name": "Kdenlive", "words": ["premiere", "adobe premiere", "premiere pro", "davinci resolve", "imovie", "video editor"]},
+        {"name": "Shotcut"},
+        {"name": "OpenShot", "summary": "A simple video editor.", "ids": ["flathub:org.openshot.OpenShot", "winget:OpenShot.OpenShot", "brew:openshot-video-editor"]}
+      ]
+    },
+    {
+      "name": "PDF readers",
+      "members": [
+        {"name": "Adobe Acrobat Reader", "words": ["acrobat", "adobe reader", "acrobat reader", "pdf reader", "pdf"]},
+        {"name": "Okular"},
+        {"name": "Evince", "summary": "A simple viewer for PDFs and other documents.", "ids": ["flathub:org.gnome.Evince"]},
+        {"name": "SumatraPDF", "words": ["sumatra"], "summary": "A small, fast PDF reader for Windows.", "ids": ["winget:SumatraPDF.SumatraPDF"]}
+      ]
+    },
+    {
+      "name": "Password managers",
+      "members": [
+        {"name": "Bitwarden", "words": ["lastpass", "password manager"]},
+        {"name": "1Password"},
+        {"name": "KeePassXC", "words": ["keepass"]}
+      ]
+    },
+    {
+      "name": "VPNs",
+      "members": [
+        {"name": "Proton VPN", "words": ["protonvpn", "vpn"]},
+        {"name": "NordVPN", "words": ["nord"]},
+        {"name": "Mullvad VPN", "summary": "A VPN that asks for no personal details.", "ids": ["winget:MullvadVPN.MullvadVPN", "brew:mullvad-vpn"]}
+      ]
+    },
+    {
+      "name": "Archive tools",
+      "members": [
+        {"name": "7-Zip", "words": ["7zip", "zip", "unzip"]},
+        {"name": "WinRAR", "words": ["rar"]},
+        {"name": "PeaZip", "summary": "Open and make zip, 7z, rar and other archives.", "ids": ["flathub:io.github.peazip.PeaZip", "winget:Giorgiotani.Peazip"]},
+        {"name": "The Unarchiver", "words": ["unarchiver"]},
+        {"name": "Keka"}
+      ]
+    },
+    {
+      "name": "Torrent clients",
+      "members": [
+        {"name": "qBittorrent", "words": ["utorrent", "bittorrent", "torrent"]},
+        {"name": "Transmission"},
+        {"name": "Deluge", "summary": "A light torrent client.", "ids": ["flathub:org.deluge_torrent.deluge", "winget:DelugeTeam.Deluge"]}
+      ]
+    },
+    {
+      "name": "Cloud storage",
+      "members": [
+        {"name": "Dropbox"},
+        {"name": "Google Drive", "words": ["gdrive", "drive"]},
+        {"name": "OneDrive"},
+        {"name": "Nextcloud"}
+      ]
+    },
+    {
+      "name": "Remote desktop",
+      "members": [
+        {"name": "AnyDesk"},
+        {"name": "TeamViewer"},
+        {"name": "RustDesk", "words": ["remote desktop"]}
+      ]
+    },
+    {
+      "name": "USB drive writers",
+      "members": [
+        {"name": "Rufus"},
+        {"name": "balenaEtcher", "words": ["etcher", "balena etcher"]},
+        {"name": "Impression", "summary": "Write a system image to a USB drive.", "ids": ["flathub:io.gitlab.adhami3310.Impression"]},
+        {"name": "Raspberry Pi Imager", "words": ["rpi imager"], "summary": "Write a system image to an SD card or USB drive.", "ids": ["flathub:org.raspberrypi.rpi-imager", "winget:RaspberryPiFoundation.RaspberryPiImager", "brew:raspberry-pi-imager"]}
+      ]
+    },
+    {
+      "name": "Chat assistants",
+      "members": [
+        {"name": "ChatGPT"},
+        {"name": "Claude"}
+      ]
+    },
+    {
+      "name": "Sending files nearby",
+      "members": [
+        {"name": "LocalSend", "words": ["airdrop", "nearby share", "quick share"]},
+        {"name": "Warpinator", "summary": "Send files between devices on the same network.", "ids": ["flathub:org.x.Warpinator"]},
+        {"name": "KDE Connect", "words": ["kdeconnect"], "summary": "Link your phone and computer: files, notifications and more.", "ids": ["winget:KDE.KDEConnect"]}
+      ]
+    },
+    {
+      "name": "Virtual machines",
+      "members": [
+        {"name": "VirtualBox", "words": ["vmware", "virtual machine"]},
+        {"name": "Boxes", "words": ["gnome boxes"], "summary": "Run another operating system in a window.", "ids": ["flathub:org.gnome.Boxes"]},
+        {"name": "UTM", "summary": "Run another operating system in a window, on a Mac.", "ids": ["brew:utm"]}
+      ]
+    },
+    {
+      "name": "Screenshot tools",
+      "members": [
+        {"name": "ShareX", "words": ["screenshot", "snipping tool", "greenshot"]},
+        {"name": "Flameshot", "summary": "Take a screenshot and draw on it.", "ids": ["flathub:org.flameshot.Flameshot", "winget:Flameshot.Flameshot"]}
+      ]
+    },
+    {
+      "name": "Music players",
+      "members": [
+        {"name": "Strawberry", "words": ["music player", "winamp"]},
+        {"name": "foobar2000", "words": ["foobar"]},
+        {"name": "Rhythmbox", "summary": "A music player for your own collection.", "ids": ["flathub:org.gnome.Rhythmbox3"]}
       ]
     }
   ]

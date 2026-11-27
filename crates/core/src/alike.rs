@@ -126,12 +126,30 @@ mod tests {
     }
 
     #[test]
+    fn no_word_could_mean_two_of_them() {
+        // "mullvad" is a browser and a VPN: a word like that names neither. And a word
+        // under three letters is never looked up, so it would only mislead here.
+        let squash = |text: &str| -> String {
+            text.chars().filter(|c| c.is_alphanumeric()).flat_map(char::to_lowercase).collect()
+        };
+        let mut seen: std::collections::HashMap<String, &str> = std::collections::HashMap::new();
+        for member in groups().iter().flat_map(|group| &group.members) {
+            for word in std::iter::once(&member.name).chain(&member.words) {
+                assert!(squash(word).len() >= 3, "{word} is too short to be looked up");
+                let earlier = seen.insert(squash(word), &member.name);
+                assert!(earlier.is_none_or(|name| name == member.name), "{word} names {earlier:?} and {}", member.name);
+            }
+        }
+    }
+
+    #[test]
     fn a_search_names_a_member_by_its_name_or_another_word_for_it() {
         let found = |query: &str| named(groups(), query).map(|(group, at)| group.members[at].name.as_str());
         assert_eq!(found("chrome"), Some("Google Chrome"));
         assert_eq!(found("Google  Chrome"), Some("Google Chrome"));
         assert_eq!(found("ungoogled-chromium"), Some("Ungoogled Chromium"));
         assert_eq!(found("librewolf"), Some("LibreWolf"));
+        assert_eq!(found("Excel"), Some("LibreOffice"), "what people call the thing it stands in for");
         assert_eq!(found("google"), None, "part of a name is not the name");
         assert_eq!(found("browser"), None);
         assert_eq!(found("br"), None);

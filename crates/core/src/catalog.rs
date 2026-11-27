@@ -851,14 +851,24 @@ impl Catalog {
         // with that setting.
         if let Some((group, at)) = crate::alike::named(crate::alike::groups(), query).filter(|_| self.essentials) {
             let sources = self.active_sources();
+            let named = &group.members[at];
             let mut others = Vec::new();
             for member in group.members.iter().enumerate().filter(|(i, _)| *i != at).map(|(_, member)| member) {
                 // What a source said about it is kept, where one found it.
                 let found = apps.iter().position(|app| member.is(&app.id)).map(|i| apps.remove(i));
                 others.extend(found.or_else(|| member.here(&sources, &self.platform)));
             }
-            let named = &group.members[at];
-            let after = apps.iter().position(|app| named.is(&app.id)).map_or(0, |i| i + 1);
+            // The one that was named leads them. No source may have found it, when
+            // it was named by another word ("excel" for LibreOffice): it is put in.
+            let after = match apps.iter().position(|app| named.is(&app.id)) {
+                Some(found) => found + 1,
+                None => {
+                    let known = named.here(&sources, &self.platform);
+                    let put_in = known.is_some() as usize;
+                    apps.splice(0..0, known);
+                    put_in
+                }
+            };
             apps.splice(after..after, others);
         }
         // What does not run here comes after everything that does.
@@ -933,6 +943,9 @@ mod tests {
         assert!(place("Chromium").is_some() && place("Ungoogled Chromium").is_some(), "{names:?}");
         assert!(place("Chromium") < place("Brave"), "in the list's order: {names:?}");
         assert_eq!(names.iter().filter(|n| *n == "Brave").count(), 1);
+        // Named by another word, which no source would match: it leads all the same.
+        let office: Vec<String> = catalog.search("excel").apps.into_iter().take(2).map(|app| app.name).collect();
+        assert_eq!(office, ["LibreOffice", "ONLYOFFICE"]);
         // A word that names none of them brings none of them.
         assert!(catalog.search("monitor").apps.iter().all(|app| app.name != "Brave"));
         // It is a recommendation, and goes when those are switched off.
