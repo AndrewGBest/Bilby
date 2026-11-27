@@ -307,6 +307,10 @@ export global Store {
     in property <int> install-index;
     in property <float> install-progress;
     in property <string> install-message;
+    // What the open app's last install did, step by step. The page folds it away
+    // until asked (`log-open`).
+    in property <string> install-log;
+    in-out property <bool> log-open;
 
     // --- library ----------------------------------------------------------------
     in property <[LibraryRow]> library;

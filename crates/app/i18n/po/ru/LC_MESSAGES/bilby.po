@@ -493,6 +493,10 @@ msgid "Copy command"
 msgstr "Копировать команду"
 
 msgctxt "DetailsBody"
+msgid "Copy the log"
+msgstr "Скопировать журнал"
+
+msgctxt "DetailsBody"
 msgid "Couldn't load this app"
 msgstr "Не удалось загрузить это приложение"
 
@@ -720,6 +724,10 @@ msgctxt "OptionCard"
 msgid "Hide steps"
 msgstr "Скрыть шаги"
 
+msgctxt "DetailsBody"
+msgid "Hide the install log"
+msgstr "Скрыть журнал установки"
+
 msgctxt "SystemBody"
 msgid "Hide what the updater said"
 msgstr "Скрыть вывод программы обновления"
@@ -778,6 +786,14 @@ msgstr "Установить"
 msgctxt "TvShell"
 msgid "Install again"
 msgstr "Установить снова"
+
+msgctxt "DetailsBody"
+msgid "Install log"
+msgstr "Журнал установки"
+
+msgctxt "TvShell"
+msgid "Install log"
+msgstr "Журнал установки"
 
 msgctxt "AppRow"
 msgid "Install {} now"
@@ -1661,6 +1677,10 @@ msgstr "Показывать показатели производительно
 msgctxt "SettingsBody"
 msgid "Show ratings and reviews"
 msgstr "Показывать оценки и отзывы"
+
+msgctxt "DetailsBody"
+msgid "Show the install log"
+msgstr "Показать журнал установки"
 
 msgctxt "UpdatesBanner"
 msgid "Show updates"

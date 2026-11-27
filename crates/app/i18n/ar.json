@@ -1393,5 +1393,9 @@
  "Take a screenshot and draw on it.": "التقط لقطة شاشة وارسم عليها.",
  "Close": "إغلاق",
  "Previous picture": "الصورة السابقة",
- "Next picture": "الصورة التالية"
+ "Next picture": "الصورة التالية",
+ "Show the install log": "إظهار سجل التثبيت",
+ "Hide the install log": "إخفاء سجل التثبيت",
+ "Copy the log": "نسخ السجل",
+ "Install log": "سجل التثبيت"
 }

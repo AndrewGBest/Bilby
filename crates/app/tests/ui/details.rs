@@ -304,7 +304,7 @@ fn an_app_page_shows_pictures_from_the_readme() {
     let s = start("linux-x64-debian", Shell::Desktop);
     s.app.open(&s.ui, "github:lumen-labs/lumen");
     assert_eq!(s.store().get_screenshots().row_count(), 3, "the logo and the badge are not screenshots");
-    assert!(s.has("Picture 1 of Lumen"));
+    assert!(s.has("Picture 1 of 3"));
     let first = s.store().get_screenshots().row_data(0).unwrap();
     assert_eq!((first.size().width, first.size().height), (800, 500));
     assert!(s.dirs.cache.join("screenshots").read_dir().unwrap().count() >= 3, "they are kept for next time");
@@ -401,4 +401,34 @@ fn a_picture_on_an_apps_page_opens_large_and_is_put_away_again() {
         s.app.open(&s.ui, "github:lumen-labs/lumen");
         assert_eq!(s.store().get_picture(), -1);
     }
+}
+
+#[test]
+fn an_installs_log_is_on_the_apps_page_folded_away_until_asked_for() {
+    let s = start("linux-x64-fedora", Shell::Desktop);
+    s.click("Tidewave");
+    assert_eq!(s.store().get_install_log(), "", "nothing has been installed yet");
+    assert!(!s.has("Show the install log"));
+
+    s.click("Install");
+    assert_eq!(s.store().get_install_state(), 2, "{}", s.store().get_install_message());
+    // It says what was fetched, from where, how it was checked and how it ended.
+    let log = s.store().get_install_log().to_string();
+    assert!(log.starts_with("tidewave · RPM package · x86_64\ngithub:tidewave/tidewave\nBilby "), "{log}");
+    assert!(log.contains("\nFetching https://") && log.contains("SHA-256") && log.contains("\nDone: "), "{log}");
+    // Not shown until asked for.
+    assert!(!s.store().get_log_open());
+    assert!(s.has("Show the install log") && !s.has("Copy the log"));
+    s.activate("Show the install log");
+    assert!(s.store().get_log_open());
+    assert!(s.has("Hide the install log") && s.has("Copy the log"));
+
+    // Another app's page has no log of its own, and this one's is still there on
+    // coming back, folded away again.
+    s.click("Back");
+    s.app.open(&s.ui, "github:lumen-labs/lumen");
+    assert_eq!(s.store().get_install_log(), "");
+    s.app.open(&s.ui, "github:tidewave/tidewave");
+    assert!(s.store().get_install_log().contains("\nDone: "));
+    assert!(!s.store().get_log_open());
 }

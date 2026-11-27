@@ -1343,5 +1343,9 @@
  "Take a screenshot and draw on it.": "スクリーンショットを撮って、その上に書き込めます。",
  "Close": "閉じる",
  "Previous picture": "前の画像",
- "Next picture": "次の画像"
+ "Next picture": "次の画像",
+ "Show the install log": "インストールログを表示",
+ "Hide the install log": "インストールログを隠す",
+ "Copy the log": "ログをコピー",
+ "Install log": "インストールログ"
 }

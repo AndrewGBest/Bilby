@@ -1343,5 +1343,9 @@
  "Take a screenshot and draw on it.": "스크린샷을 찍고 그 위에 그립니다.",
  "Close": "닫기",
  "Previous picture": "이전 사진",
- "Next picture": "다음 사진"
+ "Next picture": "다음 사진",
+ "Show the install log": "설치 로그 보기",
+ "Hide the install log": "설치 로그 숨기기",
+ "Copy the log": "로그 복사",
+ "Install log": "설치 로그"
 }

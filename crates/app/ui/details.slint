@@ -843,6 +843,84 @@ export component DetailsBody inherits Rectangle {
                 }
             }
 
+            // What the last install of this app did, step by step: folded away, for
+            // when someone wants to know why it went wrong or to report it.
+            if Store.install-log != "" && !root.busy : VerticalLayout {
+                spacing: 8px;
+                HorizontalLayout {
+                    alignment: compact ? center : end;
+                    spacing: 18px;
+                    Rectangle {
+                        height: 26px;
+                        width: log-label.preferred-width;
+                        accessible-role: button;
+                        accessible-label: Store.log-open ? @tr("Hide the install log") : @tr("Show the install log");
+                        accessible-expandable: true;
+                        accessible-expanded: Store.log-open;
+                        accessible-action-default => { Store.log-open = !Store.log-open; }
+                        TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { Store.log-open = !Store.log-open; }
+                        }
+                        log-label := Text {
+                            text: Store.log-open ? @tr("Hide the install log") + "  ▴" : @tr("Show the install log") + "  ▾";
+                            color: Theme.accent;
+                            font-size: 13px;
+                            font-weight: 600;
+                            vertical-alignment: center;
+                        }
+                    }
+                    if Store.log-open : Rectangle {
+                        height: 26px;
+                        width: copy-label.preferred-width;
+                        accessible-role: button;
+                        accessible-label: @tr("Copy the log");
+                        accessible-action-default => { log-text.select-all(); log-text.copy(); }
+                        TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { log-text.select-all(); log-text.copy(); }
+                        }
+                        copy-label := Text {
+                            text: @tr("Copy the log");
+                            color: Theme.accent;
+                            font-size: 13px;
+                            font-weight: 600;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+                // Always there, so that it can be copied; only seen when asked for.
+                Rectangle {
+                    visible: Store.log-open;
+                    height: Store.log-open ? min(320px, log-text.preferred-height + 24px) : 0;
+                    border-radius: 10px;
+                    background: Theme.surface-2;
+                    border-width: 1px;
+                    border-color: Theme.stroke;
+                    clip: true;
+                    Flickable {
+                        x: 12px;
+                        y: 12px;
+                        width: parent.width - 24px;
+                        height: parent.height - 24px;
+                        content-height: log-text.preferred-height;
+                        log-text := TextInput {
+                            width: parent.width;
+                            text: Store.install-log;
+                            read-only: true;
+                            single-line: false;
+                            wrap: word-wrap;
+                            color: Theme.text;
+                            font-family: "monospace";
+                            font-size: 12px;
+                            accessible-role: text;
+                            accessible-label: @tr("Install log");
+                            accessible-value: Store.install-log;
+                        }
+                    }
+                }
+            }
+
             if Store.app.summary != "" : Text {
                 text: Store.app.summary;
                 color: Theme.text;

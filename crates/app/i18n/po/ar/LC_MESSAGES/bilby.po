@@ -493,6 +493,10 @@ msgid "Copy command"
 msgstr "نسخ الأمر"
 
 msgctxt "DetailsBody"
+msgid "Copy the log"
+msgstr "نسخ السجل"
+
+msgctxt "DetailsBody"
 msgid "Couldn't load this app"
 msgstr "تعذّر تحميل هذا التطبيق"
 
@@ -720,6 +724,10 @@ msgctxt "OptionCard"
 msgid "Hide steps"
 msgstr "إخفاء الخطوات"
 
+msgctxt "DetailsBody"
+msgid "Hide the install log"
+msgstr "إخفاء سجل التثبيت"
+
 msgctxt "SystemBody"
 msgid "Hide what the updater said"
 msgstr "إخفاء ما قاله المحدِّث"
@@ -781,6 +789,14 @@ msgstr "تثبيت"
 msgctxt "TvShell"
 msgid "Install again"
 msgstr "إعادة التثبيت"
+
+msgctxt "DetailsBody"
+msgid "Install log"
+msgstr "سجل التثبيت"
+
+msgctxt "TvShell"
+msgid "Install log"
+msgstr "سجل التثبيت"
 
 msgctxt "AppRow"
 msgid "Install {} now"
@@ -1667,6 +1683,10 @@ msgstr "إظهار أرقام الأداء"
 msgctxt "SettingsBody"
 msgid "Show ratings and reviews"
 msgstr "إظهار التقييمات والمراجعات"
+
+msgctxt "DetailsBody"
+msgid "Show the install log"
+msgstr "إظهار سجل التثبيت"
 
 msgctxt "UpdatesBanner"
 msgid "Show updates"

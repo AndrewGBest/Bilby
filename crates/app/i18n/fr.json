@@ -1353,5 +1353,9 @@
  "Take a screenshot and draw on it.": "Faites une capture d'écran et dessinez dessus.",
  "Close": "Fermer",
  "Previous picture": "Image précédente",
- "Next picture": "Image suivante"
+ "Next picture": "Image suivante",
+ "Show the install log": "Afficher le journal d'installation",
+ "Hide the install log": "Masquer le journal d'installation",
+ "Copy the log": "Copier le journal",
+ "Install log": "Journal d'installation"
 }

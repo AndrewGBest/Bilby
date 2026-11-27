@@ -187,8 +187,13 @@ impl App {
         let work_option = option.clone();
         // What it needs first (FUSE, for an AppImage) is installed first, as part of this.
         let layering = if lacks_fuse { self.layering.clone() } else { None };
+        let log_id = details.summary.id.clone();
+        let log_title = format!("{} · {}", details.summary.name, option.label());
         self.job(
             move |app| {
+                // Everything it does is noted, for the person to read on the app's
+                // page if they ask: most useful when it goes wrong.
+                let (result, lines) = install::journal::keep(|| -> bilby_core::Result<install::Outcome> {
                 // FUSE from the system's repositories where it can be had. Where it
                 // cannot (no such package, or the install did not go through), the app
                 // is unpacked instead, which needs none. Either way the person is not
@@ -273,8 +278,12 @@ impl App {
                     }
                 }
                 Ok(outcome)
+                });
+                app.keep_install_log(&log_id, &log_title, &lines);
+                result
             },
             move |app, ui, result| {
+                app.show_install_log(ui);
                 if app.fuse_just_staged.swap(false, Ordering::SeqCst) {
                     app.ask_restart(ui);
                 }
@@ -562,5 +571,35 @@ impl App {
             self.fuse_just_staged.store(true, Ordering::SeqCst);
         }
         added
+    }
+}
+
+impl App {
+    /// Where the notes of an app's last install are kept: one small file each, with
+    /// the pictures and other things that can be fetched again.
+    fn install_log_path(&self, id: &AppId) -> std::path::PathBuf {
+        self.dirs.cache.join("logs").join(format!("{}.log", bilby_core::icons::app_key(id)))
+    }
+
+    /// Write down what an install did, in place of what the one before it did.
+    fn keep_install_log(&self, id: &AppId, title: &str, lines: &[String]) {
+        if lines.is_empty() {
+            return;
+        }
+        let platform = self.platform.read().unwrap().title();
+        let head = format!("{title}\n{id}\nBilby {} on {platform}\n\n", env!("CARGO_PKG_VERSION")); // (not shown)
+        let path = self.install_log_path(id);
+        let _ = path.parent().map(std::fs::create_dir_all);
+        let _ = std::fs::write(path, format!("{head}{}\n", lines.join("\n")));
+    }
+
+    /// Put the open app's last install log where its page can show it. The page keeps
+    /// it folded away until asked.
+    pub(crate) fn show_install_log(&self, ui: &AppWindow) {
+        let store = ui.global::<Store>();
+        let log = AppId::parse(store.get_app().id.as_str())
+            .and_then(|id| std::fs::read_to_string(self.install_log_path(&id)).ok())
+            .unwrap_or_default();
+        store.set_install_log(log.trim_end().into());
     }
 }

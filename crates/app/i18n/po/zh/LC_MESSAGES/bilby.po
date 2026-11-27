@@ -493,6 +493,10 @@ msgid "Copy command"
 msgstr "复制命令"
 
 msgctxt "DetailsBody"
+msgid "Copy the log"
+msgstr "复制日志"
+
+msgctxt "DetailsBody"
 msgid "Couldn't load this app"
 msgstr "无法加载此应用"
 
@@ -720,6 +724,10 @@ msgctxt "OptionCard"
 msgid "Hide steps"
 msgstr "隐藏步骤"
 
+msgctxt "DetailsBody"
+msgid "Hide the install log"
+msgstr "隐藏安装日志"
+
 msgctxt "SystemBody"
 msgid "Hide what the updater said"
 msgstr "隐藏更新程序的输出"
@@ -776,6 +784,14 @@ msgstr "安装"
 msgctxt "TvShell"
 msgid "Install again"
 msgstr "再次安装"
+
+msgctxt "DetailsBody"
+msgid "Install log"
+msgstr "安装日志"
+
+msgctxt "TvShell"
+msgid "Install log"
+msgstr "安装日志"
 
 msgctxt "AppRow"
 msgid "Install {} now"
@@ -1657,6 +1673,10 @@ msgstr "显示性能数据"
 msgctxt "SettingsBody"
 msgid "Show ratings and reviews"
 msgstr "显示评分和评价"
+
+msgctxt "DetailsBody"
+msgid "Show the install log"
+msgstr "显示安装日志"
 
 msgctxt "UpdatesBanner"
 msgid "Show updates"

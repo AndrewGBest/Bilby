@@ -493,6 +493,10 @@ msgid "Copy command"
 msgstr "Copia comando"
 
 msgctxt "DetailsBody"
+msgid "Copy the log"
+msgstr "Copia il registro"
+
+msgctxt "DetailsBody"
 msgid "Couldn't load this app"
 msgstr "Impossibile caricare questa app"
 
@@ -720,6 +724,10 @@ msgctxt "OptionCard"
 msgid "Hide steps"
 msgstr "Nascondi i passaggi"
 
+msgctxt "DetailsBody"
+msgid "Hide the install log"
+msgstr "Nascondi il registro di installazione"
+
 msgctxt "SystemBody"
 msgid "Hide what the updater said"
 msgstr "Nascondi cosa ha detto l'aggiornamento"
@@ -777,6 +785,14 @@ msgstr "Installa"
 msgctxt "TvShell"
 msgid "Install again"
 msgstr "Installa di nuovo"
+
+msgctxt "DetailsBody"
+msgid "Install log"
+msgstr "Registro di installazione"
+
+msgctxt "TvShell"
+msgid "Install log"
+msgstr "Registro di installazione"
 
 msgctxt "AppRow"
 msgid "Install {} now"
@@ -1659,6 +1675,10 @@ msgstr "Mostra i dati sulle prestazioni"
 msgctxt "SettingsBody"
 msgid "Show ratings and reviews"
 msgstr "Mostra valutazioni e recensioni"
+
+msgctxt "DetailsBody"
+msgid "Show the install log"
+msgstr "Mostra il registro di installazione"
 
 msgctxt "UpdatesBanner"
 msgid "Show updates"

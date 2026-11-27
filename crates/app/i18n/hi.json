@@ -1353,5 +1353,9 @@
  "Take a screenshot and draw on it.": "स्क्रीनशॉट लें और उस पर चित्र बनाएँ।",
  "Close": "बंद करें",
  "Previous picture": "पिछला चित्र",
- "Next picture": "अगला चित्र"
+ "Next picture": "अगला चित्र",
+ "Show the install log": "इंस्टॉल का लॉग दिखाएँ",
+ "Hide the install log": "इंस्टॉल का लॉग छिपाएँ",
+ "Copy the log": "लॉग कॉपी करें",
+ "Install log": "इंस्टॉल का लॉग"
 }

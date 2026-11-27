@@ -22,6 +22,7 @@ mod appimage;
 mod browser;
 mod dirs;
 mod flatpak;
+pub mod journal;
 mod launch;
 mod menu;
 mod remove;
@@ -340,6 +341,23 @@ pub fn execute(
     open: &dyn Fn(&Path) -> Result<()>,
     progress: &mut dyn FnMut(u64, Option<u64>) -> bool,
 ) -> Result<Outcome> {
+    journal::note(format!("Installing {} ({:?})", asset.name, plan.action)); // (not shown)
+    let done = execute_step(plan, asset, http, dirs, open, progress);
+    match &done {
+        Ok(outcome) => journal::note(format!("Done: {}", outcome.message)), // (not shown)
+        Err(e) => journal::note(format!("Failed: {e}")),                    // (not shown)
+    }
+    done
+}
+
+fn execute_step(
+    plan: &InstallPlan,
+    asset: &Asset,
+    http: &dyn Http,
+    dirs: &Dirs,
+    open: &dyn Fn(&Path) -> Result<()>,
+    progress: &mut dyn FnMut(u64, Option<u64>) -> bool,
+) -> Result<Outcome> {
     if plan.action == Action::ShowCommand {
         let command = plan.command.clone().unwrap_or_default();
         return Ok(Outcome {
@@ -481,8 +499,16 @@ pub fn execute(
     // place, so it is kept out of the downloads folder and thrown away afterwards.
     let folder = if plan.action == Action::FlatpakBundle { dirs.cache.join("bundles") } else { dirs.downloads.clone() };
     let dest = folder.join(safe_file_name(&asset.name));
+    journal::note(format!("Fetching {}", asset.url)); // (not shown)
+    journal::note(format!("to {}", dest.display())); // (not shown)
     let actual = http.download(&asset.url, &dest, progress)?;
+    let size = std::fs::metadata(&dest).map(|file| file.len()).unwrap_or(0);
+    journal::note(format!("Fetched {size} bytes, SHA-256 {actual}")); // (not shown)
     let expected = checkable_digest(asset);
+    match expected {
+        Some(expected) => journal::note(format!("The source says SHA-256 {expected}")), // (not shown)
+        None => journal::note("The source gives no checksum that can be checked"),      // (not shown)
+    }
     if let Some(expected) = expected {
         if !expected.eq_ignore_ascii_case(&actual) {
             let _ = std::fs::remove_file(&dest);

@@ -493,6 +493,10 @@ msgid "Copy command"
 msgstr "Copier la commande"
 
 msgctxt "DetailsBody"
+msgid "Copy the log"
+msgstr "Copier le journal"
+
+msgctxt "DetailsBody"
 msgid "Couldn't load this app"
 msgstr "Impossible de charger cette application"
 
@@ -720,6 +724,10 @@ msgctxt "OptionCard"
 msgid "Hide steps"
 msgstr "Masquer les étapes"
 
+msgctxt "DetailsBody"
+msgid "Hide the install log"
+msgstr "Masquer le journal d'installation"
+
 msgctxt "SystemBody"
 msgid "Hide what the updater said"
 msgstr "Masquer les messages de la mise à jour"
@@ -777,6 +785,14 @@ msgstr "Installer"
 msgctxt "TvShell"
 msgid "Install again"
 msgstr "Réinstaller"
+
+msgctxt "DetailsBody"
+msgid "Install log"
+msgstr "Journal d'installation"
+
+msgctxt "TvShell"
+msgid "Install log"
+msgstr "Journal d'installation"
 
 msgctxt "AppRow"
 msgid "Install {} now"
@@ -1659,6 +1675,10 @@ msgstr "Afficher les chiffres de performance"
 msgctxt "SettingsBody"
 msgid "Show ratings and reviews"
 msgstr "Afficher les notes et avis"
+
+msgctxt "DetailsBody"
+msgid "Show the install log"
+msgstr "Afficher le journal d'installation"
 
 msgctxt "UpdatesBanner"
 msgid "Show updates"

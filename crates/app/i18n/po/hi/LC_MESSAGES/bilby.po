@@ -493,6 +493,10 @@ msgid "Copy command"
 msgstr "कमांड कॉपी करें"
 
 msgctxt "DetailsBody"
+msgid "Copy the log"
+msgstr "लॉग कॉपी करें"
+
+msgctxt "DetailsBody"
 msgid "Couldn't load this app"
 msgstr "यह ऐप लोड नहीं हो सका"
 
@@ -720,6 +724,10 @@ msgctxt "OptionCard"
 msgid "Hide steps"
 msgstr "चरण छिपाएँ"
 
+msgctxt "DetailsBody"
+msgid "Hide the install log"
+msgstr "इंस्टॉल का लॉग छिपाएँ"
+
 msgctxt "SystemBody"
 msgid "Hide what the updater said"
 msgstr "अपडेटर का संदेश छिपाएँ"
@@ -777,6 +785,14 @@ msgstr "इंस्टॉल करें"
 msgctxt "TvShell"
 msgid "Install again"
 msgstr "फिर से इंस्टॉल करें"
+
+msgctxt "DetailsBody"
+msgid "Install log"
+msgstr "इंस्टॉल का लॉग"
+
+msgctxt "TvShell"
+msgid "Install log"
+msgstr "इंस्टॉल का लॉग"
 
 msgctxt "AppRow"
 msgid "Install {} now"
@@ -1659,6 +1675,10 @@ msgstr "प्रदर्शन के आँकड़े दिखाएँ"
 msgctxt "SettingsBody"
 msgid "Show ratings and reviews"
 msgstr "रेटिंग और समीक्षाएँ दिखाएँ"
+
+msgctxt "DetailsBody"
+msgid "Show the install log"
+msgstr "इंस्टॉल का लॉग दिखाएँ"
 
 msgctxt "UpdatesBanner"
 msgid "Show updates"

@@ -493,6 +493,10 @@ msgid "Copy command"
 msgstr "コマンドをコピー"
 
 msgctxt "DetailsBody"
+msgid "Copy the log"
+msgstr "ログをコピー"
+
+msgctxt "DetailsBody"
 msgid "Couldn't load this app"
 msgstr "このアプリを読み込めませんでした"
 
@@ -720,6 +724,10 @@ msgctxt "OptionCard"
 msgid "Hide steps"
 msgstr "手順を隠す"
 
+msgctxt "DetailsBody"
+msgid "Hide the install log"
+msgstr "インストールログを隠す"
+
 msgctxt "SystemBody"
 msgid "Hide what the updater said"
 msgstr "アップデーターの出力を隠す"
@@ -776,6 +784,14 @@ msgstr "インストール"
 msgctxt "TvShell"
 msgid "Install again"
 msgstr "再インストール"
+
+msgctxt "DetailsBody"
+msgid "Install log"
+msgstr "インストールログ"
+
+msgctxt "TvShell"
+msgid "Install log"
+msgstr "インストールログ"
 
 msgctxt "AppRow"
 msgid "Install {} now"
@@ -1657,6 +1673,10 @@ msgstr "パフォーマンス表示を出す"
 msgctxt "SettingsBody"
 msgid "Show ratings and reviews"
 msgstr "評価とレビューを表示"
+
+msgctxt "DetailsBody"
+msgid "Show the install log"
+msgstr "インストールログを表示"
 
 msgctxt "UpdatesBanner"
 msgid "Show updates"

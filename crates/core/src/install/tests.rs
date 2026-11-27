@@ -529,6 +529,43 @@ mod planning_and_installing {
         remove_menu_entry(&dirs, "github:Owner/Thing");
         assert!(!path.exists());
     }
+
+    #[test]
+    #[cfg(unix)]
+    fn what_a_failed_command_printed_is_kept_for_whoever_asks() {
+        let (result, lines) = journal::keep(|| {
+            run_program(
+                Path::new("sh"),
+                &["-c", "echo unpacking; printf 'half\\rdone\\n'; echo 'no space left' >&2; exit 3"],
+                "The installer",
+                &mut |_, _| true,
+            )
+        });
+        // The person is told the program's own last word, as before.
+        assert_eq!(result.unwrap_err().to_string(), "The installer could not do it: no space left");
+        // And everything else is there to be read: what was run, both things it wrote
+        // to, and how it ended. A line it drew over ("half") is not something it said.
+        let all = lines.join("\n");
+        assert!(lines[0].starts_with("Running sh -c echo unpacking"), "{all}");
+        assert!(all.contains("It printed:\n  unpacking\n  done\n"), "{all}");
+        assert!(all.contains("It reported:\n  no space left\n"), "{all}");
+        assert!(all.contains("It ended with exit status: 3"), "{all}");
+        assert!(!all.contains("\n  half"), "{all}");
+
+        // A command that cannot be started at all says so too.
+        let (result, lines) = journal::keep(|| {
+            let plan = InstallPlan {
+                command: Some("bilby-no-such-program --now".to_string()),
+                ..plan_for("x.AppImage", "linux-x64-debian")
+            };
+            let plan = InstallPlan { action: Action::RunCommand, ..plan };
+            let dirs = temp_dirs("journal");
+            execute(&plan, &asset("thing", None), &Fake(b""), &dirs, &|_| Ok(()), &mut |_, _| true)
+        });
+        assert!(result.is_err());
+        assert!(lines.iter().any(|line| line.starts_with("Running bilby-no-such-program --now")), "{lines:?}");
+        assert!(lines.last().unwrap().starts_with("Failed: "), "{lines:?}");
+    }
 }
 
 mod launch_tests {
