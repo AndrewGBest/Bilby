@@ -1357,5 +1357,8 @@
  "Show the install log": "इंस्टॉल का लॉग दिखाएँ",
  "Hide the install log": "इंस्टॉल का लॉग छिपाएँ",
  "Copy the log": "लॉग कॉपी करें",
- "Install log": "इंस्टॉल का लॉग"
+ "Install log": "इंस्टॉल का लॉग",
+ "Makers' websites": "निर्माताओं की वेबसाइटें",
+ "There is no recipe for “{}” any more.": "“{}” के लिए अब कोई रेसिपी नहीं है।",
+ "{} could not be found on its maker's website, which may have changed. Its recipe needs mending.": "{} निर्माता की वेबसाइट पर नहीं मिला। हो सकता है वेबसाइट बदल गई हो। इसकी रेसिपी को ठीक करना होगा।"
 }

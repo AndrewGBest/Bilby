@@ -27,6 +27,9 @@ flate2 = "1"
 ruzstd = "0.9.1"
 lz4_flex = { version = "0.14", default-features = false, features = ["std", "frame", "safe-decode"] }
 # Drawing a sign-in code for a phone to scan. Pure Rust, no image code.
+# The patterns a recipe finds things with. Its matching takes time in step with the
+# text however the pattern is written, which matters for patterns other people wrote.
+regex = { version = "1", default-features = false, features = ["std", "perf", "unicode-perl", "unicode-case"] }
 qrcode = { version = "0.14", default-features = false }
 ureq = { version = "2", default-features = false, features = ["tls", "gzip"], optional = true }
 

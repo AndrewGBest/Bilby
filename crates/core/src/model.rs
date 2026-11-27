@@ -45,6 +45,8 @@ pub enum SourceKind {
     GooglePlay,
     /// A list of apps on the person's own server or storage, added in Settings.
     Own,
+    /// Apps fetched from their makers' websites, by following a shared recipe.
+    Recipe,
 }
 
 impl SourceKind {
@@ -74,6 +76,7 @@ impl SourceKind {
             SourceKind::Gog => "GOG",
             SourceKind::GooglePlay => "Google Play",
             SourceKind::Own => "Your own sources",
+            SourceKind::Recipe => "Makers' websites",
         }
     }
     pub fn prefix(self) -> &'static str {
@@ -98,6 +101,7 @@ impl SourceKind {
             SourceKind::Gog => "gog",
             SourceKind::GooglePlay => "play",
             SourceKind::Own => "own",
+            SourceKind::Recipe => "recipe",
         }
     }
 }
@@ -137,6 +141,7 @@ impl AppId {
             "gog" => SourceKind::Gog,
             "play" => SourceKind::GooglePlay,
             "own" => SourceKind::Own,
+            "recipe" => SourceKind::Recipe,
             _ => return None,
         };
         (!key.is_empty()).then(|| AppId::new(source, key))
@@ -264,8 +269,9 @@ pub fn source_page(id: &AppId, distro: &str) -> Option<String> {
         SourceKind::Dnf => format!("https://packages.fedoraproject.org/search?query={key}"),
         SourceKind::Zypper => format!("https://software.opensuse.org/package/{key}"),
         // GOG's pages go by a name, which the game's entry carries; a list someone
-        // added themselves has no page.
-        SourceKind::Gog | SourceKind::Own => return None,
+        // added themselves has no page. An app from its maker's website has that
+        // website, which its entry carries as its homepage.
+        SourceKind::Gog | SourceKind::Own | SourceKind::Recipe => return None,
     })
 }
 
@@ -280,6 +286,7 @@ pub fn valid_key(source: SourceKind, key: &str) -> bool {
         SourceKind::GitHub | SourceKind::Codeberg => {
             matches!(key.split_once('/'), Some((owner, repo)) if ok(owner, &[]) && ok(repo, &[]))
         }
+        SourceKind::Recipe => crate::recipe::valid_id(key),
         // The person's source, then the app's id within it.
         SourceKind::Own => {
             matches!(key.split_once('/'), Some((source, app)) if ok(source, &[]) && ok(app, &[]) && key.len() <= 120)

@@ -130,6 +130,7 @@ crates/core     bilby-core    everything Bilby knows and decides, with no interf
   src/platform.rs               what this device is
   src/asset.rs, compat.rs       what a file is, and whether it runs here
   src/source/                   one file per place apps come from
+  src/recipe.rs                 recipes: getting an app from its maker's website
   src/catalog.rs                search, browse and details across the sources
   src/merge.rs, rank.rs         one app from several sources; search order
   src/install/, needs.rs        planning an install and carrying it out
@@ -170,6 +171,7 @@ More to read:
 | [ANDROID.md](ANDROID.md) | Building and running the Android package |
 | [LONGBOARD.md](LONGBOARD.md) | What Bilby asks of the Longboard browser on a TV |
 | [OWN-SOURCES.md](OWN-SOURCES.md) | The format of a list of apps on your own server |
+| [RECIPES.md](RECIPES.md) | Recipes: how an app is fetched from its maker's website, and how they are shared |
 
 ## Where Bilby keeps things
 

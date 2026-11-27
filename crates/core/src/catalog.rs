@@ -233,6 +233,10 @@ impl Catalog {
         catalog.sources.push(Arc::new(crate::source::msstore::MicrosoftStore::new(shared.clone()).in_country(country)));
         catalog.sources.push(Arc::new(crate::source::gog::Gog::new(shared.clone(), &platform).in_country(country)));
         catalog.sources.push(Arc::new(crate::source::play::GooglePlay::new(shared).in_country(country)));
+        // Apps on no store, fetched from their makers' websites by following recipes:
+        // the shared ones, and any in the person's own folder.
+        let (own, _) = crate::recipe::read_folder(&crate::install::Dirs::for_current_user().config.join("recipes"));
+        catalog.sources.push(Arc::new(crate::source::recipes::Recipes::new(catalog.http.clone()).with_own(own)));
         if has_token {
             catalog.check_limit = 20;
         }
@@ -605,7 +609,8 @@ impl Catalog {
             | SourceKind::MicrosoftStore
             | SourceKind::Gog
             | SourceKind::GooglePlay
-            | SourceKind::Own => return None,
+            | SourceKind::Own
+            | SourceKind::Recipe => return None,
         };
         Some(appstream_id.to_string())
     }

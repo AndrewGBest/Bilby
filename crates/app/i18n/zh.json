@@ -1347,5 +1347,8 @@
  "Show the install log": "显示安装日志",
  "Hide the install log": "隐藏安装日志",
  "Copy the log": "复制日志",
- "Install log": "安装日志"
+ "Install log": "安装日志",
+ "Makers' websites": "开发者网站",
+ "There is no recipe for “{}” any more.": "已没有“{}”的配方。",
+ "{} could not be found on its maker's website, which may have changed. Its recipe needs mending.": "在开发者网站上找不到 {}，网站可能已更改。其配方需要修正。"
 }

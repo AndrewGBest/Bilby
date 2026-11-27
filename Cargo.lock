@@ -421,6 +421,7 @@ dependencies = [
  "libc",
  "lz4_flex",
  "qrcode",
+ "regex",
  "ruzstd",
  "serde",
  "serde_json",

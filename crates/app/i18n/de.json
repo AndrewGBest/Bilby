@@ -1357,5 +1357,8 @@
  "Show the install log": "Installationsprotokoll anzeigen",
  "Hide the install log": "Installationsprotokoll ausblenden",
  "Copy the log": "Protokoll kopieren",
- "Install log": "Installationsprotokoll"
+ "Install log": "Installationsprotokoll",
+ "Makers' websites": "Websites der Hersteller",
+ "There is no recipe for “{}” any more.": "Für „{}“ gibt es kein Rezept mehr.",
+ "{} could not be found on its maker's website, which may have changed. Its recipe needs mending.": "{} wurde auf der Website des Herstellers nicht gefunden. Die Website hat sich möglicherweise geändert. Das Rezept muss angepasst werden."
 }

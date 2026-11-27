@@ -1347,5 +1347,8 @@
  "Show the install log": "インストールログを表示",
  "Hide the install log": "インストールログを隠す",
  "Copy the log": "ログをコピー",
- "Install log": "インストールログ"
+ "Install log": "インストールログ",
+ "Makers' websites": "開発元のウェブサイト",
+ "There is no recipe for “{}” any more.": "「{}」のレシピはもうありません。",
+ "{} could not be found on its maker's website, which may have changed. Its recipe needs mending.": "開発元のウェブサイトで {} が見つかりませんでした。サイトが変更された可能性があります。レシピの修正が必要です。"
 }

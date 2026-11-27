@@ -1367,5 +1367,8 @@
  "Show the install log": "Показать журнал установки",
  "Hide the install log": "Скрыть журнал установки",
  "Copy the log": "Скопировать журнал",
- "Install log": "Журнал установки"
+ "Install log": "Журнал установки",
+ "Makers' websites": "Сайты разработчиков",
+ "There is no recipe for “{}” any more.": "Рецепта для «{}» больше нет.",
+ "{} could not be found on its maker's website, which may have changed. Its recipe needs mending.": "Не удалось найти {} на сайте разработчика. Возможно, сайт изменился. Рецепт нужно исправить."
 }

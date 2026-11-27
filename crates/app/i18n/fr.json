@@ -1357,5 +1357,8 @@
  "Show the install log": "Afficher le journal d'installation",
  "Hide the install log": "Masquer le journal d'installation",
  "Copy the log": "Copier le journal",
- "Install log": "Journal d'installation"
+ "Install log": "Journal d'installation",
+ "Makers' websites": "Sites des éditeurs",
+ "There is no recipe for “{}” any more.": "Il n’y a plus de recette pour « {} ».",
+ "{} could not be found on its maker's website, which may have changed. Its recipe needs mending.": "{} est introuvable sur le site de son éditeur, qui a peut-être changé. Sa recette doit être corrigée."
 }

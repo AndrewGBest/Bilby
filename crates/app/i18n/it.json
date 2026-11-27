@@ -1357,5 +1357,8 @@
  "Show the install log": "Mostra il registro di installazione",
  "Hide the install log": "Nascondi il registro di installazione",
  "Copy the log": "Copia il registro",
- "Install log": "Registro di installazione"
+ "Install log": "Registro di installazione",
+ "Makers' websites": "Siti dei produttori",
+ "There is no recipe for “{}” any more.": "Non c’è più una ricetta per “{}”.",
+ "{} could not be found on its maker's website, which may have changed. Its recipe needs mending.": "{} non è stato trovato sul sito del produttore, che potrebbe essere cambiato. La ricetta va corretta."
 }

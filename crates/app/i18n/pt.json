@@ -1357,5 +1357,8 @@
  "Show the install log": "Mostrar o registo da instalação",
  "Hide the install log": "Ocultar o registo da instalação",
  "Copy the log": "Copiar o registo",
- "Install log": "Registo da instalação"
+ "Install log": "Registo da instalação",
+ "Makers' websites": "Sites dos criadores",
+ "There is no recipe for “{}” any more.": "Já não existe receita para “{}”.",
+ "{} could not be found on its maker's website, which may have changed. Its recipe needs mending.": "Não foi possível encontrar {} no site do seu criador, que pode ter mudado. A receita precisa de ser corrigida."
 }

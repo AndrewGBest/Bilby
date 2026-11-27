@@ -40,6 +40,7 @@ pub mod parental;
 pub mod platform;
 pub mod rank;
 pub mod ratings;
+pub mod recipe;
 pub mod region;
 pub mod related;
 pub mod reviewing;

@@ -6,6 +6,17 @@ any release may change how something works.
 
 ## Unreleased
 
+- **Apps that are only on their maker's website can be installed and updated.** A
+  recipe says where the maker publishes the app and how to read its current version,
+  and Bilby follows it. The first ones cover Signal for Android from signal.org,
+  Cursor, Zoom, Discord, Google Chrome, Vivaldi, Mullvad VPN, Proton Mail and Proton
+  Pass. Such an app's page says which website it comes from.
+- Recipes are shared. Anyone can write one and send it to
+  [bilby-recipes](https://github.com/AndrewGBest/bilby-recipes); Bilby fetches the
+  list from there, so a new or mended recipe arrives without a new version of Bilby.
+  A recipe can only read and download from the websites it names, and cannot run
+  anything. How to write one is in [docs/RECIPES.md](docs/RECIPES.md).
+- `bilby-cli recipe check`, `recipe share` and `recipe index`, for writing recipes.
 - The words on an app's tile stay sharp with the pointer over it. The tile grew
   slightly when hovered, which smeared its text.
 - **An install's log can be read on the app's page.** After an install, and most
