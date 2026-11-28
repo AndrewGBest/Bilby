@@ -6,6 +6,8 @@ any release may change how something works.
 
 ## Unreleased
 
+## 0.1.46 (2026-11-27)
+
 - On a computer and a phone too, "Update all" in the Library is there whenever more
   than one app has an update waiting, whoever installed it, and the count beside it
   includes those apps. It updates Bilby's own apps and then everything the system's
