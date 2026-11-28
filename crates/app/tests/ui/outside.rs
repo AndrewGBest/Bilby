@@ -172,3 +172,29 @@ fn a_tv_offers_to_update_everything_when_the_updates_are_not_the_store_s_own() {
     assert_eq!(s.store().get_updates_waiting(), 0, "and nothing is waiting afterwards");
     assert!(!s.has("Update all"));
 }
+
+#[test]
+fn a_desktop_and_a_phone_offer_to_update_everything_too() {
+    // Two Flatpaks from somewhere else and a system package have updates, and the
+    // store's library is empty.
+    let listing = "Looking for updates…\n\n 1.\t   \tio.quillpad.Quillpad\tstable\tu\tflathub\t< 2.1 MB\n 2.\t   \torg.tidepool.Tide\tstable\tu\tflathub\t< 9.0 MB\n\nProceed with these changes to the user installation? [Y/n]: n\n";
+    for shell in [Shell::Desktop, Shell::Mobile] {
+        let host =
+            machine("linux-x64-debian", |host| host.program("flatpak").command("flatpak update --user", 1, listing));
+        let s = start_on("linux-x64-debian", shell, Some(r#"{"settings":{"welcomed":true}}"#), Some(host.clone()));
+        for (id, name) in [("io.quillpad.Quillpad", "Quillpad"), ("org.tidepool.Tide", "Tide")] {
+            let entries = s.dirs.flatpak_roots[0].join(format!("app/{id}/current/active/export/share/applications"));
+            std::fs::create_dir_all(&entries).unwrap();
+            std::fs::write(entries.join(format!("{id}.desktop")), format!("[Desktop Entry]\nName={name}\n")).unwrap();
+        }
+        looked(&s);
+        s.store().set_page(2);
+        assert!(s.has("3 updates available"), "counted whoever installed them");
+        s.click("Update all");
+        let ran = host.streamed.lock().unwrap().clone();
+        assert!(ran.iter().any(|command| command.starts_with("flatpak update")), "Flatpak is asked: {ran:?}");
+        assert!(ran.iter().any(|command| command.contains("apt-get")), "and so is apt: {ran:?}");
+        assert_eq!(s.store().get_updates_waiting(), 0, "and nothing is waiting afterwards");
+        assert!(!s.has("Update all"));
+    }
+}

@@ -314,6 +314,8 @@ export component LibraryBody inherits Rectangle {
     // The apps the store did not install: a few, or all of them.
     property <bool> all-installed: false;
     in property <bool> compact;
+    // One round of updates at a time, the store's own or the system's.
+    property <bool> can-update: Store.updating-id == "" && Store.system-state != 1 && Store.system-state != 4;
     if Store.library.length == 0 && Store.favourites.length == 0 && Store.also-installed.length == 0 && !Store.system-supported : EmptyState {
         title: @tr("Your library is empty");
         body: @tr("Apps you install from the store show up here, and the store can tell you when they have a new release. Favourites are kept here too.");
@@ -338,14 +340,16 @@ export component LibraryBody inherits Rectangle {
                 alignment: start;
                 Button { text: @tr("Browse apps"); primary: false; clicked => { Store.page = 0; } }
             }
-            if Store.library.length > 0 : HorizontalLayout {
+            // An update is an update, whoever installed the app: this counts those of
+            // apps the store did not install too, and is there with only those waiting.
+            if Store.library.length > 0 || Store.updates-waiting > 0 : HorizontalLayout {
                 spacing: 12px;
                 VerticalLayout {
                     alignment: center;
                     horizontal-stretch: 1;
                     spacing: 2px;
                     Text {
-                        text: Store.checking-updates ? @tr("Checking for updates…") : Store.updates-count == 0 ? (Store.last-checked != "" ? @tr("Everything is up to date") : @tr("{n} app" | "{n} apps" % Store.library.length)) : @tr("{n} update available" | "{n} updates available" % Store.updates-count);
+                        text: Store.checking-updates ? @tr("Checking for updates…") : Store.updates-waiting == 0 ? (Store.last-checked != "" ? @tr("Everything is up to date") : @tr("{n} app" | "{n} apps" % Store.library.length)) : @tr("{n} update available" | "{n} updates available" % Store.updates-waiting);
                         color: Theme.text;
                         font-size: compact ? 16px : 20px;
                         font-weight: 700;
@@ -359,15 +363,15 @@ export component LibraryBody inherits Rectangle {
                     }
                 }
                 // On a phone the buttons get their own rows below.
-                if !compact && Store.updates-count > 1 : VerticalLayout {
+                if !compact && Store.updates-waiting > 1 : VerticalLayout {
                     alignment: center;
                     Button {
                         text: @tr("Update all");
-                        enabled: Store.updating-id == "";
-                        clicked => { Store.update-all(); }
+                        enabled: root.can-update;
+                        clicked => { Store.update-everything(); }
                     }
                 }
-                if !compact : VerticalLayout {
+                if !compact && Store.library.length > 0 : VerticalLayout {
                     alignment: center;
                     Button {
                         text: @tr("Check for updates");
@@ -377,10 +381,10 @@ export component LibraryBody inherits Rectangle {
                     }
                 }
             }
-            if compact && Store.updates-count > 1 : Button {
+            if compact && Store.updates-waiting > 1 : Button {
                 text: @tr("Update all");
-                enabled: Store.updating-id == "";
-                clicked => { Store.update-all(); }
+                enabled: root.can-update;
+                clicked => { Store.update-everything(); }
             }
             if compact && Store.library.length > 0 : Button {
                 text: @tr("Check for updates");
